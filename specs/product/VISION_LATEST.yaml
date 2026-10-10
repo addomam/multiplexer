@@ -1,0 +1,4 @@
+name: amux
+core_value: Organize native shell and coding-agent workflows without replacing their interactive experience.
+users: [local developers, local automation]
+platforms: [Linux, macOS]

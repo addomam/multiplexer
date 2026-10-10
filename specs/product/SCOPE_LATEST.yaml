@@ -1,0 +1,28 @@
+core_value: Project-oriented native terminals with safe local automation.
+summary: A memory-only daemon owns PTYs and complete emulator state; detachable clients organize and operate them.
+in_scope:
+  - {story: e01s01, requirement: Host Zsh, daemon PTYs, screen and scrollback, resize, detach and cleanup}
+  - {story: e01s02, requirement: Confirmed prompt execution, partial-input protection, exported context capture and child launch}
+  - {story: e01s03, requirement: Projects, tree reparenting, saved configuration, recipes, ordered hooks and cached Git metadata}
+  - {story: e01s04, requirement: OMP manual/action discovery, independent lifecycle dimensions, precise settled waits}
+  - {story: e01s05, requirement: Single-terminal TUI, hierarchical fuzzy picker, prefix and literal prefix, shared CLI API}
+  - {story: e01s06, requirement: Vertical slice, stress validation, meaningful tests, usage and supported-version evidence}
+out_of_scope:
+  - Tiling and nonlocal clients (deferred presentation)
+  - ACP, A2A, MCP-UI, A2UI (deferred protocols)
+  - Crash recovery, process restoration and exact interpreter cloning (explicitly excluded)
+constraints: [Rust core, stock Zsh, Linux and macOS, no Zig or libghostty, no screen scraping]
+success_criteria:
+  - All ten user vertical-slice steps exercised through the local API and native terminal.
+  - Busy and partial-input execution rejected without altering foreground input.
+  - Descendant foreground processes terminated on explicit close and shutdown.
+  - Noisy terminals and slow subscribers cannot block PTY consumption.
+  - Limitations and unverified platforms explicitly reported.
+prior_art:
+  - '[OK] alacritty_terminal 0.26.0: complete Rust emulator; Term::new, resize, grid, mode and vte Processor'
+  - '[OK] portable-pty 0.9.0: native PTY ownership, process spawn, reader/writer, resize'
+  - '[OK] crossterm: native terminal events, raw mode, mouse and bracketed paste'
+  - '[OK] serde_json, anyhow, clap, uuid, libc: bounded local protocol and Unix lifecycle'
+  - 'OMP 18.8.7: verified installed help and tagged ExtensionAPI, native Bun extension import, explicit -e loading'
+  - 'Zsh 5.9: documented add-zsh-hook, add-zle-hook-widget, zle -F descriptor callbacks'
+references: [../tech-architecture/DESIGN_PLAN_LATEST.md]

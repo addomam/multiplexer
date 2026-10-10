@@ -1,0 +1,6 @@
+project: Collection of terminals, configuration and launch/setup recipes.
+workspace: Execution directory and optional Git worktree identity.
+shell_context: Live Zsh interpreter and mutable state; capture clones cwd and exports only.
+execution: Command or job within a shell.
+terminal: PTY, emulator and associated process lifetime.
+agent_settled: Root OMP explicitly idle after agent_end with no retry or continuation active; not process exit or turn_end.

@@ -1,0 +1,14 @@
+story_id: e01s05
+spec: e01s05-story.md
+type: feat
+context: domain
+title: Detachable TUI and CLI
+status: failing
+bcps: 5
+tasks:
+  - id: 1
+    description: ADDED Detachable TUI and CLI
+    risk: P0
+    status: failing
+    verify: "cargo test tui"
+    allure: {severity: critical, categories: [native-terminal]}

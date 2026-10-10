@@ -1,0 +1,10 @@
+workflow_mode: solo-git
+vcs: {kind: git, branch: feat/amux-mvp, signing: disabled-local}
+active_flow: build_epic
+active_epic: e01
+project_cycle: {current_phase: 3, completed_phases: [1, 2]}
+handoff: {next_skill: develop-tdd}
+decisions:
+  - User requirements supply product decisions; routine choices resolved without interview.
+  - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
+  - No deployment or release tag requested; delivery is local MVP.

@@ -1,0 +1,14 @@
+story_id: e01s06
+spec: e01s06-story.md
+type: feat
+context: domain
+title: End-to-end verification and delivery
+status: failing
+bcps: 5
+tasks:
+  - id: 1
+    description: ADDED End-to-end verification and delivery
+    risk: P0
+    status: failing
+    verify: "cargo test --test acceptance"
+    allure: {severity: critical, categories: [native-terminal]}

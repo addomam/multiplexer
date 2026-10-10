@@ -1,0 +1,27 @@
+id: e01
+title: Native local terminal MVP
+stories:
+  - id: e01s01
+    title: Host terminal vertical slice
+    bcps: 5
+    delta: ADDED
+  - id: e01s02
+    title: Safe shell automation and context
+    bcps: 5
+    delta: ADDED
+  - id: e01s03
+    title: Projects and Git organization
+    bcps: 5
+    delta: ADDED
+  - id: e01s04
+    title: OMP lifecycle reporting
+    bcps: 5
+    delta: ADDED
+  - id: e01s05
+    title: Detachable TUI and CLI
+    bcps: 5
+    delta: ADDED
+  - id: e01s06
+    title: End-to-end verification and delivery
+    bcps: 5
+    delta: ADDED

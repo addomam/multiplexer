@@ -1,0 +1,14 @@
+story_id: e01s03
+spec: e01s03-story.md
+type: feat
+context: domain
+title: Projects and Git organization
+status: failing
+bcps: 5
+tasks:
+  - id: 1
+    description: ADDED Projects and Git organization
+    risk: P0
+    status: failing
+    verify: "cargo test projects"
+    allure: {severity: critical, categories: [native-terminal]}

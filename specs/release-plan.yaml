@@ -1,0 +1,3 @@
+version: 0.1.0
+epics:
+  - {id: e01, capsule: e01-native-terminal, wsjf: 1, title: Native local terminal MVP}

@@ -1,0 +1,14 @@
+story_id: e01s01
+spec: e01s01-story.md
+type: feat
+context: domain
+title: Host terminal vertical slice
+status: failing
+bcps: 5
+tasks:
+  - id: 1
+    description: ADDED Host terminal vertical slice
+    risk: P0
+    status: failing
+    verify: "cargo test --test runtime"
+    allure: {severity: critical, categories: [native-terminal]}
