@@ -38,3 +38,10 @@ input_latency_revision:
   evidence: specs/verifications/input-latency-final.md
   measured_single_keys: 900
   inherited_review_gate: blocked-cap-exhausted
+immediate_input_revision:
+  status: passing-mechanical-and-native-runtime
+  scope: client-only-prepared-cells-bounded-queue-priority-interaction-pacing
+  evidence: specs/verifications/immediate-input.md
+  measured_single_keys: 1000
+  compatible_daemon: first-pass-row-delta-api
+  inherited_review_gate: blocked-cap-exhausted

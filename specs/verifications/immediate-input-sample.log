@@ -1,0 +1,291 @@
+Analysis of sampling amux (pid 61729) every 1 millisecond
+Process:         amux [61729]
+Path:            /Users/USER/*/amux
+Load Address:    0x104e54000
+Identifier:      amux
+Version:         0
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  Python [74941]
+Target Type:     live task
+
+Date/Time:       2026-10-11 10:21:27.537 -0500
+Launch Time:     2026-10-11 10:21:22.505 -0500
+OS Version:      macOS 27.0.1 (26A434)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         90.4M
+Physical footprint (peak):  90.4M
+Idle exit:                  untracked
+----
+
+Call graph:
+    2115 Thread_33895845   DispatchQueue_1: com.apple.main-thread  (serial)
+      2115 start  (in dyld) + 6688  [0x192ff7e80]
+        2115 main  (in amux) + 52  [0x104e549b0]
+          2115 _RNvNtCsg55jX0GwzBC_3std2rt19lang_start_internal  (in amux) + 952  [0x104fc8c20]
+            2115 std::rt::lang_start::_$u7b$$u7b$closure$u7d$$u7d$::haa7e249ef1e22849  (in amux) + 16  [0x104e548d0]
+              2115 std::sys::backtrace::__rust_begin_short_backtrace::h88956319a8a8af8e  (in amux) + 12  [0x104e548e8]
+                2115 amux::main::h6c948799945a550f  (in amux) + 20  [0x104e54904]
+                  2115 amux::cli::run::heaf49b2588c47436  (in amux) + 1600  [0x104ea4440]
+                    1451 amux::tui::run::h5794133e433c724d  (in amux) + 4492  [0x104f195d4]
+                    + 1332 ratatui_core::terminal::terminal::Terminal$LT$B$GT$::try_draw::h8574fae044aa48cf  (in amux) + 200  [0x104ef4684]
+                    + ! 194 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 5496  [0x104eee0c4]
+                    + ! : 127 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 103 _platform_memcmp  (in libsystem_platform.dylib) + 140,236,...  [0x1933d51fc,0x1933d525c,...]
+                    + ! : | 24 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 67 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,84,...  [0x104f5f6ec,0x104f5f6b4,...]
+                    + ! 188 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9664  [0x104eef10c]
+                    + ! : 105 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 89 _platform_memcmp  (in libsystem_platform.dylib) + 236,272,...  [0x1933d525c,0x1933d5280,...]
+                    + ! : | 16 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 83 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,92,...  [0x104f5f6ec,0x104f5f6bc,...]
+                    + ! 158 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 5544  [0x104eee0f4]
+                    + ! : 102 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 86 _platform_memcmp  (in libsystem_platform.dylib) + 260,140,...  [0x1933d5274,0x1933d51fc,...]
+                    + ! : | 16 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 56 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,92,...  [0x104f5f6ec,0x104f5f6bc,...]
+                    + ! 139 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9616  [0x104eef0dc]
+                    + ! : 80 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 70 _platform_memcmp  (in libsystem_platform.dylib) + 260,272,...  [0x1933d5274,0x1933d5280,...]
+                    + ! : | 10 DYLD-STUB$$memcmp  (in amux) + 4,0  [0x104ff9bb0,0x104ff9bac]
+                    + ! : 59 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,84,...  [0x104f5f6ec,0x104f5f6b4,...]
+                    + ! 138 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9712  [0x104eef13c]
+                    + ! : 80 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 65 _platform_memcmp  (in libsystem_platform.dylib) + 272,260,...  [0x1933d5280,0x1933d5274,...]
+                    + ! : | 15 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 58 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,92,...  [0x104f5f6ec,0x104f5f6bc,...]
+                    + ! 132 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9812  [0x104eef1a0]
+                    + ! : 71 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 57 _platform_memcmp  (in libsystem_platform.dylib) + 260,272,...  [0x1933d5274,0x1933d5280,...]
+                    + ! : | 14 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 61 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,84,...  [0x104f5f6ec,0x104f5f6b4,...]
+                    + ! 83 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9760  [0x104eef16c]
+                    + ! : 58 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 52 _platform_memcmp  (in libsystem_platform.dylib) + 260,272,...  [0x1933d5274,0x1933d5280,...]
+                    + ! : | 6 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 25 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,64,...  [0x104f5f6ec,0x104f5f6a0,...]
+                    + ! 83 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9860  [0x104eef1d0]
+                    + ! : 57 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 47 _platform_memcmp  (in libsystem_platform.dylib) + 272,280,...  [0x1933d5280,0x1933d5288,...]
+                    + ! : | 10 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 26 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,92,...  [0x104f5f6ec,0x104f5f6bc,...]
+                    + ! 62 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 5476,9544,...  [0x104eee0b0,0x104eef094,...]
+                    + ! 58 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 224,216  [0x104f5f740,0x104f5f738]
+                    + ! 44 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 9564  [0x104eef0a8]
+                    + ! : 29 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! : | 24 _platform_memcmp  (in libsystem_platform.dylib) + 260,256,...  [0x1933d5274,0x1933d5270,...]
+                    + ! : | 5 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! : 15 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,92,...  [0x104f5f6ec,0x104f5f6bc,...]
+                    + ! 23 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 10052  [0x104eef290]
+                    + ! : 15 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 140,28,...  [0x104f5f6ec,0x104f5f67c,...]
+                    + ! : 8 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    + ! :   7 _platform_memcmp  (in libsystem_platform.dylib) + 260,0,...  [0x1933d5274,0x1933d5170,...]
+                    + ! :   1 DYLD-STUB$$memcmp  (in amux) + 8  [0x104ff9bb4]
+                    + ! 17 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 10372  [0x104eef3d0]
+                    + ! : 9 ratatui_core::buffer::cell::Cell::set_symbol::h6ecc162710a895ed  (in amux) + 72  [0x104f3f7dc]
+                    + ! : | 9 _platform_memmove  (in libsystem_platform.dylib) + 16,460,...  [0x1933d7d70,0x1933d7f2c,...]
+                    + ! : 8 ratatui_core::buffer::cell::Cell::set_symbol::h6ecc162710a895ed  (in amux) + 56,36,...  [0x104f3f7cc,0x104f3f7b8,...]
+                    + ! 11 amux::tui::view::draw::ha4f4b97bbed6274f  (in amux) + 10332  [0x104eef3a8]
+                    + ! : 11 ratatui_core::buffer::buffer::Buffer::index_of::hd85ddf9c2f587b77  (in amux) + 68,20,...  [0x104f3c1bc,0x104f3c18c,...]
+                    + ! 2 ratatui_core::buffer::cell::Cell::set_symbol::h6ecc162710a895ed  (in amux) + 220  [0x104f3f870]
+                    + 111 ratatui_core::terminal::terminal::Terminal$LT$B$GT$::try_draw::h8574fae044aa48cf  (in amux) + 276  [0x104ef46d0]
+                    + ! 33 ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux) + 244  [0x104f3b958]
+                    + ! : 23 _$LT$ratatui_core..buffer..cell..Cell$u20$as$u20$core..cmp..PartialEq$GT$::eq::h5f75eb25b9944a44  (in amux) + 28,192,...  [0x104f3ff98,0x104f4003c,...]
+                    + ! : 10 _$LT$ratatui_core..buffer..cell..Cell$u20$as$u20$core..cmp..PartialEq$GT$::eq::h5f75eb25b9944a44  (in amux) + 204  [0x104f40048]
+                    + ! :   9 _platform_memcmp  (in libsystem_platform.dylib) + 272,280,...  [0x1933d5280,0x1933d5288,...]
+                    + ! :   1 DYLD-STUB$$memcmp  (in amux) + 4  [0x104ff9bb0]
+                    + ! 26 ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux) + 436,196,...  [0x104f3ba18,0x104f3b928,...]
+                    + ! 14 ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux) + 608  [0x104f3bac4]
+                    + ! : 14 core::iter::traits::double_ended::DoubleEndedIterator::rfold::h39b90d742e9a67fb  (in amux) + 172,304,...  [0x104f3cb6c,0x104f3cbf0,...]
+                    + ! 13 core::iter::traits::double_ended::DoubleEndedIterator::rfold::h39b90d742e9a67fb  (in amux) + 3084,3076,...  [0x104f3d6cc,0x104f3d6c4,...]
+                    + ! 12 ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux) + 528  [0x104f3ba74]
+                    + ! : 12 core::iter::traits::double_ended::DoubleEndedIterator::rfold::h39b90d742e9a67fb  (in amux) + 120,152,...  [0x104f3cb38,0x104f3cb58,...]
+                    + ! 11 ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux) + 440  [0x104f3ba1c]
+                    + ! : 11 core::iter::traits::double_ended::DoubleEndedIterator::rfold::h39b90d742e9a67fb  (in amux) + 152,120,...  [0x104f3cb58,0x104f3cb38,...]
+                    + ! 2 _$LT$ratatui_core..buffer..cell..Cell$u20$as$u20$core..cmp..PartialEq$GT$::eq::h5f75eb25b9944a44  (in amux) + 592  [0x104f401cc]
+                    + 6 ratatui_core::terminal::terminal::Terminal$LT$B$GT$::try_draw::h8574fae044aa48cf  (in amux) + 900  [0x104ef4940]
+                    + ! 6 ratatui_core::buffer::buffer::Buffer::reset::h8f63eca300664701  (in amux) + 68,80  [0x104f3bf78,0x104f3bf84]
+                    + 2 ratatui_core::terminal::terminal::Terminal$LT$B$GT$::try_draw::h8574fae044aa48cf  (in amux) + 360  [0x104ef4724]
+                    +   2 _RNvXsd_NtNtCsg55jX0GwzBC_3std2io5stdioNtB5_6StdoutNtB7_5Write5flush  (in amux) + 24  [0x104fd45ec]
+                    +     2 _RNvXse_NtNtCsg55jX0GwzBC_3std2io5stdioRNtB5_6StdoutNtB7_5Write5flush  (in amux) + 48  [0x104fd4710]
+                    +       2 _RNvMs_NtNtNtCsg55jX0GwzBC_3std2io8buffered9bufwriterINtB4_9BufWriterNtNtB8_5stdio9StdoutRawE9flush_bufBa_  (in amux) + 112  [0x104fc1cc0]
+                    +         2 write  (in libsystem_kernel.dylib) + 8  [0x19338c838]
+                    573 amux::tui::run::h5794133e433c724d  (in amux) + 4564  [0x104f1961c]
+                    + 573 crossterm::event::poll::he8ed1d06b18526ac  (in amux) + 232  [0x104f4241c]
+                    +   573 crossterm::event::read::InternalEventReader::poll::h11e679780ca905ce  (in amux) + 612  [0x104f4871c]
+                    +     573 _$LT$crossterm..event..source..unix..mio..UnixInternalEventSource$u20$as$u20$crossterm..event..source..EventSource$GT$::try_read::h19b6d0de4786c05d  (in amux) + 332  [0x104f46948]
+                    +       573 mio::poll::Poll::poll::h38a3174008738e7d  (in amux) + 116  [0x104f4a5c4]
+                    +         573 kevent  (in libsystem_kernel.dylib) + 8  [0x19338efcc]
+                    82 amux::tui::run::h5794133e433c724d  (in amux) + 4312  [0x104f19520]
+                    + 82 amux::tui::refresh_screen::h0a4a5416b5d02471  (in amux) + 276  [0x104f175b8]
+                    +   59 amux::client::Connection::request::h3d909328b4df5eb4  (in amux) + 160  [0x104f118d8]
+                    +   ! 59 std::io::append_to_string::hf745b06559b5d356  (in amux) + 160  [0x104f0f324]
+                    +   !   59 _RNvXs1_NtNtNtNtCsg55jX0GwzBC_3std2os4unix3net6streamNtB5_10UnixStreamNtNtBd_2io4Read8read_buf  (in amux) + 44  [0x104fd1974]
+                    +   !     59 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19338d3c8]
+                    +   23 amux::client::Connection::request::h3d909328b4df5eb4  (in amux) + 216  [0x104f11910]
+                    +     23 serde_json::de::from_trait::h09891ac25ce2bcbb  (in amux) + 68  [0x104ecff70]
+                    +       23 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 808  [0x104ed1418]
+                    +         23 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 564  [0x104f22b5c]
+                    +           23 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 808  [0x104ed1418]
+                    +             23 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 564  [0x104f22b5c]
+                    +               23 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 568  [0x104ed1328]
+                    +                 22 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 568  [0x104ed1328]
+                    +                 : 21 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 808  [0x104ed1418]
+                    +                 : | 10 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 448  [0x104f22ae8]
+                    +                 : | + 4 _$LT$serde_json..de..MapAccess$LT$R$GT$$u20$as$u20$serde_core..de..MapAccess$GT$::next_key_seed::hbb73eca70a099c1b  (in amux) + 216  [0x104ed6bb8]
+                    +                 : | + ! 4 _xzm_malloc_tc  (in libsystem_malloc.dylib) + 276,116,...  [0x1931efaa4,0x1931efa04,...]
+                    +                 : | + 3 _$LT$serde_json..de..MapAccess$LT$R$GT$$u20$as$u20$serde_core..de..MapAccess$GT$::next_key_seed::hbb73eca70a099c1b  (in amux) + 112  [0x104ed6b50]
+                    +                 : | + ! 3 _$LT$serde_json..read..StrRead$u20$as$u20$serde_json..read..Read$GT$::parse_str::he7035f9e31ca1a76  (in amux) + 96  [0x104f60cbc]
+                    +                 : | + !   3 serde_json::read::SliceRead::skip_to_escape::hc6f3e4be41111caa  (in amux) + 12,92,...  [0x104f5ffe4,0x104f60034,...]
+                    +                 : | + 1 _$LT$serde_json..de..MapAccess$LT$R$GT$$u20$as$u20$serde_core..de..MapAccess$GT$::next_key_seed::hbb73eca70a099c1b  (in amux) + 200  [0x104ed6ba8]
+                    +                 : | + ! 1 _RNvCsfLfy6EI15iL_7___rustc35___rust_no_alloc_shim_is_unstable_v2  (in amux) + 0  [0x104e549cc]
+                    +                 : | + 1 _$LT$serde_json..de..MapAccess$LT$R$GT$$u20$as$u20$serde_core..de..MapAccess$GT$::next_key_seed::hbb73eca70a099c1b  (in amux) + 200  [0x104ed6ba8]
+                    +                 : | + 1 _$LT$serde_json..read..StrRead$u20$as$u20$serde_json..read..Read$GT$::parse_str::he7035f9e31ca1a76  (in amux) + 388  [0x104f60de0]
+                    +                 : | 5 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 632  [0x104f22ba0]
+                    +                 : | + 3 alloc::collections::btree::map::BTreeMap$LT$K$C$V$C$A$GT$::insert::ha03569f7dc6048f6  (in amux) + 88,144  [0x104f25d24,0x104f25d5c]
+                    +                 : | + 1 alloc::collections::btree::map::BTreeMap$LT$K$C$V$C$A$GT$::insert::ha03569f7dc6048f6  (in amux) + 116  [0x104f25d40]
+                    +                 : | + ! 1 _platform_memcmp  (in libsystem_platform.dylib) + 180  [0x1933d5224]
+                    +                 : | + 1 alloc::collections::btree::node::Handle$LT$alloc..collections..btree..node..NodeRef$LT$alloc..collections..btree..node..marker..Mut$C$K$C$V$C$alloc..collections..btree..node..marker..Leaf$GT$$C$alloc..collections..btree..node..marker..Edge$GT$::insert_recursing::h492609fd0f195653  (in amux) + 1672  [0x104e57284]
+                    +                 : | 2 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 116  [0x104f2299c]
+                    +                 : | + 2 _$LT$serde_json..value..de..KeyClassifier$u20$as$u20$serde_core..de..DeserializeSeed$GT$::deserialize::hff05fff936190218  (in amux) + 84,116  [0x104f29fc8,0x104f29fe8]
+                    +                 : | 2 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 396  [0x104f22ab4]
+                    +                 : | + 2 alloc::collections::btree::map::BTreeMap$LT$K$C$V$C$A$GT$::insert::ha03569f7dc6048f6  (in amux) + 440  [0x104f25e84]
+                    +                 : | +   1 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 44  [0x1931f451c]
+                    +                 : | +   1 _xzm_malloc_tc  (in libsystem_malloc.dylib) + 384  [0x1931efb10]
+                    +                 : | 1 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 564  [0x104f22b5c]
+                    +                 : | + 1 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 992  [0x104ed14d0]
+                    +                 : | +   1 _$LT$serde_json..read..StrRead$u20$as$u20$serde_json..read..Read$GT$::parse_str::he7035f9e31ca1a76  (in amux) + 96  [0x104f60cbc]
+                    +                 : | +     1 serde_json::read::SliceRead::skip_to_escape::hc6f3e4be41111caa  (in amux) + 12  [0x104f5ffe4]
+                    +                 : | 1 _$LT$serde_json..value..de..$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$..deserialize..ValueVisitor$u20$as$u20$serde_core..de..Visitor$GT$::visit_map::hf82db3556da02c64  (in amux) + 576  [0x104f22b68]
+                    +                 : 1 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 88  [0x104ed1148]
+                    +                 1 serde_json::value::de::_$LT$impl$u20$serde_core..de..Deserialize$u20$for$u20$serde_json..value..Value$GT$::deserialize::h30e748cc52500761  (in amux) + 640  [0x104ed1370]
+                    +                   1 alloc::raw_vec::RawVec$LT$T$C$A$GT$::grow_one::ha71ca39bb4aa03de  (in amux) + 60  [0x104ff42fc]
+                    +                     1 alloc::raw_vec::RawVecInner$LT$A$GT$::finish_grow::h112c6df9727521da  (in amux) + 92  [0x104ff4384]
+                    +                       1 _realloc  (in libsystem_malloc.dylib) + 456  [0x1931f5358]
+                    +                         1 _malloc_zone_realloc  (in libsystem_malloc.dylib) + 60  [0x1931f4ad4]
+                    6 amux::tui::run::h5794133e433c724d  (in amux) + 11428  [0x104f1b0ec]
+                    + 6 amux::tui::send_input::h9909fad8ef6c2903  (in amux) + 196  [0x104f15cd8]
+                    +   6 amux::client::Connection::request::h364467889083095c  (in amux) + 160  [0x104f11548]
+                    +     6 std::io::append_to_string::hf745b06559b5d356  (in amux) + 160  [0x104f0f324]
+                    +       6 _RNvXs1_NtNtNtNtCsg55jX0GwzBC_3std2os4unix3net6streamNtB5_10UnixStreamNtNtBd_2io4Read8read_buf  (in amux) + 44  [0x104fd1974]
+                    +         6 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19338d3c8]
+                    1 amux::tui::run::h5794133e433c724d  (in amux) + 3836  [0x104f19344]
+                    + 1 amux::tui::call::h0638111056ad05ac  (in amux) + 256  [0x104f1e118]
+                    +   1 amux::client::Connection::request::h31190886989f4bff  (in amux) + 52  [0x104f10e04]
+                    +     1 _RNvMNtNtCsg55jX0GwzBC_3std3net3tcpNtB2_9TcpStream16set_read_timeout  (in amux) + 136  [0x104fb6fc8]
+                    +       1 setsockopt  (in libsystem_kernel.dylib) + 8  [0x19338d1ac]
+                    1 amux::tui::run::h5794133e433c724d  (in amux) + 4768  [0x104f196e8]
+                    + 1 _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+                    +   1 _platform_memcmp  (in libsystem_platform.dylib) + 176  [0x1933d5220]
+                    1 amux::tui::run::h5794133e433c724d  (in amux) + 11380  [0x104f1b0bc]
+                      1 amux::tui::mode::h3c8079041f69124f  (in amux) + 0  [0x104f1e1d0]
+
+Total number in stack (recursive counted multiple, when >=5):
+        13       _platform_memcmp  (in libsystem_platform.dylib) + 0  [0x1933d5170]
+        11       DYLD-STUB$$memcmp  (in amux) + 0  [0x104ff9bac]
+        11       _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 0  [0x104f5f660]
+        11       _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux) + 112  [0x104f5f6d0]
+
+Sort by top of stack, same collapsed (when >= 5):
+        _platform_memcmp  (in libsystem_platform.dylib)        611
+        kevent  (in libsystem_kernel.dylib)        573
+        _$LT$str$u20$as$u20$serde_json..value..index..Index$GT$::index_into::h957bf114a1b8b20e  (in amux)        523
+        DYLD-STUB$$memcmp  (in amux)        118
+        __recvfrom  (in libsystem_kernel.dylib)        65
+        amux::tui::view::draw::ha4f4b97bbed6274f  (in amux)        62
+        core::iter::traits::double_ended::DoubleEndedIterator::rfold::h39b90d742e9a67fb  (in amux)        50
+        ratatui_core::buffer::buffer::Buffer::diff::h10eb32c031c8f4cd  (in amux)        26
+        _$LT$ratatui_core..buffer..cell..Cell$u20$as$u20$core..cmp..PartialEq$GT$::eq::h5f75eb25b9944a44  (in amux)        25
+        ratatui_core::buffer::buffer::Buffer::index_of::hd85ddf9c2f587b77  (in amux)        11
+        ratatui_core::buffer::cell::Cell::set_symbol::h6ecc162710a895ed  (in amux)        10
+        _platform_memmove  (in libsystem_platform.dylib)        9
+        ratatui_core::buffer::buffer::Buffer::reset::h8f63eca300664701  (in amux)        6
+        _xzm_malloc_tc  (in libsystem_malloc.dylib)        5
+
+Binary Images:
+       0x104e54000 -        0x10507ee2b +amux (0) <56D2BFDD-B73B-3E8A-B205-3BFBC8E60017> /Users/*/amux
+       0x192f44000 -        0x192f935f7  libobjc.A.dylib (973.1) <C0680DF6-9900-3C29-A071-95A031686EF8> /usr/lib/libobjc.A.dylib
+       0x192f94000 -        0x192f9e23f  libsharedcache.dylib (0) <BBF95357-BEBF-3D89-8900-2BBB14A667C5> /usr/lib/libsharedcache.dylib
+       0x192f9f000 -        0x192fc5d3b  libdyld.dylib (27062) <62863BCA-DD60-3D32-A9DB-89099BA6F3D7> /usr/lib/system/libdyld.dylib
+       0x192fc6000 -        0x1930856e3  dyld (1.0.0 - 27062) <D341DDCB-7969-3A9C-8E03-0CF4751398A9> /usr/lib/dyld
+       0x193086000 -        0x19308901f  libsystem_blocks.dylib (98.1) <6F304731-D95D-3501-B4AD-F2934F7F2446> /usr/lib/system/libsystem_blocks.dylib
+       0x19308a000 -        0x1930df0df  libxpc.dylib (3298.1.1) <0791121F-B5FC-3F84-BF04-115E86D2D882> /usr/lib/system/libxpc.dylib
+       0x1930e0000 -        0x1930ffc13  libsystem_trace.dylib (1966.1.1) <B48A8E3E-A12A-3342-8321-428B555E965E> /usr/lib/system/libsystem_trace.dylib
+       0x193100000 -        0x1931b4f27  libcorecrypto.dylib (2109.0.22) <807AA6C9-5D8A-3CA5-B4CE-FACE5296EF6A> /usr/lib/system/libcorecrypto.dylib
+       0x1931b5000 -        0x19320ac5f  libsystem_malloc.dylib (886.0.8) <2339CB57-FE5A-3154-A206-A76059C749EB> /usr/lib/system/libsystem_malloc.dylib
+       0x19320b000 -        0x19325119f  libdispatch.dylib (1605.0.2) <022BF08F-0B3A-3225-9E65-16D1553CE90D> /usr/lib/system/libdispatch.dylib
+       0x193252000 -        0x193254d2b  libsystem_featureflags.dylib (108) <20C1CAB2-1F13-3426-8146-9CAE9FF2A33D> /usr/lib/system/libsystem_featureflags.dylib
+       0x193255000 -        0x1932d7ca3  libsystem_c.dylib (1786.0.3) <FBA7B23E-AA60-3A90-9AA4-A7A2E0AD63EE> /usr/lib/system/libsystem_c.dylib
+       0x1932d8000 -        0x19336d033  libc++.1.dylib (2200.27) <1E9BA4AA-B5DA-3CF3-80AC-4B880049573F> /usr/lib/libc++.1.dylib
+       0x19336e000 -        0x193387eff  libc++abi.dylib (2200.27) <A21743EE-6E1C-3E74-97EA-7AF793DE4BDF> /usr/lib/libc++abi.dylib
+       0x193388000 -        0x1933c69ab  libsystem_kernel.dylib (13432.1.9) <F63BF418-8F75-34A4-AAF1-8CAF2B9B6A05> /usr/lib/system/libsystem_kernel.dylib
+       0x1933c7000 -        0x1933d391b  libsystem_pthread.dylib (553.0.1) <5A1828C3-CBC2-3B85-BD07-C8ED10021A41> /usr/lib/system/libsystem_pthread.dylib
+       0x1933d4000 -        0x1933dd4f3  libsystem_platform.dylib (402.0.1.0.1) <080E4444-A0FB-3913-9756-4E470015F32F> /usr/lib/system/libsystem_platform.dylib
+       0x1933de000 -        0x19340c903  libsystem_info.dylib (603) <BC387AEB-1CEF-3513-92D7-D7F913596711> /usr/lib/system/libsystem_info.dylib
+       0x197536000 -        0x19753fb13  libsystem_darwin.dylib (1786.0.3) <4E66C888-993C-3E6A-A8DA-A949C01C5B67> /usr/lib/system/libsystem_darwin.dylib
+       0x197990000 -        0x1979a1b8b  libsystem_notify.dylib (368) <58FD36D8-37A7-311C-80F2-8E64DD8710CF> /usr/lib/system/libsystem_notify.dylib
+       0x199aed000 -        0x199b07d93  libsystem_networkextension.dylib (2340.1.2) <22E1D190-486F-324F-ABA4-F36AB841BFE9> /usr/lib/system/libsystem_networkextension.dylib
+       0x199b95000 -        0x199bac247  libsystem_asl.dylib (409) <B4D449B7-A821-3A9A-8019-E917B291F10A> /usr/lib/system/libsystem_asl.dylib
+       0x19ab40000 -        0x19ab40f2f  libobjcMsgSend.dylib (973.1) <41179EDE-DC97-3BBE-8848-6400D12C1436> /usr/lib/objc/libobjcMsgSend.dylib
+       0x19bc8c000 -        0x19bc93edf  libsystem_symptoms.dylib (2394.0.4) <60EE7884-9F4E-3184-A6AC-FA40A7A0297D> /usr/lib/system/libsystem_symptoms.dylib
+       0x1a0024000 -        0x1a005eaeb  libsystem_containermanager.dylib (833.0.8.0.1) <08A57205-555D-3792-8931-9D5B585AF326> /usr/lib/system/libsystem_containermanager.dylib
+       0x1a1677000 -        0x1a167b317  libsystem_configuration.dylib (1446) <F3EB66A7-7A24-3AE5-B6E8-9A37BB00F119> /usr/lib/system/libsystem_configuration.dylib
+       0x1a167c000 -        0x1a1682e03  libsystem_sandbox.dylib (3051.0.52) <1E892B56-092E-3832-BDE3-DCE356D7A4FA> /usr/lib/system/libsystem_sandbox.dylib
+       0x1a2b40000 -        0x1a2b40f2f  libobjcMsgSend1.dylib (973.1) <B40D9B2A-E1EE-37ED-8004-711A1F263DE1> /usr/lib/objc/libobjcMsgSend1.dylib
+       0x1a3260000 -        0x1a3262f93  libquarantine.dylib (217.0.4) <7FD4AE22-86EF-382B-83F5-ADF9336C1160> /usr/lib/system/libquarantine.dylib
+       0x1a3972000 -        0x1a39781e7  libsystem_coreservices.dylib (203) <57248E07-11A5-3857-918E-4A3A63B69FE8> /usr/lib/system/libsystem_coreservices.dylib
+       0x1a3f3a000 -        0x1a3f77b27  libsystem_m.dylib (3326.0.1) <A3FB340F-3ED5-30F4-8B64-9D5860F64D35> /usr/lib/system/libsystem_m.dylib
+       0x1a3f78000 -        0x1a3f78b47  libcharset.1.dylib (121) <3C9B584E-740A-3664-A1B0-52E561EA4B0B> /usr/lib/libcharset.1.dylib
+       0x1a3f79000 -        0x1a3f7c4f7  libmacho.dylib (27062) <50DEADEC-3E99-3519-AFC3-4A3FEB3F14C3> /usr/lib/system/libmacho.dylib
+       0x1a3f96000 -        0x1a3fa2707  libcommonCrypto.dylib (600041) <41C99F45-C5E6-39DB-B1F2-A1BEA9D242A4> /usr/lib/system/libcommonCrypto.dylib
+       0x1a3fa3000 -        0x1a3facc87  libunwind.dylib (2200.5) <3070AB81-B082-39E8-8A00-EF88DDE9AC47> /usr/lib/system/libunwind.dylib
+       0x1a3fb4000 -        0x1a3fbe7eb  libcopyfile.dylib (260.0.3) <72D95AF9-BF5E-3A84-81A6-BCC5BDB99857> /usr/lib/system/libcopyfile.dylib
+       0x1a3fbf000 -        0x1a3fc28bf  libcompiler_rt.dylib (103.4) <DFB5CE7F-A36E-36AA-BECE-1392D3D43607> /usr/lib/system/libcompiler_rt.dylib
+       0x1a3fc3000 -        0x1a3fc8077  libsystem_collections.dylib (1786.0.3) <1E8022D4-5A37-3A7A-8936-603E6FA88358> /usr/lib/system/libsystem_collections.dylib
+       0x1a3fc9000 -        0x1a3fcbf1f  libsystem_secinit.dylib (182) <DE037464-4C5D-3E96-A33F-2A4557CC6A20> /usr/lib/system/libsystem_secinit.dylib
+       0x1a3fcc000 -        0x1a3fce97f  libremovefile.dylib (96) <E6E6DFCF-6B2C-3F30-A59D-816CAB1190CE> /usr/lib/system/libremovefile.dylib
+       0x1a3fcf000 -        0x1a3fcfe27  libkeymgr.dylib (31) <5EC997EF-3ADA-360B-9FCD-5F940C83FA4E> /usr/lib/system/libkeymgr.dylib
+       0x1a3fd0000 -        0x1a3fd8af7  libsystem_dnssd.dylib (3111.0.5.0.1) <DE22096F-1E5B-3D6E-8164-771582DD6391> /usr/lib/system/libsystem_dnssd.dylib
+       0x1a3fd9000 -        0x1a3fddf1b  libcache.dylib (95) <80BAE197-E285-3F6E-A1EE-B77FE37D7E5D> /usr/lib/system/libcache.dylib
+       0x1a3fde000 -        0x1a3fdf8f3  libSystem.B.dylib (1359) <4FDC9AA6-B344-37FE-B8C6-A4C94A038F57> /usr/lib/libSystem.B.dylib
+       0x1a4018000 -        0x1a401f0a3  libiconv.2.dylib (121) <C343D6F7-6932-30E8-8E8F-F756946D8413> /usr/lib/libiconv.2.dylib
+       0x1aab40000 -        0x1aab40f2f  libobjcMsgSend2.dylib (973.1) <BD27A84B-C9AE-3282-BBEA-3B6119837B5A> /usr/lib/objc/libobjcMsgSend2.dylib
+       0x1b2b40000 -        0x1b2b40f2f  libobjcMsgSend3.dylib (973.1) <C0860D68-DDFC-3BD7-8B06-DB0645CBBED4> /usr/lib/objc/libobjcMsgSend3.dylib
+       0x1bab40000 -        0x1bab40f2f  libobjcMsgSend4.dylib (973.1) <A6153BF5-622B-3B01-81B6-F64A365EF613> /usr/lib/objc/libobjcMsgSend4.dylib
+       0x1c2b40000 -        0x1c2b40f2f  libobjcMsgSend5.dylib (973.1) <3913A71C-B29A-3AEA-820B-BEC40AC1861A> /usr/lib/objc/libobjcMsgSend5.dylib
+       0x1cab40000 -        0x1cab40f2f  libobjcMsgSend6.dylib (973.1) <9BC523A3-E167-3F6C-8CAE-0F3EBA671791> /usr/lib/objc/libobjcMsgSend6.dylib
+       0x1d2b40000 -        0x1d2b40f2f  libobjcMsgSend7.dylib (973.1) <248B7BCE-5B4C-34C7-A340-43D5228628C5> /usr/lib/objc/libobjcMsgSend7.dylib
+       0x1dab40000 -        0x1dab40f2f  libobjcMsgSend8.dylib (973.1) <3E041BAD-A8E8-3069-B741-78CD1A45B176> /usr/lib/objc/libobjcMsgSend8.dylib
+       0x1e2b40000 -        0x1e2b40f2f  libobjcMsgSend9.dylib (973.1) <34A67969-21A0-39D6-BB81-8FDA5A2409DB> /usr/lib/objc/libobjcMsgSend9.dylib
+       0x1eab40000 -        0x1eab40f2f  libobjcMsgSend10.dylib (973.1) <678186C0-8EAD-3B35-8CBB-00285B41E4A0> /usr/lib/objc/libobjcMsgSend10.dylib
+       0x1f2b40000 -        0x1f2b40f2f  libobjcMsgSend11.dylib (973.1) <E05CB08C-E956-36FA-8967-AE8E346A8D2C> /usr/lib/objc/libobjcMsgSend11.dylib
+       0x21ab40000 -        0x21ab40f2f  libobjcMsgSend12.dylib (973.1) <10AB03AA-FF1F-3FDC-9DFB-BFC40042C501> /usr/lib/objc/libobjcMsgSend12.dylib
+       0x222b40000 -        0x222b40f2f  libobjcMsgSend13.dylib (973.1) <ABF53427-FA6F-3D0D-8F9D-7AD795CA5C92> /usr/lib/objc/libobjcMsgSend13.dylib
+       0x22ab40000 -        0x22ab40f2f  libobjcMsgSend14.dylib (973.1) <9A844C46-A6DA-34D4-8EBF-2AD775C30684> /usr/lib/objc/libobjcMsgSend14.dylib
+       0x232b40000 -        0x232b40f2f  libobjcMsgSend15.dylib (973.1) <7C995666-2B2D-3284-AA0A-EBF7C922838E> /usr/lib/objc/libobjcMsgSend15.dylib
+       0x23ab40000 -        0x23ab40f2f  libobjcMsgSend16.dylib (973.1) <B6C0E14B-53AE-3E22-9ED5-1729C49F46F2> /usr/lib/objc/libobjcMsgSend16.dylib
+       0x242b40000 -        0x242b40f2f  libobjcMsgSend17.dylib (973.1) <07B4CF85-251B-301B-832B-20B315A59E19> /usr/lib/objc/libobjcMsgSend17.dylib
+       0x24ab40000 -        0x24ab40f2f  libobjcMsgSend18.dylib (973.1) <43E575B7-04DB-3999-A633-1A3B638BA6E3> /usr/lib/objc/libobjcMsgSend18.dylib
+       0x252b40000 -        0x252b40f2f  libobjcMsgSend19.dylib (973.1) <736F4D85-76F7-3B28-8D87-C07E8F7A0EF4> /usr/lib/objc/libobjcMsgSend19.dylib
+       0x25ab40000 -        0x25ab40f2f  libobjcMsgSend20.dylib (973.1) <74E67C8B-6BCA-3184-A18E-A97F370052C6> /usr/lib/objc/libobjcMsgSend20.dylib
+       0x262b40000 -        0x262b40f2f  libobjcMsgSend21.dylib (973.1) <CC0D732F-98E7-3888-9E15-70984DA2FB04> /usr/lib/objc/libobjcMsgSend21.dylib
+       0x26ab40000 -        0x26ab40f2f  libobjcMsgSend22.dylib (973.1) <85A60286-5DE3-32BA-B18C-2A498B065C88> /usr/lib/objc/libobjcMsgSend22.dylib
+       0x272b40000 -        0x272b40f2f  libobjcMsgSend23.dylib (973.1) <5452A0D2-6B19-39BE-ADDD-80B7BCDE3A98> /usr/lib/objc/libobjcMsgSend23.dylib
+       0x27ab40000 -        0x27ab40f2f  libobjcMsgSend24.dylib (973.1) <94BBF2D6-722B-350D-8557-4D25A8E8D53A> /usr/lib/objc/libobjcMsgSend24.dylib
+       0x282b40000 -        0x282b40f2f  libobjcMsgSend25.dylib (973.1) <35481387-5A8E-3AE4-86A6-94CEB3CC8726> /usr/lib/objc/libobjcMsgSend25.dylib
+       0x29ab40000 -        0x29ab40f2f  libobjcMsgSend26.dylib (973.1) <9E0C8664-E7F4-39D1-AAFC-BD92B255E4E8> /usr/lib/objc/libobjcMsgSend26.dylib
+       0x2a2b40000 -        0x2a2b40f2f  libobjcMsgSend27.dylib (973.1) <FD424935-55A9-3650-955A-EED3441A1D19> /usr/lib/objc/libobjcMsgSend27.dylib
+       0x2aab40000 -        0x2aab40f2f  libobjcMsgSend28.dylib (973.1) <09BA7B97-7DF7-3C7F-932A-B6847662FC49> /usr/lib/objc/libobjcMsgSend28.dylib
+       0x2b2b40000 -        0x2b2b40f2f  libobjcMsgSend29.dylib (973.1) <36D5BA3F-2139-30B0-8558-556764BE9813> /usr/lib/objc/libobjcMsgSend29.dylib
+       0x2bab40000 -        0x2bab40f2f  libobjcMsgSend30.dylib (973.1) <9F05564A-9D12-372C-98FC-E9F0E6BE4F04> /usr/lib/objc/libobjcMsgSend30.dylib
+       0x2bf85a000 -        0x2bf860fe5  libRosetta.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/libRosetta.dylib
+       0x2c0249000 -        0x2c024c75b  libsystem_darwindirectory.dylib (129.0.1) <61264923-2AA5-3658-B8C4-550C71E9D4B3> /usr/lib/system/libsystem_darwindirectory.dylib
+       0x2c024d000 -        0x2c0257d9b  libsystem_eligibility.dylib (446.1.3) <EDDE8E9C-A2CF-3931-BBB3-321CB852EB30> /usr/lib/system/libsystem_eligibility.dylib
+       0x2c0258000 -        0x2c026142b  libsystem_sanitizers.dylib (32) <7138ED99-7AA0-34EA-B35B-20EF6ADB1EED> /usr/lib/system/libsystem_sanitizers.dylib
+       0x2c0262000 -        0x2c0262a13  libsystem_trial.dylib (511) <6AE48824-EC44-3A8C-B501-BE57DBE892E7> /usr/lib/system/libsystem_trial.dylib
+       0x2c2b40000 -        0x2c2b40f2f  libobjcMsgSend31.dylib (973.1) <0985E20F-78C3-3466-A2B2-DBB95F7104A3> /usr/lib/objc/libobjcMsgSend31.dylib
+       0x2cab40000 -        0x2cab40f2f  libobjcMsgSend32.dylib (973.1) <0D309D58-D576-3E5D-AD4B-6D55AB491702> /usr/lib/objc/libobjcMsgSend32.dylib
+       0x2d2b40000 -        0x2d2b40f2f  libobjcMsgSend33.dylib (973.1) <346E0484-48FA-369B-8A64-93B5F5341CFE> /usr/lib/objc/libobjcMsgSend33.dylib
+       0x2dab40000 -        0x2dab40f2f  libobjcMsgSend34.dylib (973.1) <6A31F809-BCBE-3E01-A367-E91FDACCE324> /usr/lib/objc/libobjcMsgSend34.dylib

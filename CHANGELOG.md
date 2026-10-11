@@ -11,6 +11,8 @@
 - Native input hot path now reuses a deadline-bound connection, serializes borrowed input bytes and transfers damage-row screen updates with atomic generation publication; eight-millisecond polling keeps UI dirtiness separate from native damage.
 - Actual TUI PTY measurements: typical120×40 shell median10.81ms;500×163 median30.34ms versus direct baseline428.85ms. Separate noisy output/50,000-row scrollback keeps large raw echo median30.39ms. Full-frame redraws and physical compositor paint remain explicit limits.
 - Integrated66 Rust tests,8 OMP tests, Clippy, release build, Zsh syntax and actual Herdr empty-page recovery pass; one-shot EOF, persistent framing/error continuation and bounded idle expiry verified. Paused/undrained clients may disconnect after five seconds without requests; no hidden replay.
+- Client-only second latency pass caches prepared native styled cells, prioritizes bounded queued-input bursts and presents immediately with brief 1 ms interaction pacing; idle polling remains 8 ms. Stock-Zsh medians now 2.01 / 3.94 / 6.77 ms at 120 / 300 / 500 columns, and a large 24-byte burst takes 3.98 ms. Cold full-refresh outliers around 130 ms remain documented.
+- Existing 66 Rust tests, 8 OMP tests, Clippy, release build and Zsh syntax pass; actual Herdr selection, Unicode/colors, picker, exit/new/empty-page detach pass. Compatible with the first-pass daemon without another process-disrupting restart. See `specs/verifications/immediate-input.md`.
 
 ## 0.1.0 — local MVP
 

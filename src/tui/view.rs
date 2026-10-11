@@ -1,6 +1,7 @@
 use super::{Row, Selection, clip_label, selection_contains, text};
 use ratatui::{
     Frame,
+    buffer::Buffer,
     layout::{Alignment, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
@@ -117,52 +118,105 @@ fn rgb(value: &Value) -> Color {
         Color::Reset
     }
 }
+#[derive(Default)]
+pub(super) struct NativeSurface {
+    buffer: Buffer,
+}
+impl NativeSurface {
+    pub(super) fn update(&mut self, update: &Value) {
+        let area = Rect::new(
+            0,
+            0,
+            update["cols"].as_u64().unwrap_or(0).min(500) as u16,
+            update["rows"].as_u64().unwrap_or(0).min(300) as u16,
+        );
+        if update["delta"] != true {
+            self.buffer.resize(area);
+            self.buffer.reset();
+        }
+        let Some(lines) = update["cells"].as_array() else {
+            return;
+        };
+        for (index, line) in lines.iter().enumerate() {
+            let row = if update["delta"] == true {
+                update["row_indices"][index].as_u64().unwrap_or(0) as usize
+            } else {
+                index
+            };
+            if row >= usize::from(area.height) {
+                continue;
+            }
+            let width = usize::from(area.width);
+            let target = &mut self.buffer.content[row * width..(row + 1) * width];
+            for cell in target.iter_mut() {
+                cell.reset();
+            }
+            let Some(cells) = line.as_array() else {
+                continue;
+            };
+            for (col, (cell, source)) in target.iter_mut().zip(cells).enumerate() {
+                if source["wide_spacer"] == true {
+                    continue;
+                }
+                let symbol = source["text"]
+                    .as_str()
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(" ");
+                if symbol.width() > width - col {
+                    continue;
+                }
+                let mut modifiers = Modifier::empty();
+                for (field, modifier) in [
+                    ("bold", Modifier::BOLD),
+                    ("italic", Modifier::ITALIC),
+                    ("underline", Modifier::UNDERLINED),
+                    ("inverse", Modifier::REVERSED),
+                    ("dim", Modifier::DIM),
+                    ("strikeout", Modifier::CROSSED_OUT),
+                ] {
+                    if source[field] == true {
+                        modifiers |= modifier;
+                    }
+                }
+                cell.set_symbol(symbol).set_style(
+                    Style::default()
+                        .fg(rgb(&source["fg"]))
+                        .bg(rgb(&source["bg"]))
+                        .add_modifier(modifiers),
+                );
+            }
+        }
+    }
+}
 fn native_surface(
     frame: &mut Frame<'_>,
     area: Rect,
+    surface: &NativeSurface,
     screen: &Value,
     offset: usize,
     focused: bool,
     selection: Option<Selection>,
 ) {
-    if let Some(lines) = screen["cells"].as_array() {
-        for (row, line) in lines.iter().take(area.height as usize).enumerate() {
-            if let Some(cells) = line.as_array() {
-                for (col, source) in cells.iter().take(area.width as usize).enumerate() {
-                    if source["wide_spacer"] == true {
-                        continue;
-                    }
-                    let symbol = source["text"]
-                        .as_str()
-                        .filter(|s| !s.is_empty())
-                        .unwrap_or(" ");
-                    // Never let a clipped wide glyph wrap over the next native row.
-                    if symbol.width() > area.width as usize - col {
-                        continue;
-                    }
-                    let mut modifiers = Modifier::empty();
-                    for (field, modifier) in [
-                        ("bold", Modifier::BOLD),
-                        ("italic", Modifier::ITALIC),
-                        ("underline", Modifier::UNDERLINED),
-                        ("inverse", Modifier::REVERSED),
-                        ("dim", Modifier::DIM),
-                        ("strikeout", Modifier::CROSSED_OUT),
-                    ] {
-                        if source[field] == true {
-                            modifiers |= modifier;
-                        }
-                    }
-                    let mut style = Style::default()
-                        .fg(rgb(&source["fg"]))
-                        .bg(rgb(&source["bg"]))
-                        .add_modifier(modifiers);
-                    if selection_contains(selection, (col as u16, row as u16)) {
-                        style = style.fg(Color::White).bg(SELECTED);
-                    }
-                    frame.buffer_mut()[(area.x + col as u16, area.y + row as u16)]
-                        .set_symbol(symbol)
-                        .set_style(style);
+    let width = area.width.min(surface.buffer.area.width);
+    let height = area.height.min(surface.buffer.area.height);
+    let target = frame.buffer_mut();
+    for row in 0..height {
+        let source_start = usize::from(row) * usize::from(surface.buffer.area.width);
+        let target_start = target.index_of(area.x, area.y + row);
+        let cells = &mut target.content[target_start..target_start + usize::from(width)];
+        cells.clone_from_slice(
+            &surface.buffer.content[source_start..source_start + usize::from(width)],
+        );
+        // A client can shrink before a shared PTY's next full snapshot arrives.
+        if width < surface.buffer.area.width
+            && cells.last().is_some_and(|cell| cell.symbol().width() > 1)
+        {
+            cells.last_mut().expect("nonempty clipped row").reset();
+        }
+        if selection.is_some() {
+            for (col, cell) in cells.iter_mut().enumerate() {
+                if selection_contains(selection, (col as u16, row)) {
+                    cell.set_style(Style::default().fg(Color::White).bg(SELECTED));
                 }
             }
         }
@@ -244,6 +298,7 @@ fn empty_windows(frame: &mut Frame<'_>, geometry: Geometry) {
 pub(super) fn draw(
     frame: &mut Frame<'_>,
     screen: &Value,
+    surface: &NativeSurface,
     snapshot: &Value,
     active: &str,
     picker: bool,
@@ -420,7 +475,15 @@ pub(super) fn draw(
     } else if let Some(terminal) = terminal.filter(|t| t["alive"] == false) {
         exited(frame, geometry, terminal);
     } else {
-        native_surface(frame, geometry.body, screen, offset, focused, selection);
+        native_surface(
+            frame,
+            geometry.body,
+            surface,
+            screen,
+            offset,
+            focused,
+            selection,
+        );
     }
     geometry
 }

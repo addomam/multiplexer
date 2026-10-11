@@ -23,6 +23,9 @@ mod view;
 
 const HEADER: u16 = 3;
 const FRAME: Duration = Duration::from_millis(8);
+const INPUT_FRAME: Duration = Duration::from_millis(1);
+const INPUT_BURST: Duration = Duration::from_millis(50);
+const EVENTS_BEFORE_FRAME: usize = 32;
 
 struct Restore;
 impl Restore {
@@ -134,6 +137,7 @@ fn refresh_screen(
     socket: &Session,
     screen: &mut Value,
     viewport: &mut ScreenViewport,
+    surface: &mut view::NativeSurface,
     terminal: &str,
     offset: usize,
     limit: u16,
@@ -162,7 +166,7 @@ fn refresh_screen(
     if update["unchanged"] == true {
         return Ok(false);
     }
-    merge_screen(screen, update)?;
+    merge_screen(screen, update, surface)?;
     if viewport.terminal != terminal {
         viewport.terminal.clear();
         viewport.terminal.push_str(terminal);
@@ -172,8 +176,13 @@ fn refresh_screen(
     Ok(true)
 }
 
-fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
+fn merge_screen(
+    screen: &mut Value,
+    mut update: Value,
+    surface: &mut view::NativeSurface,
+) -> Result<()> {
     if update["delta"] != true {
+        surface.update(&update);
         *screen = update;
         return Ok(());
     }
@@ -208,6 +217,7 @@ fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
             );
         }
     }
+    surface.update(&update);
     // Move unchanged rows, rather than cloning every cell on every key.
     let indices = update["row_indices"].take();
     let indices = indices.as_array().expect("validated row indices");
@@ -742,9 +752,22 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut snapshot_at = Instant::now();
     let mut dirty = true;
     let mut viewport = ScreenViewport::default();
+    let mut surface = view::NativeSurface::default();
+    let mut responsive_until = Instant::now();
+    let mut urgent_frame = false;
+    let mut queued_events = 0usize;
     let mut frame_at = Instant::now() - FRAME;
     loop {
-        if frame_at.elapsed() >= FRAME {
+        let interval = if !picker && Instant::now() < responsive_until {
+            INPUT_FRAME
+        } else {
+            FRAME
+        };
+        if (urgent_frame || frame_at.elapsed() >= interval)
+            && (screen.is_null()
+                || queued_events >= EVENTS_BEFORE_FRAME
+                || !event::poll(Duration::ZERO).context("checking queued client input")?)
+        {
             if snapshot_at.elapsed() >= Duration::from_millis(500) {
                 snapshot = call(socket, json!({"op":"snapshot"}))?;
                 if snapshot["detach_generation"].as_u64().unwrap_or(0) != detach_generation {
@@ -772,6 +795,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     socket,
                     &mut screen,
                     &mut viewport,
+                    &mut surface,
                     &active,
                     offset,
                     size.1.saturating_sub(HEADER).max(2),
@@ -785,20 +809,30 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 display
                     .draw(|frame| {
                         geometry = view::draw(
-                            frame, &screen, &snapshot, &active, picker, &rows, selected, &query,
-                            &status, offset, focused, selection,
+                            frame, &screen, &surface, &snapshot, &active, picker, &rows, selected,
+                            &query, &status, offset, focused, selection,
                         );
                     })
                     .context("drawing terminal surface")?;
                 dirty = false;
             }
             frame_at = Instant::now();
+            urgent_frame = false;
+            queued_events = 0;
         }
-        if !event::poll(FRAME.saturating_sub(frame_at.elapsed())).context("polling client input")? {
+        let wait = if urgent_frame {
+            Duration::ZERO
+        } else {
+            interval.saturating_sub(frame_at.elapsed())
+        };
+        if !event::poll(wait).context("polling client input")? {
             continue;
         }
         let event = event::read().context("reading client input")?;
         dirty = true;
+        urgent_frame = true;
+        queued_events += 1;
+        responsive_until = Instant::now() + INPUT_BURST;
         let previous_prefix = prefix_pending;
         if !matches!(
             event,
@@ -1198,6 +1232,40 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
 mod tests {
     use super::*;
 
+    fn projected_native(
+        screen: &Value,
+        surface: &view::NativeSurface,
+        width: u16,
+        selection: Option<Selection>,
+    ) -> ratatui::buffer::Buffer {
+        let mut display = ratatui::Terminal::new(ratatui::backend::TestBackend::new(
+            width,
+            screen["rows"].as_u64().unwrap() as u16 + HEADER,
+        ))
+        .unwrap();
+        let snapshot = json!({"terminals":[{"id":"native","alive":true}],"projects":[]});
+        display
+            .draw(|frame| {
+                view::draw(
+                    frame,
+                    screen,
+                    surface,
+                    &snapshot,
+                    "native",
+                    false,
+                    &[],
+                    0,
+                    "",
+                    "",
+                    0,
+                    true,
+                    selection,
+                );
+            })
+            .unwrap();
+        display.backend().buffer().clone()
+    }
+
     #[test]
     fn native_row_updates_preserve_untouched_styles_and_update_cursor_and_modes() {
         let mut screen = json!({
@@ -1208,6 +1276,8 @@ mod tests {
             "cursor":{"row":1,"col":1,"visible":true},
             "modes":{"application_cursor":false}
         });
+        let mut surface = view::NativeSurface::default();
+        surface.update(&screen);
         merge_screen(
             &mut screen,
             json!({
@@ -1217,6 +1287,7 @@ mod tests {
                 "cursor":{"row":0,"col":1,"visible":false},
                 "modes":{"application_cursor":true}
             }),
+            &mut surface,
         )
         .unwrap();
         assert_eq!(
@@ -1231,6 +1302,22 @@ mod tests {
         assert_eq!(screen["cursor"], json!({"row":0,"col":1,"visible":false}));
         assert!(mode(&screen, "application_cursor"));
         assert_eq!(screen["generation"], 12);
+        let projected = projected_native(&screen, &surface, 2, None);
+        assert_eq!(projected[(0, HEADER)].symbol(), "é");
+        assert!(
+            projected[(0, HEADER)]
+                .modifier
+                .contains(ratatui::style::Modifier::ITALIC)
+        );
+        assert_eq!(
+            projected[(0, HEADER + 1)].fg,
+            ratatui::style::Color::Rgb(1, 2, 3)
+        );
+        assert!(
+            projected[(0, HEADER + 1)]
+                .modifier
+                .contains(ratatui::style::Modifier::BOLD)
+        );
 
         // A mode-only update must not erase rows when there is no cell damage.
         merge_screen(
@@ -1242,11 +1329,48 @@ mod tests {
                 "cursor":{"row":0,"col":1,"visible":true},
                 "modes":{"application_cursor":false}
             }),
+            &mut surface,
         )
         .unwrap();
         assert_eq!(screen["lines"], json!(["é!", "x"]));
         assert_eq!(screen["cells"][1][0]["fg"], json!([1, 2, 3]));
         assert!(!mode(&screen, "application_cursor"));
+        assert_eq!(projected_native(&screen, &surface, 2, None), projected);
+        let selected = projected_native(&screen, &surface, 2, Some(((0, 1), (0, 1))));
+        assert_eq!(selected[(0, HEADER + 1)].fg, ratatui::style::Color::White);
+        assert_eq!(projected_native(&screen, &surface, 2, None), projected);
+
+        // Full frames clear old styling and a narrower client must not wrap a wide cell.
+        merge_screen(
+            &mut screen,
+            json!({
+                "cols":3,"rows":1,"offset":0,"generation":14,
+                "cells":[[{"text":"a"},{"text":"界","wide":true},{"text":"","wide_spacer":true}]],
+                "lines":["a界"],"cursor":{"visible":false}
+            }),
+            &mut surface,
+        )
+        .unwrap();
+        let clipped = projected_native(&screen, &surface, 2, None);
+        assert_eq!(clipped[(0, HEADER)].symbol(), "a");
+        assert_eq!(
+            clipped[(0, HEADER)].modifier,
+            ratatui::style::Modifier::empty()
+        );
+        assert_eq!(clipped[(1, HEADER)].symbol(), " ");
+        merge_screen(
+            &mut screen,
+            json!({
+                "cols":2,"rows":1,"offset":0,"generation":15,
+                "cells":[[{"text":"b"},{"text":"c"}]],"lines":["bc"],"cursor":{"visible":false}
+            }),
+            &mut surface,
+        )
+        .unwrap();
+        let resized = projected_native(&screen, &surface, 2, None);
+        assert_eq!(resized[(0, HEADER)].symbol(), "b");
+        assert_eq!(resized[(1, HEADER)].symbol(), "c");
+        assert_eq!(resized[(0, HEADER)].fg, ratatui::style::Color::Reset);
     }
 
     #[test]
@@ -1257,6 +1381,8 @@ mod tests {
         });
         for (generation, row) in [(9, 0), (10, 1)] {
             let mut screen = base.clone();
+            let mut surface = view::NativeSurface::default();
+            surface.update(&screen);
             let result = merge_screen(
                 &mut screen,
                 json!({
@@ -1264,9 +1390,14 @@ mod tests {
                     "delta":true, "base_generation":generation, "row_indices":[row],
                     "cells":[[{"text":"b"}]], "lines":["b"]
                 }),
+                &mut surface,
             );
             assert!(result.is_err());
             assert_eq!(screen, base);
+            assert_eq!(
+                projected_native(&screen, &surface, 1, None)[(0, HEADER)].symbol(),
+                "a"
+            );
         }
     }
     #[test]

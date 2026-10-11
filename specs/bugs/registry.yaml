@@ -18,3 +18,10 @@ bugs:
     risk_level: low
     commit: ab0917b
     evidence: ../verifications/UI-empty-switcher.md
+  - id: immediate-input
+    status: fixed
+    source: BUG-immediate-input.md
+    files_changed: [src/tui.rs, src/tui/view.rs]
+    approach: prepared-native-cells-bounded-event-priority-immediate-interaction-frames
+    risk_level: medium
+    evidence: ../verifications/immediate-input.md
