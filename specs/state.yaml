@@ -1,13 +1,13 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/amux-mvp, signing: disabled-local}
-active_flow: build_epic
+vcs: {kind: git, branch: main, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: null
 active_epic: e01
-project_cycle: {current_phase: 5, completed_phases: [1, 2, 3, 4]}
+project_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5]}
 handoff:
   next_skill: null
-  blocked: true
-  reason: "Independent review cap exhausted (5/5); no merge or release approval."
-  last_step_completed: daily-use-stabilization
+  blocked: false
+  reason: "User explicitly authorized main integration and GitHub push after reviewing the daily-use checkpoint."
+  last_step_completed: user-approved-main-landing
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/daily-use-checkpoint.md
@@ -18,12 +18,12 @@ decisions:
   - No deployment or release tag requested; delivery is local MVP.
   - OMP 18.8.7 is the supported extension target; macOS arm64 runtime verified, Linux and Rust minimum unverified.
   - Runtime and mechanical acceptance pass; final tree race reproduced/fixed with a passing real-daemon regression.
-  - Dual-review cap exhausted; no independent post-fix PASS, merge, tag or deployment.
+  - Dual-review cap exhausted; user explicitly authorized main integration without an independent post-fix PASS. No release tag or deployment requested.
 verification:
   mechanical: passing
   runtime: passing
   evidence: specs/verifications/MVP-e01.md
-  independent_review: blocked-cap-exhausted
+  independent_review: cap-exhausted-user-accepted-for-landing
   review_rounds: 5
 ui_revision:
   renderer: ratatui-0.30.0
@@ -63,4 +63,17 @@ daily_use_checkpoint:
   cleanup: approved-retired-workspace-and-worktree-plus-empty-scripts-file
   retained: release-binary-build-cache-committed-evidence-and-perf-branch
   independent_review: blocked-cap-exhausted
-  merge_release: not-requested
+  merge_release: user-approved-main-publication-no-release-tag
+landing:
+  user_approved: true
+  source_branch: feat/amux-mvp
+  target_branch: main
+  destination: "https://github.com/addomam/multiplexer.git"
+  method: create-main-at-integrated-feature-tip
+  force_push: false
+  runtime_source_commit: 5c1e2c6
+  verification_evidence: specs/verifications/daily-use-checkpoint.md
+  gate_trace: waived-missing-structured-inputs-and-scanner-scripts
+  coverage_percentage: unmeasured
+  ci: not-configured
+  registry_release: not-requested

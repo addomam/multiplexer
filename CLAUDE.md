@@ -8,6 +8,6 @@ Lint: `cargo clippy --all-targets -- -D warnings`
 Preflight: `cargo test && cargo clippy --all-targets -- -D warnings && cargo build`
 Plans and evidence live in specs/.
 Daily-use stopping point: specs/verifications/daily-use-checkpoint.md and specs/state.yaml.
-Keep the feature branch: independent review cap remains exhausted; no merge/release approval.
+User authorized main landing and GitHub push; review cap remains exhausted without a new PASS. Use a feature branch for future code changes.
 bigpowers is installed, but this repository has no bundled bigpowers scripts; use installed skills and actual project commands.
 <!-- END bigpowers:project -->

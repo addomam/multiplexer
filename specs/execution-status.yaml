@@ -4,3 +4,7 @@ e01s03: passing
 e01s04: passing
 e01s05: passing
 e01s06: passing
+gate_trace:
+  verdict: WAIVED
+  rationale: "Structured matrix/blind-spot inputs and project scanner scripts unavailable; manual ownership and verification evidence retained."
+  downgrade_applied: false

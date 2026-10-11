@@ -8,6 +8,8 @@ context: e01 local daily use; runtime baseline 5c1e2c6
 
 Pause on `feat/amux-mvp` for local macOS daily use. Runtime source remains `5c1e2c6`; this cleanup changes documentation and removes approved disposable artifacts only. No merge, release, daemon replacement or global installation was performed.
 
+Subsequent user decision: explicitly approved integration into `main` (create it if absent) and push to `https://github.com/addomam/multiplexer.git`. This supersedes the cleanup-time keep-branch restriction, without inventing an independent review PASS. Runtime remains unchanged.
+
 ## Cleanup
 
 - User approved closing Herdr workspace `w11` (idle `amux-latency` and `reviewr` pane), removing the clean `.worktrees/input-latency` checkout and deleting the untracked zero-byte root `scripts` file. Completed all three without force.
@@ -60,6 +62,6 @@ The first navigation probe compared Zsh's logical `/var/...` cwd with its canoni
 
 For daily use, follow [README daily operation](../../README.md#daily-operation). To reinstall this checkout deliberately: `cargo install --path . --locked --force`, then `amux` or `amux attach`. A compatible first-pass daemon does not need another restart for the client-only optimization.
 
-For future development, read `CONVENTIONS.md`, `specs/state.yaml` and architecture before editing. Keep the current feature branch and resolve the existing human review/release decision before landing.
+For future development, read `CONVENTIONS.md`, `specs/state.yaml` and architecture before editing. Start a feature branch from main; the user has authorized this landing, but the independent-review history and platform limits remain applicable.
 
 `verify:` rerun the contiguous mechanical command above; reproduce the private installed-binary flow only against a fresh owned socket/config, never by shutting down the user's live daemon.
