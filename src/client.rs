@@ -34,12 +34,20 @@ impl Connection {
         request: &impl serde::Serialize,
         timeout: Duration,
     ) -> Result<Value> {
-        self.reader.get_ref().set_read_timeout(Some(timeout))?;
-        serde_json::to_writer(&mut self.writer, request)?;
-        self.writer.write_all(b"\n")?;
-        self.writer.flush()?;
+        self.reader
+            .get_ref()
+            .set_read_timeout(Some(timeout))
+            .context("setting control response timeout")?;
+        serde_json::to_writer(&mut self.writer, request).context("encoding control request")?;
+        self.writer
+            .write_all(b"\n")
+            .context("delimiting control request")?;
+        self.writer.flush().context("sending control request")?;
         self.response.clear();
-        (&mut self.reader).take(MAX_FRAME).read_line(&mut self.response)?;
+        (&mut self.reader)
+            .take(MAX_FRAME)
+            .read_line(&mut self.response)
+            .context("reading control response")?;
         if !self.response.ends_with('\n') {
             bail!("protocol: incomplete or oversized daemon response");
         }
@@ -168,7 +176,9 @@ mod tests {
 
     fn connection_pair() -> (Connection, UnixStream) {
         let (stream, peer) = UnixStream::pair().unwrap();
-        stream.set_write_timeout(Some(Duration::from_secs(2))).unwrap();
+        stream
+            .set_write_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
         peer.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
         (
             Connection {
@@ -188,11 +198,15 @@ mod tests {
         ).unwrap();
         let request = json!({"version":1,"persistent":true,"op":"snapshot"});
         assert_eq!(
-            connection.request(&request, Duration::from_secs(2)).unwrap(),
+            connection
+                .request(&request, Duration::from_secs(2))
+                .unwrap(),
             json!({"seq":1})
         );
         assert_eq!(
-            connection.request(&request, Duration::from_secs(2)).unwrap(),
+            connection
+                .request(&request, Duration::from_secs(2))
+                .unwrap(),
             json!({"seq":2})
         );
     }
@@ -205,11 +219,16 @@ mod tests {
         ).unwrap();
         let request = json!({"version":1,"persistent":true,"op":"input"});
         assert_eq!(
-            connection.request(&request, Duration::from_secs(2)).unwrap_err().to_string(),
+            connection
+                .request(&request, Duration::from_secs(2))
+                .unwrap_err()
+                .to_string(),
             "backpressure: queue full"
         );
         assert_eq!(
-            connection.request(&request, Duration::from_secs(2)).unwrap(),
+            connection
+                .request(&request, Duration::from_secs(2))
+                .unwrap(),
             json!(true)
         );
     }
@@ -230,7 +249,10 @@ mod tests {
             peer.write_all(response.as_bytes()).unwrap();
             peer.shutdown(std::net::Shutdown::Write).unwrap();
             let error = connection
-                .request(&json!({"version":1,"op":"snapshot"}), Duration::from_secs(2))
+                .request(
+                    &json!({"version":1,"op":"snapshot"}),
+                    Duration::from_secs(2),
+                )
                 .unwrap_err();
             assert_eq!(error.to_string(), expected);
         }

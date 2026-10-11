@@ -8,6 +8,9 @@
 - Actual exit-code view with Close window and New terminal buttons, keyboard alternatives, compact stacked layout and empty-list recovery.
 - Native wrapper smoke verified Unicode/palette colors, application cursor, mouse coordinates, safe bracketed paste, focus, literal prefix, alternate-screen restoration, picker/rapid resize, exit codes 0/7/9, close/new/detach and shutdown. Existing 56 Rust tests, Clippy and release build pass.
 - Explicit New/Exit empty-window card and top-right Exit; Enter/N starts a terminal, Escape/Q detaches to the host without stopping the daemon. Visible picker Ctrl-Q hint and fresh-window guard preserve fuzzy search before snapshot refresh.
+- Native input hot path now reuses a deadline-bound connection, serializes borrowed input bytes and transfers damage-row screen updates with atomic generation publication; eight-millisecond polling keeps UI dirtiness separate from native damage.
+- Actual TUI PTY measurements: typical120×40 shell median10.81ms;500×163 median30.34ms versus direct baseline428.85ms. Separate noisy output/50,000-row scrollback keeps large raw echo median30.39ms. Full-frame redraws and physical compositor paint remain explicit limits.
+- Integrated66 Rust tests,8 OMP tests, Clippy, release build, Zsh syntax and actual Herdr empty-page recovery pass; one-shot EOF, persistent framing/error continuation and bounded idle expiry verified. Paused/undrained clients may disconnect after five seconds without requests; no hidden replay.
 
 ## 0.1.0 — local MVP
 

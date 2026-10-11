@@ -982,10 +982,13 @@ fn serve(daemon: Arc<Daemon>, stream: UnixStream) -> Result<()> {
         stream: stream.try_clone()?,
         deadline: Instant::now() + Duration::from_secs(5),
     });
-    let mut writer = BufWriter::with_capacity(16384, DeadlineIo {
-        stream,
-        deadline: Instant::now() + Duration::from_secs(2),
-    });
+    let mut writer = BufWriter::with_capacity(
+        16384,
+        DeadlineIo {
+            stream,
+            deadline: Instant::now() + Duration::from_secs(2),
+        },
+    );
     let mut line = String::new();
     loop {
         if daemon.stopping.load(Ordering::Acquire) {

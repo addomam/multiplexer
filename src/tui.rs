@@ -62,7 +62,9 @@ fn call(socket: &Session, mut request: Value) -> Result<Value> {
     request["version"] = json!(1);
     request["persistent"] = json!(true);
     let timeout = request["timeout_ms"].as_u64().unwrap_or(30000).min(300000) + 5000;
-    socket.borrow_mut().request(&request, Duration::from_millis(timeout))
+    socket
+        .borrow_mut()
+        .request(&request, Duration::from_millis(timeout))
 }
 
 #[derive(serde::Serialize)]
@@ -138,14 +140,12 @@ fn refresh_screen(
 ) -> Result<bool> {
     // UI dirtiness is not native damage. Reuse only the same terminal viewport,
     // regardless of key/focus/status changes; resizing and switching require full rows.
-    let since = if viewport.terminal == terminal
-        && viewport.offset == offset
-        && viewport.limit == limit
-    {
-        screen["generation"].as_u64()
-    } else {
-        None
-    };
+    let since =
+        if viewport.terminal == terminal && viewport.offset == offset && viewport.limit == limit {
+            screen["generation"].as_u64()
+        } else {
+            None
+        };
     let update = socket.borrow_mut().request(
         &ScreenRequest {
             version: 1,
@@ -195,10 +195,15 @@ fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
         let original = screen[field]
             .as_array()
             .context("protocol: screen delta has no base rows")?;
-        anyhow::ensure!(rows.len() == indices.len(), "protocol: mismatched screen delta rows");
+        anyhow::ensure!(
+            rows.len() == indices.len(),
+            "protocol: mismatched screen delta rows"
+        );
         for index in indices {
             anyhow::ensure!(
-                index.as_u64().is_some_and(|row| row < original.len() as u64),
+                index
+                    .as_u64()
+                    .is_some_and(|row| row < original.len() as u64),
                 "protocol: screen delta row is out of bounds"
             );
         }
@@ -208,7 +213,9 @@ fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
     let indices = indices.as_array().expect("validated row indices");
     for field in ["cells", "lines"] {
         let changed = update[field].take();
-        let Value::Array(changed) = changed else { unreachable!("validated delta rows") };
+        let Value::Array(changed) = changed else {
+            unreachable!("validated delta rows")
+        };
         let mut original = screen[field].take();
         let rows = original.as_array_mut().expect("validated base rows");
         for (index, row) in indices.iter().zip(changed) {
@@ -216,7 +223,9 @@ fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
         }
         update[field] = original;
     }
-    let metadata = update.as_object_mut().context("protocol: invalid screen update")?;
+    let metadata = update
+        .as_object_mut()
+        .context("protocol: invalid screen update")?;
     metadata.remove("delta");
     metadata.remove("base_generation");
     metadata.remove("row_indices");
@@ -758,35 +767,37 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 }
                 dirty = true;
             }
-            if !picker {
-                if refresh_screen(
+            if !picker
+                && refresh_screen(
                     socket,
                     &mut screen,
                     &mut viewport,
                     &active,
                     offset,
                     size.1.saturating_sub(HEADER).max(2),
-                )? {
-                    dirty = true;
-                }
+                )?
+            {
+                dirty = true;
             }
             if dirty {
                 let rows = tree_rows(&snapshot, &query);
                 selected = selected.min(rows.len().saturating_sub(1));
-                display.draw(|frame| {
-                    geometry = view::draw(
-                        frame, &screen, &snapshot, &active, picker, &rows, selected, &query,
-                        &status, offset, focused, selection,
-                    );
-                })?;
+                display
+                    .draw(|frame| {
+                        geometry = view::draw(
+                            frame, &screen, &snapshot, &active, picker, &rows, selected, &query,
+                            &status, offset, focused, selection,
+                        );
+                    })
+                    .context("drawing terminal surface")?;
                 dirty = false;
             }
             frame_at = Instant::now();
         }
-        if !event::poll(FRAME.saturating_sub(frame_at.elapsed()))? {
+        if !event::poll(FRAME.saturating_sub(frame_at.elapsed())).context("polling client input")? {
             continue;
         }
-        let event = event::read()?;
+        let event = event::read().context("reading client input")?;
         dirty = true;
         let previous_prefix = prefix_pending;
         if !matches!(
@@ -1197,30 +1208,44 @@ mod tests {
             "cursor":{"row":1,"col":1,"visible":true},
             "modes":{"application_cursor":false}
         });
-        merge_screen(&mut screen, json!({
-            "cols":2, "rows":2, "offset":0, "generation":12,
-            "delta":true, "base_generation":10, "row_indices":[0],
-            "cells":[[{"text":"é","italic":true},{"text":"!"}]], "lines":["é!"],
-            "cursor":{"row":0,"col":1,"visible":false},
-            "modes":{"application_cursor":true}
-        })).unwrap();
-        assert_eq!(screen["cells"][0], json!([{"text":"é","italic":true},{"text":"!"}]));
-        assert_eq!(screen["cells"][1], json!([{"text":"x","fg":[1,2,3],"bold":true},{"text":" "}]));
-        assert_eq!(screen["lines"], json!(["é!","x"]));
+        merge_screen(
+            &mut screen,
+            json!({
+                "cols":2, "rows":2, "offset":0, "generation":12,
+                "delta":true, "base_generation":10, "row_indices":[0],
+                "cells":[[{"text":"é","italic":true},{"text":"!"}]], "lines":["é!"],
+                "cursor":{"row":0,"col":1,"visible":false},
+                "modes":{"application_cursor":true}
+            }),
+        )
+        .unwrap();
+        assert_eq!(
+            screen["cells"][0],
+            json!([{"text":"é","italic":true},{"text":"!"}])
+        );
+        assert_eq!(
+            screen["cells"][1],
+            json!([{"text":"x","fg":[1,2,3],"bold":true},{"text":" "}])
+        );
+        assert_eq!(screen["lines"], json!(["é!", "x"]));
         assert_eq!(screen["cursor"], json!({"row":0,"col":1,"visible":false}));
         assert!(mode(&screen, "application_cursor"));
         assert_eq!(screen["generation"], 12);
 
         // A mode-only update must not erase rows when there is no cell damage.
-        merge_screen(&mut screen, json!({
-            "cols":2, "rows":2, "offset":0, "generation":13,
-            "delta":true, "base_generation":12, "row_indices":[],
-            "cells":[], "lines":[],
-            "cursor":{"row":0,"col":1,"visible":true},
-            "modes":{"application_cursor":false}
-        })).unwrap();
-        assert_eq!(screen["lines"], json!(["é!","x"]));
-        assert_eq!(screen["cells"][1][0]["fg"], json!([1,2,3]));
+        merge_screen(
+            &mut screen,
+            json!({
+                "cols":2, "rows":2, "offset":0, "generation":13,
+                "delta":true, "base_generation":12, "row_indices":[],
+                "cells":[], "lines":[],
+                "cursor":{"row":0,"col":1,"visible":true},
+                "modes":{"application_cursor":false}
+            }),
+        )
+        .unwrap();
+        assert_eq!(screen["lines"], json!(["é!", "x"]));
+        assert_eq!(screen["cells"][1][0]["fg"], json!([1, 2, 3]));
         assert!(!mode(&screen, "application_cursor"));
     }
 
@@ -1230,13 +1255,16 @@ mod tests {
             "cols":1, "rows":1, "offset":0, "generation":10,
             "cells":[[{"text":"a"}]], "lines":["a"]
         });
-        for (generation, row) in [(9,0), (10,1)] {
+        for (generation, row) in [(9, 0), (10, 1)] {
             let mut screen = base.clone();
-            let result = merge_screen(&mut screen, json!({
-                "cols":1, "rows":1, "offset":0, "generation":11,
-                "delta":true, "base_generation":generation, "row_indices":[row],
-                "cells":[[{"text":"b"}]], "lines":["b"]
-            }));
+            let result = merge_screen(
+                &mut screen,
+                json!({
+                    "cols":1, "rows":1, "offset":0, "generation":11,
+                    "delta":true, "base_generation":generation, "row_indices":[row],
+                    "cells":[[{"text":"b"}]], "lines":["b"]
+                }),
+            );
             assert!(result.is_err());
             assert_eq!(screen, base);
         }

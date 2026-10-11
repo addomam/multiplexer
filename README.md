@@ -51,6 +51,14 @@ amux shutdown     # deliberately terminate managed processes and stop the daemon
 
 Use Ctrl-Q in the picker to detach only your current TUI. External detach is asynchronous (observed by client snapshot polling). Reattachment starts after the latest detach generation.
 
+## Input responsiveness
+
+The TUI reuses its local connection and requests changed native rows instead of a whole grid for each keystroke. Actual release-TUI PTY measurements on macOS: typical120×40 shell echo median10.81ms, large500×163 median30.34ms; noisy-background raw echo at500×163 median30.39ms. See [full-wrapper measurements and observer caveats](specs/verifications/input-latency-final.md). These measure emitted terminal rendering, not physical monitor paint. Full-damage frames still cost more. Persistent clients expire after five seconds without a request: a paused or output-blocked TUI may disconnect, but its managed processes remain available for `amux attach`.
+
+Advanced version1 API clients may opt in with `persistent:true`. For live `screen` requests, `row_updates:true` plus `since` can return changed-row deltas with complete metadata; retain the same viewport/base generation and apply `row_indices` to `cells`/`lines`. Viewport changes require a full read. Legacy CLI/extension callers continue receiving ordinary full frames/one-shot EOF.
+
+Run daemon and TUI from the same rebuilt binary. An already-running pre-change daemon must be restarted to use this runtime/API revision; `amux shutdown` terminates its managed processes, so finish valuable work before doing that. Verification used private daemons and did not restart or replace your live daemon.
+
 ## Shell execution versus typing
 
 ```sh
@@ -131,7 +139,7 @@ zsh -n integrations/zsh/adapter.zsh
 
 [Architecture and API ownership](specs/tech-architecture/DESIGN_PLAN_LATEST.md), [implementation plan](specs/epics/e01-native-terminal/epic.yaml), and [verification evidence](specs/verifications/) record the installed bigpowers workflow and observations.
 
-Final verification: **56 Rust tests and 8 OMP tests pass**, plus Clippy, release build and Zsh syntax. Real native OMP/manual/action, shell readiness, detach/reattach, clean shutdown, input modes and noisy-output responsiveness are recorded in [MVP evidence](specs/verifications/MVP-e01.md). **Review cap exhausted (5/5). Human decision required.** The final tree-removal finding was reproduced and fixed; no post-fix independent review PASS or merge is claimed.
+Final integrated verification: **66 Rust tests and 8 OMP tests pass**, plus Clippy, release build and Zsh syntax; [latency/UI evidence](specs/verifications/input-latency-final.md) includes900 actual TUI keystroke samples, native input modes, noisy scrollback, real Herdr navigation/detach and clean shutdown. Original native OMP/manual/action and lifecycle evidence remains in [MVP evidence](specs/verifications/MVP-e01.md). **Review cap exhausted (5/5). Human decision required.** The final tree-removal finding was reproduced and fixed; no post-fix independent review PASS or merge to the default branch is claimed.
 
 Bounded MVP resources: 50,000 scrollback rows per terminal; 64 KiB per raw input request with 128 queued writes; API request 1 MiB / response 64 MiB; PTY geometry 2–500 columns and 2–300 rows; event history 2,048 entries / 4 MiB; Git cache 256 workspaces with 100 file details per change category (full counts retained); 128 active agent identities per terminal; 256 managed execution records, pruning completed/rejected records first and exposing `executions_discarded`. Git overflow and pending-execution capacity produce explicit unavailable/busy results. Diagnostics retain the latest 20 hooks, with 64 KiB visible per output channel and truncation marked.
 

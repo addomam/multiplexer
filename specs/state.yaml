@@ -27,9 +27,14 @@ empty_switcher_revision:
   status: passing-native-ui
   evidence: specs/verifications/UI-empty-switcher.md
 input_latency_revision:
-  status: implementation-in-progress
+  status: passing-mechanical-and-native-runtime
   agent: amux-latency
   herdr_workspace: w11
   worktree: .worktrees/input-latency
   branch: perf/input-latency
-  evidence: specs/bugs/BUG-input-latency-empty-switcher.md
+  scoped_commit: de14ddc
+  integrated_commit: d413016
+  parent_ui_commit: ab0917b
+  evidence: specs/verifications/input-latency-final.md
+  measured_single_keys: 900
+  inherited_review_gate: blocked-cap-exhausted

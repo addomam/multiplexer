@@ -1,0 +1,20 @@
+type: bug_registry
+context: e01 native terminal; Herdr input-latency and empty-switcher revision
+bugs:
+  - id: input-latency
+    status: fixed
+    source: BUG-input-latency-empty-switcher.md
+    files_changed: [src/client.rs, src/daemon.rs, src/runtime.rs, src/tui.rs]
+    approach: bounded-row-damage-persistent-connection-borrowed-input-eight-ms-poll
+    risk_level: medium
+    scoped_commit: de14ddc
+    integrated_commit: d413016
+    evidence: ../verifications/input-latency-final.md
+  - id: empty-switcher-navigation
+    status: fixed
+    source: BUG-input-latency-empty-switcher.md
+    files_changed: [src/tui.rs, src/tui/view.rs]
+    approach: explicit-new-exit-actions-and-active-target-empty-state-guard
+    risk_level: low
+    commit: ab0917b
+    evidence: ../verifications/UI-empty-switcher.md
