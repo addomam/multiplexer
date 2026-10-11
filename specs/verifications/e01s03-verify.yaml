@@ -1,0 +1,29 @@
+story_id: e01s03
+type: verification
+context: native-terminal
+verified_at: "2026-10-11T02:50:58.858215+00:00"
+verifier: verify-work-agent-operated
+phases:
+  smoke: {passed: true, evidence: MVP-e01.md}
+  build: {passed: true, command: "cargo build --release"}
+  typecheck: {passed: true, command: "cargo clippy --all-targets -- -D warnings"}
+  lint: {passed: true}
+  tests: {passed: true, rust_passed: 56, omp_passed: 8, intentionally_ignored_helper: 1}
+  terminal_verdict:
+    command: "cargo test --test shell_races concurrent_ancestor_removal_keeps_every_surviving_parent_valid -- --nocapture && cargo fmt && cargo test -- --nocapture && cargo clippy --all-targets -- -D warnings && cargo build --release && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh"
+    exit_code: 0
+    captured_at: "2026-10-11T02:50:58.858215+00:00"
+    stdout_stderr_file: preflight-e01.log
+    note: "One contiguous command run, artifact 185; no failing-run output mixed in."
+  manual:
+    passed: true
+    operator: assistant
+    evidence: MVP-e01.md
+    human_signoff: not-claimed
+  security: {report: ../security/REVIEW.md, unaddressed_high_findings: 0}
+  nfr: {report: NFR-e01.json}
+  gaps: {closed: true}
+review_gate:
+  passed: false
+  reason: "Review cap exhausted (5/5). Human decision required."
+  evidence: REVIEW-e01.md

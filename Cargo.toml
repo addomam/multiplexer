@@ -1,0 +1,24 @@
+[package]
+name = "amux"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Project-oriented native terminal environment"
+license = "MIT"
+
+[dependencies]
+alacritty_terminal = "=0.26.0"
+portable-pty = "=0.9.0"
+crossterm = "0.29"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+libc = "0.2"
+parking_lot = "0.12"
+unicode-width = "0.2"
+
+[[bin]]
+name = "amux"
+path = "src/main.rs"

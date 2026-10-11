@@ -1,0 +1,762 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::io::{Read, Write};
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, mpsc};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use alacritty_terminal::Term;
+use alacritty_terminal::event::{Event, EventListener, WindowSize};
+use alacritty_terminal::grid::Dimensions;
+use alacritty_terminal::index::{Column, Line, Point};
+use alacritty_terminal::term::{Config, TermMode, cell::Flags};
+use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor, Rgb};
+use anyhow::{Result, bail};
+use parking_lot::Mutex;
+use portable_pty::{CommandBuilder, MasterPty, PtySize, native_pty_system};
+use serde_json::{Value, json};
+
+const INPUT_QUEUE: usize = 128;
+pub(crate) const MAX_INPUT: usize = 65536;
+
+#[derive(Clone, Copy)]
+struct Size {
+    cols: usize,
+    rows: usize,
+}
+impl Dimensions for Size {
+    fn total_lines(&self) -> usize {
+        self.rows
+    }
+    fn screen_lines(&self) -> usize {
+        self.rows
+    }
+    fn columns(&self) -> usize {
+        self.cols
+    }
+}
+
+struct Input {
+    bytes: Vec<u8>,
+    ack: Option<mpsc::Sender<std::io::Result<()>>>,
+}
+
+#[derive(Clone)]
+struct Listener {
+    input: mpsc::SyncSender<Input>,
+    size: Arc<Mutex<Size>>,
+    color_requests: mpsc::SyncSender<Event>,
+}
+impl EventListener for Listener {
+    fn send_event(&self, event: Event) {
+        let response = match event {
+            Event::PtyWrite(text) => Some(text),
+            request @ Event::ColorRequest(..) => {
+                // Processing already holds the emulator lock. Resolve against the
+                // updated palette after this batch, without blocking PTY output.
+                let _ = self.color_requests.try_send(request);
+                None
+            }
+            Event::TextAreaSizeRequest(format) => {
+                let size = *self.size.lock();
+                Some(format(WindowSize {
+                    num_lines: size.rows as u16,
+                    num_cols: size.cols as u16,
+                    cell_width: 0,
+                    cell_height: 0,
+                }))
+            }
+            // Clipboard reads are deliberately denied; a managed process must not read the host clipboard.
+            Event::ClipboardLoad(_, format) => Some(format("")),
+            _ => None,
+        };
+        if let Some(response) = response {
+            let _ = self.input.try_send(Input {
+                bytes: response.into_bytes(),
+                ack: None,
+            });
+        }
+    }
+}
+
+struct Emulator {
+    term: Term<Listener>,
+    processor: Processor,
+    color_requests: mpsc::Receiver<Event>,
+    input: mpsc::SyncSender<Input>,
+}
+impl Emulator {
+    fn advance(&mut self, bytes: &[u8]) {
+        self.processor.advance(&mut self.term, bytes);
+        self.reply_colors();
+    }
+    fn flush_sync(&mut self) -> bool {
+        if self
+            .processor
+            .sync_timeout()
+            .sync_timeout()
+            .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            self.processor.stop_sync(&mut self.term);
+            self.reply_colors();
+            true
+        } else {
+            false
+        }
+    }
+    fn reply_colors(&self) {
+        while let Ok(Event::ColorRequest(index, format)) = self.color_requests.try_recv() {
+            let [r, g, b] = indexed_color(&self.term, index).unwrap_or([229, 229, 229]);
+            let _ = self.input.try_send(Input {
+                bytes: format(Rgb { r, g, b }).into_bytes(),
+                ack: None,
+            });
+        }
+    }
+}
+
+pub struct Terminal {
+    pub id: String,
+    pub pid: u32,
+    processes: Mutex<ProcessTree>,
+    emulator: Mutex<Emulator>,
+    master: Mutex<Box<dyn MasterPty + Send>>,
+    input: mpsc::SyncSender<Input>,
+    pub input_gate: Mutex<()>,
+    pub(crate) input_epoch: AtomicU64,
+    size: Arc<Mutex<Size>>,
+    alive: AtomicBool,
+    closing: AtomicBool,
+    exit_status: Mutex<Option<u32>>,
+    generation: AtomicU64,
+}
+
+impl Terminal {
+    pub fn spawn(
+        id: String,
+        cwd: &Path,
+        env: &BTreeMap<String, String>,
+        on_exit: Arc<dyn Fn(u32) + Send + Sync>,
+    ) -> Result<Arc<Self>> {
+        let pair = native_pty_system().openpty(PtySize {
+            rows: 24,
+            cols: 80,
+            pixel_width: 0,
+            pixel_height: 0,
+        })?;
+        // Resolve the supported stock shell without adding a missing captured PATH.
+        let mut command = CommandBuilder::new("/bin/zsh");
+        command.env_clear();
+        command.arg("-il");
+        command.cwd(cwd);
+        for (key, value) in env {
+            command.env(key, value);
+        }
+        command.env("TERM", "xterm-256color");
+        command.env("COLORTERM", "truecolor");
+        let mut child = pair.slave.spawn_command(command)?;
+        let pid = child
+            .process_id()
+            .ok_or_else(|| anyhow::anyhow!("PTY child has no process id"))?;
+        let Some(root) = process_info(pid as i32) else {
+            // This child has not been reaped, so its PID cannot have been reused.
+            unsafe {
+                libc::kill(pid as i32, libc::SIGKILL);
+            }
+            let _ = child.wait();
+            bail!("cannot capture PTY child process identity");
+        };
+        drop(pair.slave);
+        let mut reader = pair.master.try_clone_reader()?;
+        let mut writer = pair.master.take_writer()?;
+        let (input, pending) = mpsc::sync_channel::<Input>(INPUT_QUEUE);
+        let (color_requests, pending_colors) = mpsc::sync_channel(INPUT_QUEUE);
+        let size = Arc::new(Mutex::new(Size { cols: 80, rows: 24 }));
+        let listener = Listener {
+            input: input.clone(),
+            size: size.clone(),
+            color_requests,
+        };
+        let term = Term::new(
+            Config {
+                scrolling_history: 50000,
+                ..Config::default()
+            },
+            &*size.lock(),
+            listener,
+        );
+        let terminal = Arc::new(Self {
+            id,
+            pid,
+            processes: Mutex::new(ProcessTree::new(root)),
+            emulator: Mutex::new(Emulator {
+                term,
+                processor: Processor::new(),
+                color_requests: pending_colors,
+                input: input.clone(),
+            }),
+            master: Mutex::new(pair.master),
+            input,
+            input_gate: Mutex::new(()),
+            input_epoch: AtomicU64::new(0),
+            size,
+            alive: AtomicBool::new(true),
+            closing: AtomicBool::new(false),
+            exit_status: Mutex::new(None),
+            generation: AtomicU64::new(1),
+        });
+        let weak = Arc::downgrade(&terminal);
+        thread::spawn(move || {
+            while let Ok(input) = pending.recv() {
+                let result = writer.write_all(&input.bytes);
+                let failed = result.is_err();
+                if let Some(ack) = input.ack {
+                    let _ = ack.send(result);
+                }
+                if failed || weak.upgrade().is_none() {
+                    break;
+                }
+            }
+        });
+        let weak = Arc::downgrade(&terminal);
+        thread::spawn(move || {
+            let mut bytes = [0u8; 16384];
+            loop {
+                let n = match reader.read(&mut bytes) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => n,
+                };
+                let Some(terminal) = weak.upgrade() else {
+                    break;
+                };
+                terminal.emulator.lock().advance(&bytes[..n]);
+                terminal.generation.fetch_add(1, Ordering::Relaxed);
+            }
+        });
+        let weak = Arc::downgrade(&terminal);
+        thread::spawn(move || {
+            // Keep the original shell's zombie identity until its descendants have
+            // been recorded. Retained natural exits must not rediscover a reused PID.
+            let mut info = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
+            let exit_observed = loop {
+                let result = unsafe {
+                    libc::waitid(
+                        libc::P_PID,
+                        pid,
+                        info.as_mut_ptr(),
+                        libc::WEXITED | libc::WNOWAIT,
+                    )
+                };
+                if result == 0 {
+                    break true;
+                }
+                if std::io::Error::last_os_error().raw_os_error() != Some(libc::EINTR) {
+                    break false;
+                }
+            };
+            let terminal = weak.upgrade();
+            let status = match terminal.as_ref().filter(|_| exit_observed) {
+                Some(terminal) => {
+                    let mut processes = terminal.processes.lock();
+                    processes.discover(&process_snapshot());
+                    // Reaping shares the cleanup lock: the owned shell cannot be
+                    // reaped and reused between root validation and its signal.
+                    child.wait().map(|status| status.exit_code()).unwrap_or(255)
+                }
+                None => child.wait().map(|status| status.exit_code()).unwrap_or(255),
+            };
+            if let Some(terminal) = terminal {
+                *terminal.exit_status.lock() = Some(status);
+                terminal.alive.store(false, Ordering::Release);
+                terminal.generation.fetch_add(1, Ordering::Relaxed);
+            }
+            on_exit(status);
+        });
+        let weak = Arc::downgrade(&terminal);
+        thread::spawn(move || {
+            while let Some(terminal) = weak.upgrade() {
+                if terminal.emulator.lock().flush_sync() {
+                    terminal.generation.fetch_add(1, Ordering::Relaxed);
+                }
+                let alive = terminal.alive();
+                drop(terminal);
+                if !alive {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(20));
+            }
+        });
+        Ok(terminal)
+    }
+    pub fn alive(&self) -> bool {
+        self.alive.load(Ordering::Acquire)
+    }
+    pub fn status(&self) -> Value {
+        let size = *self.size.lock();
+        json!({"pid":self.pid,"alive":self.alive(),"exit_status":*self.exit_status.lock(),"size":{"cols":size.cols,"rows":size.rows}})
+    }
+    pub fn input(&self, bytes: Vec<u8>) -> Result<()> {
+        if !self.alive() || self.closing.load(Ordering::Acquire) {
+            bail!("exited: terminal no longer accepts input");
+        }
+        if bytes.len() > MAX_INPUT {
+            bail!("invalid-input: input exceeds 64 KiB");
+        }
+        self.input
+            .try_send(Input { bytes, ack: None })
+            .map_err(|error| anyhow::anyhow!("backpressure: input queue unavailable: {error}"))
+    }
+    pub fn input_confirmed(&self, bytes: Vec<u8>) -> Result<()> {
+        if !self.alive() || self.closing.load(Ordering::Acquire) {
+            bail!("exited: terminal no longer accepts input");
+        }
+        let (ack, received) = mpsc::channel();
+        self.input
+            .try_send(Input {
+                bytes,
+                ack: Some(ack),
+            })
+            .map_err(|error| anyhow::anyhow!("backpressure: {error}"))?;
+        received
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|error| anyhow::anyhow!("input-timeout: {error}"))??;
+        Ok(())
+    }
+    pub fn paste(&self, text: &str) -> Result<()> {
+        let bracketed = self
+            .emulator
+            .lock()
+            .term
+            .mode()
+            .contains(TermMode::BRACKETED_PASTE);
+        let length = if bracketed {
+            text.bytes().filter(|byte| *byte != 0x1b).count() + 12
+        } else {
+            text.len()
+        };
+        if length > MAX_INPUT {
+            bail!("invalid-input: input exceeds 64 KiB");
+        }
+        let mut bytes = Vec::with_capacity(length);
+        if bracketed {
+            bytes.extend_from_slice(b"\x1b[200~");
+            bytes.extend(text.bytes().filter(|byte| *byte != 0x1b));
+            bytes.extend_from_slice(b"\x1b[201~");
+        } else {
+            bytes.extend_from_slice(text.as_bytes());
+        }
+        self.input(bytes)
+    }
+    pub fn resize(&self, cols: usize, rows: usize) -> Result<()> {
+        if !(2..=500).contains(&cols) || !(2..=300).contains(&rows) {
+            bail!("invalid-size: expected columns 2..500 and rows 2..300");
+        }
+        let mut emulator = self.emulator.lock();
+        self.master.lock().resize(PtySize {
+            rows: rows as u16,
+            cols: cols as u16,
+            pixel_width: 0,
+            pixel_height: 0,
+        })?;
+        let size = Size { cols, rows };
+        *self.size.lock() = size;
+        emulator.term.resize(size);
+        self.generation.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+    pub fn screen(&self, offset: usize, limit: Option<usize>) -> Value {
+        let emulator = self.emulator.lock();
+        screen(
+            &emulator.term,
+            offset,
+            limit,
+            self.generation.load(Ordering::Relaxed),
+        )
+    }
+    pub fn generation(&self) -> u64 {
+        self.generation.load(Ordering::Relaxed)
+    }
+    pub fn close(&self) {
+        if self.closing.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        self.processes.lock().terminate();
+    }
+}
+impl Drop for Terminal {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct ProcessIdentity {
+    pid: i32,
+    // Linux: kernel start ticks. Darwin: proc_pidinfo's seconds and microseconds.
+    start: (u64, u64),
+}
+
+impl ProcessIdentity {
+    fn matches_current(self) -> bool {
+        process_info(self.pid).is_some_and(|info| info.identity == self)
+    }
+
+    fn signal(self, signal: i32) {
+        if self.matches_current() {
+            unsafe {
+                libc::kill(self.pid, signal);
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ProcessInfo {
+    identity: ProcessIdentity,
+    parent: i32,
+    session: i32,
+    stopped: bool,
+    exited: bool,
+}
+
+#[cfg(target_os = "linux")]
+fn process_info(pid: i32) -> Option<ProcessInfo> {
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    // comm may itself contain spaces and ')'.
+    let (_, fields) = stat.rsplit_once(") ")?;
+    let mut fields = fields.split_whitespace();
+    let state = fields.next()?;
+    let parent = fields.next()?.parse().ok()?;
+    fields.next()?; // process group
+    let session = fields.next()?.parse().ok()?;
+    let start = fields.nth(15)?.parse().ok()?; // /proc stat field 22
+    Some(ProcessInfo {
+        identity: ProcessIdentity {
+            pid,
+            start: (start, 0),
+        },
+        parent,
+        session,
+        stopped: matches!(state, "T" | "t"),
+        exited: state == "Z",
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn process_info(pid: i32) -> Option<ProcessInfo> {
+    let mut info = std::mem::MaybeUninit::<libc::proc_bsdinfo>::uninit();
+    let size = std::mem::size_of::<libc::proc_bsdinfo>() as i32;
+    // A nonzero argument includes unreaped zombies for this libproc flavor.
+    let result = unsafe {
+        libc::proc_pidinfo(
+            pid,
+            libc::PROC_PIDTBSDINFO,
+            1,
+            info.as_mut_ptr().cast(),
+            size,
+        )
+    };
+    if result != size {
+        return None;
+    }
+    let info = unsafe { info.assume_init() };
+    Some(ProcessInfo {
+        identity: ProcessIdentity {
+            pid,
+            start: (info.pbi_start_tvsec, info.pbi_start_tvusec),
+        },
+        parent: info.pbi_ppid as i32,
+        session: unsafe { libc::getsid(pid) },
+        stopped: info.pbi_status == libc::SSTOP,
+        exited: info.pbi_status == libc::SZOMB,
+    })
+}
+
+fn process_snapshot() -> BTreeMap<i32, ProcessInfo> {
+    #[cfg(target_os = "linux")]
+    let pids = std::fs::read_dir("/proc")
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse::<i32>().ok());
+    #[cfg(target_os = "macos")]
+    let pids = {
+        let count = unsafe { libc::proc_listallpids(std::ptr::null_mut(), 0) };
+        let mut pids = vec![0i32; count.max(0) as usize + 32];
+        loop {
+            let count = unsafe {
+                libc::proc_listallpids(
+                    pids.as_mut_ptr().cast(),
+                    (pids.len() * std::mem::size_of::<i32>()) as i32,
+                )
+            };
+            if count < pids.len() as i32 {
+                pids.truncate(count.max(0) as usize);
+                break;
+            }
+            pids.resize(pids.len() * 2, 0);
+        }
+        pids.into_iter().filter(|&pid| pid > 0)
+    };
+    pids.filter_map(|pid| process_info(pid).map(|info| (pid, info)))
+        .collect()
+}
+
+struct ProcessTree {
+    root: ProcessIdentity,
+    session: i32,
+    members: BTreeSet<ProcessIdentity>,
+}
+
+impl ProcessTree {
+    fn new(root: ProcessInfo) -> Self {
+        Self {
+            root: root.identity,
+            session: root.session,
+            members: BTreeSet::from([root.identity]),
+        }
+    }
+
+    fn discover(&mut self, processes: &BTreeMap<i32, ProcessInfo>) {
+        let mut parents: BTreeMap<i32, ProcessIdentity> = self
+            .members
+            .iter()
+            .filter(|identity| {
+                processes
+                    .get(&identity.pid)
+                    .is_some_and(|info| info.identity == **identity)
+                    && identity.matches_current()
+            })
+            .map(|&identity| (identity.pid, identity))
+            .collect();
+        // A session number alone is not an identity. Trust it only while the
+        // original session leader is still present, including its unreaped zombie.
+        let original_session =
+            parents.contains_key(&self.root.pid) && self.root.matches_current() && self.session > 0;
+        loop {
+            let before = parents.len();
+            for info in processes.values() {
+                let identity = info.identity;
+                if identity.pid == std::process::id() as i32 || parents.contains_key(&identity.pid)
+                {
+                    continue;
+                }
+                if (parents
+                    .get(&info.parent)
+                    .is_some_and(|parent| parent.matches_current())
+                    || (original_session
+                        && info.session == self.session
+                        && self.root.matches_current()))
+                    && identity.matches_current()
+                {
+                    parents.insert(identity.pid, identity);
+                    self.members.insert(identity);
+                }
+            }
+            if parents.len() == before {
+                break;
+            }
+        }
+    }
+
+    fn freeze(&mut self) {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            let before = self.members.len();
+            let mut stopped = true;
+            // Freeze the original root before taking the first process snapshot,
+            // and each newly discovered producer before scanning its children.
+            for &identity in &self.members {
+                if let Some(info) =
+                    process_info(identity.pid).filter(|info| info.identity == identity)
+                {
+                    if !info.stopped && !info.exited {
+                        identity.signal(libc::SIGSTOP);
+                        stopped = false;
+                    }
+                }
+            }
+            self.discover(&process_snapshot());
+            // STOP is asynchronous: all known producers must be confirmed stopped
+            // before a rescan with no new identities establishes stability.
+            if stopped && self.members.len() == before {
+                return;
+            }
+            if Instant::now() >= deadline {
+                eprintln!(
+                    "amux cleanup: a process could not be stopped; continuing best-effort termination"
+                );
+                return;
+            }
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    fn terminate(&mut self) {
+        self.freeze();
+        for &identity in &self.members {
+            identity.signal(libc::SIGTERM);
+        }
+        for &identity in &self.members {
+            identity.signal(libc::SIGCONT);
+        }
+        thread::sleep(Duration::from_millis(200));
+        // A TERM-ignoring producer can fork again after CONT. Freeze and rescan
+        // that grace-period population too before the final, identity-checked kill.
+        self.freeze();
+        for &identity in &self.members {
+            identity.signal(libc::SIGKILL);
+        }
+    }
+}
+
+fn palette(index: usize) -> Option<[u8; 3]> {
+    const ANSI: [[u8; 3]; 16] = [
+        [0, 0, 0],
+        [205, 49, 49],
+        [13, 188, 121],
+        [229, 229, 16],
+        [36, 114, 200],
+        [188, 63, 188],
+        [17, 168, 205],
+        [229, 229, 229],
+        [102, 102, 102],
+        [241, 76, 76],
+        [35, 209, 139],
+        [245, 245, 67],
+        [59, 142, 234],
+        [214, 112, 214],
+        [41, 184, 219],
+        [255, 255, 255],
+    ];
+    match index {
+        0..=15 => Some(ANSI[index]),
+        16..=231 => {
+            let i = index - 16;
+            let value = |n| if n == 0 { 0 } else { 55 + n as u8 * 40 };
+            Some([value(i / 36), value((i / 6) % 6), value(i % 6)])
+        }
+        232..=255 => Some([8 + (index - 232) as u8 * 10; 3]),
+        256 => Some([229, 229, 229]),
+        257 => Some([0, 0, 0]),
+        _ => None,
+    }
+}
+fn indexed_color(term: &Term<Listener>, index: usize) -> Option<[u8; 3]> {
+    term.colors()[index]
+        .map(|rgb| [rgb.r, rgb.g, rgb.b])
+        .or_else(|| palette(index))
+}
+fn color(term: &Term<Listener>, value: Color) -> Option<[u8; 3]> {
+    let index = match value {
+        Color::Spec(Rgb { r, g, b }) => return Some([r, g, b]),
+        Color::Indexed(index) => index as usize,
+        Color::Named(NamedColor::Foreground) | Color::Named(NamedColor::Background) => {
+            let Color::Named(named) = value else {
+                unreachable!()
+            };
+            return term.colors()[named].map(|rgb| [rgb.r, rgb.g, rgb.b]);
+        }
+        Color::Named(named) => named as usize,
+    };
+    indexed_color(term, index)
+}
+fn screen(term: &Term<Listener>, offset: usize, limit: Option<usize>, generation: u64) -> Value {
+    let grid = term.grid();
+    let offset = offset.min(grid.history_size());
+    let rows = limit
+        .unwrap_or(grid.screen_lines())
+        .min(300)
+        .min(grid.screen_lines() + offset);
+    let cols = grid.columns();
+    let mut lines = Vec::with_capacity(rows);
+    let mut cells = Vec::with_capacity(rows);
+    for row in 0..rows {
+        let mut line = String::with_capacity(cols);
+        let mut row_cells = Vec::with_capacity(cols);
+        for col in 0..cols {
+            let cell = &grid[Point::new(Line(row as i32 - offset as i32), Column(col))];
+            let flags = cell.flags;
+            let spacer =
+                flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER);
+            let mut text = if flags.contains(Flags::HIDDEN) {
+                " ".to_owned()
+            } else {
+                cell.c.to_string()
+            };
+            if let Some(zero) = cell.zerowidth() {
+                text.extend(zero);
+            }
+            if !spacer {
+                line.push_str(&text);
+            }
+            row_cells.push(json!({"text":text,"fg":color(term,cell.fg),"bg":color(term,cell.bg),"bold":flags.contains(Flags::BOLD),"italic":flags.contains(Flags::ITALIC),"underline":flags.intersects(Flags::ALL_UNDERLINES),"inverse":flags.contains(Flags::INVERSE),"dim":flags.contains(Flags::DIM),"strikeout":flags.contains(Flags::STRIKEOUT),"wide":flags.contains(Flags::WIDE_CHAR),"wide_spacer":spacer}));
+        }
+        lines.push(line.trim_end().to_owned());
+        cells.push(row_cells);
+    }
+    let mode = term.mode();
+    let cursor = grid.cursor.point;
+    json!({"cols":cols,"rows":rows,"cursor":{"row":cursor.line.0+offset as i32,"col":cursor.column.0,"visible":offset==0 && mode.contains(TermMode::SHOW_CURSOR)},"modes":{"application_cursor":mode.contains(TermMode::APP_CURSOR),"application_keypad":mode.contains(TermMode::APP_KEYPAD),"bracketed_paste":mode.contains(TermMode::BRACKETED_PASTE),"mouse_sgr":mode.contains(TermMode::SGR_MOUSE),"mouse_click":mode.contains(TermMode::MOUSE_REPORT_CLICK),"mouse_drag":mode.contains(TermMode::MOUSE_DRAG),"mouse_motion":mode.contains(TermMode::MOUSE_MOTION),"mouse_utf8":mode.contains(TermMode::UTF8_MOUSE),"focus_reporting":mode.contains(TermMode::FOCUS_IN_OUT),"alt_screen":mode.contains(TermMode::ALT_SCREEN)},"lines":lines,"cells":cells,"history_size":grid.history_size(),"generation":generation})
+}
+
+#[cfg(test)]
+mod process_cleanup_tests {
+    use super::{ProcessTree, process_info};
+    use std::io::BufRead;
+    use std::process::{Child, Command, Stdio};
+
+    struct Helper {
+        child: Child,
+        descendant: super::ProcessIdentity,
+    }
+
+    impl Drop for Helper {
+        fn drop(&mut self) {
+            self.descendant.signal(libc::SIGKILL);
+            let _ = self.child.kill();
+            let _ = self.child.wait();
+        }
+    }
+
+    #[test]
+    fn stale_root_identity_never_signals_or_expands_reused_pid() {
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", "sleep 120 & echo $!; wait"])
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut line = String::new();
+        std::io::BufReader::new(child.stdout.take().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        let descendant = process_info(line.trim().parse().unwrap()).unwrap().identity;
+        let mut unrelated = Helper { child, descendant };
+        let original = process_info(unrelated.child.id() as i32).unwrap();
+        let mut stale = original;
+        stale.identity.start.1 = stale.identity.start.1.wrapping_add(1);
+        let mut tree = ProcessTree::new(stale);
+        let mut survivor = Command::new("/bin/sleep").arg("120").spawn().unwrap();
+        // Previously recorded original descendants must still be cleaned even
+        // when a different process now occupies the shell PID.
+        tree.members
+            .insert(process_info(survivor.id() as i32).unwrap().identity);
+        tree.terminate();
+        assert!(
+            !survivor.wait().unwrap().success(),
+            "known original descendant survived"
+        );
+        assert!(
+            unrelated.child.try_wait().unwrap().is_none(),
+            "reused root PID was signaled"
+        );
+        for identity in [original.identity, descendant] {
+            let info = process_info(identity.pid).expect("unrelated process was killed");
+            assert_eq!(info.identity, identity);
+            assert!(
+                !info.stopped && !info.exited,
+                "stale PID was used as a cleanup anchor"
+            );
+        }
+    }
+}

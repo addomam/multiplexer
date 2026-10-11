@@ -2,9 +2,18 @@ workflow_mode: solo-git
 vcs: {kind: git, branch: feat/amux-mvp, signing: disabled-local}
 active_flow: build_epic
 active_epic: e01
-project_cycle: {current_phase: 3, completed_phases: [1, 2]}
-handoff: {next_skill: develop-tdd}
+project_cycle: {current_phase: 5, completed_phases: [1, 2, 3, 4]}
+handoff: {next_skill: null, blocked: true, reason: "Review cap exhausted (5/5). Human decision required."}
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
   - No deployment or release tag requested; delivery is local MVP.
+  - OMP 18.8.7 is the supported extension target; macOS arm64 runtime verified, Linux and Rust minimum unverified.
+  - Runtime and mechanical acceptance pass; final tree race reproduced/fixed with a passing real-daemon regression.
+  - Dual-review cap exhausted; no independent post-fix PASS, merge, tag or deployment.
+verification:
+  mechanical: passing
+  runtime: passing
+  evidence: specs/verifications/MVP-e01.md
+  independent_review: blocked-cap-exhausted
+  review_rounds: 5

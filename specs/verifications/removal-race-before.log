@@ -1,0 +1,19 @@
+   Compiling amux v0.1.0 (/Users/addomam/projects/multiplexer)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.34s
+     Running tests/shell_races.rs (target/debug/deps/shell_races-816fe41ef25dd52f)
+
+running 1 test
+
+thread 'concurrent_ancestor_removal_keeps_every_surviving_parent_valid' (31692929) panicked at tests/shell_races.rs:295:104:
+dangling parent: {"config":{"daemon_start_hooks":[],"prefix":"ctrl-b","projects_dir":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214/home/projects"},"detach_generation":0,"diagnostics":[],"projects":[{"context":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","hooks":[],"id":"e90cbf72-2243-40cc-8b9c-0a5be83fc592","main_terminal":"dd7039a7-e752-490d-bf98-cae9f952c25e","name":"unsaved","recipes":{},"saved":false}],"seq":344,"terminals":[{"alive":true,"exit_status":null,"id":"acdd3756-d23a-4942-a59e-b2b4d7fdaf54","integration":{"agent":{"activity":"unknown","children":[],"reason":"not-observed","settled":false},"executions":[],"executions_discarded":0,"shell":{"captured_at_ms":1791686497652,"cwd":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","freshness":"confirmed","partial_input":false,"pid":72722,"prompt_generation":1,"ready":true}},"name":"shell-acdd3756","parent_id":"138a4224-ee34-4d70-ba95-c0b6d72d9a93","pid":72722,"project_id":"e90cbf72-2243-40cc-8b9c-0a5be83fc592","size":{"cols":80,"rows":24},"workspace":{"cwd":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","git":{"age_ms":678,"ahead":null,"behind":null,"branch":null,"commit":null,"common_dir":null,"detached":null,"error":"Git rev-parse --path-format=absolute --show-toplevel --absolute-git-dir --git-common-dir failed: fatal: not a git repository (or any of the parent directories): .git","freshness":"error","git_dir":null,"isolated":null,"refreshed_at_ms":1791686497432,"refreshing":false,"repository_root":null,"staged":null,"unstaged":null,"untracked":null,"upstream":null,"workspace":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","worktree_id":null}}},{"alive":true,"exit_status":null,"id":"dd7039a7-e752-490d-bf98-cae9f952c25e","integration":{"agent":{"activity":"unknown","children":[],"reason":"not-observed","settled":false},"executions":[],"executions_discarded":0,"shell":{"captured_at_ms":1791686487318,"cwd":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","freshness":"confirmed","partial_input":false,"pid":72244,"prompt_generation":1,"ready":true}},"name":"main","parent_id":null,"pid":72244,"project_id":"e90cbf72-2243-40cc-8b9c-0a5be83fc592","size":{"cols":80,"rows":24},"workspace":{"cwd":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","git":{"age_ms":678,"ahead":null,"behind":null,"branch":null,"commit":null,"common_dir":null,"detached":null,"error":"Git rev-parse --path-format=absolute --show-toplevel --absolute-git-dir --git-common-dir failed: fatal: not a git repository (or any of the parent directories): .git","freshness":"error","git_dir":null,"isolated":null,"refreshed_at_ms":1791686497432,"refreshing":false,"repository_root":null,"staged":null,"unstaged":null,"untracked":null,"upstream":null,"workspace":"/private/tmp/amux-shell-0a45aac8-01bb-43fb-a552-3ca2ab9cf214","worktree_id":null}}}]}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test concurrent_ancestor_removal_keeps_every_surviving_parent_valid ... FAILED
+
+failures:
+
+failures:
+    concurrent_ancestor_removal_keeps_every_surviving_parent_valid
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 11.54s
+
+error: test failed, to rerun pass `--test shell_races`

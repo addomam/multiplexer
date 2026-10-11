@@ -3,12 +3,12 @@ spec: e01s04-story.md
 type: feat
 context: domain
 title: OMP lifecycle reporting
-status: failing
+status: passing
 bcps: 5
 tasks:
   - id: 1
     description: ADDED OMP lifecycle reporting
     risk: P0
-    status: failing
+    status: passing
     verify: "bun test integrations/omp"
     allure: {severity: critical, categories: [native-terminal]}

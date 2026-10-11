@@ -3,12 +3,12 @@ spec: e01s02-story.md
 type: feat
 context: domain
 title: Safe shell automation and context
-status: failing
+status: passing
 bcps: 5
 tasks:
   - id: 1
     description: ADDED Safe shell automation and context
     risk: P0
-    status: failing
+    status: passing
     verify: "cargo test --test integration"
     allure: {severity: critical, categories: [native-terminal]}

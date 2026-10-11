@@ -1,0 +1,93 @@
+{
+  "type": "verification-report",
+  "context": "native-terminal",
+  "verified_at": "2026-10-11T02:50:58.858215+00:00",
+  "stories": [
+    "e01s01",
+    "e01s02",
+    "e01s03",
+    "e01s04",
+    "e01s05",
+    "e01s06"
+  ],
+  "performance": {
+    "requirement": "Measure foreground input responsiveness under noisy background output",
+    "passed": true,
+    "numeric_sla": "not specified; no latency guarantee claimed",
+    "samples": 30,
+    "method": "real CLI input then CLI screen native echo, 8192-character continuous output in separate terminal",
+    "milliseconds": {
+      "median": 30.82,
+      "p95": 46.08,
+      "max": 77.72
+    },
+    "raw_milliseconds": [
+      38.62004199982039,
+      39.798416999474284,
+      31.258541999704903,
+      32.50595800091105,
+      42.59808299866563,
+      40.5962909990194,
+      46.08225000083621,
+      38.44566600128019,
+      31.183958999463357,
+      28.805541998735862,
+      35.31758300050569,
+      40.136292000170215,
+      77.7183749996766,
+      37.77591700054472,
+      28.423457999451784,
+      30.856625000524218,
+      28.109458000471932,
+      27.087374999609892,
+      30.777042000408983,
+      26.42999999989115,
+      28.23129199896357,
+      27.26687500035041,
+      28.3602500003326,
+      33.699666999382316,
+      27.028791000702768,
+      27.11487499982468,
+      28.730333000567043,
+      28.672500000539003,
+      27.500791000420577,
+      29.087749999234802
+    ],
+    "scrollback_bound_observed": 50000
+  },
+  "reliability": {
+    "passed": true,
+    "evidence": "MVP-e01.md and preflight-e01.log",
+    "scenarios": [
+      "integration loss invalidates readiness",
+      "agent crash unknown not success",
+      "cursor gaps explicit",
+      "foreground and separate-session descendant cleanup",
+      "config-only cold restart",
+      "queued/native input ordering",
+      "concurrent tree removal",
+      "hook failure leaves usable shell"
+    ],
+    "crash_recovery": "intentionally deferred"
+  },
+  "operability": {
+    "passed": true,
+    "evidence": "MVP-e01.md",
+    "facilities": [
+      "versioned snapshot/state/errors",
+      "sequenced events and gap snapshots",
+      "CLI screen and shell/agent waits",
+      "visible bounded hook diagnostics",
+      "private daemon log",
+      "detach and acknowledged shutdown"
+    ]
+  },
+  "release_gate": "blocked: independent review cap exhausted; human decision required",
+  "platform": "macOS arm64",
+  "unverified": [
+    "Linux runtime",
+    "Rust1.85 minimum",
+    "other OMP versions",
+    "human acceptance sign-off"
+  ]
+}
