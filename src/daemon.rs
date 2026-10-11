@@ -581,12 +581,11 @@ impl Daemon {
             "state" => Ok(self.terminal_snapshot(&self.entry(&request)?)),
             "screen" => {
                 let entry = self.entry(&request)?;
-                if request["since"].as_u64() == Some(entry.terminal.generation()) {
-                    return Ok(json!({"unchanged":true,"generation":entry.terminal.generation()}));
-                }
-                Ok(entry.terminal.screen(
+                Ok(entry.terminal.screen_update(
                     request["offset"].as_u64().unwrap_or(0) as usize,
                     request["limit"].as_u64().map(|limit| limit as usize),
+                    request["since"].as_u64(),
+                    request["row_updates"].as_bool().unwrap_or(false),
                 ))
             }
             "resize" => {
@@ -945,50 +944,103 @@ fn key_bytes(key: &str, app_cursor: bool) -> Result<Vec<u8>> {
     };
     Ok(bytes)
 }
-fn serve(daemon: Arc<Daemon>, mut stream: UnixStream) -> Result<()> {
-    // Darwin accept inherits listener O_NONBLOCK; each client worker uses deadline-bound blocking I/O.
-    stream.set_nonblocking(false)?;
-    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(2)))?;
-    let mut reader = BufReader::new(stream.try_clone()?).take(1024 * 1024);
-    let mut line = String::new();
-    reader.read_line(&mut line)?;
-    let result = if !line.ends_with('\n') {
-        Err(anyhow::anyhow!(
-            "invalid-frame: incomplete or oversized request"
-        ))
-    } else {
-        serde_json::from_str::<Value>(&line)
-            .map_err(anyhow::Error::from)
-            .and_then(|request| daemon.dispatch(request))
-    };
-    let response = match result {
-        Ok(result) => json!({"version":1,"ok":true,"result":result}),
-        Err(error) => {
-            let message = error.to_string();
-            let code = message
-                .split_once(':')
-                .map(|(code, _)| code)
-                .filter(|code| code.len() < 64 && !code.contains(' '))
-                .unwrap_or("request-failed");
-            json!({"version":1,"ok":false,"error":{"code":code,"message":message}})
-        }
-    };
-    let shutdown = response["ok"] == true && response["result"]["shutting_down"] == true;
-    let written = (|| -> Result<()> {
-        let mut writer = BufWriter::with_capacity(16384, &mut stream);
-        serde_json::to_writer(&mut writer, &response)?;
-        writer.write_all(b"\n")?;
-        writer.flush()?;
-        Ok(())
-    })();
-    // Publish shutdown only after attempting the acknowledgement. The listener
-    // can then disconnect slow clients without racing this response.
-    if shutdown {
-        daemon.stopping.store(true, Ordering::Release);
-        daemon.changed.notify_all();
+fn serve(daemon: Arc<Daemon>, stream: UnixStream) -> Result<()> {
+    // Socket timeouts alone reset on each syscall; bound the whole frame even
+    // when a client trickles bytes instead of completing a request.
+    struct DeadlineIo {
+        stream: UnixStream,
+        deadline: Instant,
     }
-    written
+    impl DeadlineIo {
+        fn remaining(&self) -> std::io::Result<Duration> {
+            self.deadline
+                .checked_duration_since(Instant::now())
+                .filter(|remaining| !remaining.is_zero())
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::TimedOut, "client frame deadline")
+                })
+        }
+    }
+    impl Read for DeadlineIo {
+        fn read(&mut self, bytes: &mut [u8]) -> std::io::Result<usize> {
+            self.stream.set_read_timeout(Some(self.remaining()?))?;
+            self.stream.read(bytes)
+        }
+    }
+    impl Write for DeadlineIo {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.stream.set_write_timeout(Some(self.remaining()?))?;
+            self.stream.write(bytes)
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.stream.flush()
+        }
+    }
+    // Darwin accept inherits listener O_NONBLOCK; workers use blocking I/O.
+    stream.set_nonblocking(false)?;
+    let mut reader = BufReader::new(DeadlineIo {
+        stream: stream.try_clone()?,
+        deadline: Instant::now() + Duration::from_secs(5),
+    });
+    let mut writer = BufWriter::with_capacity(16384, DeadlineIo {
+        stream,
+        deadline: Instant::now() + Duration::from_secs(2),
+    });
+    let mut line = String::new();
+    loop {
+        if daemon.stopping.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        line.clear();
+        reader.get_mut().deadline = Instant::now() + Duration::from_secs(5);
+        // Borrow the reader so read-ahead survives each independently capped frame.
+        if (&mut reader).take(1024 * 1024).read_line(&mut line)? == 0 {
+            return Ok(());
+        }
+        let mut persistent = false;
+        let result = if !line.ends_with('\n') {
+            Err(anyhow::anyhow!(
+                "invalid-frame: incomplete or oversized request"
+            ))
+        } else {
+            serde_json::from_str::<Value>(&line)
+                .map_err(anyhow::Error::from)
+                .and_then(|request| {
+                    persistent = request["persistent"] == true;
+                    daemon.dispatch(request)
+                })
+        };
+        let response = match result {
+            Ok(result) => json!({"version":1,"ok":true,"result":result}),
+            Err(error) => {
+                let message = error.to_string();
+                let code = message
+                    .split_once(':')
+                    .map(|(code, _)| code)
+                    .filter(|code| code.len() < 64 && !code.contains(' '))
+                    .unwrap_or("request-failed");
+                json!({"version":1,"ok":false,"error":{"code":code,"message":message}})
+            }
+        };
+        let shutdown = response["ok"] == true && response["result"]["shutting_down"] == true;
+        writer.get_mut().deadline = Instant::now() + Duration::from_secs(2);
+        let written = (|| -> Result<()> {
+            serde_json::to_writer(&mut writer, &response)?;
+            writer.write_all(b"\n")?;
+            writer.flush()?;
+            Ok(())
+        })();
+        // Publish shutdown only after attempting the acknowledgement. The listener
+        // can then disconnect slow clients without racing this response.
+        if shutdown {
+            daemon.stopping.store(true, Ordering::Release);
+            daemon.changed.notify_all();
+        }
+        if shutdown || !persistent {
+            return written;
+        }
+        written?;
+    }
 }
 
 pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {

@@ -12,6 +12,7 @@ use crossterm::{
 };
 use serde_json::{Value, json};
 use std::{
+    cell::RefCell,
     collections::HashSet,
     io::{self, Write},
     path::Path,
@@ -21,7 +22,7 @@ use std::{
 mod view;
 
 const HEADER: u16 = 3;
-const FRAME: Duration = Duration::from_millis(34);
+const FRAME: Duration = Duration::from_millis(8);
 
 struct Restore;
 impl Restore {
@@ -55,19 +56,39 @@ impl Drop for Restore {
     }
 }
 
-fn call(socket: &Path, mut request: Value) -> Result<Value> {
+type Session = RefCell<crate::client::Connection>;
+
+fn call(socket: &Session, mut request: Value) -> Result<Value> {
     request["version"] = json!(1);
-    crate::client::request(socket, request)
+    request["persistent"] = json!(true);
+    let timeout = request["timeout_ms"].as_u64().unwrap_or(30000).min(300000) + 5000;
+    socket.borrow_mut().request(&request, Duration::from_millis(timeout))
 }
-fn send_input(socket: &Path, terminal: &str, bytes: &[u8], status: &mut String) -> Result<()> {
+
+#[derive(serde::Serialize)]
+struct InputRequest<'a> {
+    version: u8,
+    persistent: bool,
+    op: &'static str,
+    terminal: &'a str,
+    bytes: &'a [u8],
+}
+
+fn send_input(socket: &Session, terminal: &str, bytes: &[u8], status: &mut String) -> Result<()> {
     if bytes.len() > crate::runtime::MAX_INPUT {
         *status = "invalid-input: input exceeds 64 KiB".into();
         return Ok(());
     }
     input_result(
-        call(
-            socket,
-            json!({"op":"input","terminal":terminal,"bytes":bytes}),
+        socket.borrow_mut().request(
+            &InputRequest {
+                version: 1,
+                persistent: true,
+                op: "input",
+                terminal,
+                bytes,
+            },
+            Duration::from_secs(35),
         ),
         status,
     )
@@ -86,6 +107,121 @@ fn input_result(result: Result<Value>, status: &mut String) -> Result<()> {
             }
         }
     }
+}
+
+#[derive(serde::Serialize)]
+struct ScreenRequest<'a> {
+    version: u8,
+    persistent: bool,
+    op: &'static str,
+    terminal: &'a str,
+    offset: usize,
+    limit: u16,
+    since: Option<u64>,
+    row_updates: bool,
+}
+
+#[derive(Default)]
+struct ScreenViewport {
+    terminal: String,
+    offset: usize,
+    limit: u16,
+}
+
+fn refresh_screen(
+    socket: &Session,
+    screen: &mut Value,
+    viewport: &mut ScreenViewport,
+    terminal: &str,
+    offset: usize,
+    limit: u16,
+) -> Result<bool> {
+    // UI dirtiness is not native damage. Reuse only the same terminal viewport,
+    // regardless of key/focus/status changes; resizing and switching require full rows.
+    let since = if viewport.terminal == terminal
+        && viewport.offset == offset
+        && viewport.limit == limit
+    {
+        screen["generation"].as_u64()
+    } else {
+        None
+    };
+    let update = socket.borrow_mut().request(
+        &ScreenRequest {
+            version: 1,
+            persistent: true,
+            op: "screen",
+            terminal,
+            offset,
+            limit,
+            since,
+            row_updates: true,
+        },
+        Duration::from_secs(35),
+    )?;
+    if update["unchanged"] == true {
+        return Ok(false);
+    }
+    merge_screen(screen, update)?;
+    if viewport.terminal != terminal {
+        viewport.terminal.clear();
+        viewport.terminal.push_str(terminal);
+    }
+    viewport.offset = offset;
+    viewport.limit = limit;
+    Ok(true)
+}
+
+fn merge_screen(screen: &mut Value, mut update: Value) -> Result<()> {
+    if update["delta"] != true {
+        *screen = update;
+        return Ok(());
+    }
+    anyhow::ensure!(
+        update["base_generation"].as_u64().is_some()
+            && update["base_generation"] == screen["generation"]
+            && update["cols"] == screen["cols"]
+            && update["rows"] == screen["rows"]
+            && update["offset"] == screen["offset"],
+        "protocol: screen delta does not match the displayed viewport"
+    );
+    let indices = update["row_indices"]
+        .as_array()
+        .context("protocol: screen delta has no row indices")?;
+    for field in ["cells", "lines"] {
+        let rows = update[field]
+            .as_array()
+            .context("protocol: screen delta has no rows")?;
+        let original = screen[field]
+            .as_array()
+            .context("protocol: screen delta has no base rows")?;
+        anyhow::ensure!(rows.len() == indices.len(), "protocol: mismatched screen delta rows");
+        for index in indices {
+            anyhow::ensure!(
+                index.as_u64().is_some_and(|row| row < original.len() as u64),
+                "protocol: screen delta row is out of bounds"
+            );
+        }
+    }
+    // Move unchanged rows, rather than cloning every cell on every key.
+    let indices = update["row_indices"].take();
+    let indices = indices.as_array().expect("validated row indices");
+    for field in ["cells", "lines"] {
+        let changed = update[field].take();
+        let Value::Array(changed) = changed else { unreachable!("validated delta rows") };
+        let mut original = screen[field].take();
+        let rows = original.as_array_mut().expect("validated base rows");
+        for (index, row) in indices.iter().zip(changed) {
+            rows[index.as_u64().expect("validated row index") as usize] = row;
+        }
+        update[field] = original;
+    }
+    let metadata = update.as_object_mut().context("protocol: invalid screen update")?;
+    metadata.remove("delta");
+    metadata.remove("base_generation");
+    metadata.remove("row_indices");
+    *screen = update;
+    Ok(())
 }
 fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or("")
@@ -520,7 +656,7 @@ fn close_window(snapshot: &Value, id: &str) -> Value {
     json!({"op":if window_exited(snapshot,id) {"remove"} else {"close"},"terminal":id})
 }
 fn apply_window(
-    socket: &Path,
+    socket: &Session,
     request: Value,
     active: &mut String,
     snapshot: &mut Value,
@@ -548,6 +684,7 @@ fn apply_window(
 }
 
 pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
+    let socket = &Session::new(crate::client::Connection::connect(socket)?);
     let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
     let detach_generation = snapshot["detach_generation"].as_u64().unwrap_or(0);
     let terminals = snapshot["terminals"]
@@ -595,6 +732,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut focused = true;
     let mut snapshot_at = Instant::now();
     let mut dirty = true;
+    let mut viewport = ScreenViewport::default();
     let mut frame_at = Instant::now() - FRAME;
     loop {
         if frame_at.elapsed() >= FRAME {
@@ -621,12 +759,14 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 dirty = true;
             }
             if !picker {
-                let update = call(
+                if refresh_screen(
                     socket,
-                    json!({"op":"screen","terminal":active,"offset":offset,"limit":size.1.saturating_sub(HEADER).max(2),"since":if dirty {Value::Null}else{screen["generation"].clone()}}),
-                )?;
-                if update["unchanged"] != true {
-                    screen = update;
+                    &mut screen,
+                    &mut viewport,
+                    &active,
+                    offset,
+                    size.1.saturating_sub(HEADER).max(2),
+                )? {
                     dirty = true;
                 }
             }
@@ -1046,6 +1186,61 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_row_updates_preserve_untouched_styles_and_update_cursor_and_modes() {
+        let mut screen = json!({
+            "cols":2, "rows":2, "offset":0, "generation":10,
+            "cells":[[{"text":"界","wide":true},{"text":"","wide_spacer":true}],
+                [{"text":"x","fg":[1,2,3],"bold":true},{"text":" "}]],
+            "lines":["界","x"],
+            "cursor":{"row":1,"col":1,"visible":true},
+            "modes":{"application_cursor":false}
+        });
+        merge_screen(&mut screen, json!({
+            "cols":2, "rows":2, "offset":0, "generation":12,
+            "delta":true, "base_generation":10, "row_indices":[0],
+            "cells":[[{"text":"é","italic":true},{"text":"!"}]], "lines":["é!"],
+            "cursor":{"row":0,"col":1,"visible":false},
+            "modes":{"application_cursor":true}
+        })).unwrap();
+        assert_eq!(screen["cells"][0], json!([{"text":"é","italic":true},{"text":"!"}]));
+        assert_eq!(screen["cells"][1], json!([{"text":"x","fg":[1,2,3],"bold":true},{"text":" "}]));
+        assert_eq!(screen["lines"], json!(["é!","x"]));
+        assert_eq!(screen["cursor"], json!({"row":0,"col":1,"visible":false}));
+        assert!(mode(&screen, "application_cursor"));
+        assert_eq!(screen["generation"], 12);
+
+        // A mode-only update must not erase rows when there is no cell damage.
+        merge_screen(&mut screen, json!({
+            "cols":2, "rows":2, "offset":0, "generation":13,
+            "delta":true, "base_generation":12, "row_indices":[],
+            "cells":[], "lines":[],
+            "cursor":{"row":0,"col":1,"visible":true},
+            "modes":{"application_cursor":false}
+        })).unwrap();
+        assert_eq!(screen["lines"], json!(["é!","x"]));
+        assert_eq!(screen["cells"][1][0]["fg"], json!([1,2,3]));
+        assert!(!mode(&screen, "application_cursor"));
+    }
+
+    #[test]
+    fn stale_or_out_of_viewport_updates_cannot_replace_displayed_native_rows() {
+        let base = json!({
+            "cols":1, "rows":1, "offset":0, "generation":10,
+            "cells":[[{"text":"a"}]], "lines":["a"]
+        });
+        for (generation, row) in [(9,0), (10,1)] {
+            let mut screen = base.clone();
+            let result = merge_screen(&mut screen, json!({
+                "cols":1, "rows":1, "offset":0, "generation":11,
+                "delta":true, "base_generation":generation, "row_indices":[row],
+                "cells":[[{"text":"b"}]], "lines":["b"]
+            }));
+            assert!(result.is_err());
+            assert_eq!(screen, base);
+        }
+    }
     #[test]
     fn utf8_mouse_reports_non_ascii_and_large_coordinates() {
         let screen = json!({"modes":{"mouse_utf8":true}});

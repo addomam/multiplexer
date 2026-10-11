@@ -10,7 +10,7 @@ use alacritty_terminal::Term;
 use alacritty_terminal::event::{Event, EventListener, WindowSize};
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::term::{Config, TermMode, cell::Flags};
+use alacritty_terminal::term::{Config, TermDamage, TermMode, cell::Flags};
 use alacritty_terminal::vte::ansi::{Color, NamedColor, Processor, Rgb};
 use anyhow::{Result, bail};
 use parking_lot::Mutex;
@@ -85,13 +85,33 @@ struct Emulator {
     processor: Processor,
     color_requests: mpsc::Receiver<Event>,
     input: mpsc::SyncSender<Input>,
+    generation: u64,
+    full_damage_generation: u64,
+    row_generations: [u64; 300],
 }
 impl Emulator {
+    fn new(
+        mut term: Term<Listener>,
+        color_requests: mpsc::Receiver<Event>,
+        input: mpsc::SyncSender<Input>,
+    ) -> Self {
+        term.reset_damage();
+        Self {
+            term,
+            processor: Processor::new(),
+            color_requests,
+            input,
+            generation: 1,
+            full_damage_generation: 1,
+            row_generations: [1; 300],
+        }
+    }
     fn advance(&mut self, bytes: &[u8]) {
         self.processor.advance(&mut self.term, bytes);
         self.reply_colors();
+        self.publish_damage();
     }
-    fn flush_sync(&mut self) -> bool {
+    fn flush_sync(&mut self) {
         if self
             .processor
             .sync_timeout()
@@ -100,10 +120,66 @@ impl Emulator {
         {
             self.processor.stop_sync(&mut self.term);
             self.reply_colors();
-            true
-        } else {
-            false
+            self.publish_damage();
         }
+    }
+    fn resize(&mut self, size: Size) {
+        self.term.resize(size);
+        self.publish_damage();
+    }
+    fn publish_damage(&mut self) {
+        // Consume damage on mutation, not on requests, so clients can skip
+        // generations without losing rows observed by another client.
+        self.generation += 1;
+        match self.term.damage() {
+            TermDamage::Full => self.full_damage_generation = self.generation,
+            TermDamage::Partial(lines) => {
+                for line in lines {
+                    self.row_generations[line.line] = self.generation;
+                }
+            }
+        }
+        self.term.reset_damage();
+    }
+    fn screen_update(
+        &self,
+        offset: usize,
+        limit: Option<usize>,
+        since: Option<u64>,
+        row_updates: bool,
+    ) -> Value {
+        let generation = self.generation;
+        if !row_updates {
+            return if since == Some(generation) {
+                json!({"unchanged":true,"generation":generation})
+            } else {
+                screen(&self.term, offset, limit, generation)
+            };
+        }
+        let Some(since) = since.filter(|since| {
+            offset == 0 && *since >= self.full_damage_generation && *since <= generation
+        }) else {
+            return screen(&self.term, offset, limit, generation);
+        };
+        if since == generation {
+            return json!({"unchanged":true,"generation":generation});
+        }
+        let rows = limit
+            .unwrap_or(self.term.screen_lines())
+            .min(300)
+            .min(self.term.screen_lines());
+        let indices: Vec<usize> = self
+            .row_generations
+            .iter()
+            .take(rows)
+            .enumerate()
+            .filter_map(|(row, changed)| (*changed > since).then_some(row))
+            .collect();
+        let mut update = screen_rows(&self.term, 0, rows, generation, indices.iter().copied());
+        update["delta"] = json!(true);
+        update["base_generation"] = json!(since);
+        update["row_indices"] = json!(indices);
+        update
     }
     fn reply_colors(&self) {
         while let Ok(Event::ColorRequest(index, format)) = self.color_requests.try_recv() {
@@ -129,7 +205,6 @@ pub struct Terminal {
     alive: AtomicBool,
     closing: AtomicBool,
     exit_status: Mutex<Option<u32>>,
-    generation: AtomicU64,
 }
 
 impl Terminal {
@@ -190,12 +265,7 @@ impl Terminal {
             id,
             pid,
             processes: Mutex::new(ProcessTree::new(root)),
-            emulator: Mutex::new(Emulator {
-                term,
-                processor: Processor::new(),
-                color_requests: pending_colors,
-                input: input.clone(),
-            }),
+            emulator: Mutex::new(Emulator::new(term, pending_colors, input.clone())),
             master: Mutex::new(pair.master),
             input,
             input_gate: Mutex::new(()),
@@ -204,7 +274,6 @@ impl Terminal {
             alive: AtomicBool::new(true),
             closing: AtomicBool::new(false),
             exit_status: Mutex::new(None),
-            generation: AtomicU64::new(1),
         });
         let weak = Arc::downgrade(&terminal);
         thread::spawn(move || {
@@ -231,7 +300,6 @@ impl Terminal {
                     break;
                 };
                 terminal.emulator.lock().advance(&bytes[..n]);
-                terminal.generation.fetch_add(1, Ordering::Relaxed);
             }
         });
         let weak = Arc::downgrade(&terminal);
@@ -267,18 +335,17 @@ impl Terminal {
                 None => child.wait().map(|status| status.exit_code()).unwrap_or(255),
             };
             if let Some(terminal) = terminal {
+                let mut emulator = terminal.emulator.lock();
                 *terminal.exit_status.lock() = Some(status);
                 terminal.alive.store(false, Ordering::Release);
-                terminal.generation.fetch_add(1, Ordering::Relaxed);
+                emulator.publish_damage();
             }
             on_exit(status);
         });
         let weak = Arc::downgrade(&terminal);
         thread::spawn(move || {
             while let Some(terminal) = weak.upgrade() {
-                if terminal.emulator.lock().flush_sync() {
-                    terminal.generation.fetch_add(1, Ordering::Relaxed);
-                }
+                terminal.emulator.lock().flush_sync();
                 let alive = terminal.alive();
                 drop(terminal);
                 if !alive {
@@ -361,21 +428,26 @@ impl Terminal {
         })?;
         let size = Size { cols, rows };
         *self.size.lock() = size;
-        emulator.term.resize(size);
-        self.generation.fetch_add(1, Ordering::Relaxed);
+        emulator.resize(size);
         Ok(())
     }
     pub fn screen(&self, offset: usize, limit: Option<usize>) -> Value {
         let emulator = self.emulator.lock();
-        screen(
-            &emulator.term,
-            offset,
-            limit,
-            self.generation.load(Ordering::Relaxed),
-        )
+        screen(&emulator.term, offset, limit, emulator.generation)
     }
-    pub fn generation(&self) -> u64 {
-        self.generation.load(Ordering::Relaxed)
+    pub(crate) fn screen_update(
+        &self,
+        offset: usize,
+        limit: Option<usize>,
+        since: Option<u64>,
+        row_updates: bool,
+    ) -> Value {
+        if since.is_none() {
+            return self.screen(offset, limit);
+        }
+        self.emulator
+            .lock()
+            .screen_update(offset, limit, since, row_updates)
     }
     pub fn close(&self) {
         if self.closing.swap(true, Ordering::AcqRel) {
@@ -668,10 +740,21 @@ fn screen(term: &Term<Listener>, offset: usize, limit: Option<usize>, generation
         .unwrap_or(grid.screen_lines())
         .min(300)
         .min(grid.screen_lines() + offset);
+    screen_rows(term, offset, rows, generation, 0..rows)
+}
+
+fn screen_rows(
+    term: &Term<Listener>,
+    offset: usize,
+    rows: usize,
+    generation: u64,
+    row_indices: impl ExactSizeIterator<Item = usize>,
+) -> Value {
+    let grid = term.grid();
     let cols = grid.columns();
-    let mut lines = Vec::with_capacity(rows);
-    let mut cells = Vec::with_capacity(rows);
-    for row in 0..rows {
+    let mut lines = Vec::with_capacity(row_indices.len());
+    let mut cells = Vec::with_capacity(row_indices.len());
+    for row in row_indices {
         let mut line = String::with_capacity(cols);
         let mut row_cells = Vec::with_capacity(cols);
         for col in 0..cols {
@@ -692,12 +775,233 @@ fn screen(term: &Term<Listener>, offset: usize, limit: Option<usize>, generation
             }
             row_cells.push(json!({"text":text,"fg":color(term,cell.fg),"bg":color(term,cell.bg),"bold":flags.contains(Flags::BOLD),"italic":flags.contains(Flags::ITALIC),"underline":flags.intersects(Flags::ALL_UNDERLINES),"inverse":flags.contains(Flags::INVERSE),"dim":flags.contains(Flags::DIM),"strikeout":flags.contains(Flags::STRIKEOUT),"wide":flags.contains(Flags::WIDE_CHAR),"wide_spacer":spacer}));
         }
-        lines.push(line.trim_end().to_owned());
+        line.truncate(line.trim_end().len());
+        lines.push(line);
         cells.push(row_cells);
     }
     let mode = term.mode();
     let cursor = grid.cursor.point;
-    json!({"cols":cols,"rows":rows,"cursor":{"row":cursor.line.0+offset as i32,"col":cursor.column.0,"visible":offset==0 && mode.contains(TermMode::SHOW_CURSOR)},"modes":{"application_cursor":mode.contains(TermMode::APP_CURSOR),"application_keypad":mode.contains(TermMode::APP_KEYPAD),"bracketed_paste":mode.contains(TermMode::BRACKETED_PASTE),"mouse_sgr":mode.contains(TermMode::SGR_MOUSE),"mouse_click":mode.contains(TermMode::MOUSE_REPORT_CLICK),"mouse_drag":mode.contains(TermMode::MOUSE_DRAG),"mouse_motion":mode.contains(TermMode::MOUSE_MOTION),"mouse_utf8":mode.contains(TermMode::UTF8_MOUSE),"focus_reporting":mode.contains(TermMode::FOCUS_IN_OUT),"alt_screen":mode.contains(TermMode::ALT_SCREEN)},"lines":lines,"cells":cells,"history_size":grid.history_size(),"generation":generation})
+    json!({"cols":cols,"rows":rows,"cursor":{"row":cursor.line.0+offset as i32,"col":cursor.column.0,"visible":offset==0 && mode.contains(TermMode::SHOW_CURSOR)},"modes":{"application_cursor":mode.contains(TermMode::APP_CURSOR),"application_keypad":mode.contains(TermMode::APP_KEYPAD),"bracketed_paste":mode.contains(TermMode::BRACKETED_PASTE),"mouse_sgr":mode.contains(TermMode::SGR_MOUSE),"mouse_click":mode.contains(TermMode::MOUSE_REPORT_CLICK),"mouse_drag":mode.contains(TermMode::MOUSE_DRAG),"mouse_motion":mode.contains(TermMode::MOUSE_MOTION),"mouse_utf8":mode.contains(TermMode::UTF8_MOUSE),"focus_reporting":mode.contains(TermMode::FOCUS_IN_OUT),"alt_screen":mode.contains(TermMode::ALT_SCREEN)},"lines":lines,"cells":cells,"history_size":grid.history_size(),"offset":offset,"generation":generation})
+}
+
+#[cfg(test)]
+mod screen_update_tests {
+    use super::*;
+
+    fn emulator(cols: usize, rows: usize) -> Emulator {
+        let (input, _) = mpsc::sync_channel(INPUT_QUEUE);
+        let (color_requests, pending_colors) = mpsc::sync_channel(INPUT_QUEUE);
+        let size = Arc::new(Mutex::new(Size { cols, rows }));
+        let listener = Listener {
+            input: input.clone(),
+            size: size.clone(),
+            color_requests,
+        };
+        let term = Term::new(Config::default(), &*size.lock(), listener);
+        Emulator::new(term, pending_colors, input)
+    }
+
+    fn generation(frame: &Value) -> u64 {
+        frame["generation"].as_u64().unwrap()
+    }
+
+    fn apply_update(frame: &mut Value, update: &Value) {
+        if update["unchanged"] == true {
+            assert_eq!(frame["generation"], update["generation"]);
+            return;
+        }
+        if update["delta"] != true {
+            assert!(update.get("row_indices").is_none());
+            assert!(update.get("base_generation").is_none());
+            *frame = update.clone();
+            return;
+        }
+        assert_eq!(update["base_generation"], frame["generation"]);
+        let indices = update["row_indices"].as_array().unwrap();
+        assert_eq!(indices.len(), update["cells"].as_array().unwrap().len());
+        assert_eq!(indices.len(), update["lines"].as_array().unwrap().len());
+        for (index, row) in indices.iter().enumerate() {
+            let row = row.as_u64().unwrap() as usize;
+            frame["cells"][row] = update["cells"][index].clone();
+            frame["lines"][row] = update["lines"][index].clone();
+        }
+        for (key, value) in update.as_object().unwrap() {
+            if !matches!(
+                key.as_str(),
+                "delta" | "base_generation" | "row_indices" | "cells" | "lines"
+            ) {
+                frame[key] = value.clone();
+            }
+        }
+    }
+
+    fn assert_reconstructs(
+        emulator: &Emulator,
+        frame: &mut Value,
+        update: &Value,
+        offset: usize,
+        limit: Option<usize>,
+    ) {
+        apply_update(frame, update);
+        assert_eq!(
+            *frame,
+            screen(&emulator.term, offset, limit, emulator.generation)
+        );
+    }
+
+    #[test]
+    fn skipped_generations_and_independent_clients_reconstruct_native_cells() {
+        let mut emulator = emulator(10, 4);
+        let mut slow = emulator.screen_update(0, None, None, true);
+        let mut fast = slow.clone();
+        let slow_generation = generation(&slow);
+
+        emulator.advance("\x1b[1;1Hα\x1b[3;1H界\u{301}".as_bytes());
+        let first = emulator.screen_update(0, None, Some(generation(&fast)), true);
+        assert_reconstructs(&emulator, &mut fast, &first, 0, None);
+
+        emulator.advance(b"\x1b[2;2H\x1b[31;4mB\x1b[0m");
+        let second = emulator.screen_update(0, None, Some(generation(&fast)), true);
+        assert_reconstructs(&emulator, &mut fast, &second, 0, None);
+
+        let skipped = emulator.screen_update(0, None, Some(slow_generation), true);
+        assert_reconstructs(&emulator, &mut slow, &skipped, 0, None);
+        assert_eq!(slow, fast);
+        let unchanged = emulator.screen_update(0, None, Some(generation(&fast)), true);
+        assert_eq!(
+            unchanged,
+            json!({"unchanged":true,"generation":generation(&fast)})
+        );
+    }
+
+    #[test]
+    fn metadata_only_delta_preserves_modes_cursor_and_limited_view() {
+        let mut emulator = emulator(8, 4);
+        emulator.advance(b"\x1b[3;2H");
+        let mut frame = emulator.screen_update(0, Some(1), None, true);
+        emulator.advance(b"\x1b[?1h\x1b[?2004h\x1b[?1004h\x1b[?25l");
+        let update = emulator.screen_update(0, Some(1), Some(generation(&frame)), true);
+        assert_eq!(update["cursor"], json!({"row":2,"col":1,"visible":false}));
+        assert_eq!(update["modes"]["application_cursor"], true);
+        assert_eq!(update["modes"]["bracketed_paste"], true);
+        assert_eq!(update["modes"]["focus_reporting"], true);
+        assert_reconstructs(&emulator, &mut frame, &update, 0, Some(1));
+
+        let current = generation(&frame);
+        assert_eq!(
+            emulator.screen_update(0, Some(1), Some(current), false),
+            json!({"unchanged":true,"generation":current})
+        );
+        for since in [None, Some(0), Some(current + 1)] {
+            let full = emulator.screen_update(0, Some(1), since, true);
+            assert!(full.get("delta").is_none());
+            assert_reconstructs(&emulator, &mut frame, &full, 0, Some(1));
+        }
+        let legacy = emulator.screen_update(0, Some(1), Some(current - 1), false);
+        assert!(legacy.get("delta").is_none());
+        assert_reconstructs(&emulator, &mut frame, &legacy, 0, Some(1));
+        let history = emulator.screen_update(1, Some(1), Some(current), true);
+        assert!(history.get("delta").is_none());
+        assert_reconstructs(&emulator, &mut frame, &history, 1, Some(1));
+    }
+
+    #[test]
+    fn palette_alternate_screen_and_resize_force_full_reconstruction() {
+        let mut emulator = emulator(8, 4);
+        emulator.advance(b"\x1b[31mR\x1b[0m");
+        let mut frame = emulator.screen_update(0, None, None, true);
+        let original_color = frame["cells"][0][0]["fg"].clone();
+
+        emulator.advance(b"\x1b]4;1;rgb:00/ff/00\x07");
+        let palette = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert!(palette.get("delta").is_none());
+        assert_ne!(palette["cells"][0][0]["fg"], original_color);
+        assert_reconstructs(&emulator, &mut frame, &palette, 0, None);
+
+        emulator.advance(b"\x1b[?1049hALT");
+        let alternate = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert!(alternate.get("delta").is_none());
+        assert_eq!(alternate["modes"]["alt_screen"], true);
+        assert_reconstructs(&emulator, &mut frame, &alternate, 0, None);
+
+        emulator.advance(b"\x1b[?1049l");
+        let normal = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert!(normal.get("delta").is_none());
+        assert_eq!(normal["modes"]["alt_screen"], false);
+        assert_reconstructs(&emulator, &mut frame, &normal, 0, None);
+
+        emulator.resize(Size { cols: 9, rows: 6 });
+        let resized = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert!(resized.get("delta").is_none());
+        assert_eq!(resized["cols"], 9);
+        assert_eq!(resized["rows"], 6);
+        assert_reconstructs(&emulator, &mut frame, &resized, 0, None);
+
+        emulator.advance(b"\x1b[6;1Hz");
+        let after_resize = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert_eq!(after_resize["delta"], true);
+        assert_reconstructs(&emulator, &mut frame, &after_resize, 0, None);
+    }
+
+    #[test]
+    fn synchronized_timeout_flush_publishes_previously_buffered_rows() {
+        let mut emulator = emulator(8, 4);
+        let mut frame = emulator.screen_update(0, None, None, true);
+        emulator.advance(b"\x1b[?2026h\x1b[3;1HSYNC");
+        let buffered = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert_reconstructs(&emulator, &mut frame, &buffered, 0, None);
+        assert_eq!(frame["lines"][2], "");
+        let before_flush = generation(&frame);
+
+        // Exercise the processor's real timeout instead of ending the update
+        // through another PTY batch, which would hide missing flush damage.
+        let deadline = emulator.processor.sync_timeout().sync_timeout().unwrap();
+        thread::sleep(deadline.saturating_duration_since(Instant::now()));
+        emulator.flush_sync();
+        let flushed = emulator.screen_update(0, None, Some(before_flush), true);
+        assert_eq!(flushed["generation"], before_flush + 1);
+        assert_eq!(flushed["delta"], true);
+        assert!(
+            flushed["row_indices"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(2))
+        );
+        assert_reconstructs(&emulator, &mut frame, &flushed, 0, None);
+        assert_eq!(frame["lines"][2], "SYNC");
+    }
+
+    #[test]
+    fn scrolling_invalidates_old_bases_and_history_never_returns_delta() {
+        let mut emulator = emulator(8, 3);
+        let mut frame = emulator.screen_update(0, None, None, true);
+        emulator.advance(b"a\r\nb\r\nc\r\nd\r\ne");
+        let scrolled = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert!(scrolled.get("delta").is_none());
+        assert!(scrolled["history_size"].as_u64().unwrap() > 0);
+        assert_reconstructs(&emulator, &mut frame, &scrolled, 0, None);
+
+        let current = generation(&frame);
+        let mut history = emulator.screen_update(1, Some(4), Some(current), true);
+        assert!(history.get("delta").is_none());
+        assert_eq!(history["offset"], 1);
+        assert_eq!(history["rows"], 4);
+        assert_reconstructs(
+            &emulator,
+            &mut history,
+            &emulator.screen_update(1, Some(4), Some(current), true),
+            1,
+            Some(4),
+        );
+
+        emulator.advance(b"!");
+        let delta = emulator.screen_update(0, None, Some(current), true);
+        assert_eq!(delta["delta"], true);
+        assert_reconstructs(&emulator, &mut frame, &delta, 0, None);
+        let historical = emulator.screen_update(1, Some(4), Some(current), true);
+        assert!(historical.get("delta").is_none());
+        assert_reconstructs(&emulator, &mut history, &historical, 1, Some(4));
+    }
 }
 
 #[cfg(test)]
