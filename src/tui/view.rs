@@ -218,6 +218,28 @@ fn exited(frame: &mut Frame<'_>, geometry: Geometry, terminal: &Value) {
     button(frame, geometry.close, "Close window · X", false);
     button(frame, geometry.new, "New terminal · N", true);
 }
+fn empty_windows(frame: &mut Frame<'_>, geometry: Geometry) {
+    frame.render_widget(
+        panel()
+            .title(" No windows ")
+            .border_style(Style::default().fg(ACCENT)),
+        geometry.card,
+    );
+    frame.render_widget(
+        Paragraph::new("Start a terminal or exit to your host shell.\n\nExiting this view leaves the daemon running.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(MUTED))
+            .wrap(Wrap { trim: true }),
+        Rect::new(
+            geometry.card.x + 1,
+            geometry.card.y + 1,
+            geometry.card.width.saturating_sub(2),
+            geometry.card.height.saturating_sub(5),
+        ),
+    );
+    button(frame, geometry.close, "Exit · Esc / Q", false);
+    button(frame, geometry.new, "New terminal · Enter", true);
+}
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     frame: &mut Frame<'_>,
@@ -237,6 +259,10 @@ pub(super) fn draw(
     let terminal = snapshot["terminals"]
         .as_array()
         .and_then(|ts| ts.iter().find(|t| text(t, "id") == active));
+    let empty = active.is_empty()
+        && snapshot["terminals"]
+            .as_array()
+            .is_none_or(|terminals| terminals.is_empty());
     let project = terminal.and_then(|t| {
         snapshot["projects"]
             .as_array()
@@ -270,8 +296,10 @@ pub(super) fn draw(
         .unwrap_or_default();
     let hint = if !status.is_empty() {
         status
+    } else if picker && empty {
+        "N / Enter new · Esc / Q exit"
     } else if picker {
-        "Enter open · ^N new · ^O OMP · ^X close · Esc return"
+        "^Q detach · Esc return · Enter open · ^N new · ^O OMP · ^X close"
     } else if !failure.is_empty() {
         &failure
     } else if offset > 0 {
@@ -287,7 +315,12 @@ pub(super) fn draw(
     }
     let inner = block.inner(geometry.header);
     frame.render_widget(block, geometry.header);
-    if picker {
+    if picker && empty {
+        frame.render_widget(
+            Paragraph::new(" Start a terminal").style(Style::default().fg(ACCENT)),
+            inner,
+        );
+    } else if picker {
         frame.render_widget(
             Paragraph::new(Line::from(vec![
                 Span::styled(" Search  ", Style::default().fg(ACCENT)),
@@ -334,10 +367,18 @@ pub(super) fn draw(
     button(
         frame,
         geometry.switch,
-        if picker { "Return" } else { "Switch" },
+        if picker && empty {
+            "Exit"
+        } else if picker {
+            "Return"
+        } else {
+            "Switch"
+        },
         true,
     );
-    if picker {
+    if picker && empty {
+        empty_windows(frame, geometry);
+    } else if picker {
         let items = rows.iter().map(|row| {
             let (summary, directory) = row.label.split_once('\n').unwrap_or((&row.label, ""));
             let indent = "  ".repeat(row.depth.min(20));

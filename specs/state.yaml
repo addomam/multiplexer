@@ -23,3 +23,13 @@ ui_revision:
   requirements: three-row-header-fullscreen-switcher-exit-actions
   evidence: specs/verifications/UI-ratatui.md
   inherited_review_gate: blocked-cap-exhausted
+empty_switcher_revision:
+  status: passing-native-ui
+  evidence: specs/verifications/UI-empty-switcher.md
+input_latency_revision:
+  status: implementation-in-progress
+  agent: amux-latency
+  herdr_workspace: w11
+  worktree: .worktrees/input-latency
+  branch: perf/input-latency
+  evidence: specs/bugs/BUG-input-latency-empty-switcher.md

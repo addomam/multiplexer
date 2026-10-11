@@ -728,8 +728,14 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 if picker {
                     let chosen = rows.get(selected).map(|r| r.id.clone());
                     let control = key.modifiers.contains(KeyModifiers::CONTROL);
+                    let empty = active.is_empty()
+                        && snapshot["terminals"]
+                            .as_array()
+                            .is_none_or(|terminals| terminals.is_empty());
                     let action = match key.code {
-                        KeyCode::Char('q') if control => break,
+                        KeyCode::Char('q') if control || empty => break,
+                        KeyCode::Esc if empty => break,
+                        KeyCode::Enter if empty => Some(open_window("", false)),
                         KeyCode::Esc => {
                             picker = active.is_empty();
                             pending_parent = None;
@@ -767,7 +773,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                 None
                             }
                         }
-                        KeyCode::Char('n') if control => {
+                        KeyCode::Char('n') if control || empty => {
                             Some(open_window(chosen.as_deref().unwrap_or(&active), false))
                         }
                         KeyCode::Char('o') if control => {
@@ -870,6 +876,9 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
                     && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
                 {
+                    if picker && active.is_empty() {
+                        break;
+                    }
                     picker = !picker || active.is_empty();
                     query.clear();
                     pending_parent = None;
@@ -882,6 +891,37 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                         )?;
                     }
                 } else if picker {
+                    let empty = active.is_empty()
+                        && snapshot["terminals"]
+                            .as_array()
+                            .is_none_or(|terminals| terminals.is_empty());
+                    if empty && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
+                        if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
+                            break;
+                        }
+                        if view::Geometry::hit(geometry.new, mouse.column, mouse.row) {
+                            match apply_window(
+                                socket,
+                                open_window("", false),
+                                &mut active,
+                                &mut snapshot,
+                            ) {
+                                Ok(()) => {
+                                    picker = false;
+                                    screen = Value::Null;
+                                    offset = 0;
+                                    selection = None;
+                                    status.clear();
+                                    call(
+                                        socket,
+                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+                                    )?;
+                                }
+                                Err(error) => status = format!("{error:#}"),
+                            }
+                        }
+                        continue;
+                    }
                     if matches!(mouse.kind, MouseEventKind::ScrollUp) {
                         selected = selected.saturating_sub(3);
                     } else if matches!(mouse.kind, MouseEventKind::ScrollDown) {

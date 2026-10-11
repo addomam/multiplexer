@@ -7,6 +7,7 @@
 - Full-screen hierarchical fuzzy window list with two-line rows, direct click/Enter selection and retained launch/tree shortcuts.
 - Actual exit-code view with Close window and New terminal buttons, keyboard alternatives, compact stacked layout and empty-list recovery.
 - Native wrapper smoke verified Unicode/palette colors, application cursor, mouse coordinates, safe bracketed paste, focus, literal prefix, alternate-screen restoration, picker/rapid resize, exit codes 0/7/9, close/new/detach and shutdown. Existing 56 Rust tests, Clippy and release build pass.
+- Explicit New/Exit empty-window card and top-right Exit; Enter/N starts a terminal, Escape/Q detaches to the host without stopping the daemon. Visible picker Ctrl-Q hint and fresh-window guard preserve fuzzy search before snapshot refresh.
 
 ## 0.1.0 — local MVP
 
