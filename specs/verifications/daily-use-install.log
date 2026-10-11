@@ -1,0 +1,6 @@
+  Installing amux v0.1.0 (/Users/addomam/projects/multiplexer)
+    Updating crates.io index
+    Finished `release` profile [optimized] target(s) in 0.49s
+  Installing /var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-daily-q2p_l_b9/install/bin/amux
+   Installed package `amux v0.1.0 (/Users/addomam/projects/multiplexer)` (executable `amux`)
+warning: be sure to add `/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-daily-q2p_l_b9/install/bin` to your PATH to be able to run the installed binaries

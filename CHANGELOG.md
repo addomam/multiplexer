@@ -13,6 +13,7 @@
 - Integrated66 Rust tests,8 OMP tests, Clippy, release build, Zsh syntax and actual Herdr empty-page recovery pass; one-shot EOF, persistent framing/error continuation and bounded idle expiry verified. Paused/undrained clients may disconnect after five seconds without requests; no hidden replay.
 - Client-only second latency pass caches prepared native styled cells, prioritizes bounded queued-input bursts and presents immediately with brief 1 ms interaction pacing; idle polling remains 8 ms. Stock-Zsh medians now 2.01 / 3.94 / 6.77 ms at 120 / 300 / 500 columns, and a large 24-byte burst takes 3.98 ms. Cold full-refresh outliers around 130 ms remain documented.
 - Existing 66 Rust tests, 8 OMP tests, Clippy, release build and Zsh syntax pass; actual Herdr selection, Unicode/colors, picker, exit/new/empty-page detach pass. Compatible with the first-pass daemon without another process-disrupting restart. See `specs/verifications/immediate-input.md`.
+- Daily-use checkpoint verifies a private locked installation outside the checkout, cold auto-start, native detach/reattach, captured context, process-preserving reparenting, busy/partial refusal, descendant cleanup, hook failure recovery and config-only restart. Retired latency workspace/checkout and empty root artifact removed with approval; committed evidence and usable build retained.
 
 ## 0.1.0 — local MVP
 
@@ -23,4 +24,4 @@
 - Sequenced snapshots/events/waits with explicit stream gaps; bounded screen/scrollback/input; detach, retained exits and descendant-aware close/shutdown.
 - Native keyboard, mouse, paste, Unicode, alternate/synchronized screens, scrolling, selection and resize validation on macOS arm64. 56 Rust and 8 OMP tests pass.
 
-Linux runtime, Rust 1.85 minimum and other OMP versions remain unverified. No crash recovery or interpreter-state cloning. Independent review reached its five-round cap; final concurrent-removal finding was reproduced and fixed, but no post-fix independent PASS is claimed. Feature remains unmerged pending human decision. See `specs/verifications/MVP-e01.md` and `REVIEW-e01.md`.
+Linux runtime, Rust 1.86 minimum and other OMP versions remain unverified. No crash recovery or interpreter-state cloning. Independent review reached its five-round cap; final concurrent-removal finding was reproduced and fixed, but no post-fix independent PASS is claimed. Feature remains unmerged pending human decision. See `specs/verifications/MVP-e01.md` and `REVIEW-e01.md`.

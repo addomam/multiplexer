@@ -22,6 +22,28 @@ amux open --source main --omp --name agent
 
 `amux attach` reattaches without restarting processes or running hooks. `amux daemon` runs in the foreground for supervision. `--socket PATH` and `AMUX_SOCKET` select a daemon; its directory must be private and owned by the current user.
 
+## Daily operation
+
+Start with `amux`; return with `amux attach`. In the picker, **Ctrl-Q** detaches only this client. Closing the client does not stop the daemon or its shells.
+
+Save useful project configuration with `amux project-save NAME`. After a daemon restart, `amux project-open NAME` starts a **new shell** at the saved project context; it does not restore old processes or interpreter state.
+
+**`amux shutdown` ends all managed work.** Finish valuable tasks before shutdown, reboot, or a daemon upgrade. Screen/scrollback and unsaved runtime state exist only in memory.
+
+To update this checkout's installed binary:
+
+```sh
+cargo install --path . --locked --force
+```
+
+Reattach the new client afterward. The latest input optimization needs no restart of a daemon already supporting row updates; older runtime/API changes do. Installing a binary alone does not replace a running daemon.
+
+For startup failures, inspect `daemon.log` next to the selected socket. Default runtime directory: `$AMUX_RUNTIME_DIR`, otherwise `$XDG_RUNTIME_DIR/amux`, otherwise the OS temporary directory's `amux-<uid>`.
+
+`AMUX_SOCKET` or `--socket PATH` chooses another socket. Configuration remains under `$XDG_CONFIG_HOME/amux/config.json` or `~/.config/amux/config.json`. Hook failures appear in `amux snapshot` diagnostics and do not disable the shell.
+
+The [daily-use checkpoint](specs/verifications/daily-use-checkpoint.md) records the frozen source baseline, final checks, cleanup and remaining release limitations.
+
 ## Picker and native interaction
 
 The Ratatui interface has a **three-row title/tab bar**, a **Switch** button at the top right, and an edge-to-edge native terminal below it—no footer. Default prefix: **Ctrl-B**. Click Switch or press the prefix to replace the terminal view with a **full-screen window list**. Hierarchical rows show project, Git/agent/exit status and directory; fuzzy search covers terminal name, project, actual cwd and Git branch/commit. Select either line of a row with Enter or a mouse click to open it directly; Return or Escape restores the terminal.

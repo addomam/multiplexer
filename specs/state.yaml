@@ -3,7 +3,15 @@ vcs: {kind: git, branch: feat/amux-mvp, signing: disabled-local}
 active_flow: build_epic
 active_epic: e01
 project_cycle: {current_phase: 5, completed_phases: [1, 2, 3, 4]}
-handoff: {next_skill: null, blocked: true, reason: "Review cap exhausted (5/5). Human decision required."}
+handoff:
+  next_skill: null
+  blocked: true
+  reason: "Independent review cap exhausted (5/5); no merge or release approval."
+  last_step_completed: daily-use-stabilization
+  required_reading:
+    - CONVENTIONS.md
+    - specs/verifications/daily-use-checkpoint.md
+    - specs/tech-architecture/DESIGN_PLAN_LATEST.md
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -37,6 +45,8 @@ input_latency_revision:
   parent_ui_commit: ab0917b
   evidence: specs/verifications/input-latency-final.md
   measured_single_keys: 900
+  worktree_retired: true
+  herdr_workspace_retired: true
   inherited_review_gate: blocked-cap-exhausted
 immediate_input_revision:
   status: passing-mechanical-and-native-runtime
@@ -45,3 +55,12 @@ immediate_input_revision:
   measured_single_keys: 1000
   compatible_daemon: first-pass-row-delta-api
   inherited_review_gate: blocked-cap-exhausted
+daily_use_checkpoint:
+  status: paused-for-local-daily-use
+  tested_source_commit: 5c1e2c6
+  runtime_changes: none
+  evidence: specs/verifications/daily-use-checkpoint.md
+  cleanup: approved-retired-workspace-and-worktree-plus-empty-scripts-file
+  retained: release-binary-build-cache-committed-evidence-and-perf-branch
+  independent_review: blocked-cap-exhausted
+  merge_release: not-requested
