@@ -1,7 +1,7 @@
 # amux design
 ## Ownership
 Daemon: PTYs, independent emulator per terminal, process cleanup, tree, projects, snapshots and sequenced event ring.
-Client: focused terminal, scroll offset, selection, picker/filter. A picker overlays the surface and never resizes background terminals.
+Client: focused terminal, scroll offset, selection, picker/filter. Ratatui draws a three-row title/tab bar and an edge-to-edge native terminal below it, without a footer. Switch/prefix replaces the surface with a full-screen hierarchical window list and never resizes background terminals.
 Background terminals retain their last attached size, initially 80x24. Only opening/focusing/resizing the visible terminal changes its size.
 Unix sockets live in a private user-owned runtime directory. API v1 uses bounded newline JSON requests and responses. Same-user control is trusted, not a sandbox.
 PTY readers and writers are per-terminal workers. Screen reads copy bounded cells under only that terminal's emulator lock. Structured events exclude PTY bytes.
@@ -28,5 +28,5 @@ Cleanup validates kernel birth identities before signals, freezes/rescans descen
 integration: owns shell-safe structured submissions and lifecycle reporting; hides handshake/readiness races.
 projects: owns persistent configuration, hooks and Git cache; isolates disk/Git work from terminal I/O.
 client: owns local request framing; same contract for CLI, extension and TUI.
-tui: owns presentation/input translation only.
+tui: owns input translation and view state. Private tui/view uses Ratatui buffer projection for native styled/wide cells and cursor, with ordinary widgets for chrome/list/exit card. Shared geometry supplies drawing and mouse hitboxes. Exited windows show actual code and remove/new actions; New retains the old record and captured source context. Closing the last record leaves a usable empty list. Daemon API and emulator ownership are unchanged.
 No generic plugin layer, distributed service or recovery journal.

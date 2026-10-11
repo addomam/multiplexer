@@ -1,0 +1,190 @@
+   Compiling unicode-segmentation v1.13.3
+   Compiling foldhash v0.2.0
+   Compiling allocator-api2 v0.2.21
+   Compiling equivalent v1.0.2
+   Compiling darling_core v0.20.11
+   Compiling either v1.19.0
+   Compiling thiserror v2.0.21
+   Compiling castaway v0.2.4
+   Compiling ryu v1.0.23
+   Compiling static_assertions v1.1.0
+   Compiling strum v0.27.2
+   Compiling powerfmt v0.2.1
+   Compiling num_threads v0.1.7
+   Compiling num-conv v0.1.0
+   Compiling compact_str v0.9.1
+   Compiling itertools v0.14.0
+   Compiling time-core v0.1.7
+   Compiling thiserror v1.0.69
+   Compiling hashbrown v0.16.1
+   Compiling convert_case v0.10.0
+   Compiling deranged v0.5.8
+   Compiling line-clipping v0.3.8
+   Compiling filedescriptor v0.8.3
+   Compiling portable-pty v0.9.0
+   Compiling derive_more-impl v2.1.1
+   Compiling lru v0.16.4
+   Compiling kasuari v0.4.12
+   Compiling time v0.3.45
+   Compiling derive_more v2.1.1
+   Compiling unicode-truncate v2.0.1
+   Compiling darling_macro v0.20.11
+   Compiling ratatui-core v0.1.0
+   Compiling crossterm v0.29.0
+   Compiling darling v0.20.11
+   Compiling instability v0.3.10
+   Compiling ratatui-crossterm v0.1.0
+   Compiling ratatui-widgets v0.3.0
+   Compiling ratatui v0.30.0
+   Compiling amux v0.1.0 (/Users/addomam/projects/multiplexer)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.18s
+     Running unittests src/lib.rs (target/debug/deps/amux-c429c8e34ad73136)
+
+running 29 tests
+test cli::tests::reparent_preserves_explicit_root_and_open_omits_missing_fields ... ok
+test integration::tests::mismatched_generation_or_retry_cannot_be_settled ... ok
+test integration::tests::heartbeat_loss_invalidates_settle_without_waiting_in_real_time ... ok
+test cli::tests::bytes_are_validated_before_sending ... ok
+test projects::tests::inherited_pipe_from_background_process_cannot_hang_hook ... ok
+test projects::tests::invalid_configuration_cannot_replace_working_configuration ... ok
+test projects::tests::invalid_initial_config_changes_neither_disk_store_nor_directory ... ok
+test projects::tests::initial_project_hooks_and_recipes_are_ready_on_first_open ... ok
+test projects::tests::project_creation_is_safe_and_uses_configured_directory ... ok
+test projects::tests::hooks_capture_stderr_bound_output_and_report_spawn_failures ... ok
+test projects::tests::saved_identity_context_hooks_and_recipes_survive_without_runtime ... ok
+test projects::tests::daemon_and_project_hooks_are_independent_and_ordered ... ok
+test projects::tests::missing_repository_and_new_repository_are_explicit ... ok
+test tui::tests::malformed_cycle_does_not_hide_terminals_or_loop ... ok
+test tui::tests::mouse_protocol_uses_surface_coordinates_and_sgr_release ... ok
+test tui::tests::native_input_preserves_control_alt_unicode_and_application_cursor ... ok
+test tui::tests::picker_preserves_hierarchy_and_matches_workspace_metadata ... ok
+test tui::tests::selection_skips_wide_spacers_and_clipboard_encoding_is_padded ... ok
+test tui::tests::unicode_labels_are_cell_bounded_and_prefix_is_configurable ... ok
+test tui::tests::utf8_mouse_reports_non_ascii_and_large_coordinates ... ok
+test projects::tests::git_summaries_separate_index_worktree_and_untracked ... ok
+test projects::tests::git_preserves_renames_binary_files_and_unusual_untracked_paths ... ok
+test projects::tests::timed_out_hook_kills_descendants_and_continues ... ok
+test projects::tests::large_worktrees_keep_complete_counts_and_bounded_file_details ... ok
+test projects::tests::equal_branches_do_not_alias_distinct_worktrees ... ok
+test runtime::process_cleanup_tests::stale_root_identity_never_signals_or_expands_reused_pid ... ok
+test projects::tests::git_reports_detached_commit_and_upstream_divergence ... ok
+test projects::tests::git_refresh_is_async_and_kills_a_hung_git_hook ... ok
+test projects::tests::workspace_traversal_bounds_missing_repo_history_and_retains_live_metadata ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.89s
+
+     Running unittests src/main.rs (target/debug/deps/amux-bd37740d5d7427bd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (target/debug/deps/acceptance-5ceb3728c5288886)
+
+running 11 tests
+test shutdown_disconnects_partial_clients_and_drains_concurrent_opens ... ok
+test interrupted_source_records_completion_without_replacing_user_hooks ... ok
+test project_save_immediately_after_confirmed_cd_uses_latest_workspace_root ... ok
+test unsupported_version_is_explicit_json_error ... ok
+test agent_crash_is_published_without_a_final_extension_report ... ok
+test initial_hooks_continue_after_failure_and_concurrent_open_runs_once ... ok
+test host_context_child_partial_busy_tree_detach_and_shutdown ... ok
+foreground input under noisy PTY: p50=131ms p95=139ms max=160ms
+test screen_queries_slow_subscriber_and_noisy_terminal_do_not_block_input ... ok
+test maximum_supported_screen_is_readable_through_shared_client ... ok
+test inherited_git_common_dir_does_not_corrupt_workspace_metadata ... ok
+test sequenced_waits_replay_transitions_and_report_stream_gaps ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.41s
+
+     Running tests/integration.rs (target/debug/deps/integration-81b1dc0bbea8a6a4)
+
+running 4 tests
+test busy_partial_and_lost_are_distinct_and_capture_remains_timestamped ... ok
+test nested_agents_never_overwrite_root_activity_and_shutdown_is_not_settled ... ok
+test agent_lifetimes_are_bounded_without_losing_root_or_active_children ... ok
+test real_zsh_preserves_startup_exports_input_foreground_and_explicit_queue ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s
+
+     Running tests/runtime.rs (target/debug/deps/runtime-de897c87a9a20265)
+
+running 8 tests
+test raw_color_query_foreground_app ... ignored, raw foreground subprocess fixture
+test retained_natural_exit_cleanup_is_idempotent_and_keeps_original_status ... ok
+test captured_removed_exports_do_not_leak_from_daemon_environment ... ok
+test close_freezes_and_rescans_concurrent_fork_producers ... ok
+test close_terminates_term_ignoring_separate_session_descendant ... ok
+test close_terminates_foreground_job_and_retains_exit_status ... ok
+test native_pty_application_updated_palette_queries_match_displayed_colors ... ok
+test native_pty_unicode_alt_screen_modes_scrollback_resize_and_reply ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.55s
+
+     Running tests/shell_races.rs (target/debug/deps/shell_races-7514fad326b7c457)
+
+running 5 tests
+test captured_zdotdir_changes_and_removals_select_actual_child_startup ... ok
+test immediate_submission_cannot_deadlock_a_pending_queued_wake ... ok
+test queued_wake_cannot_follow_typeahead_into_foreground_application ... ok
+test concurrent_first_opens_publish_one_main_and_valid_default_parents ... ok
+test concurrent_ancestor_removal_keeps_every_surviving_parent_valid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.16s
+
+   Doc-tests amux
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Checking amux v0.1.0 (/Users/addomam/projects/multiplexer)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.57s
+   Compiling rustversion v1.0.23
+   Compiling thiserror v2.0.21
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.2.0
+   Compiling ident_case v1.0.1
+   Compiling strsim v0.11.1
+   Compiling syn v2.0.119
+   Compiling fnv v1.0.7
+   Compiling thiserror-impl v2.0.21
+   Compiling either v1.19.0
+   Compiling static_assertions v1.1.0
+   Compiling indoc v2.0.8
+   Compiling ryu v1.0.23
+   Compiling instability v0.3.10
+   Compiling itertools v0.14.0
+   Compiling unicode-segmentation v1.13.3
+   Compiling hashbrown v0.16.1
+   Compiling powerfmt v0.2.1
+   Compiling num_threads v0.1.7
+   Compiling time-core v0.1.7
+   Compiling num-conv v0.1.0
+   Compiling deranged v0.5.8
+   Compiling line-clipping v0.3.8
+   Compiling castaway v0.2.4
+   Compiling lru v0.16.4
+   Compiling compact_str v0.9.1
+   Compiling kasuari v0.4.12
+   Compiling time v0.3.45
+   Compiling unicode-truncate v2.0.1
+   Compiling darling_core v0.20.11
+   Compiling strum_macros v0.27.2
+   Compiling derive_more-impl v2.1.1
+   Compiling thiserror-impl v1.0.69
+   Compiling derive_more v2.1.1
+   Compiling thiserror v1.0.69
+   Compiling crossterm v0.29.0
+   Compiling darling_macro v0.20.11
+   Compiling filedescriptor v0.8.3
+   Compiling portable-pty v0.9.0
+   Compiling darling v0.20.11
+   Compiling strum v0.27.2
+   Compiling ratatui-core v0.1.0
+   Compiling ratatui-crossterm v0.1.0
+   Compiling ratatui-widgets v0.3.0
+   Compiling ratatui v0.30.0
+   Compiling amux v0.1.0 (/Users/addomam/projects/multiplexer)
+    Finished `release` profile [optimized] target(s) in 9.02s

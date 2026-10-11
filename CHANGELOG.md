@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Ratatui UI
+
+- Ratatui 0.30.0 rendering with the existing Crossterm 0.29 input/backend and Rust minimum raised to 1.86.
+- Three-row title/tab bar and top-right Switch button; native terminal fills every remaining row with no footer.
+- Full-screen hierarchical fuzzy window list with two-line rows, direct click/Enter selection and retained launch/tree shortcuts.
+- Actual exit-code view with Close window and New terminal buttons, keyboard alternatives, compact stacked layout and empty-list recovery.
+- Native wrapper smoke verified Unicode/palette colors, application cursor, mouse coordinates, safe bracketed paste, focus, literal prefix, alternate-screen restoration, picker/rapid resize, exit codes 0/7/9, close/new/detach and shutdown. Existing 56 Rust tests, Clippy and release build pass.
+
 ## 0.1.0 — local MVP
 
 - Rust daemon-owned PTYs and alacritty_terminal emulator, one-surface detachable TUI, and `amux` CLI over a versioned local API.

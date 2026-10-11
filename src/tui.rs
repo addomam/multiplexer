@@ -6,9 +6,9 @@ use crossterm::{
         EnableFocusChange, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
         KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
     },
-    execute, queue,
-    style::{self, Attribute, Color},
-    terminal::{self, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+    execute,
+    style::{self, Attribute},
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use serde_json::{Value, json};
 use std::{
@@ -17,6 +17,8 @@ use std::{
     path::Path,
     time::{Duration, Instant},
 };
+
+mod view;
 
 const HEADER: u16 = 3;
 const FRAME: Duration = Duration::from_millis(34);
@@ -298,18 +300,22 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
                 changes
             )
         };
+        let exit = if node["alive"] == false {
+            node["exit_status"]
+                .as_u64()
+                .map(|code| format!(" · exit {code}"))
+                .unwrap_or_else(|| " · exiting".into())
+        } else {
+            String::new()
+        };
         let label = format!(
-            "{}  [{}]  {}  {}  {}{}",
+            "{}  [{}]  {}{}  {}\n{}",
             text(node, "name"),
             project_name,
-            cwd,
-            git_label,
             activity,
-            if node["alive"] == false {
-                " (exited)"
-            } else {
-                ""
-            }
+            exit,
+            git_label,
+            cwd,
         );
         if fuzzy(query, &label) {
             rows.push(Row {
@@ -338,16 +344,6 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
     rows
 }
 
-fn color(value: &Value) -> Color {
-    match value.as_array() {
-        Some(rgb) if rgb.len() == 3 => Color::Rgb {
-            r: rgb[0].as_u64().unwrap_or(0) as u8,
-            g: rgb[1].as_u64().unwrap_or(0) as u8,
-            b: rgb[2].as_u64().unwrap_or(0) as u8,
-        },
-        _ => Color::Reset,
-    }
-}
 fn clip_label(label: &str, cols: u16) -> String {
     use unicode_width::UnicodeWidthChar;
     let mut width = 0usize;
@@ -368,172 +364,6 @@ fn selection_contains(selection: Option<Selection>, point: (u16, u16)) -> bool {
         let point = (point.1, point.0);
         point >= a.min(b) && point <= a.max(b)
     })
-}
-#[allow(clippy::too_many_arguments)]
-fn render(
-    screen: &Value,
-    snapshot: &Value,
-    active: &str,
-    picker: bool,
-    rows: &[Row],
-    selected: usize,
-    query: &str,
-    status: &str,
-    offset: usize,
-    focused: bool,
-    selection: Option<Selection>,
-) -> Result<()> {
-    let (cols, height) = terminal::size()?;
-    let mut out = io::stdout().lock();
-    queue!(
-        out,
-        cursor::Hide,
-        style::ResetColor,
-        style::SetAttribute(Attribute::Reset),
-        cursor::MoveTo(0, 0),
-        terminal::Clear(ClearType::All)
-    )?;
-    let title = snapshot["terminals"]
-        .as_array()
-        .and_then(|ts| ts.iter().find(|t| text(t, "id") == active))
-        .map(|t| text(t, "name"))
-        .unwrap_or(active);
-    queue!(
-        out,
-        style::SetBackgroundColor(Color::DarkBlue),
-        style::SetForegroundColor(Color::White),
-        style::Print(clip_label(
-            &format!(" amux · {title} · click here / prefix: picker"),
-            cols
-        ))
-    )?;
-    let search = if picker {
-        format!(" Search: {query}")
-    } else {
-        format!(
-            " {}",
-            if offset > 0 {
-                "scrollback · type to return to live surface"
-            } else {
-                "foreground terminal · prefix twice sends literal prefix"
-            }
-        )
-    };
-    let failure = snapshot["diagnostics"]
-        .as_array()
-        .and_then(|diagnostics| {
-            diagnostics.iter().rev().find(|diagnostic| {
-                diagnostic["diagnostic"]["ok"] == false || diagnostic["message"].is_string()
-            })
-        })
-        .map(|diagnostic| {
-            format!(
-                "{}: {}",
-                text(diagnostic, "kind"),
-                diagnostic["diagnostic"]["error"]
-                    .as_str()
-                    .or_else(|| diagnostic["message"].as_str())
-                    .unwrap_or("hook failed; amux snapshot shows output")
-            )
-        })
-        .unwrap_or_default();
-    let help = if !status.is_empty() {
-        status
-    } else if picker {
-        " ↑↓ select  Enter open  ^N shell  ^O OMP  ^P promote  ^R reparent  ^D demote  ^X close  ^Q detach"
-    } else {
-        &failure
-    };
-    if height > 1 {
-        queue!(
-            out,
-            cursor::MoveTo(0, 1),
-            style::Print(clip_label(&search, cols))
-        )?;
-    }
-    if height > 2 {
-        queue!(
-            out,
-            cursor::MoveTo(0, 2),
-            style::Print(clip_label(help, cols))
-        )?;
-    }
-    queue!(out, style::ResetColor)?;
-    if picker {
-        let visible = height.saturating_sub(HEADER) as usize;
-        let start = selected.saturating_sub(visible.saturating_sub(1));
-        for (index, row) in rows.iter().enumerate().skip(start).take(visible) {
-            queue!(
-                out,
-                cursor::MoveTo(0, HEADER + (index - start) as u16),
-                style::SetAttribute(Attribute::Reset)
-            )?;
-            if index == selected {
-                queue!(out, style::SetAttribute(Attribute::Reverse))?;
-            }
-            let label = format!("{}{}", "  ".repeat(row.depth.min(20)), row.label);
-            queue!(out, style::Print(clip_label(&label, cols)))?;
-        }
-    } else if let Some(lines) = screen["cells"].as_array() {
-        for (row, line) in lines
-            .iter()
-            .take(height.saturating_sub(HEADER) as usize)
-            .enumerate()
-        {
-            if let Some(cells) = line.as_array() {
-                for (col, cell) in cells.iter().take(cols as usize).enumerate() {
-                    if cell["wide_spacer"].as_bool().unwrap_or(false) {
-                        continue;
-                    }
-                    queue!(
-                        out,
-                        cursor::MoveTo(col as u16, row as u16 + HEADER),
-                        style::SetAttribute(Attribute::Reset),
-                        style::SetForegroundColor(color(&cell["fg"])),
-                        style::SetBackgroundColor(color(&cell["bg"]))
-                    )?;
-                    for (field, attribute) in [
-                        ("bold", Attribute::Bold),
-                        ("italic", Attribute::Italic),
-                        ("underline", Attribute::Underlined),
-                        ("inverse", Attribute::Reverse),
-                        ("dim", Attribute::Dim),
-                        ("strikeout", Attribute::CrossedOut),
-                    ] {
-                        if cell[field].as_bool().unwrap_or(false) {
-                            queue!(out, style::SetAttribute(attribute))?;
-                        }
-                    }
-                    if selection_contains(selection, (col as u16, row as u16)) {
-                        queue!(
-                            out,
-                            style::SetBackgroundColor(Color::DarkBlue),
-                            style::SetForegroundColor(Color::White)
-                        )?;
-                    }
-                    let content = cell["text"].as_str().unwrap_or(" ");
-                    queue!(
-                        out,
-                        style::Print(if content.is_empty() { " " } else { content })
-                    )?;
-                }
-            }
-        }
-        if offset == 0 && focused && screen["cursor"]["visible"].as_bool().unwrap_or(true) {
-            let row = screen["cursor"]["row"].as_u64().unwrap_or(0) as u16;
-            let col = screen["cursor"]["col"].as_u64().unwrap_or(0) as u16;
-            if row < height.saturating_sub(HEADER) && col < cols {
-                queue!(out, cursor::MoveTo(col, row + HEADER), cursor::Show)?;
-            }
-        }
-    }
-    queue!(
-        out,
-        style::ResetColor,
-        style::SetAttribute(Attribute::Reset)
-    )?;
-    out.flush()?;
-    Ok(())
 }
 
 fn mouse_bytes(mouse: MouseEvent, screen: &Value) -> Vec<u8> {
@@ -673,6 +503,50 @@ fn selected_text(screen: &Value, start: (u16, u16), end: (u16, u16)) -> String {
     result
 }
 
+fn window_exited(snapshot: &Value, id: &str) -> bool {
+    snapshot["terminals"].as_array().is_some_and(|ts| {
+        ts.iter()
+            .any(|t| text(t, "id") == id && t["alive"] == false)
+    })
+}
+fn open_window(source: &str, omp: bool) -> Value {
+    let mut request = json!({"op":"open","omp":omp});
+    if !source.is_empty() {
+        request["source"] = json!(source);
+    }
+    request
+}
+fn close_window(snapshot: &Value, id: &str) -> Value {
+    json!({"op":if window_exited(snapshot,id) {"remove"} else {"close"},"terminal":id})
+}
+fn apply_window(
+    socket: &Path,
+    request: Value,
+    active: &mut String,
+    snapshot: &mut Value,
+) -> Result<()> {
+    let opens = request["op"] == "open";
+    let result = call(socket, request)?;
+    *snapshot = call(socket, json!({"op":"snapshot"}))?;
+    if opens {
+        *active = text(&result, "id").to_owned();
+    } else if !snapshot["terminals"]
+        .as_array()
+        .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
+    {
+        *active = snapshot["terminals"]
+            .as_array()
+            .and_then(|ts| {
+                ts.iter()
+                    .find(|t| t["alive"] == true)
+                    .or_else(|| ts.first())
+            })
+            .map(|t| text(t, "id").to_owned())
+            .unwrap_or_default();
+    }
+    Ok(())
+}
+
 pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
     let detach_generation = snapshot["detach_generation"].as_u64().unwrap_or(0);
@@ -701,7 +575,10 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         text(&call(socket, json!({"op":"open"}))?, "id").to_owned()
     };
     let _restore = Restore::enter()?;
+    let mut display =
+        ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(io::stdout()))?;
     let mut size = terminal::size()?;
+    let mut geometry = view::geometry(ratatui::layout::Rect::new(0, 0, size.0, size.1));
     call(
         socket,
         json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
@@ -727,6 +604,20 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     break;
                 }
                 snapshot_at = Instant::now();
+                if !snapshot["terminals"]
+                    .as_array()
+                    .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
+                {
+                    active = snapshot["terminals"]
+                        .as_array()
+                        .and_then(|ts| ts.first())
+                        .map(|t| text(t, "id").to_owned())
+                        .unwrap_or_default();
+                    picker = true;
+                    offset = 0;
+                    screen = Value::Null;
+                    selection = None;
+                }
                 dirty = true;
             }
             if !picker {
@@ -742,10 +633,12 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
             if dirty {
                 let rows = tree_rows(&snapshot, &query);
                 selected = selected.min(rows.len().saturating_sub(1));
-                render(
-                    &screen, &snapshot, &active, picker, &rows, selected, &query, &status, offset,
-                    focused, selection,
-                )?;
+                display.draw(|frame| {
+                    geometry = view::draw(
+                        frame, &screen, &snapshot, &active, picker, &rows, selected, &query,
+                        &status, offset, focused, selection,
+                    );
+                })?;
                 dirty = false;
             }
             frame_at = Instant::now();
@@ -811,7 +704,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
             }
             Event::Key(key) if key.kind != KeyEventKind::Release => {
                 if is_prefix(key, prefix) {
-                    if picker && previous_prefix {
+                    if picker && previous_prefix && !active.is_empty() {
                         picker = false;
                         call(
                             socket,
@@ -838,7 +731,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     let action = match key.code {
                         KeyCode::Char('q') if control => break,
                         KeyCode::Esc => {
-                            picker = false;
+                            picker = active.is_empty();
                             pending_parent = None;
                             None
                         }
@@ -863,6 +756,9 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                     )
                                 } else {
                                     active = id;
+                                    screen = Value::Null;
+                                    selection = None;
+                                    status.clear();
                                     offset = 0;
                                     picker = false;
                                     None
@@ -872,16 +768,16 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                             }
                         }
                         KeyCode::Char('n') if control => {
-                            Some(json!({"op":"open","source":chosen.as_deref().unwrap_or(&active)}))
+                            Some(open_window(chosen.as_deref().unwrap_or(&active), false))
                         }
-                        KeyCode::Char('o') if control => Some(
-                            json!({"op":"open","source":chosen.as_deref().unwrap_or(&active),"omp":true}),
-                        ),
+                        KeyCode::Char('o') if control => {
+                            Some(open_window(chosen.as_deref().unwrap_or(&active), true))
+                        }
                         KeyCode::Char('p') if control => {
                             chosen.map(|id| json!({"op":"promote","terminal":id}))
                         }
                         KeyCode::Char('x') if control => {
-                            chosen.map(|id| json!({"op":"close","terminal":id}))
+                            chosen.map(|id| close_window(&snapshot, &id))
                         }
                         KeyCode::Char('r' | 'd') if control => {
                             if let Some(id) = chosen {
@@ -901,14 +797,17 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     };
                     if let Some(request) = action {
                         let opens = request["op"] == "open";
-                        match call(socket, request) {
-                            Ok(result) => {
+                        match apply_window(socket, request, &mut active, &mut snapshot) {
+                            Ok(()) => {
                                 status.clear();
-                                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                offset = 0;
+                                screen = Value::Null;
+                                selection = None;
                                 if opens {
-                                    active = text(&result, "id").to_owned();
-                                    offset = 0;
                                     picker = false;
+                                }
+                                if active.is_empty() {
+                                    picker = true;
                                 }
                             }
                             Err(error) => status = format!("{error:#}"),
@@ -919,6 +818,36 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                             socket,
                             json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
                         )?;
+                    }
+                } else if window_exited(&snapshot, &active) {
+                    let request = match key.code {
+                        KeyCode::Char('n') | KeyCode::Enter => Some(open_window(&active, false)),
+                        KeyCode::Char('x') | KeyCode::Delete => {
+                            Some(close_window(&snapshot, &active))
+                        }
+                        KeyCode::Esc => {
+                            picker = true;
+                            None
+                        }
+                        _ => None,
+                    };
+                    if let Some(request) = request {
+                        match apply_window(socket, request, &mut active, &mut snapshot) {
+                            Ok(()) => {
+                                picker = active.is_empty();
+                                screen = Value::Null;
+                                offset = 0;
+                                selection = None;
+                                status.clear();
+                                if !picker {
+                                    call(
+                                        socket,
+                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+                                    )?;
+                                }
+                            }
+                            Err(error) => status = format!("{error:#}"),
+                        }
                     }
                 } else if key.modifiers.contains(KeyModifiers::SHIFT)
                     && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown)
@@ -938,12 +867,14 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 }
             }
             Event::Mouse(mouse) => {
-                if mouse.row < HEADER
+                if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
                     && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
                 {
-                    picker = !picker;
+                    picker = !picker || active.is_empty();
                     query.clear();
                     pending_parent = None;
+                    selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
+                    status.clear();
                     if !picker {
                         call(
                             socket,
@@ -951,12 +882,21 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                         )?;
                     }
                 } else if picker {
-                    if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
-                        let visible = size.1.saturating_sub(HEADER) as usize;
-                        let start = selected.saturating_sub(visible.saturating_sub(1));
-                        if let Some(row) =
-                            rows.get(start + mouse.row.saturating_sub(HEADER) as usize)
-                        {
+                    if matches!(mouse.kind, MouseEventKind::ScrollUp) {
+                        selected = selected.saturating_sub(3);
+                    } else if matches!(mouse.kind, MouseEventKind::ScrollDown) {
+                        selected = (selected + 3).min(rows.len().saturating_sub(1));
+                    } else if view::Geometry::hit(geometry.body, mouse.column, mouse.row)
+                        && mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT
+                            < geometry.body.height / view::ROW_HEIGHT
+                        && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
+                    {
+                        let start = view::list_start(selected, geometry.body.height);
+                        if let Some(row) = rows.get(
+                            start
+                                + (mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT)
+                                    as usize,
+                        ) {
                             if let Some((child, demote)) = pending_parent.take() {
                                 match call(
                                     socket,
@@ -971,10 +911,42 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                 active = row.id.clone();
                                 picker = false;
                                 offset = 0;
+                                screen = Value::Null;
+                                selection = None;
+                                status.clear();
                                 call(
                                     socket,
                                     json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
                                 )?;
+                            }
+                        }
+                    }
+                } else if window_exited(&snapshot, &active) {
+                    if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
+                        let request = if view::Geometry::hit(geometry.new, mouse.column, mouse.row)
+                        {
+                            Some(open_window(&active, false))
+                        } else if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
+                            Some(close_window(&snapshot, &active))
+                        } else {
+                            None
+                        };
+                        if let Some(request) = request {
+                            match apply_window(socket, request, &mut active, &mut snapshot) {
+                                Ok(()) => {
+                                    picker = active.is_empty();
+                                    screen = Value::Null;
+                                    offset = 0;
+                                    selection = None;
+                                    status.clear();
+                                    if !picker {
+                                        call(
+                                            socket,
+                                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+                                        )?;
+                                    }
+                                }
+                                Err(error) => status = format!("{error:#}"),
                             }
                         }
                     }

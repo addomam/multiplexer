@@ -4,7 +4,7 @@ A project-oriented native terminal wrapper: a Rust daemon owns Zsh terminals and
 
 ## Install and start
 
-Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. The crate declares Rust 1.85; that minimum toolchain is not independently verified. Requires stock `/bin/zsh`. OMP is optional until launched.
+Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. Ratatui 0.30.0 uses the existing Crossterm 0.29 backend; the crate now declares Rust 1.86, matching Ratatui's minimum. That minimum toolchain is not independently verified. Requires stock `/bin/zsh`. OMP is optional until launched.
 
 ```sh
 cargo install --path . --locked
@@ -24,7 +24,7 @@ amux open --source main --omp --name agent
 
 ## Picker and native interaction
 
-Default prefix: **Ctrl-B**. Click the full-width picker header or press the prefix to open a hierarchical fuzzy picker. Search covers terminal name, project, actual cwd and Git branch/commit. Select a row with Enter or a mouse click to open it directly.
+The Ratatui interface has a **three-row title/tab bar**, a **Switch** button at the top right, and an edge-to-edge native terminal below it—no footer. Default prefix: **Ctrl-B**. Click Switch or press the prefix to replace the terminal view with a **full-screen window list**. Hierarchical rows show project, Git/agent/exit status and directory; fuzzy search covers terminal name, project, actual cwd and Git branch/commit. Select either line of a row with Enter or a mouse click to open it directly; Return or Escape restores the terminal.
 
 | Picker action | Key |
 |---|---|
@@ -33,10 +33,13 @@ Default prefix: **Ctrl-B**. Click the full-width picker header or press the pref
 | New terminal running OMP | Ctrl-O |
 | Promote | Ctrl-P |
 | Reparent / demote: choose a parent row next | Ctrl-R / Ctrl-D |
-| Close selected terminal | Ctrl-X |
+| Close running terminal / remove exited window | Ctrl-X |
 | Detach this TUI | Ctrl-Q |
 | Cancel picker | Escape |
 | Send literal prefix to the application | Prefix twice |
+
+When a terminal exits, its view shows the actual exit code and **Close window** / **New terminal** buttons. **X** removes its exited record; **N** or **Enter** starts a new terminal from the retained captured context, leaving the old record available until closed. If the last window is removed, the empty full-screen list remains usable: **Ctrl-N** starts a new shell. The list's mouse wheel moves its selection. Exit-card buttons stack vertically on narrow displays.
+Native Ratatui surface/action evidence: [UI verification](specs/verifications/UI-ratatui.md).
 
 Mouse wheel and Shift-PageUp/PageDown scroll locally; typing returns to the live surface. Shift-drag selects text even when the foreground application requests mouse reporting; selection copies through the host terminal's OSC 52 support. Managed-application clipboard requests are not forwarded; client selection is the supported clipboard path. Focus, scrolling, selection and picker state belong to this client. Background terminals retain their last size, initially 80×24; opening a picker does not resize them. Only the visible surface follows client resize. If multiple local TUIs show the same terminal, the last attachment/resize determines its PTY geometry.
 

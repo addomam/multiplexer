@@ -17,3 +17,9 @@ verification:
   evidence: specs/verifications/MVP-e01.md
   independent_review: blocked-cap-exhausted
   review_rounds: 5
+ui_revision:
+  renderer: ratatui-0.30.0
+  status: passing
+  requirements: three-row-header-fullscreen-switcher-exit-actions
+  evidence: specs/verifications/UI-ratatui.md
+  inherited_review_gate: blocked-cap-exhausted
