@@ -1,0 +1,11 @@
+story_id: e02s03
+title: Advanced graphics and input
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: Advanced graphics and input
+    verify: "cargo test -p terminal-showcase"
+    risk: P0
+    status: passing
+    allure: {severity: critical, categories: [terminal, compatibility]}

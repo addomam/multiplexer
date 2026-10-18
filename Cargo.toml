@@ -5,6 +5,12 @@ edition = "2024"
 rust-version = "1.86"
 description = "Project-oriented native terminal environment"
 license = "MIT"
+default-run = "amux"
+
+[workspace]
+members = ["terminal-showcase"]
+default-members = ["."]
+resolver = "3"
 
 [dependencies]
 alacritty_terminal = "=0.26.0"

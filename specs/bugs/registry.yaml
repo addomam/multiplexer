@@ -1,5 +1,5 @@
 type: bug_registry
-context: e01 native terminal; Herdr input-latency and empty-switcher revision
+context: amux native terminal; historical input revisions and open showcase endpoint compatibility bugs
 bugs:
   - id: input-latency
     status: fixed
@@ -25,3 +25,19 @@ bugs:
     approach: prepared-native-cells-bounded-event-priority-immediate-interaction-frames
     risk_level: medium
     evidence: ../verifications/immediate-input.md
+  - id: showcase-origin-cpr
+    status: open
+    source: BUG-showcase-endpoint-compatibility.md
+    risk_level: medium
+    evidence: ../verifications/terminal-showcase.md
+    pickup_order: 1
+    next_skill: investigate-bug
+    acceptance: origin-relative-cpr-with-mode-transitions-and-margin-restoration
+  - id: showcase-zwj-cursor
+    status: open
+    source: BUG-showcase-endpoint-compatibility.md
+    risk_level: medium
+    evidence: ../verifications/terminal-showcase.md
+    pickup_order: 2
+    next_skill: investigate-bug
+    acceptance: joined-grapheme-cursor-width-with-cjk-combining-and-overwrite-regressions

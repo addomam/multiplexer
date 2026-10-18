@@ -7,6 +7,10 @@ in_scope:
   - {story: e01s04, requirement: OMP manual/action discovery, independent lifecycle dimensions, precise settled waits}
   - {story: e01s05, requirement: Single-terminal TUI, hierarchical fuzzy picker, prefix and literal prefix, shared CLI API}
   - {story: e01s06, requirement: Vertical slice, stress validation, meaningful tests, usage and supported-version evidence}
+  - {story: e02s01, requirement: Independent terminal endpoint detection with bounded parsing and safe state restoration}
+  - {story: e02s02, requirement: Polished capability matrix, cycling visual demonstrations and reproducible screenshots}
+  - {story: e02s03, requirement: Graphics lifecycles and interactive input and integration inspection}
+  - {story: e02s04, requirement: Headless JSON regression, visual verification export and independent amux compatibility testing}
 out_of_scope:
   - Tiling and nonlocal clients (deferred presentation)
   - ACP, A2A, MCP-UI, A2UI (deferred protocols)
@@ -18,6 +22,7 @@ success_criteria:
   - Descendant foreground processes terminated on explicit close and shutdown.
   - Noisy terminals and slow subscribers cannot block PTY consumption.
   - Limitations and unverified platforms explicitly reported.
+  - All fourteen terminal-showcase completion criteria exercised with objective and visual evidence distinguished.
 prior_art:
   - '[OK] alacritty_terminal 0.26.0: complete Rust emulator; Term::new, resize, grid, mode and vte Processor'
   - '[OK] portable-pty 0.9.0: native PTY ownership, process spawn, reader/writer, resize'

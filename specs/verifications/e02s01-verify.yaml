@@ -1,0 +1,64 @@
+story_id: e02s01
+type: verification
+context: native-terminal
+verified_at: '2026-10-11T22:42:49.975551+00:00'
+verifier: verify-work-agent-operated
+phases:
+  smoke:
+    passed: true
+    evidence: showcase-browser-screen.json
+    native_stages: 21
+  build:
+    passed: true
+    command: cargo build --workspace
+  typecheck:
+    passed: true
+    command: cargo clippy --workspace --all-targets -- -D warnings
+  lint:
+    passed: true
+    command: cargo fmt --all -- --check
+  tests:
+    passed: true
+    workspace_rust_passed: 177
+    intentionally_ignored: 4
+    explicit_amux_integration_passed: 1
+    headless_checks_passed: 6
+  terminal_verdict:
+    command: GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings
+      && cargo build --workspace && cargo test -p terminal-showcase --test multiplexer
+      -- --ignored --nocapture && cargo run -p terminal-showcase -- --headless --json
+      && cargo fmt --all -- --check
+    exit_code: 0
+    captured_at: '2026-10-11T22:42:49.975551+00:00'
+    stdout_stderr_file: e02-gates.log
+    artifact: 186
+    wall_seconds: 72.95
+    note: One contiguous post-review run; no failing-run output mixed in.
+  manual:
+    passed: true
+    operator: assistant
+    evidence: terminal-showcase.md
+    human_signoff: not-claimed
+  security:
+    report: ../security/REVIEW-e02.md
+    unaddressed_high_findings: 0
+  nfr:
+    report: NFR-e02.json
+  gaps:
+    closed: true
+    limits: Physical raster/fonts, minimum Rust, Linux/SSH/emulator combinations not
+      certified.
+review_gate:
+  passed: true
+  rounds: 5
+  reviewer_scores:
+  - 100
+  - 100
+  must_fix: 0
+  should_fix: 0
+  evidence: REVIEW-e02.md
+endpoint_failures:
+  preserved: true
+  evidence: ../bugs/BUG-showcase-endpoint-compatibility.md
+  scope: amux ZWJ width and origin CPR; strict probe exits 1, not showcase regressions

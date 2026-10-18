@@ -1,0 +1,20 @@
+[package]
+name = "terminal-showcase"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+description = "Independent terminal capability explorer and visual compatibility showcase"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
+unicode-width = "0.2"
+unicode-segmentation = "1"
+base64 = "0.22"
+
+[dev-dependencies]
+portable-pty = "=0.9.0"

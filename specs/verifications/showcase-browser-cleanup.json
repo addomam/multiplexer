@@ -1,0 +1,10 @@
+{
+  "endpoint": "xterm.js 6.0.0, ordinary live PTY",
+  "after_Q": {
+    "type": "normal",
+    "mouse": "none",
+    "paste": false,
+    "origin": false,
+    "focus": false
+  }
+}

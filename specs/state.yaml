@@ -1,17 +1,23 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: main, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+vcs: {kind: git, branch: feat/terminal-showcase, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
 active_flow: null
-active_epic: e01
+active_epic: e02
 project_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5]}
 handoff:
-  next_skill: null
+  next_skill: investigate-bug
   blocked: false
-  reason: "User explicitly authorized main integration and GitHub push after reviewing the daily-use checkpoint."
-  last_step_completed: user-approved-main-landing
+  reason: "User requested a local showcase commit and documentation-only bug handoff. Pick up origin CPR, then ZWJ cursor width in a fresh session; no bug fixes, merge or push in this commit."
+  last_step_completed: e02-showcase-and-bug-handoff-commit
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/daily-use-checkpoint.md
     - specs/tech-architecture/DESIGN_PLAN_LATEST.md
+    - specs/terminal-showcase.md
+    - specs/verifications/terminal-showcase.md
+    - specs/bugs/BUG-showcase-endpoint-compatibility.md
+    - specs/bugs/registry.yaml
+    - terminal-showcase/tests/multiplexer.rs
+  open_bugs: [showcase-origin-cpr, showcase-zwj-cursor]
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -77,3 +83,22 @@ landing:
   coverage_percentage: unmeasured
   ci: not-configured
   registry_release: not-requested
+terminal_showcase:
+  status: committed-local
+  capsule: specs/epics/e02-terminal-showcase
+  package: terminal-showcase
+  independent_of_amux: true
+  baseline: "cargo test (66 passed, 1 ignored), cargo clippy --all-targets -- -D warnings, cargo build"
+  unavailable_skill_helpers: "Repository has no bundled BigPowers scripts; actual Rust commands replace scripted gates, no claims of helper execution."
+  mechanical: passing
+  runtime: passing
+  independent_review: passing
+  review_rounds: 5
+  review_scores: [100, 100]
+  evidence: specs/verifications/terminal-showcase.md
+  security: specs/security/REVIEW-e02.md
+metrics:
+  story_start: "2026-10-11T17:34:53+00:00"
+  story_end: "2026-10-11T22:42:49.975551+00:00"
+  timing_scope: e02-shared-implementation-and-verification
+  includes_user_suspend: true

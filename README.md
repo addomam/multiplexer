@@ -44,6 +44,22 @@ For startup failures, inspect `daemon.log` next to the selected socket. Default 
 
 The [daily-use checkpoint](specs/verifications/daily-use-checkpoint.md) records the frozen source baseline, final checks, cleanup and remaining release limitations.
 
+## Terminal capability showcase
+
+`terminal-showcase` is a separate Rust workspace package. It queries and exercises the terminal endpoint through ordinary stdin/stdout, with no dependency on amux's implementation.
+
+```sh
+cargo run -p terminal-showcase
+cargo run -p terminal-showcase -- --screenshot --demo colors
+cargo run -p terminal-showcase -- --probe --json
+cargo run -p terminal-showcase -- --headless --json
+cargo install --path terminal-showcase --locked
+```
+
+Run the same binary in any attached amux shell. Space pauses; arrows select demonstrations; Tab expands evidence; D shows diagnostics; S freezes screenshot mode; Q/Escape exits. P/F record visual verdicts; E exports JSON. Clipboard, title, notifications and working-directory actions require an explicit key in the integration demo.
+
+Build and test all packages with `cargo build --workspace` and `cargo test --workspace`; plain `cargo run` and the root default build still select amux. See [showcase usage, report semantics and limitations](specs/terminal-showcase.md). The explorer has already exposed [origin-mode CPR and ZWJ cursor incompatibilities](specs/bugs/BUG-showcase-endpoint-compatibility.md); a passing explorer regression suite is not a claim that amux supports every feature.
+
 ## Picker and native interaction
 
 The Ratatui interface has a **three-row title/tab bar**, a **Switch** button at the top right, and an edge-to-edge native terminal below it—no footer. Default prefix: **Ctrl-B**. Click Switch or press the prefix to replace the terminal view with a **full-screen window list**. Hierarchical rows show project, Git/agent/exit status and directory; fuzzy search covers terminal name, project, actual cwd and Git branch/commit. Select either line of a row with Enter or a mouse click to open it directly; Return or Escape restores the terminal.

@@ -1,0 +1,8 @@
+id: e02
+title: Independent terminal capability explorer
+scope: specs/product/SCOPE_LATEST.yaml
+stories:
+  - {id: e02s01, title: Evidence-based terminal explorer, bcps: 8, delta: ADDED}
+  - {id: e02s02, title: Visual dashboard and demonstrations, bcps: 8, delta: ADDED}
+  - {id: e02s03, title: Advanced graphics and input, bcps: 8, delta: ADDED}
+  - {id: e02s04, title: Independent compatibility regression and delivery, bcps: 5, delta: ADDED}

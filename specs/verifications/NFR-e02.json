@@ -1,0 +1,60 @@
+{
+  "type": "verification",
+  "context": "native-terminal",
+  "platform": "macOS arm64, Rust 1.95",
+  "method": "Five ordinary debug-binary process launches per viewport, headless fixed colors frame; elapsed includes process launch/render/output capture, not live discovery, graphics, transport or animation FPS.",
+  "cli_timing": [
+    {
+      "columns": 40,
+      "rows": 12,
+      "runs": 5,
+      "mean_ms": 5.174200200289488,
+      "maximum_ms": 9.941250000149012,
+      "ansi_bytes": 2644
+    },
+    {
+      "columns": 80,
+      "rows": 24,
+      "runs": 5,
+      "mean_ms": 6.973591800034046,
+      "maximum_ms": 7.158707998692989,
+      "ansi_bytes": 15758
+    },
+    {
+      "columns": 120,
+      "rows": 36,
+      "runs": 5,
+      "mean_ms": 8.150699999928474,
+      "maximum_ms": 8.262207999825478,
+      "ansi_bytes": 20445
+    }
+  ],
+  "idle_profile": {
+    "method": "macOS sample, one-second native interactive snapshot",
+    "footprint": "1968K",
+    "peak": "1968K",
+    "on_cpu_samples": 0,
+    "blocked_in": "poll",
+    "interpretation": "Snapshot only; not a CPU-load or memory-leak certification."
+  },
+  "runtime_bounds": {
+    "render_columns": 500,
+    "render_rows": 200,
+    "protocol_payload_bytes": 8192,
+    "nested_transport_depth": 4,
+    "raster_width": 64,
+    "raster_height": 32,
+    "legacy_updates_per_opt_in": 16,
+    "configured_fps_range": [
+      1,
+      60
+    ],
+    "default_fps": 24
+  },
+  "runtime_evidence": "showcase-browser-screen.json",
+  "limits": [
+    "Native Ghostty/Kitty/WezTerm graphics appearance not certified",
+    "Linux/SSH/minimum-toolchain behavior not certified",
+    "No absolute latency, bandwidth or FPS SLA requested or asserted"
+  ]
+}

@@ -1,0 +1,11 @@
+story_id: e02s01
+title: Evidence-based terminal explorer
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: Evidence-based terminal explorer
+    verify: "cargo test -p terminal-showcase"
+    risk: P0
+    status: passing
+    allure: {severity: critical, categories: [terminal, compatibility]}

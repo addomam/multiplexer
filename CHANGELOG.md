@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Terminal capability explorer
+
+- Independent `terminal-showcase` Rust workspace package; amux's default binary and implementation remain unchanged.
+- Fullscreen capability matrix with explicit protocol/visual evidence, eight cycling demonstrations, deterministic screenshot mode and bounded row-differential redraws.
+- Independent incremental CSI/OSC/DCS/APC parser and correlated terminal queries; missing replies remain Unknown rather than Unsupported.
+- Color/Unicode/typography/control specimens, Kitty/Sixel/iTerm procedural image lifecycles, advanced input inspector and explicit-consent integration actions.
+- POSIX terminal/signal RAII cleanup, resize handling, bracketed-paste-safe controls, headless JSON regressions and visual pass/fail export.
+- Ordinary-shell amux compatibility regression exposes origin-mode CPR and joined-emoji cursor mismatches without sharing the multiplexer oracle. Strict `--probe --check` preserves failures and exits nonzero.
+
 ## Unreleased — Ratatui UI
 
 - Ratatui 0.30.0 rendering with the existing Crossterm 0.29 input/backend and Rust minimum raised to 1.86.
