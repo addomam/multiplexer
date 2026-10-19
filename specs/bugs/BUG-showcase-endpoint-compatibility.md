@@ -1,9 +1,9 @@
 # Independently exposed amux terminal endpoint incompatibilities
 
-**Status:** open; detected by e02 standalone explorer, not modified by this enhancement.
+**Status:** both fixed and verified on `fix/substrate-defects`; original e02 failures preserved below. Fresh evidence: [substrate reliability](../verifications/substrate-reliability.md).
 **Scope:** amux's observable terminal endpoint. The explorer imports no amux parser/model/renderer.
 
-## Observed evidence
+## Observed evidence — original e02 run
 The independent explorer ran as an ordinary Zsh application under a real daemon at 100×30, using only stdin/stdout for all queries. Final recorded output: [workspace preflight](../verifications/e02-gates.log).
 
 | Exercise | Independent expected CPR | Actual CPR | Explorer verdict |
@@ -18,38 +18,33 @@ The strict `--probe --check` command exported the complete JSON report, restored
 - ZWJ expectation uses grapheme-aware unicode-width, independently of amux. Joined woman-technologist occupies two expected cells followed by X; the observed extra two cells expose endpoint grapheme arithmetic. Font appearance remains a separate visual check.
 
 ## Reproduction
-Build the workspace and run the explicit multiplexer integration command above. Alternatively execute `terminal-showcase --probe --json --check --report /tmp/amux-capabilities.json` in an attached amux shell. The tool never substitutes the observed endpoint coordinates as its oracle.
+Build the workspace and run the explicit multiplexer integration command below. Alternatively execute `terminal-showcase --probe --json --check --report /tmp/amux-capabilities.json` in an attached amux shell. The tool never substitutes the observed endpoint coordinates as its oracle.
 
-## Impact and next action
-Cursor-dependent applications can misposition after joined emoji or use incorrect origin-relative DSR coordinates. Investigate the existing emulator/runtime boundary in a separate bug-fix story; preserve these independent regressions. No claim of fixing amux or of compatibility PASS is made here.
+## Impact and resolution
+Cursor-dependent applications could misposition after joined emoji or receive incorrect origin-relative DSR coordinates. The parsed ANSI Handler adapter now preserves native controls while composing graphemes in native cells and correcting DECOM CPR. The independent oracle is unchanged; both endpoint capabilities now verify and strict probing exits 0.
 
-## Fresh-session pickup
+## Fresh verification
 
-These are two separate open bugs, not unfinished showcase implementation. Both are registered in [registry.yaml](registry.yaml). Root causes have not been investigated; do not treat suspected parser/runtime boundaries as confirmed causes.
-
-1. Start with `survey-context`, then `investigate-bug`. Read CONVENTIONS.md, specs/state.yaml, this report, and terminal-showcase/tests/multiplexer.rs.
-2. Preserve the showcase commit. Create a separate bug-fix branch before changing amux; do not merge or push as part of investigation without a request.
-3. Pick up `showcase-origin-cpr` first, then `showcase-zwj-cursor`. This is a suggested sequence, not evidence that either root cause is simpler.
-4. Use the existing private-daemon integration fixture. Never stop or replace the user's live/default daemon to reproduce these bugs.
+The separate bug-fix branch implements both fixes in `src/runtime.rs` and `src/runtime/compatibility.rs`, with direct cell/layout regressions, real-PTY raw CPR coverage, and a strict independent-showcase acceptance. All probes used private daemons; the live/default daemon and Herdr sessions were not changed.
 
 ```sh
 cargo build --workspace
 cargo test -p terminal-showcase --test multiplexer -- --ignored --nocapture
 ```
 
-The integration test passes when report classification and strict exit behavior match the independent oracle. A green test alone does not mean these endpoint defects are fixed; inspect its printed failures and actual cursor replies.
+The integration now requires every exercise to pass, both endpoint capability statuses to be objective Verified, and strict exit 0. Workspace tests, Clippy, debug/release builds, a separate 13-case wire probe and native TUI detach/reattach pass; physical font/glyph shaping remains unverified.
 
 ### showcase-origin-cpr
 
 With scrolling margins 3..10, origin mode enabled and CUP 2;4, CPR must report the origin-relative coordinate in the evidence table. Keep origin-disabled reporting, margin restoration and subsequent shell interaction correct.
 
-Close only when a real amux endpoint reports the expected value, the explorer records objective Verified, and a consumer-visible regression covers the transition between origin-enabled and origin-disabled modes.
+Verified closure: the real endpoint matches the unchanged expectation, the explorer records objective Verified, and a consumer-visible regression covers origin-enabled/disabled transitions, reset, margins, resize and alternate screen.
 
 ### showcase-zwj-cursor
 
 The joined woman-technologist grapheme followed by X must advance according to the independent expectation in the evidence table. Preserve ordinary CJK/combining-mark cursor behavior and wide-cell overwrite behavior.
 
-Close only when a real amux endpoint reports the expected value, the explorer records objective Verified, and a regression catches the incorrect joined-emoji advancement. Font/glyph appearance remains a separate visual check.
+Verified closure: the real endpoint matches the unchanged expectation, the explorer records objective Verified, and regressions cover chunked UTF-8/ZWJ, family/flags/modifiers/keycaps, CJK/combining, wide overwrite, right-edge wrapping and variation-width replay. Font/glyph appearance remains a separate visual check.
 
 ### Verification and closure
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Execution substrate reliability
+
+- Correct DECOM-origin-relative CPR through the parsed ANSI Handler boundary; preserve native control behavior and independent expected replies.
+- Compose joined graphemes in native narrow/wide cells, including chunked UTF-8, flags/modifiers/keycaps, CJK/combining, overwrite, wrapping and variation-width replay. Final-cluster working text is limited to 4 KiB; oversized input starts a new native scalar segment without dropping text.
+- Prevent shared-config lost updates with canonical file identity, stable nonblocking writer locks, exact snapshot comparison and explicit `config-busy` / `config-conflict` errors. Sync both private replacement file and containing directory before success.
+- Add daemon-wide terminal admission: default 64, configurable 1–256, counting retained exits and pending opens. Refund failed opens; clean partial integration resources and uninstalled PTY children.
+- Centralize latest-20 hook/launch/enqueue diagnostics, with UTF-8-safe 16 KiB strings and explicit command/source/output truncation.
+- Require bounded initialized API-v1 readiness for existing/new daemons, serialize automatic starts and clean startup sockets on failure without replacing unresponsive peers.
+- Cancel active hook process groups on shutdown, reap their owned workers and skip pending hooks instead of waiting for configured timeouts.
+- Breaking Rust-library change: `projects::run_hooks` now requires an explicit `&AtomicBool` cancellation argument. CLI/API framing remains version 1.
+- Verify 210 workspace Rust tests, the strict independent-showcase integration, 8 OMP tests, Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle probes. Retain the initial queued-execution timeout observation and exact limits in `specs/verifications/substrate-reliability.md`; no independent review PASS or live-daemon upgrade is implied.
+
 ## Unreleased — Terminal capability explorer
 
 - Independent `terminal-showcase` Rust workspace package; amux's default binary and implementation remain unchanged.

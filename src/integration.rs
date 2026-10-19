@@ -438,10 +438,13 @@ impl Integration {
         }
     }
     pub fn remove(&self, id: &str) {
-        if self.terminals.lock().remove(id).is_some() {
-            let _ = fs::remove_dir_all(self.directory.join(id));
-            self.acknowledgement.notify_all();
+        if valid_id(id).is_err() {
+            return;
         }
+        let _ = self.terminals.lock().remove(id);
+        // Preparation can fail before publishing its integration record.
+        let _ = fs::remove_dir_all(self.directory.join(id));
+        self.acknowledgement.notify_all();
     }
 }
 fn agent_snapshot(agent: &Agent, timestamp: u64) -> Value {

@@ -17,6 +17,9 @@ use parking_lot::Mutex;
 use portable_pty::{CommandBuilder, MasterPty, PtySize, native_pty_system};
 use serde_json::{Value, json};
 
+mod compatibility;
+use compatibility::{Compatibility, TerminalHandler};
+
 const INPUT_QUEUE: usize = 128;
 pub(crate) const MAX_INPUT: usize = 65536;
 
@@ -83,6 +86,7 @@ impl EventListener for Listener {
 struct Emulator {
     term: Term<Listener>,
     processor: Processor,
+    compatibility: Compatibility,
     color_requests: mpsc::Receiver<Event>,
     input: mpsc::SyncSender<Input>,
     generation: u64,
@@ -94,11 +98,13 @@ impl Emulator {
         mut term: Term<Listener>,
         color_requests: mpsc::Receiver<Event>,
         input: mpsc::SyncSender<Input>,
+        history_limit: usize,
     ) -> Self {
         term.reset_damage();
         Self {
             term,
             processor: Processor::new(),
+            compatibility: Compatibility::new(history_limit),
             color_requests,
             input,
             generation: 1,
@@ -107,7 +113,10 @@ impl Emulator {
         }
     }
     fn advance(&mut self, bytes: &[u8]) {
-        self.processor.advance(&mut self.term, bytes);
+        self.processor.advance(
+            &mut TerminalHandler::new(&mut self.term, &mut self.compatibility, &self.input),
+            bytes,
+        );
         self.reply_colors();
         self.publish_damage();
     }
@@ -118,12 +127,17 @@ impl Emulator {
             .sync_timeout()
             .is_some_and(|deadline| Instant::now() >= deadline)
         {
-            self.processor.stop_sync(&mut self.term);
+            self.processor.stop_sync(&mut TerminalHandler::new(
+                &mut self.term,
+                &mut self.compatibility,
+                &self.input,
+            ));
             self.reply_colors();
             self.publish_damage();
         }
     }
     fn resize(&mut self, size: Size) {
+        self.compatibility.resize(&self.term, size);
         self.term.resize(size);
         self.publish_damage();
     }
@@ -133,12 +147,21 @@ impl Emulator {
         self.generation += 1;
         match self.term.damage() {
             TermDamage::Full => self.full_damage_generation = self.generation,
+            TermDamage::Partial(_) if self.compatibility.full_damage => {
+                self.full_damage_generation = self.generation;
+            }
             TermDamage::Partial(lines) => {
                 for line in lines {
                     self.row_generations[line.line] = self.generation;
                 }
             }
         }
+        for (row, dirty) in self.compatibility.dirty_rows.iter_mut().enumerate() {
+            if std::mem::take(dirty) {
+                self.row_generations[row] = self.generation;
+            }
+        }
+        self.compatibility.full_damage = false;
         self.term.reset_damage();
     }
     fn screen_update(
@@ -207,6 +230,28 @@ pub struct Terminal {
     exit_status: Mutex<Option<u32>>,
 }
 
+// A PTY child is not owned by Terminal's normal cleanup until setup completes.
+// In particular, descriptor duplication and process-identity capture can fail.
+struct UninstalledChild(Option<Box<dyn portable_pty::Child + Send + Sync>>);
+impl Drop for UninstalledChild {
+    fn drop(&mut self) {
+        let Some(mut child) = self.0.take() else {
+            return;
+        };
+        if let Some(pid) = child.process_id() {
+            // The owned child has not been reaped, so its PID cannot be reused.
+            // Kill its PTY process group as well as the root before reaping.
+            unsafe {
+                libc::kill(-(pid as i32), libc::SIGKILL);
+                libc::kill(pid as i32, libc::SIGKILL);
+            }
+        } else {
+            let _ = child.kill();
+        }
+        let _ = child.wait();
+    }
+}
+
 impl Terminal {
     pub fn spawn(
         id: String,
@@ -230,18 +275,15 @@ impl Terminal {
         }
         command.env("TERM", "xterm-256color");
         command.env("COLORTERM", "truecolor");
-        let mut child = pair.slave.spawn_command(command)?;
-        let pid = child
+        let mut pending_child = UninstalledChild(Some(pair.slave.spawn_command(command)?));
+        let pid = pending_child
+            .0
+            .as_ref()
+            .unwrap()
             .process_id()
             .ok_or_else(|| anyhow::anyhow!("PTY child has no process id"))?;
-        let Some(root) = process_info(pid as i32) else {
-            // This child has not been reaped, so its PID cannot have been reused.
-            unsafe {
-                libc::kill(pid as i32, libc::SIGKILL);
-            }
-            let _ = child.wait();
-            bail!("cannot capture PTY child process identity");
-        };
+        let root = process_info(pid as i32)
+            .ok_or_else(|| anyhow::anyhow!("cannot capture PTY child process identity"))?;
         drop(pair.slave);
         let mut reader = pair.master.try_clone_reader()?;
         let mut writer = pair.master.take_writer()?;
@@ -253,19 +295,22 @@ impl Terminal {
             size: size.clone(),
             color_requests,
         };
-        let term = Term::new(
-            Config {
-                scrolling_history: 50000,
-                ..Config::default()
-            },
-            &*size.lock(),
-            listener,
-        );
+        let config = Config {
+            scrolling_history: 50000,
+            ..Config::default()
+        };
+        let history_limit = config.scrolling_history;
+        let term = Term::new(config, &*size.lock(), listener);
         let terminal = Arc::new(Self {
             id,
             pid,
             processes: Mutex::new(ProcessTree::new(root)),
-            emulator: Mutex::new(Emulator::new(term, pending_colors, input.clone())),
+            emulator: Mutex::new(Emulator::new(
+                term,
+                pending_colors,
+                input.clone(),
+                history_limit,
+            )),
             master: Mutex::new(pair.master),
             input,
             input_gate: Mutex::new(()),
@@ -303,6 +348,7 @@ impl Terminal {
             }
         });
         let weak = Arc::downgrade(&terminal);
+        let mut child = pending_child.0.take().unwrap();
         thread::spawn(move || {
             // Keep the original shell's zombie identity until its descendants have
             // been recorded. Retained natural exits must not rediscover a reused PID.
@@ -789,7 +835,19 @@ mod screen_update_tests {
     use super::*;
 
     fn emulator(cols: usize, rows: usize) -> Emulator {
-        let (input, _) = mpsc::sync_channel(INPUT_QUEUE);
+        emulator_with_replies(cols, rows).0
+    }
+
+    fn emulator_with_replies(cols: usize, rows: usize) -> (Emulator, mpsc::Receiver<Input>) {
+        emulator_with_history(cols, rows, Config::default().scrolling_history)
+    }
+
+    fn emulator_with_history(
+        cols: usize,
+        rows: usize,
+        history_limit: usize,
+    ) -> (Emulator, mpsc::Receiver<Input>) {
+        let (input, replies) = mpsc::sync_channel(INPUT_QUEUE);
         let (color_requests, pending_colors) = mpsc::sync_channel(INPUT_QUEUE);
         let size = Arc::new(Mutex::new(Size { cols, rows }));
         let listener = Listener {
@@ -797,8 +855,240 @@ mod screen_update_tests {
             size: size.clone(),
             color_requests,
         };
-        let term = Term::new(Config::default(), &*size.lock(), listener);
-        Emulator::new(term, pending_colors, input)
+        let config = Config {
+            scrolling_history: history_limit,
+            ..Config::default()
+        };
+        let term = Term::new(config, &*size.lock(), listener);
+        (
+            Emulator::new(term, pending_colors, input, history_limit),
+            replies,
+        )
+    }
+
+    #[test]
+    fn cpr_tracks_origin_margins_modes_reset_resize_and_alternate_screen() {
+        let (mut emulator, replies) = emulator_with_replies(12, 24);
+        for (bytes, expected) in [
+            ("\x1b[4;4H\x1b[6n", "\x1b[4;4R"),
+            ("\x1b[3;20r\x1b[?6h\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+            ("\x1b[5;18r\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+            ("\x1b[18;5r\x1b[6n", "\x1b[2;4R"),
+            ("\x1b[?1049h\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+            ("\x1b[?1049l\x1b[6n", "\x1b[2;4R"),
+            ("\x1b[?6l\x1b[4;4H\x1b[6n", "\x1b[4;4R"),
+            ("\x1b[?6h\x1b[2;4H\x1b[5n", "\x1b[0n"),
+        ] {
+            emulator.advance(bytes.as_bytes());
+            assert_eq!(replies.try_recv().unwrap().bytes, expected.as_bytes());
+        }
+        // A no-op resize must not discard margins; a real resize does.
+        emulator.resize(Size { cols: 12, rows: 24 });
+        emulator.advance(b"\x1b[6n");
+        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        emulator.resize(Size { cols: 13, rows: 25 });
+        emulator.advance(b"\x1b[2;4H\x1b[6n");
+        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        emulator.advance(b"\x1b[3;20r\x1b[?3h\x1b[2;4H\x1b[6n");
+        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        emulator.advance(b"\x1bc\x1b[6n");
+        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[1;1R");
+    }
+
+    #[test]
+    fn grapheme_cells_and_cursor_survive_every_utf8_chunk_boundary() {
+        for (text, width) in [
+            ("👩‍💻", 2),
+            ("👨‍👩‍👧‍👦", 2),
+            ("👍🏽", 2),
+            ("🇺🇳", 2),
+            ("1️⃣", 2),
+            ("❤️", 2),
+            ("界", 2),
+            ("é", 1),
+            ("⌚︎", 1),
+        ] {
+            for split in 0..=text.len() {
+                let mut emulator = emulator(12, 3);
+                emulator.advance(&text.as_bytes()[..split]);
+                emulator.advance(&text.as_bytes()[split..]);
+                emulator.advance(b"X");
+                let frame = emulator.screen_update(0, None, None, true);
+                assert_eq!(frame["cells"][0][0]["text"], text, "{text}, split {split}");
+                assert_eq!(frame["cells"][0][0]["wide"], width == 2);
+                if width == 2 {
+                    assert_eq!(frame["cells"][0][1]["wide_spacer"], true);
+                }
+                assert_eq!(frame["cells"][0][width]["text"], "X");
+                assert_eq!(frame["cursor"]["col"], width + 1);
+            }
+        }
+    }
+
+    #[test]
+    fn streamed_clusters_wrap_overwrite_and_invalidate_on_controls() {
+        let mut emulator = emulator(5, 4);
+        for byte in "abc👩‍💻X".as_bytes() {
+            emulator.advance(std::slice::from_ref(byte));
+        }
+        let frame = emulator.screen_update(0, None, None, true);
+        assert_eq!(frame["lines"][0], "abc👩‍💻");
+        assert_eq!(frame["cells"][0][3]["text"], "👩‍💻");
+        assert_eq!(frame["cells"][0][4]["wide_spacer"], true);
+        assert_eq!(frame["cells"][1][0]["text"], "X");
+        emulator.advance(b"\x1b[1;5HB");
+        let overwritten = emulator.screen_update(0, None, None, true);
+        assert_eq!(overwritten["cells"][0][3]["text"], " ");
+        assert_eq!(overwritten["cells"][0][3]["wide"], false);
+        assert_eq!(overwritten["cells"][0][4]["text"], "B");
+        assert_eq!(overwritten["cells"][0][4]["wide_spacer"], false);
+        emulator.advance("\x1bc👩\x1b[2;1H\u{200d}💻X".as_bytes());
+        let moved = emulator.screen_update(0, None, None, true);
+        assert_eq!(moved["cells"][0][0]["text"], "👩");
+        assert_eq!(moved["cells"][1][0]["text"], "💻");
+        assert_eq!(moved["cells"][1][2]["text"], "X");
+        emulator.advance("\x1b[1;1H👩‍💻\r\x1b[2K💻".as_bytes());
+        assert_eq!(
+            emulator.screen_update(0, None, None, true)["cells"][0][0]["text"],
+            "💻"
+        );
+    }
+
+    #[test]
+    fn variation_widening_at_margin_preserves_sgr_and_row_deltas() {
+        let mut emulator = emulator(5, 4);
+        emulator.advance("abcd❤".as_bytes());
+        let mut frame = emulator.screen_update(0, None, None, true);
+        emulator.advance("\x1b[32m\u{fe0f}X".as_bytes());
+        let update = emulator.screen_update(0, None, Some(generation(&frame)), true);
+        assert_eq!(update["delta"], true);
+        assert_reconstructs(&emulator, &mut frame, &update, 0, None);
+        assert_eq!(frame["lines"][0], "abcd");
+        assert_eq!(frame["cells"][0][4]["wide_spacer"], true);
+        assert_eq!(frame["cells"][1][0]["text"], "❤️");
+        assert_eq!(frame["cells"][1][1]["wide_spacer"], true);
+        assert_eq!(frame["cells"][1][2]["text"], "X");
+        assert_ne!(frame["cells"][1][0]["fg"], frame["cells"][1][2]["fg"]);
+        assert_eq!(frame["cursor"]["row"], 1);
+        assert_eq!(frame["cursor"]["col"], 3);
+    }
+
+    #[test]
+    fn width_changes_restore_inserted_cells_and_provisional_scroll() {
+        let mut inserted = emulator(10, 3);
+        inserted.advance("abcdef\r\x1b[4h❤".as_bytes());
+        inserted.advance("\u{fe0f}X".as_bytes());
+        assert_eq!(
+            inserted.screen_update(0, None, None, true)["lines"][0],
+            "❤️Xabcdef"
+        );
+
+        for margin in ["", "\x1b[2;3r"] {
+            let mut shrinking = emulator(5, 3);
+            shrinking.advance("AAAAA\r\nBBBBB\r\nCCCC".as_bytes());
+            shrinking.advance(margin.as_bytes());
+            shrinking.advance("\x1b[3;5H⌚".as_bytes());
+            shrinking.advance("\u{fe0e}".as_bytes());
+            let frame = shrinking.screen_update(0, None, None, true);
+            assert_eq!(frame["lines"], json!(["AAAAA", "BBBBB", "CCCC⌚︎"]));
+            assert_eq!(frame["history_size"], 0);
+            assert_eq!(frame["cursor"]["row"], 2);
+            assert_eq!(frame["cursor"]["col"], 4);
+            assert_eq!(frame["cells"][2][4]["wide"], false);
+        }
+    }
+
+    #[test]
+    fn variation_shrink_preserves_capped_history_and_alternate_screen() {
+        for (history_limit, alternate) in [(1, false), (2, false), (2, true)] {
+            let (mut emulator, _) = emulator_with_history(5, 3, history_limit);
+            if alternate {
+                emulator.advance(b"\x1b[?1049h");
+            }
+            emulator.advance(b"00000\r\n11111\r\n22222\r\n33333\r\n4444");
+            let before = screen(&emulator.term, 2, Some(2), emulator.generation);
+            let history = emulator.term.grid().history_size();
+            emulator.advance("⌚".as_bytes());
+            emulator.advance("\u{fe0e}".as_bytes());
+            let after = screen(&emulator.term, 2, Some(2), emulator.generation);
+            assert_eq!(after["lines"], before["lines"]);
+            assert_eq!(after["cells"], before["cells"]);
+            assert_eq!(emulator.term.grid().history_size(), history);
+            let visible = emulator.screen_update(0, None, None, true);
+            assert_eq!(visible["lines"], json!(["22222", "33333", "4444⌚︎"]));
+        }
+    }
+
+    #[test]
+    fn no_wrap_refuses_widened_cluster_without_stray_cells() {
+        let mut emulator = emulator(5, 3);
+        emulator.advance("\x1b[?7labcd❤".as_bytes());
+        emulator.advance("\u{fe0f}X".as_bytes());
+        let frame = emulator.screen_update(0, None, None, true);
+        assert_eq!(frame["lines"][0], "abcdX");
+        for cell in frame["cells"][0].as_array().unwrap() {
+            assert_eq!(cell["wide"], false);
+            assert_eq!(cell["wide_spacer"], false);
+        }
+    }
+
+    #[test]
+    fn oversized_graphemes_keep_text_and_start_a_new_scalar_segment() {
+        let mut joined = emulator(8, 3);
+        let within_limit = format!("👩{}\u{fe0f}\u{200d}💻", "\u{301}".repeat(2041));
+        assert_eq!(within_limit.len(), 4096);
+        joined.advance(within_limit.as_bytes());
+        joined.advance(b"X");
+        let frame = joined.screen_update(0, None, None, true);
+        assert_eq!(frame["cells"][0][0]["text"], within_limit);
+        assert_eq!(frame["cells"][0][1]["wide_spacer"], true);
+        assert_eq!(frame["cells"][0][2]["text"], "X");
+        assert_eq!(frame["cursor"]["col"], 3);
+
+        let mut overflow = emulator(8, 3);
+        let prefix = format!("👩{}\u{fe0f}\u{200d}", "\u{301}".repeat(2043));
+        assert_eq!(prefix.len(), 4096);
+        overflow.advance(prefix.as_bytes());
+        overflow.advance("💻X".as_bytes());
+        let frame = overflow.screen_update(0, None, None, true);
+        assert_eq!(frame["cells"][0][0]["text"], prefix);
+        assert_eq!(frame["cells"][0][1]["wide_spacer"], true);
+        assert_eq!(frame["cells"][0][2]["text"], "💻");
+        assert_eq!(frame["cells"][0][3]["wide_spacer"], true);
+        assert_eq!(frame["cells"][0][4]["text"], "X");
+        assert_eq!(frame["cursor"]["col"], 5);
+        assert_eq!(frame["lines"][0], format!("{prefix}💻X"));
+
+        // Combining overflow uses the native zero-width path rather than
+        // dropping marks or retaining an ever-growing composition buffer.
+        let mut combining = emulator(8, 3);
+        let text = format!("e{}", "\u{301}".repeat(4096));
+        combining.advance(text.as_bytes());
+        combining.advance(b"X");
+        let frame = combining.screen_update(0, None, None, true);
+        assert_eq!(frame["cells"][0][0]["text"], text);
+        assert_eq!(frame["cells"][0][1]["text"], "X");
+        assert_eq!(frame["cursor"]["col"], 2);
+    }
+
+    #[test]
+    fn incomplete_terminal_setup_kills_and_reaps_its_child() {
+        let child = std::process::Command::new("/bin/sleep")
+            .arg("120")
+            .spawn()
+            .unwrap();
+        let pid = child.id() as i32;
+        let pending = UninstalledChild(Some(Box::new(child)));
+        drop(pending);
+        let mut status = 0;
+        assert_eq!(
+            unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) },
+            -1
+        );
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ECHILD)
+        );
     }
 
     fn generation(frame: &Value) -> u64 {

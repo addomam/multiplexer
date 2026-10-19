@@ -3,9 +3,10 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
@@ -17,6 +18,10 @@ use uuid::Uuid;
 
 fn default_hook_timeout() -> u64 {
     30_000
+}
+
+fn default_terminal_limit() -> usize {
+    64
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -33,6 +38,8 @@ pub struct Hook {
 pub struct Config {
     pub projects_dir: PathBuf,
     pub prefix: String,
+    #[serde(default = "default_terminal_limit")]
+    pub terminal_limit: usize,
     #[serde(default)]
     pub daemon_start_hooks: Vec<Hook>,
 }
@@ -45,6 +52,7 @@ impl Default for Config {
         Self {
             projects_dir: home.join("projects"),
             prefix: "ctrl-b".into(),
+            terminal_limit: default_terminal_limit(),
             daemon_start_hooks: Vec::new(),
         }
     }
@@ -112,6 +120,7 @@ pub struct Store {
     pub config: Config,
     pub projects: BTreeMap<String, Project>,
     path: PathBuf,
+    expected: Mutex<Option<Vec<u8>>>,
     unsaved: String,
 }
 
@@ -120,6 +129,64 @@ fn absolute(path: &Path) -> Result<PathBuf> {
         Ok(path.to_path_buf())
     } else {
         Ok(std::env::current_dir()?.join(path))
+    }
+}
+
+// Resolve both directory aliases and existing file symlinks before selecting the
+// stable sibling lock. A dangling file symlink is not a new configuration file.
+fn configuration_path(path: &Path) -> Result<PathBuf> {
+    let path = absolute(path)?;
+    match fs::canonicalize(&path) {
+        Ok(path) => return Ok(path),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error).context("resolving configuration path"),
+    }
+    ensure!(
+        !fs::symlink_metadata(&path).is_ok_and(|metadata| metadata.file_type().is_symlink()),
+        "configuration symlink target is unavailable"
+    );
+    let parent = path
+        .parent()
+        .context("configuration has no parent directory")?;
+    fs::create_dir_all(parent)?;
+    Ok(fs::canonicalize(parent)?.join(path.file_name().context("configuration has no file name")?))
+}
+
+fn configuration_lock(path: &Path) -> Result<File> {
+    let mut name = path
+        .file_name()
+        .context("configuration has no file name")?
+        .to_os_string();
+    name.push(".lock");
+    // Never unlink this file: replacing it would let writers lock different inodes.
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(path.with_file_name(name))
+        .context("opening configuration lock")?;
+    let metadata = file.metadata()?;
+    ensure!(
+        metadata.is_file() && metadata.uid() == unsafe { libc::geteuid() } && metadata.nlink() == 1,
+        "configuration lock must be a private regular file owned by this user"
+    );
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    loop {
+        if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } == 0 {
+            return Ok(file);
+        }
+        let error = std::io::Error::last_os_error();
+        if error.kind() == std::io::ErrorKind::WouldBlock {
+            bail!(
+                "config-busy: another writer holds the configuration lock; retry after it finishes"
+            );
+        }
+        if error.kind() != std::io::ErrorKind::Interrupted {
+            return Err(error).context("locking configuration");
+        }
     }
 }
 
@@ -150,6 +217,10 @@ fn validate_config(config: &Config) -> Result<()> {
         config.projects_dir.is_absolute(),
         "projects_dir must be absolute"
     );
+    ensure!(
+        (1..=256).contains(&config.terminal_limit),
+        "terminal_limit must be in 1..256"
+    );
     let prefix = config.prefix.to_ascii_lowercase();
     let letter = prefix
         .strip_prefix("ctrl-")
@@ -162,11 +233,32 @@ fn validate_config(config: &Config) -> Result<()> {
     validate_hooks(&config.daemon_start_hooks)
 }
 
-fn read_disk(path: &Path) -> Result<Option<DiskConfig>> {
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
+fn read_config_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
+    let mut file = match OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(path)
+    {
+        Ok(file) => file,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error).context("reading project configuration"),
+    };
+    let metadata = file.metadata()?;
+    // Atomic replacement splits hard-link aliases into independent files; reject
+    // that ambiguous identity rather than claiming they share a writer lock.
+    ensure!(
+        metadata.is_file() && metadata.nlink() == 1,
+        "configuration must be a regular file without hard-link aliases"
+    );
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .context("reading project configuration")?;
+    Ok(Some(bytes))
+}
+
+fn read_disk(path: &Path) -> Result<Option<(DiskConfig, Vec<u8>)>> {
+    let Some(bytes) = read_config_bytes(path)? else {
+        return Ok(None);
     };
     let disk: DiskConfig =
         serde_json::from_slice(&bytes).context("invalid project configuration")?;
@@ -189,15 +281,17 @@ fn read_disk(path: &Path) -> Result<Option<DiskConfig>> {
         );
         validate_hooks(&project.hooks)?;
     }
-    Ok(Some(disk))
+    Ok(Some((disk, bytes)))
 }
 
 impl Store {
     pub fn load(path: &Path, projects_override: Option<PathBuf>) -> Result<Self> {
-        let path = absolute(path)?;
+        let path = configuration_path(path)?;
         let mut config = Config::default();
         let mut projects = BTreeMap::new();
-        if let Some(disk) = read_disk(&path)? {
+        let mut expected = None;
+        if let Some((disk, bytes)) = read_disk(&path)? {
+            expected = Some(bytes);
             config = disk.config;
             for saved in disk.projects {
                 let project = Project::from(saved);
@@ -225,6 +319,7 @@ impl Store {
             config,
             projects,
             path,
+            expected: Mutex::new(expected),
             unsaved,
         })
     }
@@ -330,8 +425,9 @@ impl Store {
     }
 
     pub fn open(&mut self, selector: &str) -> Result<Project> {
-        // Reload configuration, not a process or organizational tree.
-        if let Some(disk) = read_disk(&self.path)? {
+        // Reload saved projects only, not runtime state or the expected write
+        // generation: this partial read cannot make a stale global config current.
+        if let Some((disk, _)) = read_disk(&self.path)? {
             for saved in disk.projects {
                 let mut project = Project::from(saved);
                 if let Some(active) = self.projects.get(&project.id) {
@@ -411,6 +507,10 @@ impl Store {
                         .context("prefix must be a string")?
                         .to_owned()
                 }
+                "terminal_limit" => {
+                    updated.terminal_limit = serde_json::from_value(value.clone())
+                        .context("terminal_limit must be an integer in 1..256")?;
+                }
                 "daemon_start_hooks" => {
                     updated.daemon_start_hooks = serde_json::from_value(value.clone())?
                 }
@@ -442,10 +542,15 @@ impl Store {
             .path
             .parent()
             .context("configuration has no parent directory")?;
-        fs::create_dir_all(parent)?;
+        let mut expected = self.expected.lock();
+        let _lock = configuration_lock(&self.path)?;
+        ensure!(
+            read_config_bytes(&self.path)? == *expected,
+            "config-conflict: configuration changed on disk; reload before saving"
+        );
+        let directory = File::open(parent).context("opening configuration directory")?;
         let temporary = parent.join(format!(".amux-config-{}.tmp", Uuid::new_v4()));
         let result = (|| -> Result<()> {
-            use std::os::unix::fs::OpenOptionsExt;
             let mut file = OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -454,12 +559,18 @@ impl Store {
             file.write_all(&bytes)?;
             file.sync_all()?;
             fs::rename(&temporary, &self.path)?;
+            directory.sync_all().context(
+                "configuration replaced but directory sync failed; reload before retrying",
+            )?;
             Ok(())
         })();
         if result.is_err() {
             let _ = fs::remove_file(&temporary);
         }
-        result.context("persisting project configuration")
+        if result.is_ok() {
+            *expected = Some(bytes);
+        }
+        result.map_err(|error| anyhow::anyhow!("config-save: {error:#}"))
     }
 }
 
@@ -471,6 +582,7 @@ struct ProcessOutput {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
     timed_out: bool,
+    cancelled: bool,
     truncated: bool,
 }
 
@@ -505,7 +617,16 @@ fn drain(reader: &mut impl Read, target: &mut Vec<u8>, limit: usize) -> Result<b
     Ok(truncated)
 }
 
-fn bounded_process(mut command: Command, timeout: Duration, limit: usize) -> Result<ProcessOutput> {
+fn bounded_process(
+    mut command: Command,
+    timeout: Duration,
+    limit: usize,
+    cancellation: Option<&AtomicBool>,
+) -> Result<ProcessOutput> {
+    ensure!(
+        !cancellation.is_some_and(|stopping| stopping.load(Ordering::Acquire)),
+        "worker process cancelled before spawn"
+    );
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -523,9 +644,17 @@ fn bounded_process(mut command: Command, timeout: Duration, limit: usize) -> Res
         let mut err = Vec::new();
         let mut truncated = false;
         let mut timed_out = false;
+        let mut cancelled = false;
         let status = loop {
             truncated |= drain(&mut stdout, &mut out, limit)?;
             truncated |= drain(&mut stderr, &mut err, limit)?;
+            if cancellation.is_some_and(|stopping| stopping.load(Ordering::Acquire)) {
+                cancelled = true;
+                unsafe {
+                    libc::kill(-group, libc::SIGKILL);
+                }
+                break child.wait()?;
+            }
             if let Some(status) = child.try_wait()? {
                 break status;
             }
@@ -550,6 +679,7 @@ fn bounded_process(mut command: Command, timeout: Duration, limit: usize) -> Res
             stdout: out,
             stderr: err,
             timed_out,
+            cancelled,
             truncated,
         })
     })();
@@ -562,30 +692,64 @@ fn bounded_process(mut command: Command, timeout: Duration, limit: usize) -> Res
     outcome
 }
 
-pub fn run_hooks(hooks: &[Hook], cwd: &Path, env: &BTreeMap<String, String>) -> Vec<Value> {
-    hooks.iter().enumerate().map(|(index, hook)| {
+pub fn run_hooks(
+    hooks: &[Hook],
+    cwd: &Path,
+    env: &BTreeMap<String, String>,
+    cancellation: &AtomicBool,
+) -> Vec<Value> {
+    let mut results = Vec::new();
+    for (index, hook) in hooks.iter().enumerate() {
+        if cancellation.load(Ordering::Acquire) {
+            break;
+        }
         let started = Instant::now();
         let mut command = Command::new("/bin/sh");
-        command.arg("-c").arg(&hook.source).current_dir(cwd).envs(env);
-        match bounded_process(command, Duration::from_millis(hook.timeout_ms), OUTPUT_LIMIT) {
+        command
+            .arg("-c")
+            .arg(&hook.source)
+            .current_dir(cwd)
+            .envs(env);
+        let mut end = hook.source.len().min(16 * 1024);
+        while !hook.source.is_char_boundary(end) {
+            end -= 1;
+        }
+        let source = &hook.source[..end];
+        let source_truncated = end < hook.source.len();
+        let diagnostic = match bounded_process(
+            command,
+            Duration::from_millis(hook.timeout_ms),
+            OUTPUT_LIMIT,
+            Some(cancellation),
+        ) {
             Ok(output) => json!({
-                "kind":"hook", "index":index, "source":hook.source,
-                "ok":output.status.success() && !output.timed_out,
+                "kind":"hook", "index":index, "source":source,
+                "source_truncated":source_truncated,
+                "ok":output.status.success() && !output.timed_out && !output.cancelled,
                 "exit_status":output.status.code(), "timed_out":output.timed_out,
+                "cancelled":output.cancelled,
                 "stdout":String::from_utf8_lossy(&output.stdout),
                 "stderr":String::from_utf8_lossy(&output.stderr),
                 "output_truncated":output.truncated,
                 "duration_ms":started.elapsed().as_millis() as u64,
-                "error":if output.timed_out { Some("hook timed out".to_owned()) }
+                "error":if output.cancelled { Some("hook cancelled".to_owned()) }
+                    else if output.timed_out { Some("hook timed out".to_owned()) }
                     else if !output.status.success() { Some(format!("hook exited with {}", output.status)) }
                     else { None },
             }),
-            Err(error) => json!({"kind":"hook","index":index,"source":hook.source,
-                "ok":false,"exit_status":null,"timed_out":false,"stdout":"","stderr":"",
-                "output_truncated":false,"duration_ms":started.elapsed().as_millis() as u64,
-                "error":format!("{error:#}")}),
-        }
-    }).collect()
+            Err(error) => {
+                let cancelled = cancellation.load(Ordering::Acquire);
+                json!({"kind":"hook","index":index,"source":source,
+                    "source_truncated":source_truncated,
+                    "ok":false,"exit_status":null,"timed_out":false,"cancelled":cancelled,
+                    "stdout":"","stderr":"","output_truncated":false,
+                    "duration_ms":started.elapsed().as_millis() as u64,
+                    "error":if cancelled { "hook cancelled".to_owned() } else { format!("{error:#}") }})
+            }
+        };
+        results.push(diagnostic);
+    }
+    results
 }
 
 fn now_ms() -> u64 {
@@ -793,6 +957,7 @@ pub(crate) fn resolve_workspace_context(cwd: &Path) -> Result<PathBuf> {
         workspace_git_command(&cwd, &["rev-parse", "--show-toplevel"]),
         Duration::from_secs(3),
         GIT_OUTPUT_LIMIT,
+        None,
     )?;
     ensure!(!output.timed_out, "Git workspace resolution timed out");
     ensure!(
@@ -817,7 +982,7 @@ fn git_output(cwd: &Path, args: &[&str], stopping: &AtomicBool) -> Result<Vec<u8
         "Git cache is shutting down"
     );
     let command = workspace_git_command(cwd, args);
-    let output = bounded_process(command, Duration::from_secs(3), GIT_OUTPUT_LIMIT)?;
+    let output = bounded_process(command, Duration::from_secs(3), GIT_OUTPUT_LIMIT, None)?;
     ensure!(!output.timed_out, "Git refresh timed out");
     ensure!(
         output.status.success(),
@@ -1061,6 +1226,310 @@ mod tests {
     }
 
     #[test]
+    fn stale_configuration_writer_preserves_saved_projects_and_rolls_back() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut owner = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let mut stale = Store::load(&file, None).unwrap();
+        let saved = owner.create("retained", None, json!({})).unwrap();
+        owner.configure_global(json!({"prefix":"C-a"})).unwrap();
+        let original = fs::read(&file).unwrap();
+        let error = stale.configure_global(json!({"prefix":"C-z"})).unwrap_err();
+        assert!(error.to_string().contains("config-conflict"));
+        assert_eq!(stale.config.prefix, Config::default().prefix);
+        assert_eq!(fs::read(&file).unwrap(), original);
+
+        // A partial project reload is not a fresh configuration generation.
+        assert_eq!(stale.open(&saved.id).unwrap().id, saved.id);
+        assert!(
+            stale
+                .configure(&saved.id, json!({"recipes":{"lost":"true"}}))
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        assert!(stale.projects[&saved.id].recipes.is_empty());
+        assert_eq!(fs::read(&file).unwrap(), original);
+
+        let mut fresh = Store::load(&file, None).unwrap();
+        fresh
+            .configure(&saved.id, json!({"recipes":{"check":"true"}}))
+            .unwrap();
+        fresh.configure_global(json!({"prefix":"C-x"})).unwrap();
+        let reloaded = Store::load(&file, None).unwrap();
+        assert_eq!(reloaded.config.prefix, "C-x");
+        assert_eq!(reloaded.projects[&saved.id].recipes["check"], "true");
+        assert_eq!(reloaded.projects[&saved.id].main_terminal, None);
+        assert!(
+            owner
+                .configure_global(json!({"prefix":"C-b"}))
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        assert_eq!(owner.config.prefix, "C-a");
+    }
+
+    #[test]
+    fn stale_project_save_does_not_replace_an_existing_configuration() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut first = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let retained = first.create("retained", None, json!({})).unwrap();
+        let mut second = Store::load(&file, None).unwrap();
+        first
+            .configure(&retained.id, json!({"recipes":{"new":"printf newer"}}))
+            .unwrap();
+        let original = fs::read(&file).unwrap();
+        let unsaved = second.unsaved_id();
+        assert!(
+            second
+                .save(&unsaved, "conflicting")
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        assert!(!second.projects[&unsaved].saved);
+        assert_eq!(second.projects[&unsaved].name, "unsaved");
+        assert_eq!(fs::read(&file).unwrap(), original);
+        assert_eq!(
+            Store::load(&file, None).unwrap().projects[&retained.id].recipes["new"],
+            "printf newer"
+        );
+    }
+
+    #[test]
+    fn configuration_aliases_share_conflict_detection_and_private_files() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+
+        let temp = TempDir::new();
+        let directory = temp.0.join("real");
+        fs::create_dir(&directory).unwrap();
+        let alias = temp.0.join("alias");
+        symlink(&directory, &alias).unwrap();
+        let file = directory.join("config.json");
+        let mut owner = Store::load(&file, None).unwrap();
+        let mut stale = Store::load(&alias.join("config.json"), None).unwrap();
+        owner.configure_global(json!({"prefix":"C-a"})).unwrap();
+        assert!(
+            stale
+                .configure_global(json!({"prefix":"C-z"}))
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        let link = temp.0.join("linked-config.json");
+        symlink(&file, &link).unwrap();
+        let mut linked = Store::load(&link, None).unwrap();
+        owner.configure_global(json!({"prefix":"C-x"})).unwrap();
+        assert!(
+            linked
+                .configure_global(json!({"prefix":"C-z"}))
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        let mut linked = Store::load(&link, None).unwrap();
+        linked.configure_global(json!({"prefix":"C-c"})).unwrap();
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-c");
+        for path in [&file, &directory.join("config.json.lock")] {
+            assert_eq!(
+                fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+    }
+
+    #[test]
+    fn concurrent_configuration_writers_respect_one_stable_lock() {
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let stores = [
+            Arc::new(Mutex::new(Store::load(&file, None).unwrap())),
+            Arc::new(Mutex::new(Store::load(&file, None).unwrap())),
+        ];
+        let original_prefix = stores[0].lock().config.prefix.clone();
+        let lock = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .mode(0o600)
+            .open(temp.0.join("config.json.lock"))
+            .unwrap();
+        assert_eq!(unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX) }, 0);
+        let barrier = Arc::new(std::sync::Barrier::new(3));
+        let (sender, receiver) = mpsc::channel();
+        let workers: Vec<_> = stores
+            .iter()
+            .enumerate()
+            .map(|(index, store)| {
+                let store = store.clone();
+                let barrier = barrier.clone();
+                let sender = sender.clone();
+                thread::spawn(move || {
+                    barrier.wait();
+                    let result = store.lock().configure_global(json!({
+                        "prefix": if index == 0 { "C-a" } else { "C-z" }
+                    }));
+                    sender.send(result.map(|config| config.prefix)).unwrap();
+                })
+            })
+            .collect();
+        barrier.wait();
+        let results: Vec<_> = (0..2)
+            .map(|_| receiver.recv_timeout(Duration::from_secs(2)).unwrap())
+            .collect();
+        drop(lock);
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        for result in results {
+            assert!(result.unwrap_err().to_string().contains("config-busy"));
+        }
+        assert!(!file.exists());
+        for store in &stores {
+            assert_eq!(store.lock().config.prefix, original_prefix);
+        }
+        stores[0]
+            .lock()
+            .configure_global(json!({"prefix":"C-a"}))
+            .unwrap();
+        assert!(
+            stores[1]
+                .lock()
+                .configure_global(json!({"prefix":"C-z"}))
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-a");
+    }
+
+    #[test]
+    fn configuration_deletion_conflicts_without_advancing_expected_generation() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        let original = fs::read(&file).unwrap();
+        fs::remove_file(&file).unwrap();
+        let error = store.configure_global(json!({"prefix":"C-z"})).unwrap_err();
+        assert!(error.to_string().contains("config-conflict"));
+        assert_eq!(store.config.prefix, "C-a");
+        assert!(!file.exists());
+        fs::write(&file, original).unwrap();
+        store.configure_global(json!({"prefix":"C-x"})).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-x");
+    }
+
+    #[test]
+    fn configuration_lock_refuses_symlinks_and_retries_failed_initial_save() {
+        use std::os::unix::fs::symlink;
+
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let lock = temp.0.join("config.json.lock");
+        let sentinel = temp.0.join("sentinel");
+        fs::write(&sentinel, "untouched").unwrap();
+        symlink(&sentinel, &lock).unwrap();
+        let mut store = Store::load(&file, None).unwrap();
+        assert!(store.configure_global(json!({"prefix":"C-a"})).is_err());
+        assert_eq!(store.config.prefix, Config::default().prefix);
+        assert!(!file.exists());
+        assert_eq!(fs::read_to_string(&sentinel).unwrap(), "untouched");
+        fs::remove_file(&lock).unwrap();
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        store.configure_global(json!({"prefix":"C-x"})).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-x");
+    }
+
+    #[test]
+    fn configuration_rejects_dangling_symlinks_and_hard_link_aliases() {
+        use std::os::unix::fs::symlink;
+
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        let hard_link = temp.0.join("hard-link.json");
+        fs::hard_link(&file, &hard_link).unwrap();
+        assert!(Store::load(&hard_link, None).is_err());
+        assert!(store.configure_global(json!({"prefix":"C-z"})).is_err());
+        assert_eq!(store.config.prefix, "C-a");
+        fs::remove_file(&hard_link).unwrap();
+        store.configure_global(json!({"prefix":"C-x"})).unwrap();
+        let dangling = temp.0.join("dangling.json");
+        let missing = temp.0.join("missing.json");
+        symlink(&missing, &dangling).unwrap();
+        assert!(Store::load(&dangling, None).is_err());
+        assert!(!missing.exists());
+        assert!(
+            fs::symlink_metadata(&dangling)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+    }
+
+    #[test]
+    fn legacy_configuration_defaults_terminal_limit_and_validates_patches() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        fs::write(
+            &file,
+            serde_json::to_vec(&json!({
+                "version":1,
+                "config":{"projects_dir":temp.0,"prefix":"C-a","daemon_start_hooks":[]},
+                "projects":[]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let mut store = Store::load(&file, None).unwrap();
+        assert_eq!(store.config.terminal_limit, 64);
+        store.configure_global(json!({"prefix":"C-z"})).unwrap();
+        for limit in [1, 256, 64] {
+            store
+                .configure_global(json!({"terminal_limit":limit}))
+                .unwrap();
+            assert_eq!(
+                Store::load(&file, None).unwrap().config.terminal_limit,
+                limit
+            );
+        }
+        let original = fs::read(&file).unwrap();
+        for limit in [
+            json!(0),
+            json!(257),
+            json!(-1),
+            json!(1.5),
+            json!("64"),
+            json!(null),
+        ] {
+            assert!(
+                store
+                    .configure_global(json!({"terminal_limit":limit}))
+                    .is_err()
+            );
+            assert_eq!(store.config.terminal_limit, 64);
+            assert_eq!(fs::read(&file).unwrap(), original);
+        }
+        let mut invalid: Value = serde_json::from_slice(&original).unwrap();
+        invalid["config"]["terminal_limit"] = json!(0);
+        fs::write(&file, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        assert!(Store::load(&file, None).is_err());
+    }
+
+    #[test]
     fn saved_identity_context_hooks_and_recipes_survive_without_runtime() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
@@ -1131,7 +1600,12 @@ mod tests {
         let opened = reopened.open(&created.id).unwrap();
         assert_eq!(opened.hooks.len(), 1);
         assert_eq!(opened.recipes["check"], "cat setup-marker");
-        let results = run_hooks(&opened.hooks, &opened.context, &BTreeMap::new());
+        let results = run_hooks(
+            &opened.hooks,
+            &opened.context,
+            &BTreeMap::new(),
+            &AtomicBool::new(false),
+        );
         assert_eq!(results[0]["ok"], true);
         assert_eq!(
             fs::read_to_string(opened.context.join("setup-marker")).unwrap(),
@@ -1208,14 +1682,138 @@ mod tests {
             )
             .unwrap();
         let env = BTreeMap::from([("EXPORTED".into(), "inherited".into())]);
-        let daemon = run_hooks(&store.config.daemon_start_hooks, &temp.0, &env);
+        let daemon = run_hooks(
+            &store.config.daemon_start_hooks,
+            &temp.0,
+            &env,
+            &AtomicBool::new(false),
+        );
         assert_eq!(daemon[0]["stdout"], "daemon");
-        let results = run_hooks(&store.projects[&id].hooks, &temp.0, &env);
+        let results = run_hooks(
+            &store.projects[&id].hooks,
+            &temp.0,
+            &env,
+            &AtomicBool::new(false),
+        );
         assert_eq!(results[0]["stdout"], "inherited");
         assert_eq!(results[1]["stdout"], "first");
         assert_eq!(results[1]["exit_status"], 7);
         assert_eq!(results[2]["stdout"], "firstsecond");
         assert_eq!(results[2]["ok"], true);
+    }
+
+    #[test]
+    fn already_cancelled_hooks_never_start() {
+        let temp = TempDir::new();
+        let hooks = [Hook {
+            source: "printf started > unexpected".into(),
+            timeout_ms: 30_000,
+        }];
+        let results = run_hooks(&hooks, &temp.0, &BTreeMap::new(), &AtomicBool::new(true));
+        assert!(results.is_empty());
+        assert!(!temp.0.join("unexpected").exists());
+    }
+
+    #[test]
+    fn active_cancelled_hook_kills_owned_group_and_skips_remaining() {
+        let temp = TempDir::new();
+        let stopping = AtomicBool::new(false);
+        let hooks = [
+            Hook {
+                source: "printf '%s' \"$$\" > parent; sleep 30 & child=$!; printf '%s' \"$child\" > descendant; wait".into(),
+                timeout_ms: 30_000,
+            },
+            Hook {
+                source: "printf started > unexpected".into(),
+                timeout_ms: 30_000,
+            },
+        ];
+        let (results, descendant, parent) = thread::scope(|scope| {
+            let worker = scope.spawn(|| run_hooks(&hooks, &temp.0, &BTreeMap::new(), &stopping));
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let descendant: i32 = loop {
+                if let Some(pid) = fs::read_to_string(temp.0.join("descendant"))
+                    .ok()
+                    .and_then(|text| text.parse().ok())
+                {
+                    break pid;
+                }
+                if Instant::now() >= deadline {
+                    stopping.store(true, Ordering::Release);
+                    panic!("hook did not start its descendant");
+                }
+                thread::sleep(Duration::from_millis(5));
+            };
+            let parent: i32 = fs::read_to_string(temp.0.join("parent"))
+                .unwrap()
+                .parse()
+                .unwrap();
+            let started = Instant::now();
+            stopping.store(true, Ordering::Release);
+            let results = worker.join().unwrap();
+            assert!(started.elapsed() < Duration::from_secs(2));
+            (results, descendant, parent)
+        });
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["ok"], false);
+        assert_eq!(results[0]["cancelled"], true);
+        assert_eq!(results[0]["timed_out"], false);
+        assert_eq!(results[0]["exit_status"], Value::Null);
+        assert_eq!(results[0]["error"], "hook cancelled");
+        assert!(!temp.0.join("unexpected").exists());
+        let mut status = 0;
+        assert_eq!(
+            unsafe { libc::waitpid(parent, &mut status, libc::WNOHANG) },
+            -1
+        );
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ECHILD)
+        );
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if unsafe { libc::kill(descendant, 0) } != 0 {
+                break;
+            }
+            let zombie = fs::read_to_string(format!("/proc/{descendant}/stat"))
+                .ok()
+                .and_then(|stat| {
+                    stat.rsplit_once(") ")
+                        .map(|(_, tail)| tail.starts_with('Z'))
+                })
+                .unwrap_or(false);
+            if zombie {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "descendant survived hook cancellation"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    #[test]
+    fn hook_diagnostics_bound_source_without_changing_execution() {
+        let temp = TempDir::new();
+        let source = format!("printf complete\n#{}", "界".repeat(6_000));
+        let results = run_hooks(
+            &[Hook {
+                source: source.clone(),
+                timeout_ms: 2_000,
+            }],
+            &temp.0,
+            &BTreeMap::new(),
+            &AtomicBool::new(false),
+        );
+        assert_eq!(results[0]["stdout"], "complete");
+        assert_eq!(results[0]["ok"], true);
+        assert_eq!(results[0]["cancelled"], false);
+        assert_eq!(results[0]["source_truncated"], true);
+        let shown = results[0]["source"].as_str().unwrap();
+        assert!(shown.len() <= 16 * 1024);
+        assert!(source.starts_with(shown));
+        assert!(shown.len() >= 16 * 1024 - 3);
     }
 
     #[test]
@@ -1232,9 +1830,10 @@ mod tests {
             },
         ];
         let started = Instant::now();
-        let results = run_hooks(&hooks, &temp.0, &BTreeMap::new());
+        let results = run_hooks(&hooks, &temp.0, &BTreeMap::new(), &AtomicBool::new(false));
         assert!(started.elapsed() < Duration::from_secs(5));
         assert_eq!(results[0]["timed_out"], true);
+        assert_eq!(results[0]["cancelled"], false);
         assert_eq!(results[1]["stdout"], "usable");
         let pid: i32 = fs::read_to_string(temp.0.join("descendant"))
             .unwrap()
@@ -1273,7 +1872,7 @@ mod tests {
             timeout_ms: 500,
         }];
         let started = Instant::now();
-        let results = run_hooks(&hooks, &temp.0, &BTreeMap::new());
+        let results = run_hooks(&hooks, &temp.0, &BTreeMap::new(), &AtomicBool::new(false));
         assert!(started.elapsed() < Duration::from_secs(2));
         assert_eq!(results[0]["stdout"], "finished");
         assert_eq!(results[0]["ok"], true);
@@ -1502,7 +2101,7 @@ mod tests {
             source: "printf diagnostic >&2; dd if=/dev/zero bs=1200000 count=1 2>/dev/null".into(),
             timeout_ms: 2_000,
         };
-        let result = run_hooks(&[hook], &temp.0, &BTreeMap::new());
+        let result = run_hooks(&[hook], &temp.0, &BTreeMap::new(), &AtomicBool::new(false));
         assert_eq!(result[0]["stderr"], "diagnostic");
         assert_eq!(result[0]["output_truncated"], true);
         assert!(result[0]["stdout"].as_str().unwrap().len() <= OUTPUT_LIMIT);
@@ -1513,6 +2112,7 @@ mod tests {
             }],
             &temp.0.join("missing"),
             &BTreeMap::new(),
+            &AtomicBool::new(false),
         );
         assert_eq!(failed[0]["ok"], false);
         assert!(!failed[0]["error"].is_null());

@@ -118,25 +118,11 @@ fn independent_showcase_runs_inside_amux_and_checks_real_cursor_replies() {
     assert_eq!(value["report"]["columns"], 100);
     assert_eq!(value["report"]["rows"], 30);
     let exercises = value["exercises"].as_array().unwrap();
-    assert_eq!(
-        exercises.len(),
-        9,
-        "endpoint failed to answer an objective CPR transaction: {value}"
-    );
-    for capability in [
-        "cursor",
-        "save_restore",
-        "wide",
-        "combining",
-        "overwrite",
-        "autowrap",
-    ] {
-        for test in exercises.iter().filter(|v| v["capability"] == capability) {
-            assert_eq!(
-                test["outcome"], "passed",
-                "independent endpoint regression: {test}"
-            );
-        }
+    for test in exercises {
+        assert_eq!(
+            test["outcome"], "passed",
+            "independent endpoint regression: {test}"
+        );
     }
     let origin = exercises
         .iter()
@@ -147,6 +133,13 @@ fn independent_showcase_runs_inside_amux_and_checks_real_cursor_replies() {
         json!([2, 4]),
         "CPR coordinates must remain origin-relative; do not adopt amux's expectations"
     );
+    assert_eq!(origin["actual"], json!([2, 4]));
+    let graphemes = exercises
+        .iter()
+        .find(|v| v["capability"] == "graphemes")
+        .unwrap();
+    assert_eq!(graphemes["expected"], json!([7, 4]));
+    assert_eq!(graphemes["actual"], json!([7, 4]));
     for capability in ["origin", "graphemes"] {
         let test = exercises
             .iter()
@@ -158,27 +151,13 @@ fn independent_showcase_runs_inside_amux_and_checks_real_cursor_replies() {
             .iter()
             .find(|v| v["id"] == capability)
             .unwrap();
-        assert_eq!(
-            cap["objective_status"],
-            if test["expected"] == test["actual"] {
-                "verified"
-            } else {
-                "failed"
-            }
-        );
+        assert_eq!(test["outcome"], "passed");
+        assert_eq!(cap["objective_status"], "verified");
     }
-    let failures: Vec<_> = exercises
-        .iter()
-        .filter(|v| v["outcome"] == "failed")
-        .collect();
-    println!(
-        "Independent endpoint failures (not suppressed): {}",
-        json!(failures)
-    );
     assert_eq!(
         fs::read_to_string(exit_file).unwrap().trim(),
-        if failures.is_empty() { "0" } else { "1" },
-        "strict probe must expose endpoint failures to shell automation"
+        "0",
+        "strict probe must complete without objective endpoint failures"
     );
     let screenshot = daemon.directory.join("screen.json");
     let source = format!(

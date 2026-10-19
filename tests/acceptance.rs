@@ -63,7 +63,9 @@ impl Harness {
             }
             assert!(
                 Instant::now() < deadline,
-                "{label}; log {}",
+                "{label}; snapshot {:?}; main screen {}; log {}",
+                self.call(json!({"op":"snapshot"})),
+                self.screen(&self.main()),
                 fs::read_to_string(self.directory.join("daemon.log")).unwrap_or_default()
             );
             std::thread::sleep(Duration::from_millis(20));
@@ -722,4 +724,360 @@ fn interrupted_source_records_completion_without_replacing_user_hooks() {
         .unwrap();
     assert_eq!(completed["status"], "completed");
     assert_eq!(completed["exit_status"], 130);
+}
+
+#[test]
+fn concurrent_terminal_admission_counts_exits_and_reuses_removed_capacity() {
+    let h = Harness::new();
+    let main = h.main();
+    h.ready(&main);
+    h.call(json!({"op":"config","config":{"terminal_limit":3}}))
+        .unwrap();
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(17));
+    let opens: Vec<_> = (0..16)
+        .map(|index| {
+            let socket = h.socket.clone();
+            let barrier = barrier.clone();
+            let main = main.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                client::request(
+                    &socket,
+                    json!({"op":"open","source":main,"name":format!("capacity-{index}")}),
+                )
+            })
+        })
+        .collect();
+    barrier.wait();
+    let mut admitted = Vec::new();
+    for open in opens {
+        match open.join().unwrap() {
+            Ok(terminal) => admitted.push(terminal["id"].as_str().unwrap().to_owned()),
+            Err(error) => assert!(
+                error.to_string().starts_with("terminal-limit:"),
+                "{error:#}"
+            ),
+        }
+    }
+    assert_eq!(admitted.len(), 2);
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    let removed = admitted.pop().unwrap();
+    h.call(json!({"op":"close","terminal":removed})).unwrap();
+    h.call(json!({"op":"wait","terminal":removed,"condition":"exited","timeout_ms":5000}))
+        .unwrap();
+    assert!(
+        h.call(json!({"op":"open"}))
+            .unwrap_err()
+            .to_string()
+            .starts_with("terminal-limit:")
+    );
+    assert!(
+        h.call(json!({"op":"project-new","name":"capacity-project"}))
+            .unwrap_err()
+            .to_string()
+            .starts_with("terminal-limit:")
+    );
+    assert!(
+        h.call(json!({"op":"project-open","project":"capacity-project"}))
+            .unwrap_err()
+            .to_string()
+            .starts_with("terminal-limit:")
+    );
+    h.call(json!({"op":"remove","terminal":removed})).unwrap();
+    for _ in 0..4 {
+        assert!(
+            h.call(json!({"op":"open","cwd":h.directory.join("missing")}))
+                .unwrap_err()
+                .to_string()
+                .starts_with("invalid-directory:")
+        );
+    }
+    let replacement = h.call(json!({"op":"open","source":main})).unwrap();
+    admitted.push(replacement["id"].as_str().unwrap().to_owned());
+    admitted.push(main);
+    h.call(json!({"op":"config","config":{"terminal_limit":1}}))
+        .unwrap();
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert!(
+        h.call(json!({"op":"open"}))
+            .unwrap_err()
+            .to_string()
+            .starts_with("terminal-limit:")
+    );
+    for terminal in admitted {
+        h.call(json!({"op":"close","terminal":terminal})).unwrap();
+        h.call(json!({"op":"wait","terminal":terminal,"condition":"exited","timeout_ms":5000}))
+            .unwrap();
+        h.call(json!({"op":"remove","terminal":terminal})).unwrap();
+    }
+    let opened = h
+        .call(json!({"op":"project-open","project":"capacity-project"}))
+        .unwrap();
+    assert!(opened["terminal"]["id"].is_string());
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn failed_terminal_preparation_refunds_capacity_without_late_shells() {
+    let h = Harness::new();
+    h.ready(&h.main());
+    h.call(json!({"op":"config","config":{"terminal_limit":2}}))
+        .unwrap();
+    let integration = h.directory.join("integration");
+    let saved = h.directory.join("saved-integration");
+    fs::rename(&integration, &saved).unwrap();
+    fs::write(&integration, b"not a directory").unwrap();
+    for _ in 0..4 {
+        let error = h.call(json!({"op":"open"})).unwrap_err();
+        assert!(
+            !error.to_string().starts_with("terminal-limit:"),
+            "{error:#}"
+        );
+    }
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    fs::remove_file(&integration).unwrap();
+    fs::rename(&saved, &integration).unwrap();
+    let terminal = h.call(json!({"op":"open"})).unwrap();
+    h.ready(terminal["id"].as_str().unwrap());
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[test]
+fn completed_hooks_and_launch_failures_share_bounded_ordered_diagnostics() {
+    let h = Harness::with_daemon_command(|directory, _| {
+        let path = directory.join("config/amux");
+        fs::create_dir_all(&path).unwrap();
+        let hooks: Vec<_> = (0..25).map(|index| {
+            json!({"source":format!("printf '%20000s' x; : hook-{index:02} {}", "界".repeat(9000)),"timeout_ms":2000})
+        }).collect();
+        fs::write(
+            path.join("config.json"),
+            serde_json::to_vec(&json!({
+                "version":1,"config":{"projects_dir":directory.join("projects"),"prefix":"Ctrl-a",
+                    "terminal_limit":2,"daemon_start_hooks":hooks},"projects":[]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    });
+    let hooks = h.until(
+        || {
+            let snapshot = h.call(json!({"op":"snapshot"})).ok()?;
+            (snapshot["diagnostics"].as_array()?.last()?["diagnostic"]["index"] == 24)
+                .then_some(snapshot)
+        },
+        "all startup hooks completed",
+    );
+    let diagnostics = hooks["diagnostics"].as_array().unwrap();
+    assert_eq!(diagnostics.len(), 20);
+    assert_eq!(diagnostics[0]["diagnostic"]["index"], 5);
+    for diagnostic in diagnostics {
+        assert!(diagnostic["diagnostic"]["source"].as_str().unwrap().len() <= 16 * 1024);
+        assert_eq!(diagnostic["diagnostic"]["source_truncated"], true);
+        assert!(diagnostic["diagnostic"]["stdout"].as_str().unwrap().len() <= 16 * 1024);
+        assert_eq!(diagnostic["diagnostic"]["output_truncated"], true);
+    }
+    for index in 0..25 {
+        let command = format!("launch-{index:02}\0{}", "界".repeat(9000));
+        let terminal = h.call(json!({"op":"open","command":command})).unwrap();
+        let id = terminal["id"].as_str().unwrap();
+        h.ready(id);
+        h.until(
+            || {
+                let snapshot = h.call(json!({"op":"snapshot"})).ok()?;
+                (snapshot["diagnostics"].as_array()?.last()?["terminal"] == id).then_some(())
+            },
+            "launch failure published",
+        );
+        h.call(json!({"op":"close","terminal":id})).unwrap();
+        h.call(json!({"op":"wait","terminal":id,"condition":"exited","timeout_ms":5000}))
+            .unwrap();
+        h.call(json!({"op":"remove","terminal":id})).unwrap();
+    }
+    let snapshot = h.call(json!({"op":"snapshot"})).unwrap();
+    let diagnostics = snapshot["diagnostics"].as_array().unwrap();
+    assert_eq!(diagnostics.len(), 20);
+    assert!(
+        diagnostics[0]["command"]
+            .as_str()
+            .unwrap()
+            .starts_with("launch-05")
+    );
+    assert!(
+        diagnostics[19]["command"]
+            .as_str()
+            .unwrap()
+            .starts_with("launch-24")
+    );
+    assert!(serde_json::to_vec(diagnostics).unwrap().len() < 2 * 1024 * 1024);
+    for diagnostic in diagnostics {
+        assert!(diagnostic["command"].as_str().unwrap().len() <= 16 * 1024);
+        assert_eq!(diagnostic["command_truncated"], true);
+    }
+    let events = h
+        .call(json!({"op":"events","after":0,"timeout_ms":0}))
+        .unwrap();
+    let events = events["events"].as_array().unwrap();
+    assert!(
+        events
+            .windows(2)
+            .all(|pair| pair[0]["seq"].as_u64().unwrap() < pair[1]["seq"].as_u64().unwrap())
+    );
+    assert!(
+        events
+            .iter()
+            .filter(|event| event["kind"] == "launch-failed")
+            .all(|event| event["data"]["command"].as_str().unwrap().len() <= 16 * 1024)
+    );
+}
+
+#[test]
+fn hook_enqueue_failures_retain_only_twenty_bounded_command_diagnostics() {
+    let h = Harness::with_daemon_command(|directory, _| {
+        let path = directory.join("config/amux");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("config.json"), serde_json::to_vec(&json!({
+            "version":1,"config":{"projects_dir":directory.join("projects"),"prefix":"Ctrl-a",
+                "terminal_limit":2,"daemon_start_hooks":[{"source":"touch hook-running; sleep 300","timeout_ms":300000}]},"projects":[]
+        })).unwrap()).unwrap();
+    });
+    h.until(
+        || h.directory.join("hook-running").exists().then_some(()),
+        "blocking hook started",
+    );
+    let hooks: Vec<_> = (0..25)
+        .map(|index| {
+            json!({
+                "source":format!(": queued-{index:02} {}", "界".repeat(9000)),"timeout_ms":2000
+            })
+        })
+        .collect();
+    let opened = h
+        .call(json!({"op":"project-new","name":"queued-hooks","config":{"hooks":hooks}}))
+        .unwrap();
+    let project = opened["project"]["id"].as_str().unwrap();
+    let mut terminal = opened["terminal"]["id"].as_str().unwrap().to_owned();
+    for _ in 0..65 {
+        h.call(json!({"op":"close","terminal":terminal})).unwrap();
+        h.call(json!({"op":"wait","terminal":terminal,"condition":"exited","timeout_ms":5000}))
+            .unwrap();
+        h.call(json!({"op":"remove","terminal":terminal})).unwrap();
+        let opened = h
+            .call(json!({"op":"project-open","project":project}))
+            .unwrap();
+        terminal = opened["terminal"]["id"].as_str().unwrap().to_owned();
+    }
+    let snapshot = h.call(json!({"op":"snapshot"})).unwrap();
+    let diagnostics = snapshot["diagnostics"].as_array().unwrap();
+    assert_eq!(diagnostics.len(), 20);
+    for (offset, diagnostic) in diagnostics.iter().enumerate() {
+        assert_eq!(diagnostic["index"], offset + 5);
+        assert!(
+            diagnostic["message"]
+                .as_str()
+                .unwrap()
+                .starts_with("hook-backpressure:")
+        );
+        assert!(diagnostic["command"].as_str().unwrap().len() <= 16 * 1024);
+        assert_eq!(diagnostic["command_truncated"], true);
+    }
+    assert!(serde_json::to_vec(diagnostics).unwrap().len() < 2 * 1024 * 1024);
+}
+
+#[test]
+fn concurrent_removals_release_one_admission_slot_without_double_refund() {
+    let h = Harness::new();
+    let main = h.main();
+    h.ready(&main);
+    h.call(json!({"op":"config","config":{"terminal_limit":2}}))
+        .unwrap();
+    let spare = h.call(json!({"op":"open"})).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    h.call(json!({"op":"close","terminal":spare})).unwrap();
+    h.call(json!({"op":"wait","terminal":spare,"condition":"exited","timeout_ms":5000}))
+        .unwrap();
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(9));
+    let requests: Vec<_> = (0..8)
+        .map(|index| {
+            let socket = h.socket.clone();
+            let spare = spare.clone();
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let request = if index < 2 {
+                    json!({"op":"remove","terminal":spare})
+                } else {
+                    json!({"op":"open"})
+                };
+                (index, client::request(&socket, request))
+            })
+        })
+        .collect();
+    barrier.wait();
+    let mut removed = 0;
+    let mut opened = 0;
+    for worker in requests {
+        let (index, result) = worker.join().unwrap();
+        match result {
+            Ok(_) if index < 2 => removed += 1,
+            Ok(_) => opened += 1,
+            Err(error) if index < 2 => {
+                assert!(error.to_string().starts_with("not-found:"), "{error:#}")
+            }
+            Err(error) => assert!(
+                error.to_string().starts_with("terminal-limit:"),
+                "{error:#}"
+            ),
+        }
+    }
+    assert_eq!(removed, 1);
+    assert!(opened <= 1);
+    if opened == 0 {
+        h.call(json!({"op":"open"})).unwrap();
+    }
+    assert_eq!(
+        h.call(json!({"op":"snapshot"})).unwrap()["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(
+        h.call(json!({"op":"open"}))
+            .unwrap_err()
+            .to_string()
+            .starts_with("terminal-limit:")
+    );
 }

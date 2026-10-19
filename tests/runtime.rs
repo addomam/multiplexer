@@ -103,6 +103,115 @@ fn native_pty_unicode_alt_screen_modes_scrollback_resize_and_reply() {
 }
 
 #[test]
+fn native_pty_origin_relative_reports_and_joined_grapheme_cells() {
+    let term = terminal();
+    let executable = std::env::current_exe().unwrap();
+    let executable = executable.to_str().unwrap().replace('\'', "'\\''");
+    term.input(
+        format!(
+            "AMUX_CPR_QUERY_APP=1 '{executable}' --exact raw_cpr_query_foreground_app --ignored --nocapture\r"
+        )
+        .into_bytes(),
+    )
+    .unwrap();
+    wait(&term, "CPR_AND_GRAPHEME_REPLIES_OK");
+    let frame = term.screen(0, None);
+    assert_eq!(frame["cells"][6][0]["text"], "👩‍💻");
+    assert_eq!(frame["cells"][6][0]["wide"], true);
+    assert_eq!(frame["cells"][6][1]["wide_spacer"], true);
+    assert_eq!(frame["cells"][6][2]["text"], "X");
+    assert_eq!(frame["cells"][6][3]["text"], " ");
+    term.input(b"finish\n".to_vec()).unwrap();
+    wait(&term, "RAW_CPR_INPUT_OK");
+}
+
+#[test]
+#[ignore = "raw foreground subprocess fixture"]
+fn raw_cpr_query_foreground_app() {
+    use std::io::{Read, Write};
+
+    assert_eq!(std::env::var("AMUX_CPR_QUERY_APP").as_deref(), Ok("1"));
+    struct RestoreMode(libc::termios);
+    impl Drop for RestoreMode {
+        fn drop(&mut self) {
+            unsafe {
+                libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &self.0);
+            }
+        }
+    }
+    let mut original = std::mem::MaybeUninit::<libc::termios>::uninit();
+    assert_eq!(
+        unsafe { libc::tcgetattr(libc::STDIN_FILENO, original.as_mut_ptr()) },
+        0
+    );
+    let original = unsafe { original.assume_init() };
+    let _restore = RestoreMode(original);
+    let mut raw = original;
+    unsafe { libc::cfmakeraw(&mut raw) };
+    assert_eq!(
+        unsafe { libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &raw) },
+        0
+    );
+    fn read_bounded(expected: &[u8]) {
+        let mut actual = vec![0; expected.len()];
+        let deadline = Instant::now() + Duration::from_secs(4);
+        let mut input = std::io::stdin().lock();
+        let mut offset = 0;
+        while offset < actual.len() {
+            assert!(Instant::now() < deadline, "raw CPR reply timed out");
+            let mut poll = libc::pollfd {
+                fd: libc::STDIN_FILENO,
+                events: libc::POLLIN,
+                revents: 0,
+            };
+            let ready = unsafe { libc::poll(&mut poll, 1, 100) };
+            if ready < 0
+                && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted
+            {
+                continue;
+            }
+            assert!(ready >= 0, "raw CPR poll failed");
+            if ready == 0 {
+                continue;
+            }
+            let count = input.read(&mut actual[offset..]).unwrap();
+            assert!(count > 0, "raw CPR input ended");
+            offset += count;
+        }
+        assert_eq!(actual, expected, "independent raw-wire CPR mismatch");
+    }
+    let mut output = std::io::stdout().lock();
+    for (sequence, expected) in [
+        ("\x1bc\x1b[3;20r\x1b[?6h\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+        ("\x1b[?6l\x1b[4;4H\x1b[6n", "\x1b[4;4R"),
+        ("\x1b[?6h\x1b[?1049h\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+        ("\x1b[?1049l\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
+        ("\x1bc\x1b[6n", "\x1b[1;1R"),
+    ] {
+        output.write_all(sequence.as_bytes()).unwrap();
+        output.flush().unwrap();
+        read_bounded(expected.as_bytes());
+    }
+    output.write_all(b"\x1b[7;1H").unwrap();
+    // Deliberately split scalars and the joined cluster over PTY writes.
+    for byte in "👩‍💻X".as_bytes() {
+        output.write_all(std::slice::from_ref(byte)).unwrap();
+        output.flush().unwrap();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    output.write_all(b"\x1b[6n").unwrap();
+    output.flush().unwrap();
+    read_bounded(b"\x1b[7;4R");
+    output
+        .write_all(b"\x1b[10;1HCPR_AND_GRAPHEME_REPLIES_OK")
+        .unwrap();
+    output.flush().unwrap();
+    read_bounded(b"finish\n");
+    output.write_all(b"\r\nRAW_CPR_INPUT_OK\r\n").unwrap();
+    output.flush().unwrap();
+}
+
+#[test]
 fn native_pty_application_updated_palette_queries_match_displayed_colors() {
     let term = terminal();
     let executable = std::env::current_exe().unwrap();

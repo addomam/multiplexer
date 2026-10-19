@@ -21,6 +21,8 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 static SIGNAL_STOP: AtomicBool = AtomicBool::new(false);
+const DIAGNOSTIC_LIMIT: usize = 20;
+const DIAGNOSTIC_TEXT_LIMIT: usize = 16 * 1024;
 extern "C" fn signal_stop(_: libc::c_int) {
     SIGNAL_STOP.store(true, Ordering::Relaxed);
 }
@@ -45,6 +47,7 @@ struct Entry {
 struct State {
     store: Store,
     terminals: BTreeMap<String, Entry>,
+    opening_terminals: usize,
     seq: u64,
     events: VecDeque<Value>,
     event_bytes: usize,
@@ -77,6 +80,43 @@ impl Drop for ProjectOpening {
         self.daemon.changed.notify_all();
     }
 }
+struct TerminalAdmission {
+    daemon: Arc<Daemon>,
+    active: bool,
+}
+impl Drop for TerminalAdmission {
+    fn drop(&mut self) {
+        if self.active {
+            self.daemon.state.lock().opening_terminals -= 1;
+            self.daemon.changed.notify_all();
+        }
+    }
+}
+struct SocketFile(PathBuf);
+impl Drop for SocketFile {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+fn diagnostic_text(text: &str) -> &str {
+    let mut end = text.len().min(DIAGNOSTIC_TEXT_LIMIT);
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
+}
+fn bound_diagnostic(value: &mut Value) {
+    match value {
+        Value::String(text) if text.len() > DIAGNOSTIC_TEXT_LIMIT => {
+            let end = diagnostic_text(text).len();
+            text.truncate(end);
+            text.shrink_to_fit();
+        }
+        Value::Array(values) => values.iter_mut().for_each(bound_diagnostic),
+        Value::Object(fields) => fields.values_mut().for_each(bound_diagnostic),
+        _ => {}
+    }
+}
 struct ByteCount(usize);
 impl Write for ByteCount {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
@@ -104,6 +144,44 @@ impl Daemon {
                 state.event_bytes -= json_size(&event);
             }
         }
+    }
+    fn diagnostic(state: &mut State, kind: &str, terminal: Option<&str>, mut data: Value) {
+        bound_diagnostic(&mut data);
+        if state.diagnostics.len() == DIAGNOSTIC_LIMIT {
+            state.diagnostics.remove(0);
+        }
+        state.diagnostics.push(data.clone());
+        Self::emit(state, kind, terminal, data);
+    }
+    fn launch_failure(&self, id: &str, command: Option<&str>, error: &anyhow::Error) {
+        let message = error.to_string();
+        let mut state = self.state.lock();
+        Self::diagnostic(
+            &mut state,
+            "launch-failed",
+            Some(id),
+            json!({"terminal":id,"message":diagnostic_text(&message),
+                "command":command.map(diagnostic_text),
+                "command_truncated":command.is_some_and(|source| source.len() > DIAGNOSTIC_TEXT_LIMIT)}),
+        );
+        self.changed.notify_all();
+    }
+    fn reserve_terminal(self: &Arc<Self>) -> Result<TerminalAdmission> {
+        let mut state = self.state.lock();
+        if self.stopping.load(Ordering::Acquire) {
+            bail!("shutdown: daemon is stopping");
+        }
+        let limit = state.store.config.terminal_limit;
+        if state.terminals.len() + state.opening_terminals >= limit {
+            bail!(
+                "terminal-limit: retained terminals and pending opens reached limit {limit}; remove an exited terminal or raise terminal_limit"
+            );
+        }
+        state.opening_terminals += 1;
+        Ok(TerminalAdmission {
+            daemon: self.clone(),
+            active: true,
+        })
     }
     fn resolve(state: &State, selector: &str) -> Result<String> {
         if state.terminals.contains_key(selector) {
@@ -222,17 +300,28 @@ impl Daemon {
             env,
             kind,
         })) {
+            let (message, job) = match error {
+                std::sync::mpsc::TrySendError::Full(job) => ("hook queue is full", job),
+                std::sync::mpsc::TrySendError::Disconnected(job) => ("hook worker stopped", job),
+            };
             let mut state = self.state.lock();
-            let diagnostic = json!({"kind":kind,"message":format!("hook-backpressure: {error}")});
-            state.diagnostics.push(diagnostic.clone());
-            Self::emit(&mut state, "hook", None, diagnostic);
+            if let Some(job) = job {
+                for (index, hook) in job.hooks.iter().enumerate() {
+                    Self::diagnostic(
+                        &mut state,
+                        "hook",
+                        None,
+                        json!({"kind":kind,"message":format!("hook-backpressure: {message}"),
+                            "index":index,"command":diagnostic_text(&hook.source),
+                            "command_truncated":hook.source.len() > DIAGNOSTIC_TEXT_LIMIT}),
+                    );
+                }
+            }
             self.changed.notify_all();
         }
     }
     fn open(self: &Arc<Self>, request: &Value) -> Result<Value> {
-        if self.stopping.load(Ordering::Acquire) {
-            bail!("shutdown: daemon is stopping");
-        }
+        let mut admission = self.reserve_terminal()?;
         let (project_id, cwd, mut env, freshness, command) = {
             let state = self.state.lock();
             let source = if let Some(selector) = request["source"].as_str() {
@@ -303,7 +392,14 @@ impl Daemon {
             bail!("invalid-directory: {}", cwd.display());
         }
         let id = Uuid::new_v4().to_string();
-        let launch = self.integration.prepare(&id)?;
+        let launch = match self.integration.prepare(&id) {
+            Ok(launch) => launch,
+            Err(error) => {
+                self.integration.remove(&id);
+                self.launch_failure(&id, command.as_deref(), &error);
+                return Err(error);
+            }
+        };
         let original = env.get("ZDOTDIR").cloned();
         env.extend(launch);
         if let Some(zdotdir) = original {
@@ -333,6 +429,7 @@ impl Daemon {
             Ok(terminal) => terminal,
             Err(error) => {
                 self.integration.remove(&id);
+                self.launch_failure(&id, command.as_deref(), &error);
                 return Err(error);
             }
         };
@@ -369,6 +466,8 @@ impl Daemon {
                 project.main_terminal = Some(id.clone());
             }
             state.terminals.insert(id.clone(), entry.clone());
+            state.opening_terminals -= 1;
+            admission.active = false;
             Self::emit(
                 &mut state,
                 "terminal-opened",
@@ -390,15 +489,19 @@ impl Daemon {
                 {
                     thread::sleep(Duration::from_millis(25));
                 }
-                let result = daemon
-                    .entry(&json!({"terminal":launch_id}))
-                    .and_then(|entry| daemon.execute_source(&entry, &command, false));
+                let result = if daemon.stopping.load(Ordering::Acquire) {
+                    Err(anyhow::anyhow!("shutdown: daemon is stopping"))
+                } else {
+                    daemon
+                        .entry(&json!({"terminal":launch_id}))
+                        .and_then(|entry| daemon.execute_source(&entry, &command, false))
+                };
                 let mut state = daemon.state.lock();
                 if let Err(error) = result {
-                    let data =
-                        json!({"terminal":launch_id,"message":error.to_string(),"command":command});
-                    state.diagnostics.push(data.clone());
-                    Self::emit(&mut state, "launch-failed", Some(&launch_id), data);
+                    let data = json!({"terminal":launch_id,"message":error.to_string(),
+                        "command":diagnostic_text(&command),
+                        "command_truncated":command.len() > DIAGNOSTIC_TEXT_LIMIT});
+                    Self::diagnostic(&mut state, "launch-failed", Some(&launch_id), data);
                 }
                 daemon.changed.notify_all();
             });
@@ -750,7 +853,6 @@ impl Daemon {
                         project.main_terminal = next;
                     }
                 }
-                self.integration.remove(&entry.terminal.id);
                 Self::emit(
                     &mut state,
                     "terminal-removed",
@@ -758,6 +860,8 @@ impl Daemon {
                     Value::Null,
                 );
                 self.changed.notify_all();
+                drop(state);
+                self.integration.remove(&entry.terminal.id);
                 Ok(json!({"removed":entry.terminal.id}))
             }
             "events" => Ok(self.events(
@@ -1065,6 +1169,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         fs::remove_file(socket)?;
     }
     let listener = UnixListener::bind(socket)?;
+    let _socket_file = SocketFile(socket.to_owned());
     fs::set_permissions(socket, fs::Permissions::from_mode(0o600))?;
     listener.set_nonblocking(true)?;
     let integration = Integration::new(runtime, socket, &std::env::current_exe()?)?;
@@ -1076,6 +1181,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         state: Mutex::new(State {
             store,
             terminals: BTreeMap::new(),
+            opening_terminals: 0,
             seq: 0,
             detach_generation: 0,
             events: VecDeque::new(),
@@ -1100,35 +1206,25 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 if daemon.stopping.load(Ordering::Acquire) {
                     break;
                 }
-                drop(daemon);
-                let mut diagnostics =
-                    projects::run_hooks(std::slice::from_ref(hook), &job.cwd, &job.env);
-                let Some(daemon) = weak.upgrade() else {
-                    return;
-                };
+                let mut diagnostics = projects::run_hooks(
+                    std::slice::from_ref(hook),
+                    &job.cwd,
+                    &job.env,
+                    &daemon.stopping,
+                );
                 let mut state = daemon.state.lock();
                 for diagnostic in &mut diagnostics {
                     diagnostic["index"] = index.into();
-                    for field in ["stdout", "stderr"] {
-                        if let Some(output) = diagnostic[field]
-                            .as_str()
-                            .filter(|output| output.len() > 65536)
-                        {
-                            let mut end = 65536;
-                            while !output.is_char_boundary(end) {
-                                end -= 1;
-                            }
-                            diagnostic[field] = output[..end].into();
-                            diagnostic["output_truncated"] = true.into();
-                        }
-                    }
+                    diagnostic["output_truncated"] = (diagnostic["output_truncated"] == true
+                        || ["stdout", "stderr"].iter().any(|field| {
+                            diagnostic[*field]
+                                .as_str()
+                                .is_some_and(|text| text.len() > DIAGNOSTIC_TEXT_LIMIT)
+                        }))
+                    .into();
+                    bound_diagnostic(diagnostic);
                     let data = json!({"kind":job.kind,"cwd":job.cwd,"diagnostic":diagnostic});
-                    Daemon::emit(&mut state, "hook", None, data.clone());
-                    state.diagnostics.push(data);
-                }
-                if state.diagnostics.len() > 20 {
-                    let excess = state.diagnostics.len() - 20;
-                    state.diagnostics.drain(..excess);
+                    Daemon::diagnostic(&mut state, "hook", None, data);
                 }
                 daemon.changed.notify_all();
             }
@@ -1264,7 +1360,5 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     let _ = daemon.hook_jobs.send(None);
     let _ = hook_worker.join();
     drop(listener);
-    fs::remove_file(socket)?;
-    drop(lock);
     Ok(())
 }

@@ -84,6 +84,22 @@ fn eventually(mut condition: impl FnMut() -> bool) {
 fn agent(instance: &str, kind: &str, activity: &str, settled: bool) -> Value {
     json!({"kind":"agent","instance_id":instance,"agent_kind":kind,"agent_id":instance,"activity":activity,"pid":std::process::id(),"conversation_id":"session-one","generation":1,"completed_generation":if settled {Some(1)} else {None},"retrying":false,"settled":settled})
 }
+
+#[test]
+fn failed_preparation_removes_partial_resources_without_traversing_ids() {
+    let fixture = Fixture::new();
+    let partial = fixture.directory.join("integration").join("failed");
+    fs::create_dir_all(partial.join(".zshrc")).unwrap();
+    assert!(fixture.integration.prepare("failed").is_err());
+    fixture.integration.remove("failed");
+    assert!(!partial.exists());
+
+    let retained = fixture.directory.join("retained");
+    fs::create_dir(&retained).unwrap();
+    fs::write(retained.join("owned"), "keep").unwrap();
+    fixture.integration.remove("../retained");
+    assert_eq!(fs::read_to_string(retained.join("owned")).unwrap(), "keep");
+}
 #[test]
 fn busy_partial_and_lost_are_distinct_and_capture_remains_timestamped() {
     let fixture = Fixture::new();

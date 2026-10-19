@@ -1,23 +1,30 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/terminal-showcase, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+vcs: {kind: git, branch: fix/substrate-defects, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
 active_flow: null
 active_epic: e02
 project_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5]}
 handoff:
-  next_skill: investigate-bug
+  next_skill: survey-context
   blocked: false
-  reason: "User requested a local showcase commit and documentation-only bug handoff. Pick up origin CPR, then ZWJ cursor width in a fresh session; no bug fixes, merge or push in this commit."
-  last_step_completed: e02-showcase-and-bug-handoff-commit
+  reason: "Eight scoped defects fixed, verified and committed on fix/substrate-defects; feature branch retained without merge/push or review-cap waiver. User authorized default-daemon shutdown; shutdown acknowledged and no amux process remained. Next product scope stays execution/workspace tooling, not autonomous orchestration."
+  last_step_completed: substrate-fixes-committed-feature-branch-kept-daemon-stopped
   required_reading:
     - CONVENTIONS.md
+    - specs/verifications/readiness-orchestration-assessment.md
     - specs/verifications/daily-use-checkpoint.md
     - specs/tech-architecture/DESIGN_PLAN_LATEST.md
     - specs/terminal-showcase.md
     - specs/verifications/terminal-showcase.md
     - specs/bugs/BUG-showcase-endpoint-compatibility.md
     - specs/bugs/registry.yaml
+    - specs/bugs/BUG-substrate-reliability.md
+    - specs/verifications/substrate-reliability.md
     - terminal-showcase/tests/multiplexer.rs
-  open_bugs: [showcase-origin-cpr, showcase-zwj-cursor]
+  open_bugs: []
+  retained_observations:
+    - "Initial queued-execution acceptance timeout: cause not established; instrumented acceptance suite, final workspace suite and 24 real cancellation probes passed without weakened tests. See substrate-reliability.md."
+  open_decisions:
+    - "Define initial local workspace/execution operations, capability reporting, lifecycle observations and interaction/failure acceptance criteria before implementation."
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -25,11 +32,15 @@ decisions:
   - OMP 18.8.7 is the supported extension target; macOS arm64 runtime verified, Linux and Rust minimum unverified.
   - Runtime and mechanical acceptance pass; final tree race reproduced/fixed with a passing real-daemon regression.
   - Dual-review cap exhausted; user explicitly authorized main integration without an independent post-fix PASS. No release tag or deployment requested.
+  - "User clarified amux provides execution/project/workspace tooling; external orchestration owns tasks, autonomous dispatch, retries, merge policy and automatic answers."
+  - "Worktree tooling may be built in initially behind a replaceable boundary; containers, VMs and Kubernetes are future targets, not current backend/plugin implementation scope."
+  - "Preserve native interaction and expose equivalent operations via CLI/API; observe agent lifecycle/questions with explicit unsupported, unknown and stale states."
 verification:
   mechanical: passing
   runtime: passing
-  evidence: specs/verifications/MVP-e01.md
-  independent_review: cap-exhausted-user-accepted-for-landing
+  evidence: specs/verifications/substrate-reliability.md
+  baseline_evidence: specs/verifications/MVP-e01.md
+  independent_review: cap-exhausted-user-accepted-for-prior-landing-only
   review_rounds: 5
 ui_revision:
   renderer: ratatui-0.30.0
@@ -102,3 +113,35 @@ metrics:
   story_end: "2026-10-11T22:42:49.975551+00:00"
   timing_scope: e02-shared-implementation-and-verification
   includes_user_suspend: true
+foundation_assessment:
+  date: "2026-10-18"
+  assessed_head: af21287
+  mode: standard
+  status: assessment-complete-substrate-boundary-clarified
+  evidence: specs/verifications/readiness-orchestration-assessment.md
+  runtime_smoke: passed-private-daemon-lifecycle
+  reproduced_gap: separate-sockets-shared-config-lost-update
+  implementation_changes: none
+  independent_review: no-new-pass-or-cap-reset
+  scope_clarified: "2026-10-19"
+  superseded_recommendation: amux-owned-autonomous-orchestration-and-durable-task-ledger
+  followup_evidence: specs/verifications/substrate-reliability.md
+bug_cycle: null
+substrate_reliability_revision:
+  status: committed-verified-feature-branch-kept
+  baseline_head: af21287
+  branch: fix/substrate-defects
+  committed: true
+  branch_disposition: kept
+  completed_bug_steps: [1, 2, 3, 4, 5]
+  evidence: specs/verifications/substrate-reliability.md
+  fixed_bugs: [showcase-origin-cpr, showcase-zwj-cursor, substrate-config-lost-update, substrate-config-durability, substrate-terminal-admission, substrate-diagnostic-retention, substrate-startup-readiness, substrate-hook-cancellation]
+  rust_tests: 210
+  ignored_fixtures_and_integration: 5
+  explicit_independent_showcase_tests: 1
+  independent_wire_cases: 13
+  omp_tests: 8
+  runtime_platform: macos-arm64
+  live_daemon_changed: true
+  daemon_shutdown: user-authorized-graceful-shutdown-verified-no-amux-processes
+  independent_review: no-new-pass-cap-preserved
