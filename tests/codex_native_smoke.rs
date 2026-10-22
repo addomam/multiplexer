@@ -284,10 +284,10 @@ impl Owned {
                 .any(|row| row.0 == *pid && (birth.is_empty() || *birth == row.3))
         });
         for (pid, _, _, birth) in &rows {
-            if let Some(known_birth) = self.known.get_mut(pid) {
-                if known_birth.is_empty() {
-                    known_birth.clone_from(birth);
-                }
+            if let Some(known_birth) = self.known.get_mut(pid)
+                && known_birth.is_empty()
+            {
+                known_birth.clone_from(birth);
             }
         }
         loop {
@@ -467,6 +467,74 @@ fn bounded_reap(child: &mut Child, budget: Duration) -> io::Result<bool> {
         }
         thread::sleep(POLL);
     }
+}
+
+#[test]
+fn owned_cleanup_discovery_failure_preserves_unowned_pid_and_group() {
+    // Both sentinels are this test's children, not this cleanup owner's children.
+    // Their stale entries model reused numbers after the former owner was reaped.
+    struct Sentinels {
+        root: PathBuf,
+        children: Vec<Child>,
+    }
+    impl Drop for Sentinels {
+        fn drop(&mut self) {
+            for child in &mut self.children {
+                let _ = child.kill();
+                let _ = bounded_reap(child, Duration::from_secs(2));
+            }
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+    let root = fs::canonicalize("/tmp")
+        .unwrap()
+        .join(format!("amux-cleanup-{}", uuid::Uuid::new_v4()));
+    private_dir(&root);
+    let mut sentinels = Sentinels {
+        root: root.clone(),
+        children: Vec::new(),
+    };
+    for _ in 0..2 {
+        sentinels.children.push(
+            Command::new("/bin/sleep")
+                .arg("60")
+                .env_clear()
+                .process_group(0)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap(),
+        );
+    }
+    let group_pid = sentinels.children[0].id() as i32;
+    let individual_pid = sentinels.children[1].id() as i32;
+    let mut owned = Owned {
+        socket: root.join("absent.sock"),
+        root: root.clone(),
+        children: Vec::new(),
+        known: HashMap::from([
+            (group_pid, "previous process birth".to_owned()),
+            (individual_pid, "previous process birth".to_owned()),
+        ]),
+        groups: HashSet::from([group_pid]),
+        readers: Vec::new(),
+        terminals: Vec::new(),
+        cleaned: false,
+    };
+    // A real filesystem error makes every ownership refresh fail before ps runs.
+    fs::create_dir(root.join("process-table")).unwrap();
+    let errors = owned.cleanup();
+    let statuses = [
+        sentinels.children[0].try_wait().unwrap(),
+        sentinels.children[1].try_wait().unwrap(),
+    ];
+    assert_eq!(
+        statuses,
+        [None, None],
+        "failed discovery signaled an unowned group/PID: {errors:?}"
+    );
+    assert!(!root.exists(), "private cleanup files survived");
 }
 
 struct Guard {
