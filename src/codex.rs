@@ -2112,3 +2112,136 @@ fn path_text(path: &Path) -> Result<String> {
 fn shell_quote(text: &str) -> String {
     format!("'{}'", text.replace('\'', "'\\''"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct PrivateRoot(PathBuf);
+
+    impl Drop for PrivateRoot {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn shutdown_waits_for_concurrent_terminal_cleanup_and_owned_resources() {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-close-{}", Uuid::new_v4().simple())),
+        );
+        fs::DirBuilder::new().mode(0o700).create(&root.0).unwrap();
+        let marker = root.0.join("descendant.pid");
+        let mut command = Command::new("/bin/sh");
+        command
+            .args([
+                "-c",
+                "/bin/sleep 60 & printf '%s\\n' \"$!\" > \"$1\"; wait",
+                "amux-cleanup-fixture",
+            ])
+            .arg(&marker)
+            .env_clear()
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        unsafe {
+            command.pre_exec(|| {
+                if libc::setsid() < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let backend = OwnedBackend::new(command.spawn().unwrap()).unwrap();
+        let backend_pid = backend.child.id() as i32;
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let descendant_pid = loop {
+            if let Ok(pid) = fs::read_to_string(&marker)
+                && let Ok(pid) = pid.trim().parse::<i32>()
+            {
+                break pid;
+            }
+            assert!(Instant::now() < deadline, "owned descendant did not start");
+            thread::sleep(Duration::from_millis(5));
+        };
+        let (release, paused) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            let _ = paused.recv();
+        });
+        let (sender, _receiver) = mpsc::sync_channel(1);
+        let instance = Arc::new(Instance {
+            id: "cleanup-fixture".to_owned(),
+            root: root.0.clone(),
+            sender,
+            stop: AtomicBool::new(false),
+            process: Mutex::new(Some(backend)),
+            connection: Mutex::new(None),
+            worker: Mutex::new(Some(worker)),
+            state: Mutex::new(State {
+                terminal: Some("pty".to_owned()),
+                session: None,
+                provider_session: None,
+                joining_session: None,
+                expected_resume: None,
+                frontend: "running",
+                backend: "running",
+                connection: "ready",
+                session_state: "discovering",
+                observation: "waiting-for-first-turn",
+                observation_started: None,
+                activity: "unknown",
+                turn: None,
+                turn_outcome: None,
+                ended_turns: BTreeMap::new(),
+                direct_input: false,
+                gap: false,
+                problem: None,
+                pending: BTreeMap::new(),
+                tombstones: BTreeMap::new(),
+                ambiguous_requests: BTreeSet::new(),
+                calls: VecDeque::new(),
+                events: VecDeque::new(),
+            }),
+        });
+        let broker = Arc::new(Broker::new(&root.0).unwrap());
+        broker
+            .inner
+            .instances
+            .lock()
+            .insert(instance.id.clone(), instance.clone());
+        let ending = {
+            let broker = broker.clone();
+            thread::spawn(move || broker.end_terminal("pty"))
+        };
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while !instance.stop.load(Ordering::Acquire) && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+        let cleanup_started = instance.stop.load(Ordering::Acquire);
+        let (attempted, attempt) = mpsc::channel();
+        let (finished, finish) = mpsc::channel();
+        let shutdown = {
+            let broker = broker.clone();
+            thread::spawn(move || {
+                attempted.send(()).unwrap();
+                broker.shutdown();
+                finished.send(()).unwrap();
+            })
+        };
+        let shutdown_started = attempt.recv_timeout(Duration::from_secs(3)).is_ok();
+        let premature = finish.recv_timeout(Duration::from_millis(250)).is_ok();
+        release.send(()).unwrap();
+        ending.join().unwrap();
+        shutdown.join().unwrap();
+        let resources_removed = !root.0.exists();
+        for pid in [backend_pid, descendant_pid] {
+            assert_eq!(unsafe { libc::kill(pid, 0) }, -1, "owned PID {pid} survived");
+            assert_eq!(std::io::Error::last_os_error().raw_os_error(), Some(libc::ESRCH));
+        }
+        assert!(cleanup_started && shutdown_started);
+        assert!(resources_removed, "private root survived completed cleanup");
+        assert!(!premature, "shutdown returned while terminal cleanup was paused");
+    }
+}
+
+[Showing lines 2114-2244 of 2245. Use :2245 to continue]

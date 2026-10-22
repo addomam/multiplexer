@@ -1619,3 +1619,44 @@ fn event_gap_snapshot_recovers_public_reservation_but_only_private_read_recovers
     );
     h.marker("GAP_RECOVERED_ACCEPT");
 }
+
+#[test]
+fn removed_terminals_do_not_receive_later_native_view_events() {
+    let h = Host::new();
+    let terminal = h.main();
+    let mut native = Connection::connect(&h.socket, DEADLINE).unwrap();
+    let registration = native
+        .persistent(json!({"op":"controller-create","role":"attachment","label":"churn observer"}));
+    let mut removed = Vec::new();
+    for _ in 0..8 {
+        let id = h.call(json!({"op":"open","source":terminal}))["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        h.ready(&id);
+        h.call(json!({"op":"close","terminal":id}));
+        h.call(json!({"op":"wait","terminal":id,"condition":"exited","timeout_ms":10000}));
+        h.call(json!({"op":"remove","terminal":id}));
+        removed.push(id);
+    }
+    let cursor = h.seq();
+    native.persistent(
+        json!({"op":"control-handle","handle":registration["controller"],
+        "method":"view","view":{"serial":1,"terminal":terminal,"focused":true}}),
+    );
+    let events = h.events(cursor);
+    let views: Vec<_> = events["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["kind"] == "control-view-changed")
+        .map(|event| event["terminal"].as_str().unwrap())
+        .collect();
+    assert!(
+        views.iter().all(|id| !removed.iter().any(|old| old == id)),
+        "removed terminals still consume view-event history: {views:?}"
+    );
+    assert_eq!(views, [terminal.as_str()]);
+}
+
+[Showing lines 1705-1743 of 1744. Use :1744 to continue]
