@@ -1660,3 +1660,166 @@ fn removed_terminals_do_not_receive_later_native_view_events() {
 }
 
 [Showing lines 1705-1743 of 1744. Use :1744 to continue]
+
+// Delay a genuine native permission callback at the transport boundary. The
+// original request survives termination of its sender; nothing is resubmitted.
+struct ShellReportGate {
+    captured: std::sync::mpsc::Receiver<Value>,
+    release: std::sync::mpsc::Sender<()>,
+    result: std::sync::mpsc::Receiver<Value>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    worker: Option<std::thread::JoinHandle<()>>,
+}
+
+impl ShellReportGate {
+    fn new(h: &Host) -> Self {
+        use std::sync::{Arc, atomic::AtomicBool, mpsc};
+        let path = h.root.join("shell-report.sock");
+        let listener = std::os::unix::net::UnixListener::bind(&path).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let (capture_tx, captured) = mpsc::channel();
+        let (release, release_rx) = mpsc::channel();
+        let (result_tx, result) = mpsc::channel();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stopped = stop.clone();
+        let real = h.socket.clone();
+        let worker = std::thread::spawn(move || {
+            use std::sync::atomic::Ordering;
+            let mut held = false;
+            while !stopped.load(Ordering::Acquire) {
+                let (mut stream, _) = match listener.accept() {
+                    Ok(pair) => pair,
+                    Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(5));
+                        continue;
+                    }
+                    Err(_) => break,
+                };
+                stream.set_read_timeout(Some(DEADLINE)).unwrap();
+                stream.set_write_timeout(Some(DEADLINE)).unwrap();
+                let mut text = String::new();
+                let read = BufReader::new(&stream)
+                    .take(8 * 1024 * 1024)
+                    .read_line(&mut text);
+                if !matches!(read, Ok(n) if n > 0) {
+                    continue;
+                }
+                let request: Value = serde_json::from_str(&text).unwrap();
+                let hold = !held && request["event"]["kind"] == "execution-accepted";
+                if hold {
+                    held = true;
+                    let _ = capture_tx.send(request.clone());
+                    let _ = release_rx.recv_timeout(DEADLINE);
+                }
+                let response = wire(&real, request, DEADLINE).unwrap();
+                if hold {
+                    let _ = result_tx.send(response.clone());
+                }
+                // The native helper may already have been reaped after removal.
+                if serde_json::to_writer(&mut stream, &response).is_ok() {
+                    let _ = stream.write_all(b"\n");
+                }
+            }
+        });
+        fs::write(
+            h.root.join("startup/.zshrc"),
+            format!("PS1='OWNERSHIP_NATIVE> '\nexport AMUX_SOCKET='{}'\n", path.display()),
+        ).unwrap();
+        Self { captured, release, result, stop, worker: Some(worker) }
+    }
+
+    fn captured(&self, terminal: &str) -> Value {
+        let request = self.captured.recv_timeout(DEADLINE).expect("genuine native acceptance");
+        assert_eq!(request["terminal"], terminal);
+        request
+    }
+
+    fn forward(&self) -> Value {
+        self.release.send(()).unwrap();
+        self.result.recv_timeout(DEADLINE).expect("original report response")
+    }
+}
+
+impl Drop for ShellReportGate {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Release);
+        let _ = self.release.send(());
+        // Gate cancellation plus socket deadlines bound the worker on failure.
+        if let Some(worker) = self.worker.take() {
+            let result = worker.join();
+            if !std::thread::panicking() {
+                result.unwrap();
+            }
+        }
+    }
+}
+
+fn unknown_startup(h: &Host, terminal: &str, execution: &Value) {
+    h.until("actual startup acknowledgement deadline", || {
+        h.ownership(terminal)["unsettled"].as_array()?.iter()
+            .any(|call| call["id"] == *execution && call["outcome"] == "unknown")
+            .then_some(())
+    });
+}
+
+#[test]
+fn late_automatic_startup_acceptance_retires_control_without_replay() {
+    let h = Host::new();
+    let gate = ShellReportGate::new(&h);
+    let marker = h.root.join("launch-once");
+    let terminal = h.call(json!({"op":"open","source":h.main(),
+        "command":format!("print -r -- launch >> '{}'", marker.display())}))["id"]
+        .as_str().unwrap().to_owned();
+    let report = gate.captured(&terminal);
+    let execution_id = &report["event"]["execution_id"];
+    unknown_startup(&h, &terminal, execution_id);
+    assert!(!h.ownership(&terminal)["owner"].is_null());
+    success(gate.forward());
+    let completed = h.until("real delayed command completion", || {
+        let result = execution(&h.state(&terminal), execution_id);
+        (result["status"] == "completed").then_some(result)
+    });
+    let ownership = h.ownership(&terminal);
+    assert!(ownership["owner"].is_null(), "inaccessible launch owner: {ownership}; completion: {completed}");
+    assert_eq!(completed["exit_status"], 0, "{completed}");
+    assert_eq!(fs::read_to_string(marker).unwrap(), "launch\n");
+    let next = h.controller("after late startup");
+    assert_eq!(h.acquire(&terminal, &next["controller"])["mode"], "safe");
+}
+
+#[test]
+fn removed_terminal_consumes_original_shell_settlement_without_retargeting() {
+    let h = Host::new();
+    let gate = ShellReportGate::new(&h);
+    let terminal = h.call(json!({"op":"open","source":h.main(),
+        "command":h.marker_source("REMOVED_SOURCE_MUST_NOT_RUN")}))["id"]
+        .as_str().unwrap().to_owned();
+    let report = gate.captured(&terminal);
+    unknown_startup(&h, &terminal, &report["event"]["execution_id"]);
+    let observer = h.controller("retained ended claim");
+    let claim = h.claim(&terminal, &observer["controller"]);
+    h.call(json!({"op":"close","terminal":terminal}));
+    h.call(json!({"op":"wait","terminal":terminal,"condition":"exited","timeout_ms":10000}));
+    h.call(json!({"op":"remove","terminal":terminal}));
+    assert!(!h.root.join("runtime/integration").join(&terminal).exists());
+    let before = h.handle(&claim["claim"], "read");
+    assert_eq!(before["ownership"]["unsettled"][0]["id"], report["event"]["execution_id"], "{before}");
+    // Reuse only the display name, never the old stable target identity.
+    fs::write(h.root.join("startup/.zshrc"), "PS1='OWNERSHIP_NATIVE> '\n").unwrap();
+    let replacement = h.call(json!({"op":"open","source":h.main(),"name":terminal}))["id"]
+        .as_str().unwrap().to_owned();
+    h.ready(&replacement);
+    let replacement_before = h.state(&replacement);
+    denied(gate.forward(), &["target-ended", "stale-handle"]);
+    let after = h.handle(&claim["claim"], "read");
+    assert_eq!(after["ownership"]["unsettled"], json!([]), "{after}");
+    assert_ne!(after["phase"], "offered");
+    assert!(after["offer"].is_null());
+    assert_eq!(h.state(&replacement)["ownership"], replacement_before["ownership"]);
+    assert!(!h.root.join("REMOVED_SOURCE_MUST_NOT_RUN").exists());
+    // The settlement-only lookup is consumed, not retained as live integration.
+    denied(h.response(report), &["integration-lost"]);
+    h.handle(&claim["claim"], "close");
+    h.handle(&observer["controller"], "close");
+}
