@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — e03 ownership and agent interaction (Build)
+
+- Breaking API/CLI cutover: public `input` and `execute` require a current control capability; CLI callers must supply serialized `--control` JSON. Raw client requests never acquire ownership implicitly.
+- Preserve daemon rejection codes in concrete `client::DaemonError` values and the CLI JSON envelope instead of parsing diagnostic text.
+- Register native attachments once on their original persistent connection, report serial selected-terminal/focus views with initially unknown focus, and cache per-terminal control. Unowned settled targets may be acquired normally; observers and stale controls cannot forward keys, literal prefixes, mouse or separate paste, and failed input is never replayed.
+- Migrate acceptance, shell-race and independent-showcase fixtures to explicit external registration/acquisition and cached controls without changing original shell readiness, partial-input, busy or latency assertions.
+- Document request-success-not-grant semantics, inspect-after-uncertainty recovery, ordinary pending cancellation granting nobody, and retained work after force/cancel.
+- Add native request/owner-response/progress/cancel and deliberate fresh-force panels, plus externally requested idle/background reacquisition. Draw-bound consent, local activity, keep/withdraw and stale offers preserve human control without automatic rearming.
+- Integrate a concrete Codex 0.160.0 same-instance broker with exact turn/request identities, retained outcomes, request-only permission decisions and explicit interrupt separate from ownership. Native-first discovery reads the live thread; ephemeral native title helpers do not replace its identity.
+- Verify separate live start/steer, genuine question, permission allow/deny and exact-turn interrupt checks. Keep complete-broker acceptance failing on unknown native/application settlement; native winning-answer races and all32 acceptance remain unproved. See `specs/verifications/e03-integration-build.md`; Plan approval and mechanical tests are not acceptance.
+- Explicitly unlock completed configuration-writer guards before closing their descriptors so a fork-inherited duplicate cannot keep the writer lock alive.
+- Subscribe explicitly to the native-created Codex thread after its first requested turn, recovering authoritative completion from its paginated initial turn snapshot. No hidden bootstrap turn or API mutation replay.
+- Keep Codex request-only denial distinct from its native menu: supported `decline` does not become the interrupting `cancel`; permission allow remains constrained to the request.
+- Verify live output through the supported paginated turn API, including authoritative proposed-plan items, instead of assuming legacy rollout files.
+- Disable inherited signing only for temporary acceptance-fixture commits; never invoke the user's signing agent or modify global Git configuration.
+
 ## Unreleased — Execution substrate reliability
 
 - Correct DECOM-origin-relative CPR through the parsed ANSI Handler boundary; preserve native control behavior and independent expected replies.

@@ -1,0 +1,36 @@
+{
+  "integration_owner": "parent",
+  "integration_worktree": "/Users/addomam/projects/amux-e03-build",
+  "base_commit": "6318845",
+  "commit_merge_push_release": "not performed",
+  "work_preservation": "Complete nonignored worker source snapshots were byte-verified member-by-member before closing sessions or removing worktrees. Ignored reproducible build output is excluded. All worker-owned source paths were integrated; subsequent integration fixes remain in the parent feature worktree.",
+  "private_manifest": "/Users/addomam/projects/multiplexer/.git/amux-e03-preserved-workers/manifest.json",
+  "workers": [
+    {
+      "track": "native e03s03-04",
+      "workspace": "w16",
+      "tab": "w16:t1",
+      "panes": ["w16:p1", "w16:p2"],
+      "branch_retained": "feat/e03-native-control",
+      "worktree_removed": "/Users/addomam/projects/amux-e03-native",
+      "archive": "/Users/addomam/projects/multiplexer/.git/amux-e03-preserved-workers/native.tar.gz",
+      "archive_sha256": "5eb0ea717c2f7242bf79e1dda5d619b74af3fec2ac2e3ef54f79e10e4e3905c3",
+      "files_verified": 190
+    },
+    {
+      "track": "Codex e03s05-07",
+      "workspace": "w17",
+      "tab": "w17:t1",
+      "panes": ["w17:p1", "w17:p2"],
+      "branch_retained": "feat/e03-codex-structured",
+      "worktree_removed": "/Users/addomam/projects/amux-e03-codex",
+      "archive": "/Users/addomam/projects/multiplexer/.git/amux-e03-preserved-workers/codex.tar.gz",
+      "archive_sha256": "d7f1f2fd1d57942343e2104522f8b8b775d9877c90cdff912124721dea8e2590",
+      "files_verified": 191
+    }
+  ],
+  "workspace_close": "Both exact owned workspace-close commands returned success; no global herdr server was stopped.",
+  "process_cleanup": "All eight captured shell/OMP/MCP/reviewr process identities disappeared after workspace close; identity comparison included birth time and command. No fallback signal was required for these workers.",
+  "private_resources": "Completed worker-session root and completed live-harness profile/auth/schema/raw-output root removed. Local inference service and diagnostic daemon/backend were already stopped as recorded in e03-integration-build.md.",
+  "restore": "Verify the archive SHA256, then extract into a new empty directory. Do not extract over an existing worktree. The private manifest records every member and its digest or symlink target."
+}

@@ -13,6 +13,21 @@ use std::time::{Duration, Instant};
 
 pub const MAX_FRAME: u64 = 64 * 1024 * 1024;
 
+/// A daemon rejection, retaining the machine-readable wire code.
+#[derive(Debug)]
+pub struct DaemonError {
+    pub code: String,
+    pub message: String,
+}
+
+impl std::fmt::Display for DaemonError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}: {}", self.code, self.message)
+    }
+}
+
+impl std::error::Error for DaemonError {}
+
 pub(crate) struct Connection {
     reader: BufReader<UnixStream>,
     writer: BufWriter<UnixStream>,
@@ -60,13 +75,17 @@ impl Connection {
         if response["ok"] == true {
             Ok(response["result"].take())
         } else {
-            bail!(
-                "{}: {}",
-                response["error"]["code"].as_str().unwrap_or("daemon-error"),
-                response["error"]["message"]
+            Err(DaemonError {
+                code: response["error"]["code"]
+                    .as_str()
+                    .unwrap_or("daemon-error")
+                    .to_owned(),
+                message: response["error"]["message"]
                     .as_str()
                     .unwrap_or("request failed")
-            );
+                    .to_owned(),
+            }
+            .into())
         }
     }
 }
@@ -431,14 +450,15 @@ mod tests {
         peer.write_all(
             b"{\"version\":1,\"ok\":false,\"error\":{\"code\":\"backpressure\",\"message\":\"queue full\"}}\n{\"version\":1,\"ok\":true,\"result\":true}\n",
         ).unwrap();
-        let request = json!({"version":1,"persistent":true,"op":"input"});
-        assert_eq!(
-            connection
-                .request(&request, Duration::from_secs(2))
-                .unwrap_err()
-                .to_string(),
-            "backpressure: queue full"
-        );
+        let request = json!({"version":1,"persistent":true,"op":"input",
+            "control":{"kind":"control","ref":"transport-fixture"}});
+        let error = connection
+            .request(&request, Duration::from_secs(2))
+            .unwrap_err();
+        let rejection = error.downcast_ref::<DaemonError>().unwrap();
+        assert_eq!(rejection.code, "backpressure");
+        assert_eq!(rejection.message, "queue full");
+        assert_eq!(error.to_string(), "backpressure: queue full");
         assert_eq!(
             connection
                 .request(&request, Duration::from_secs(2))

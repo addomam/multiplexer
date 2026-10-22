@@ -1,0 +1,185 @@
+{
+  "test": "real_complete_broker_handoff",
+  "acceptance": "BLOCKED_OR_FAILED",
+  "meaningful_turns_submitted": 0,
+  "turn_ceiling": 6,
+  "owned_cleanup_verified": true,
+  "native_captures": "/Users/addomam/projects/amux-e03-build/target/e03-codex-native/real_complete_broker_handoff-b1d5edbe-f1d9-46a8-aa1f-9d4f7075fe51",
+  "failure": "First safe offer unavailable because authoritative native/application settlement remained unknown; 15-second phase deadline, 18.25-second total.",
+  "scenarios": [
+    {
+      "id": "interaction-01",
+      "observations": [
+        "Two actual controlling-PTY attachments observe one unchanged live target and PID."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-02",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-03",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-04",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-05",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-06",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-07",
+      "observations": [
+        "Controller/claim references do not authorize application input."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-08",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-09",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-10",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-11",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-12",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-13",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-14",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-15",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-16",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-17",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-18",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-19",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-20",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-21",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-22",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-23",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-24",
+      "observations": [
+        "Two actual controlling-PTY attachments observe one unchanged live target and PID."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-25",
+      "observations": [
+        "Separate raw claim/read calls preserve old authority and do not grant control."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-26",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-27",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-28",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-29",
+      "observations": [
+        "Controller/claim references do not authorize application input."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-30",
+      "observations": [
+        "Separate raw claim/read calls preserve old authority and do not grant control."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    },
+    {
+      "id": "interaction-31",
+      "observations": null,
+      "status": "not-observed"
+    },
+    {
+      "id": "interaction-32",
+      "observations": [
+        "Separate raw claim/read calls preserve old authority and do not grant control."
+      ],
+      "status": "observed-assertions-see-overall-verdict"
+    }
+  ]
+}

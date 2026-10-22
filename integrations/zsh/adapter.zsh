@@ -46,7 +46,11 @@ _amux_schedule() {
       _amux_report rejected "$id" busy
       continue
     fi
-    [[ -f "$AMUX_INTEGRATION/$id.zsh" ]] || { _amux_pending[1]=(); continue; }
+    if [[ ! -f "$AMUX_INTEGRATION/$id.zsh" ]]; then
+      _amux_pending[1]=()
+      _amux_report rejected "$id" integration-lost
+      continue
+    fi
     # Reject before a wake key can follow typeahead into a new foreground app.
     if [[ -n $BUFFER || $CONTEXT != start || $PENDING -gt 0 || $KEYS_QUEUED_COUNT -gt 0 ]]; then
       [[ $queued == 1 ]] && return
@@ -60,6 +64,12 @@ _amux_schedule() {
       _amux_report lost "$$"
       return
     fi
+    if [[ $epoch == revoked ]]; then
+      _amux_pending[1]=()
+      command rm -f -- "$AMUX_INTEGRATION/$id.zsh"
+      _amux_report rejected "$id" stale-handle
+      continue
+    fi
     [[ $epoch == deferred ]] && return
     if [[ -n $BUFFER || $CONTEXT != start || $PENDING -gt 0 || $KEYS_QUEUED_COUNT -gt 0 ]]; then
       [[ $queued == 1 ]] && return
@@ -72,6 +82,12 @@ _amux_schedule() {
       _amux_active=0
       _amux_wakeup_pending=0
       _amux_report lost "$$"
+    elif [[ $response == revoked ]]; then
+      _amux_wakeup_pending=0
+      _amux_pending[1]=()
+      command rm -f -- "$AMUX_INTEGRATION/$id.zsh"
+      _amux_report rejected "$id" stale-handle
+      zle -R
     elif [[ $response == deferred ]]; then
       _amux_wakeup_pending=0
       zle -R
@@ -109,12 +125,18 @@ _amux_dispatch() {
       continue
     fi
     _amux_pending[1]=()
-    [[ -f "$AMUX_INTEGRATION/$id.zsh" ]] || continue
+    if [[ ! -f "$AMUX_INTEGRATION/$id.zsh" ]]; then
+      _amux_report rejected "$id" integration-lost
+      continue
+    fi
     source_path="$AMUX_INTEGRATION/$id.zsh"
     _amux_active=0
     BUFFER="builtin source ${(q)source_path}; _amux_complete ${(q)id} \$?"
     if ! _amux_report accepted "$id"; then
       BUFFER=""
+      command rm -f -- "$source_path"
+      _amux_active=1
+      zle -R
       return
     fi
     _amux_current_execution=$id

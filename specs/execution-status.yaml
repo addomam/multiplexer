@@ -18,3 +18,65 @@ e02_quality_gate:
   independent_review: specs/verifications/REVIEW-e02.md
   gate_trace: manual-acceptance-evidence-map
   helper_execution: not-claimed
+e03s01: passing
+e03s02: passing
+e03s03: passing
+e03s04: passing
+e03s05: passing
+e03s06: passing
+e03s07: passing
+e03s08: failing
+stories:
+  e03s01:
+    status: passing
+    phase: verified-build-slice
+    started_at: "2026-10-21T20:46:55Z"
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-ownership-build.md
+  e03s02:
+    status: passing
+    phase: verified-build-slice
+    started_at: "2026-10-21T20:46:55Z"
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-ownership-build.md
+  e03s03:
+    status: passing
+    phase: verified-native-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-native, session: "w16:p1", retired: true}
+    evidence: specs/verifications/e03-integration-build.md
+  e03s04:
+    status: passing
+    phase: verified-native-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-native, session: "w16:p1", retired: true}
+    evidence: specs/verifications/e03-integration-build.md
+  e03s05:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_native_first_start
+    evidence: specs/verifications/e03-integration-build.md
+  e03s06:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_questions_and_permissions
+    evidence: specs/verifications/e03-integration-build.md
+  e03s07:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_explicit_interrupt
+    evidence: specs/verifications/e03-integration-build.md
+  e03s08:
+    status: failing
+    phase: complete-broker-safe-offer-blocked-unknown-application-settlement
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-integration-build.md
+    acceptance_evidence: specs/verifications/e03-complete-broker-acceptance.json
+    meaningful_turns_submitted: 0
+    owned_cleanup_verified: true

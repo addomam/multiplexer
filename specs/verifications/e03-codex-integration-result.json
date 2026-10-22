@@ -1,0 +1,143 @@
+{
+  "task_id": "e03-codex",
+  "round": "owned-integration-boundary-fixes",
+  "status": "implemented-pending-parent-verification",
+  "live_authorization": false,
+  "acceptance_pass_claimed": false,
+  "integration_owner": "parent in /Users/addomam/projects/amux-e03-build",
+  "files_supplied_this_round": [
+    "src/codex.rs",
+    "tests/agent_interaction.rs",
+    "specs/verifications/e03-codex-integration-result.json"
+  ],
+  "ownership": {
+    "shared_files_edited": false,
+    "live_acceptance_test_file_edited": false,
+    "live_acceptance_entrypoint_owner": "parent exclusively",
+    "prior_track_result_edited": false,
+    "shared_routing_dependency_runtime_ledger_changes": "None. Parent remains sole integration owner."
+  },
+  "source_fixes": [
+    {
+      "boundary": "One verified absolute Codex executable for both peers",
+      "file": "src/codex.rs",
+      "symbols": [
+        "resolve_codex_executable",
+        "check_version",
+        "Broker::prepare_at"
+      ],
+      "implementation": [
+        "Resolve daemon PATH entries against the daemon current directory before applying the requested source cwd. Relative and empty PATH entries therefore retain their daemon-launch meaning.",
+        "Canonicalize the first regular executable Codex candidate to an absolute path. Missing daemon PATH, unavailable launch directory and missing executable fail as unavailable; a non-UTF-8 executable path fails as unsupported. None falls back to the source shell PATH.",
+        "Pass that same resolved path to the offline version check and the private app-server Command, and place that same path first in the shell-quoted native frontend argument vector.",
+        "Do not change ordinary source-shell PATH or add PATH to Prepared.env. Preserve the supplied model, private --remote endpoint, backend cwd, frontend --cd, resume arguments and existing frontend-only private environment scope.",
+        "Broker::new remains lazy: executable resolution and version invocation occur only during an explicit prepare, not ordinary stock Zsh startup."
+      ],
+      "identity_limit": "Canonical absolute executable identity is reused; executable contents are not copied, hashed or inode-pinned against an external concurrent replacement."
+    },
+    {
+      "boundary": "Validated common framing on otherwise closed agent root schemas",
+      "file": "src/codex.rs",
+      "symbols": [
+        "request_shape",
+        "shape",
+        "Broker::prepare",
+        "Broker::inspect",
+        "validate_mutation"
+      ],
+      "implementation": [
+        "Add persistent to the explicit allowed root fields of agent-open, agent-inspect and every typed agent mutation.",
+        "Use a root-only request_shape helper requiring exact numeric API version 1 and an optional boolean persistent, following specs/contracts/pty-control.md and the existing control request_shape convention.",
+        "Keep shape as the closed nested-object checker. It does not add common framing fields to controller, target, control, question answers or permission payloads.",
+        "Retain unknown-field rejection, required-field checks, exact operation checks, capability checks, full target identity and dispatch-time authority retention.",
+        "Do not change schema-derived unknown/ambiguous request settlement, native/API race attribution, request-only permission semantics or exact-turn interruption."
+      ],
+      "version_error": "unsupported-version: API version 1 required",
+      "persistent_error": "invalid-request: persistent must be a boolean"
+    }
+  ],
+  "consumer_visible_fixtures_added": [
+    {
+      "name": "managed_codex_uses_verified_executable_despite_relative_daemon_and_conflicting_source_paths",
+      "target": "tests/agent_interaction.rs",
+      "behavior": [
+        "Launch the private real daemon with relative bin in its PATH and its launch directory containing the verified fixture Codex.",
+        "Give stock Zsh an absolute PATH selecting a different executable Codex in the requested backend cwd. That conflicting executable writes an owned marker and exits if invoked.",
+        "Execute command -v codex in the actual ordinary source PTY to prove the conflicting source PATH is live, then open a managed agent using that source and explicit cwd.",
+        "Observe native-created session discovery, an explicit manager turn, and delivery of an exact blocking question to the separately initialized native peer on the same private backend.",
+        "Assert the conflicting executable never ran, there was exactly one explicit manager start with no hidden bootstrap turn, and the ordinary source shell still selects its conflicting Codex after managed launch."
+      ]
+    },
+    {
+      "name": "persistent_agent_operations_preserve_external_and_native_original_connection_authority",
+      "target": "tests/agent_interaction.rs",
+      "behavior": [
+        "Run the complete fixture for both external and attachment controller roles, retaining the original real Unix connection for controller-create, agent-open, repeated agent-inspect and typed agent mutations with persistent:true.",
+        "Start and steer the exact live thread/turn, answer a negative integer-ID question, deny a string-ID command request and interrupt the exact turn over that same persistent public connection.",
+        "Observe exact provider wire payloads, conservative unknown settlement for question/permission responses, interrupt acknowledgement without invented completion, and independently observed exact interrupted completion.",
+        "For the attachment role, reject a borrowed view report from another connection, then accept the next serial on the original persistent connection.",
+        "Explicitly replace ownership, reject the old control on the still-live persistent connection without provider forwarding, and continue inspecting the exact retained target and completed turn."
+      ]
+    },
+    {
+      "name": "agent_framing_rejects_wrong_types_versions_unknown_fields_and_nested_framing",
+      "target": "tests/agent_interaction.rs",
+      "behavior": [
+        "Exercise agent-open, agent-inspect and an otherwise-valid steer against null, integer, string, array and object persistent values; wrong/null/string/boolean/floating API versions; and unknown root fields.",
+        "Send an actual unversioned public request without the fixture client's automatic version insertion and require rejection.",
+        "Reject persistent/version injected into closed controller, target, control and per-question answer objects, and reject a session-scoped permission field without forwarding provider mutations.",
+        "Inspect successfully with persistent:true, then persistent:false on the same public connection and observe EOF after the latter response.",
+        "After the negative cases, forward a valid exact-turn persistent steer, proving the retained target/control still supports valid consumer behavior."
+      ]
+    }
+  ],
+  "fixture_support_changes": [
+    "Host::new preserves the default isolated fixture environment; Host::with_source_path_conflict enables the deliberate daemon/source PATH disagreement.",
+    "Host::track_open shares owned terminal/PID tracking for standard, source-boundary and persistent opens.",
+    "Connection::receive shares bounded public response framing while permitting the missing-version negative request without changing normal automatic version insertion."
+  ],
+  "schema_authority": {
+    "authority": "Installed Codex 0.160.0 generated experimental schema, as recorded in specs/verifications/e03-codex-track-result.json.",
+    "new_schema_or_version_commands_run_this_round": false,
+    "preserved_semantics": [
+      "String and signed integer request IDs remain distinct.",
+      "serverRequest/resolved does not attribute a response winner; unknown remains unknown and blocking.",
+      "No generic provider passthrough, session-wide allow, hidden bootstrap model turn, automatic retry/queue or stale retarget was introduced."
+    ]
+  },
+  "parent_reported_baseline": {
+    "source": "User/parent report, not commands executed by this worker. These results precede verification of this integration-fix round.",
+    "lib": {"passed": 94},
+    "agent_interaction": {"passed": 18, "guarded_child_ignored": 1},
+    "live": {"ignored": 3},
+    "pty_control": {"passed": 22, "failed": 6},
+    "failure_ownership": "Parent is handling the six independent native integration failures and shared routing verification. No cause or resolution is claimed here."
+  },
+  "verification_this_round": {
+    "builds_run": false,
+    "tests_run": false,
+    "lint_run": false,
+    "formatters_run": false,
+    "live_codex_or_application_checks_run": false,
+    "auth_copied": false,
+    "global_daemon_config_or_auth_changes": false,
+    "git_mutations": false,
+    "execution_evidence": "None for these new behavioral changes. Source edits and fixture bodies are supplied for parent integration and execution, not an acceptance PASS."
+  },
+  "required_parent_checks": [
+    "Integrate only the supplied owned source, deterministic fixture file and this result. Do not take a live acceptance test file from this round.",
+    "Apply parent-owned formatting and compile the combined checkout; no compilation or formatting of these edits has been performed by this worker.",
+    "Run all deterministic agent_interaction fixtures, including the three exact names listed above, against the integrated real daemon and existing private fixture subprocess helper.",
+    "Verify the conflicting source-PATH regression reaches the shared backend/native session while never executing the conflicting binary and leaving ordinary source PATH unchanged.",
+    "Verify persistent original external/attachment connections retain framing, native view provenance, exact dispatch authority and late settlement; malformed framing must not loosen closed nested schemas.",
+    "Re-run the appropriate combined library/control/runtime checks after resolving the six parent-owned pty_control failures. The reported earlier baseline is not proof of these new edits.",
+    "Keep the parent-owned final complete-broker live acceptance entrypoint ignored and unexecuted unless the user separately authorizes that live run. Live authorization remains false."
+  ],
+  "handoff": {
+    "worktree_preserved": true,
+    "session_exit_reset_commit_merge_push_release_performed": false,
+    "new_dependency_or_shared_api_changes_required": false,
+    "prepared_contract_preserved": "Prepared.command is shell-quoted executable plus arguments only; Prepared.env is frontend-only private overrides with no secrets. Parent supplies exec env ... startup source and redacts it from diagnostics.",
+    "broker_contract_preserved": "No exported API change. Broker::new remains lazy; launch_failed remains available; inspect remains retained in-memory state without provider I/O."
+  }
+}

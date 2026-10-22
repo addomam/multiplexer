@@ -1,0 +1,192 @@
+{
+  "task_id": "e03-native",
+  "stories": ["e03s03", "e03s04"],
+  "status": "implementation-complete-unverified-parent-integration-required",
+  "worktree": "/Users/addomam/projects/amux-e03-native",
+  "integration_owner": "parent",
+  "acceptance": {
+    "pass_claimed": false,
+    "task_ledgers_changed": false,
+    "task_ledgers_remain_failing": true,
+    "review_pass_claimed": false,
+    "checks_executed_in_this_track": [],
+    "reason": "The task explicitly prohibits build, tests, lint, format and live application-model checks in this worktree. Parent integrates and verifies after both tracks. New code and fixtures have not been compiled or executed here."
+  },
+  "files": [
+    {
+      "path": "src/control.rs",
+      "symbols": ["Registry", "Authority", "Target conditional ownership state and transitions"],
+      "implementation": [
+        "Retain existing public Registry and Authority APIs and ordinary ownership semantics.",
+        "Bind immutable external human-idle and views-backgrounded conditions to the current live native human owner and generation.",
+        "Expose monotonic eligibility, consent, warning, daemon-clock and actual settlement facts in public snapshots and private claim reads.",
+        "Require original live native attachment consent for the exact activity revision and view serial that were displayed.",
+        "Preserve the identical human control handle through warning, settlement drain, offer, keep and conditional withdrawal.",
+        "Revalidate owner, generation, condition, consent, activity, views, requested warning and exact settlement atomically at acceptance.",
+        "Retract conditional offers and consent on relevant activity, view, focus or membership changes; stale offers cannot become current again.",
+        "Use consent-recorded and aborted-by-owner protocol transitions; keep is terminal for that explicit request and does not rearm policy.",
+        "Ordinary cancellation grants nobody; explicit release supersedes conditional intent; no implicit external reacquisition policy.",
+        "Keep unknown native-input calls blocking. Generic settlement cannot certify native input as applied or rejected.",
+        "Bound superseded conditional offer tombstones to 32."
+      ]
+    },
+    {
+      "path": "src/tui/control.rs",
+      "symbols": ["NativeControl", "Input", "Grant", "Warning", "Op", "native attachment worker"],
+      "implementation": [
+        "Keep controller registration and all native authority operations on the original persistent connection, owned by one FIFO worker.",
+        "Use a bounded 128-operation queue and three-second RPC timeout; move input payloads and share immutable cached grants rather than clone capability JSON for every key.",
+        "Refresh controller, private pending claims and public state without blocking the TUI event loop; require committed controller identity and generation before enabling application input.",
+        "Implement explicit request, retained waiting state, hide/reopen, deliberate cancel, deliberate Force, observed-facts confirmation, owner yield/release and automatic acceptance of the requester's exact ready safe offer.",
+        "Show real retained blockers with identity, kind, elapsed time and outcome, with scrolling rather than a timeout-based grant.",
+        "Gate every application-bound key, repeat, literal prefix, paste and application mouse event. Intercepted input is discarded, not buffered for replay.",
+        "Suppress an intercepted mouse gesture through drag and release even if authority changes during the gesture.",
+        "Render requested conditional timing before consent; retain the precise displayed activity revision and view serial; never consent from an undisplayed or clipped warning.",
+        "Process warning acknowledgement and Keep on the same connection before later paste, mouse or local activity; clear pending prefix/modal input when consuming Keep.",
+        "Handle all relevant conditional warnings, not only whichever request is currently selected in the panel.",
+        "Sanitize control and bidi characters, clip Unicode labels and include disambiguating controller IDs without displaying private handles.",
+        "Render ownership and conditional status in the existing three header rows; preserve the single application surface, picker, search, diagnostics and scrollback hints.",
+        "Fail closed on stale authority or connection uncertainty; no reconnect, input retry or automatic reacquisition from a stale cached grant."
+      ]
+    },
+    {
+      "path": "src/tui.rs",
+      "symbols": ["tui::run", "control module", "unified native event routing"],
+      "implementation": [
+        "Replace the old synchronous minimal native controller and direct send_input paths with the dedicated native control module.",
+        "Keep the attachment's original connection in the authority worker and use a separate unregistered observer connection for ordinary screen/topology operations.",
+        "Route all application-bound input through the same authority gate and preserve local picker, selection and scrollback behavior.",
+        "Add configured-prefix Ctrl-L request/reopen/owner panel and Ctrl-F deliberate Force entry.",
+        "Start focus as unknown and defer view reports until already queued local events are drained; report real activity and consent in connection order.",
+        "Draw the existing native application surface before the control chrome; acknowledge conditional warnings only after an actual complete draw and after queued local events are handled.",
+        "Remove the obsolete implementation-specific old cache unit test; behavior coverage is in the actual authority and native fixtures."
+      ]
+    },
+    {
+      "path": "tests/pty_control.rs",
+      "symbols": ["native test module inclusion", "Host::cli", "Host::stop"],
+      "implementation": [
+        "Include tests/pty_control/native.rs in the existing pty_control integration target.",
+        "Bound post-kill CLI and private-daemon reaping instead of unconditionally waiting forever. Cleanup only signals fixture-owned processes and process groups."
+      ]
+    },
+    {
+      "path": "tests/pty_control/native.rs",
+      "symbols": ["Attachment", "OuterOutput", "drain_outer", "join_until", "ConsentGate", "NativeWire", "recording_target"],
+      "implementation": [
+        "Launch actual amux attach processes under openpty, setsid and TIOCSCTTY, with private HOME/config/runtime and the real private daemon.",
+        "Continuously drain each outer PTY on its own nonblocking reader thread, even while the test waits on another attachment, a daemon operation, a consent barrier or elapsed warning.",
+        "Parse the real ANSI stream with the existing alacritty_terminal dependency; snapshot text, raw ANSI and the three header rows' cell colors.",
+        "Keep capture-file I/O outside the reader lock. Limit retained raw evidence to 16 MiB; overflow is an explicit fixture failure while reading and parsing continue, not silent truncation or PTY backpressure.",
+        "Use a plain local byte-observable shell/cat target; no live model, Codex application or replacement conversation surface.",
+        "Use a transparent private socket proxy to delay the real consent reply and inspect Keep-before-paste ordering on the original native connection.",
+        "Bound attachment process reaping and reader joins to three seconds each after cancellation. Proxy shutdown releases consent barriers, shuts down owned streams, and joins only workers observed finished, with three-second deadlines. Cleanup deadline failures are visible; unwinding does not trigger a second panic.",
+        "Write capture artifacts only when parent executes the fixtures, under target/e03-native-captures/<private-host-id>/<attachment-name>/. No runtime captures were produced here."
+      ]
+    },
+    {
+      "path": "specs/verifications/e03-native-track-result.json",
+      "implementation": ["Record this native-only implementation handoff without changing shared state, documentation, ledgers or acceptance status."]
+    }
+  ],
+  "tests_added": {
+    "execution_status": "not-run",
+    "authority_unit_tests": [
+      "idle_readiness_warning_and_settlement_share_the_public_clock",
+      "conditional_events_publish_semantics_not_interpolated_ticks_or_private_handles",
+      "preconsent_activity_resets_idle_without_rearming_and_stale_display_cannot_consent",
+      "zero_idle_still_rejects_activity_between_display_and_consent",
+      "pending_ack_keep_aborts_once_and_late_consent_never_resurrects_it",
+      "conditional_activity_accept_race_has_exactly_one_winner_and_never_revives_human_control",
+      "dispatch_after_conditional_offer_invalidates_it_until_exact_calls_settle",
+      "borrowed_input_never_keeps_human_control_and_unknown_native_input_never_settles",
+      "background_scope_is_explicit_and_unknown_membership_retracts_all_scope_offers",
+      "owner_scope_ignores_unrelated_views_but_picker_and_unknown_owner_never_imply_background",
+      "disconnected_owner_cannot_consent_and_disconnect_does_not_release_or_grant",
+      "withdraw_preserves_human_token_release_supersedes_and_handback_needs_no_idle_delay",
+      "no_external_request_means_indefinite_native_control_despite_time_and_background",
+      "daemon_clock_observations_do_not_regress_when_older_captures_arrive_late",
+      "scoped_view_accept_race_never_retargets_or_rolls_back_a_committed_grant",
+      "force_supersedes_conditional_intent_without_old_offer_or_consent_reviving_it",
+      "conditional_offer_revisions_have_bounded_tombstones_under_view_churn",
+      "conditional_requests_require_external_requester_and_a_live_native_source_owner"
+    ],
+    "pty_control_native_tests": [
+      "two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notice",
+      "observer_physical_keys_repeat_literal_prefix_paste_mouse_never_replay_after_force",
+      "native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation",
+      "native_lock_label_is_sanitized_clipped_identified_and_contains_no_private_handles",
+      "conditional_idle_consent_uses_original_connection_exact_revisions_requested_clock_and_same_token_keep",
+      "conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_and_withdraw_keeps_token",
+      "background_owner_scope_rejects_unknown_and_stale_views_withdraws_consent_without_revoking_human",
+      "background_all_scope_includes_new_unknown_foreground_and_departed_views_at_acceptance",
+      "explicit_release_supersedes_conditional_request_without_policy_and_fresh_now_hands_back_immediately",
+      "actual_native_idle_warning_draws_requested_duration_consumes_keep_and_never_rearms",
+      "competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_background_owner",
+      "actual_native_warning_paste_mouse_and_local_selection_keep_the_same_authority",
+      "actual_native_pending_consent_ack_keeps_before_paste_without_rotating_or_replaying_prefix",
+      "actual_native_safe_offer_accepts_only_after_deliberate_yield_and_never_replays_prompt_input",
+      "actual_native_outer_output_drains_while_test_waits_only_on_daemon"
+    ]
+  },
+  "parent_integration": {
+    "file_transfer": [
+      "Collect the five implementation/test files listed above and this result JSON from this existing worktree. Include both new files src/tui/control.rs and tests/pty_control/native.rs.",
+      "Preserve the parent's shared daemon/client/CLI/runtime/lib/Cargo/integration changes and the other track. Do not replace shared files with worktree copies or carry unrelated seeded changes from this worktree.",
+      "No Cargo dependency addition or public Registry/Authority API migration is intended. Retain the integration contract's existing dispatcher and authority APIs."
+    ],
+    "required_shared_contracts": [
+      "Preserve original connection identity from controller registration through native view, consent, keep, activity and input operations. Do not move these calls to one-shot connections or the TUI observer connection.",
+      "Preserve the existing daemon monotonic tick, disconnect/depart handling, authority event publication and native-activity reporting after validated application-bound input.",
+      "Keep actual native dispatch recorded through the retained native forwarding API and retain exact per-call settlement. Generic settlement must not erase or certify unknown native-input entries.",
+      "Automatic terminal replies remain daemon-classified automatic replies, never a public authority bypass.",
+      "External reacquisition policy remains outside the native UI and authority condition. Keep, cancel, withdrawal, release, polling and disconnect do not create replacement requests."
+    ],
+    "verification_after_both_tracks_integrate": [
+      {
+        "command": "cargo test --lib",
+        "purpose": "Compile and execute the deterministic authority regressions and retained library behavior."
+      },
+      {
+        "command": "cargo test --test pty_control native:: -- --test-threads=1 --nocapture",
+        "purpose": "Execute the actual controlling-PTY native scenarios and collect text/ANSI/cell-color proof, including continuous outer-output drainage and bounded cleanup."
+      },
+      {
+        "command": "cargo test --test pty_control -- --test-threads=1 --nocapture",
+        "purpose": "Run the parent's complete real-daemon control behavior suite against the integrated shared broker."
+      },
+      {
+        "command": "cargo test --workspace",
+        "purpose": "Run the integrated workspace regressions."
+      },
+      {
+        "command": "cargo clippy --all-targets -- -D warnings",
+        "purpose": "Run the project lint gate after integration."
+      },
+      {
+        "command": "cargo build",
+        "purpose": "Build the integrated executable."
+      },
+      {
+        "command": "cargo check --all-targets",
+        "purpose": "Run the parent's integrated check gate."
+      }
+    ],
+    "acceptance_instructions": [
+      "Inspect actual native captures for one unchanged application process/surface, precisely three header rows, ownership tint and safe labels, visible requested warning duration, nonmodal owner notice and explicit request/cancel/Force/Keep behavior.",
+      "Verify physical keys, repeated keys, literal prefixes, bracketed paste, application mouse and intercepted gesture tails do not reach the target while unowned, stale, waiting or uncertain, and never replay after a grant.",
+      "Verify delayed consent acknowledges the displayed revisions on the original connection, Keep precedes later allowed input, and owner handle identity remains unchanged through Keep/withdrawal.",
+      "Unknown native settlement intentionally remains blocking. The empty-ledger safe-yield fixture is not a substitute for final complete-broker settlement/fence validation, and Force is not evidence of safe acceptance.",
+      "Only parent may update shared documentation/changelog, evidence and task ledgers after real integrated verification. Document configured-prefix Ctrl-L and Ctrl-F plus the explicit requested conditional duration and Keep/withdrawal semantics there; this track was forbidden those edits.",
+      "Keep all story/task ledgers failing until parent has the required end-to-end evidence. Do not treat this JSON or unexecuted test code as a new review PASS or acceptance PASS."
+    ]
+  },
+  "unverified_limits": [
+    "No build, test, lint, format, cargo check, native runtime smoke, CLI smoke or live application-model check was executed in this track, including after resume.",
+    "The 18 added authority tests and 15 native integration tests are implementation deliverables, not observed passing results. Compilation, runtime behavior and capture output remain unverified here.",
+    "The continuous PTY reader and bounded cleanup have not been exercised here; parent must execute the new output-drain scenario and the failure/cleanup paths in its integration run.",
+    "Final native settlement/fence proof belongs to complete-broker integration. Unknown native calls remain blocking by design; no speculative native-fence spike or generic settlement fallback was added.",
+    "No live Codex/model session, global change, commit, merge, push or release was performed. No shared daemon/client/CLI/runtime/lib/Cargo/integration/docs/ledger file was edited by this native track.",
+    "The current unmerged worktree is left intact for parent collection; no reset, recreation or cleanup of existing user/parent edits was performed."
+  ]
+}

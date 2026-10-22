@@ -47,6 +47,7 @@ struct Terminal {
     root: Option<String>,
     agents: BTreeMap<String, Agent>,
     executions: BTreeMap<String, Value>,
+    authorities: BTreeMap<String, Arc<crate::control::Authority>>,
     execution_order: std::collections::VecDeque<String>,
     executions_discarded: u64,
 }
@@ -234,6 +235,33 @@ impl Integration {
                 let execution = event["execution_id"]
                     .as_str()
                     .ok_or_else(|| anyhow!("missing execution ID"))?;
+                if event["kind"] == "execution-accepted"
+                    && terminal
+                        .executions
+                        .get(execution)
+                        .is_none_or(|record| record["status"] != "queued")
+                {
+                    return Ok(snapshot(terminal, now()));
+                }
+                if event["kind"] == "execution-accepted" {
+                    if let Some(authority) = terminal.authorities.get(execution) {
+                        if let Err(error) = authority.check() {
+                            authority.settle(execution, "rejected");
+                            if let Some(current) = terminal.executions.get_mut(execution) {
+                                *current = json!({"execution_id":execution,"status":"rejected","reason":"stale-handle"});
+                            }
+                            self.acknowledgement.notify_all();
+                            return Err(error);
+                        }
+                        // Native ZLE installed this exact source in BUFFER.
+                        // Acceptance settles dispatch, not command completion.
+                        authority.settle(execution, "applied");
+                    }
+                } else if event["kind"] == "execution-rejected" {
+                    if let Some(authority) = terminal.authorities.get(execution) {
+                        authority.settle(execution, "rejected");
+                    }
+                }
                 if let Some(current) = terminal.executions.get_mut(execution) {
                     if event["kind"] == "execution-accepted" {
                         terminal.shell.ready = false;
@@ -346,7 +374,38 @@ impl Integration {
                 && terminal.shell.prompt_generation == generation
         })
     }
+    pub(crate) fn execution_authority(
+        &self,
+        id: &str,
+        execution: &str,
+    ) -> Result<Arc<crate::control::Authority>> {
+        self.terminals
+            .lock()
+            .get(id)
+            .and_then(|terminal| terminal.authorities.get(execution))
+            .cloned()
+            .context("stale-handle: execution has no originating authority")
+    }
     pub fn execute(&self, id: &str, source: &str, queue: bool) -> Result<Value> {
+        self.execute_inner(id, source, queue, None)
+    }
+    pub(crate) fn execute_authorized(
+        &self,
+        id: &str,
+        source: &str,
+        queue: bool,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<Value> {
+        authority.check()?;
+        self.execute_inner(id, source, queue, Some(authority))
+    }
+    fn execute_inner(
+        &self,
+        id: &str,
+        source: &str,
+        queue: bool,
+        authority: Option<Arc<crate::control::Authority>>,
+    ) -> Result<Value> {
         ensure!(!source.contains('\0'), "shell source contains NUL");
         let execution = uuid::Uuid::new_v4().to_string();
         let directory = self.directory.join(id);
@@ -370,6 +429,7 @@ impl Integration {
                 .remove(position)
                 .expect("existing execution");
             terminal.executions.remove(&old);
+            terminal.authorities.remove(&old);
             terminal.executions_discarded += 1;
         }
         private_write(&path, source.as_bytes())?;
@@ -377,6 +437,9 @@ impl Integration {
             execution.clone(),
             json!({"execution_id":execution,"status":"queued","queue":queue}),
         );
+        if let Some(authority) = authority {
+            terminal.authorities.insert(execution.clone(), authority);
+        }
         let fifo = CString::new(directory.join("commands").as_os_str().as_bytes())?;
         let descriptor = unsafe {
             libc::open(
@@ -386,6 +449,7 @@ impl Integration {
         };
         if descriptor < 0 {
             terminal.executions.remove(&execution);
+            terminal.authorities.remove(&execution);
             let _ = fs::remove_file(&path);
             bail!("integration-lost: shell command channel unavailable");
         }
@@ -395,9 +459,21 @@ impl Integration {
             u8::from(queue),
             terminal.shell.prompt_generation
         );
+        if let Some(authority) = terminal.authorities.get(&execution) {
+            if let Err(error) = authority.forward(&execution, "shell-execute") {
+                terminal.executions.remove(&execution);
+                terminal.authorities.remove(&execution);
+                let _ = fs::remove_file(&path);
+                return Err(error);
+            }
+        }
         // A single sub-PIPE_BUF write prevents timed ZLE reads from consuming a partial request.
         if let Err(error) = fifo.write_all(frame.as_bytes()) {
+            if let Some(authority) = terminal.authorities.get(&execution) {
+                authority.settle(&execution, "rejected");
+            }
             terminal.executions.remove(&execution);
+            terminal.authorities.remove(&execution);
             let _ = fs::remove_file(&path);
             return Err(error).context("integration-lost: shell command channel write failed");
         }
@@ -427,8 +503,11 @@ impl Integration {
             if remaining.is_zero() {
                 let _ = fs::remove_file(&path);
                 if let Some(t) = terminals.get_mut(id) {
-                    t.executions.remove(&execution);
-                    t.execution_order.retain(|id| id != &execution);
+                    // Unknown acknowledgement is not rejection. Preserve the
+                    // execution and authority so late exact reports can settle it.
+                    if let Some(authority) = t.authorities.get(&execution) {
+                        authority.settle(&execution, "unknown");
+                    }
                     t.shell.ready = false;
                     t.shell.lost = true;
                 }
@@ -557,7 +636,9 @@ pub fn helper(args: &[String]) -> Result<()> {
         &crate::client::socket_path(),
         json!({"version":1,"op":"report","terminal":terminal,"event":event}),
     )?;
-    if epoch {
+    if (epoch || wake) && result["revoked"] == true {
+        println!("revoked");
+    } else if epoch {
         if let Some(value) = result["input_epoch"].as_u64() {
             println!("{value}");
         } else {

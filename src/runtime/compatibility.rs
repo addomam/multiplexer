@@ -361,6 +361,8 @@ impl Handler for TerminalHandler<'_> {
             let _ = self.input.try_send(Input {
                 bytes: format!("\x1b[{row};{}R", pos.column.0 + 1).into_bytes(),
                 ack: None,
+                authority: None,
+                native: false,
             });
         } else {
             self.term.device_status(arg);

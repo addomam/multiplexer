@@ -1,5 +1,7 @@
 use amux::client;
 use serde_json::{Value, json};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
@@ -12,6 +14,8 @@ struct Host {
     dir: PathBuf,
     socket: PathBuf,
     daemon: Child,
+    controller: Value,
+    controls: RefCell<HashMap<String, Value>>,
 }
 impl Host {
     fn new() -> Self {
@@ -47,17 +51,68 @@ impl Host {
             .stderr(log)
             .spawn()
             .unwrap();
-        let host = Self {
+        let mut host = Self {
             dir,
             socket,
             daemon,
+            controller: Value::Null,
+            controls: RefCell::new(HashMap::new()),
         };
         host.until(|| host.call(json!({"op":"snapshot"})).is_ok());
+        host.controller = host
+            .call(json!({"op":"controller-create","role":"external","label":"shell race fixture"}))
+            .unwrap()["controller"]
+            .clone();
         host.ready(&host.main());
         host
     }
-    fn call(&self, request: Value) -> anyhow::Result<Value> {
+    fn call(&self, mut request: Value) -> anyhow::Result<Value> {
+        if matches!(request["op"].as_str(), Some("input" | "execute")) {
+            let terminal = request["terminal"].as_str().expect("mutation terminal");
+            let control = self
+                .controls
+                .borrow()
+                .get(terminal)
+                .unwrap_or_else(|| {
+                    panic!("fixture must acquire control before mutating {terminal}")
+                })
+                .clone();
+            request["control"] = control;
+        }
         client::request(&self.socket, request)
+    }
+    fn acquire(&self, id: &str) {
+        if self.controls.borrow().contains_key(id) {
+            return;
+        }
+        // Bootstrap readiness alone does not imply automatic-launch retirement.
+        let mut observed = None;
+        self.until(|| {
+            let state = self.call(json!({"op":"state","terminal":id})).unwrap();
+            let available = state["integration"]["shell"]["ready"] == true
+                && state["ownership"]["owner"].is_null()
+                && state["ownership"]["reservation"].is_null()
+                && state["ownership"]["unsettled"]
+                    .as_array()
+                    .is_some_and(Vec::is_empty);
+            if available {
+                observed = Some(state);
+            }
+            available
+        });
+        let state = observed.unwrap();
+        let grant = self
+            .call(json!({"op":"ownership-claim","controller":self.controller,
+            "terminal":id,"observed":state["ownership"]["observed"],
+            "mode":"cooperative","when":{"kind":"now"}}))
+            .unwrap();
+        assert_eq!(
+            grant["kind"], "control",
+            "fixture requires an unowned settled target: {grant}"
+        );
+        self.controls
+            .borrow_mut()
+            .insert(id.to_owned(), grant["control"].clone());
     }
     fn main(&self) -> String {
         self.call(json!({"op":"snapshot"})).unwrap()["terminals"][0]["id"]
@@ -68,6 +123,7 @@ impl Host {
     fn ready(&self, id: &str) {
         self.call(json!({"op":"wait","terminal":id,"condition":"shell-ready","timeout_ms":10000}))
             .unwrap();
+        self.acquire(id);
     }
     fn execute(&self, id: &str, source: String) {
         self.call(json!({"op":"execute","terminal":id,"source":source}))

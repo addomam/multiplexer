@@ -1,0 +1,248 @@
+{
+  "task_id": "e03-codex",
+  "status": "implemented-unverified-parent-integration-required",
+  "stories": ["e03s05", "e03s06", "e03s07"],
+  "acceptance_claim": "No story/task PASS, live-provider acceptance, native-application fence, complete-broker acceptance, or independent review PASS is claimed.",
+  "files": [
+    {
+      "path": "src/codex.rs",
+      "purpose": "Concrete owned Codex 0.160.0 Unix WebSocket Broker, RAII Prepared lease, native-first discovery, closed typed mutations, exact retained identities/outcomes, lifecycle and owned cleanup."
+    },
+    {
+      "path": "tests/agent_interaction.rs",
+      "purpose": "18 deterministic public real-daemon-wire behavior tests with an independently initialized private fixture backend/frontend over actual Unix WebSockets; one guarded ignored fixture-process helper."
+    },
+    {
+      "path": "tests/codex_native_smoke.rs",
+      "purpose": "Three fully real ignored exact-name live test bodies, explicit approval/model/auth guards, actual controlling-PTY attachments, provider/rollout effects, bounded watchdog and owned cleanup."
+    },
+    {
+      "path": "specs/verifications/e03-codex-track-result.json",
+      "purpose": "This result; no shared state/task/evidence ledgers were edited."
+    }
+  ],
+  "integration_files": "No integrations/codex launcher file is needed: Prepared.command directly contains the shell-escaped real native executable and arguments; parent supplies the exec-env startup source.",
+  "offline_observations": {
+    "installed_version_command": "codex --version",
+    "installed_version_stdout": "codex-cli 0.160.0",
+    "installed_version_exit": 0,
+    "schema_command": "codex app-server generate-json-schema --experimental --out <owned-private-root>/schema",
+    "schema_exit": 0,
+    "schema_stdout": "",
+    "schema_stderr": "",
+    "isolation": "Generated under an owned /tmp root with mode0700 HOME, XDG_CONFIG_HOME and CODEX_HOME. No existing configuration/authentication was copied for inspection.",
+    "private_schema_root_mode": "0700",
+    "private_schema_root_removed": true,
+    "cleanup_observed": "The offline generation root was removed and its absence was observed before this result.",
+    "other_offline_commands": ["codex --help"],
+    "schema_facts": [
+      "RequestId is string or signed int64, not a coerced textual identifier.",
+      "initialize accepts clientInfo and capabilities.experimentalApi; initialized follows the successful initialization response before other requests.",
+      "thread/loaded/list returns data thread IDs and nextCursor. thread/resume explicitly rejoins an already-running thread in memory, avoiding fresh rollout/bootstrap requirements.",
+      "Thread.id is the protocol thread target. Thread.sessionId separately identifies the session tree; inspection preserves it as provider_session_id.",
+      "Thread.canAcceptDirectInput is nullable; unknown/false does not imply structured prompt support.",
+      "TurnStartParams takes threadId plus input. Text input has type=text, text and optional/default text_elements. TurnSteerParams requires expectedTurnId and returns turnId.",
+      "ToolRequestUserInputParams includes threadId, turnId, itemId, isBlocking and questions. Question fields are id/header/question, default-false isOther/isSecret, and nullable options of label/description. There is no generated multi-select discriminator.",
+      "ToolRequestUserInputResponse is answers keyed by exact question IDs, each value containing an answers array of strings. Choice arrays and free text are preserved and checked, not synthesized as terminal keys.",
+      "CommandExecutionRequestApprovalParams includes exact thread/turn/item identity and startedAtMs; kind is command or writeStdin. availableDecisions, when present, constrains the offered decisions.",
+      "Command/file approval responses support accept and decline as request-only choices, separately from acceptForSession, amendments and cancel. The broker emits only accept/decline for explicit allow/deny.",
+      "File-change grantRoot has unproved session-root semantics; allow is rejected when non-null rather than silently broadening permission. Deny remains decline.",
+      "PermissionsRequestApprovalResponse grants only scope turn or session, default turn. No request-only allow exists in that shape, so item/permissions/requestApproval remains visibly unsupported.",
+      "serverRequest/resolved contains only threadId and requestId. It does not identify the winning responder or answer; it cannot prove an API response won a native/API race.",
+      "turn/interrupt requires threadId and turnId and has an empty acknowledgement. turn/completed and later serverRequest/resolved are independent lifecycle observations."
+    ]
+  },
+  "concrete_api": {
+    "visibility": "pub(crate) Broker and Prepared; parent registers the private codex module.",
+    "methods": [
+      "Broker::new(runtime: &Path) -> anyhow::Result<Self>",
+      "Broker::prepare(request: &Value) -> anyhow::Result<Prepared>",
+      "Broker::bind(instance: &str, terminal: &str) -> anyhow::Result<()>",
+      "Broker::inspect(request: &Value) -> anyhow::Result<Value>",
+      "Broker::mutate(op: &str, request: &Value, authority: Arc<control::Authority>) -> anyhow::Result<Value>",
+      "Broker::launch_failed(terminal: &str, message: &str)",
+      "Broker::end_terminal(terminal: &str)",
+      "Broker::shutdown()",
+      "Broker::take_events() -> Vec<(String, String, Value)>"
+    ],
+    "prepared_fields": ["instance_id: String", "command: String", "env: BTreeMap<String, String>"],
+    "prepared_raii": "Dropping an unbound Prepared removes and cleans only its own prepared instance. After bind, dropping Prepared leaves the live bound instance owned by Broker. Borrow the public fields; do not partially move a Drop value.",
+    "frontend_command": "Shell-escaped codex executable and arguments only, without exec/env prefixes. Includes --remote unix://<owned-socket>, explicit --model, --ask-for-approval on-request, --sandbox workspace-write, --no-alt-screen, resolved --cd when supplied, and optional explicit resume thread.",
+    "frontend_env_keys": ["HOME", "XDG_CONFIG_HOME", "XDG_RUNTIME_DIR", "CODEX_HOME"],
+    "frontend_env_secrets": "No credential values. Values are frontend-only private paths, not shell-context environment overrides.",
+    "new_behavior": "In-memory only; no Codex invocation, installation requirement, authentication read/copy or provider connection at ordinary daemon startup.",
+    "inspect_behavior": "Retained in-memory observation only. No provider I/O or mutex held across provider I/O is used by inspection.",
+    "launch_failed_behavior": "Records frontend exited/native-start-failed and cleans only that terminal's instance. Arbitrary supplied error text is not published; parent retains its separately redacted diagnostic."
+  },
+  "closed_wire_contract": {
+    "agent-open": "controller, optional source/project/name/cwd, required explicit nonblank model, optional persisted resume_thread UUID. Unknown/incompatible fields are rejected.",
+    "agent-inspect": "terminal and expected instance_id; no control capability required.",
+    "target": "{terminal, instance_id, session_id}; session_id is the discovered provider Thread.id/threadId, never screen-derived.",
+    "agent-prompt": "target, control, text, intent=start|steer. expected_turn_id is required only for steer. Start requires idle/no pending/unresolved start; steer requires the exact active turn and never falls back to start.",
+    "agent-answer": "target, control, turn_id, item_id, request_id with exact string/int64 type, answers={question_id:{answers:[strings]}}.",
+    "agent-permission": "target, control, exact turn/item/request identity and decision=allow|deny for this request only.",
+    "agent-interrupt": "target, control, exact turn_id. Duplicate/ended/replaced exact-turn attempts are rejected without selecting a replacement.",
+    "receipts": "Mutations return a minted inspectable call receipt, not completion or task success. States queued/forwarded/applied/rejected/unknown and provider_ack are separate from turn lifecycle.",
+    "inspection": "target, provider_session_id, lifecycle, capabilities, exact pending rows with targets/provider_method/supported status, tombstones, recent calls, turn_outcomes keyed by exact completed turn ID, problem and resynchronization_required.",
+    "completed_turns": "lifecycle.turn_id is the ACTIVE turn and becomes null on completion. turn_outcomes[exact_turn_id] retains completed/interrupted/failed outcomes; a late old turn never replaces the active turn.",
+    "events": "Public/redacted kind+terminal+data tuples; take_events attaches instance_id. Parent assigns the existing global sequence cursor and snapshot/gap recovery. No second event service."
+  },
+  "dispatch_and_identity": [
+    "The worker owns each WebSocket and checks exact target/action semantics again when consuming the bounded dispatch queue.",
+    "Actual dispatch calls Authority::forward(call_id, agent-mutation) before provider I/O. Every retained Call owns the originating Arc<Authority>; late applied/rejected/unknown settlement uses that exact call and old authority without changing current ownership.",
+    "No topology/authority/state mutex is held across handshake/read/write/model I/O. Inspection stays responsive during provider backpressure.",
+    "Pending response identity includes terminal/instance/session/turn/item and exact typed provider request ID. Full-identity tombstones do not reopen on duplicate delivery.",
+    "The same typed provider ID may identify a new turn/item request, while old full-identity answers remain rejected. Because a reused-ID resolved notification omits turn/item, ambiguous resolution leaves the new pending request/call unknown rather than clearing or settling the wrong request.",
+    "Resolution of an ordinary request removes its pending row and retains a tombstone, but the API contender remains unknown when its winning response is not authoritatively identified. A uniquely attributable late provider rejection can settle the exact response call rejected.",
+    "Turn completion does not erase pending requests; pending cleanup can arrive later. Interrupt acknowledgement records request application/provider_ack, not interrupted completion.",
+    "Force/cancel/viewer detach are not broker mutations and issue no turn/interrupt, provider retry, reconnect, model turn or process stop.",
+    "Disconnect/degradation retains unknown work and blocks new unsafe mutations. Unknown request/native input settlement is never promoted to safe grant or task acceptance."
+  ],
+  "resource_behavior": {
+    "backend": "Owned private app-server in a distinct setsid session, one real Unix WebSocket manager connection, one parent-launched ordinary native frontend on the same socket. Manager performs no thread/start, prompt or bootstrap turn.",
+    "discovery": "Observe the sole loaded native-created conversation, then rejoin that exact running thread with thread/resume. Discovery is explicitly unavailable until the authoritative reply. Ambiguous/replaced sessions degrade instead of retargeting.",
+    "credentials_and_resume_at_future_managed_launch": "Only an explicitly requested prepare may copy a bounded regular non-symlink auth.json into mode0600 private CODEX_HOME. Explicit resume imports only its matching bounded persisted rollout into private history. This code path was NOT run during this task; no real auth was copied.",
+    "cleanup": "Unbound lease failure, native launch failure, terminal end and broker shutdown clean only owned resources. Uses the existing identity-checked runtime ProcessTree via the parent exposure specified below, bounded child reaping, socket shutdown and owned-root removal. Incomplete cleanup is reported as unknown/problem, never fabricated exited success.",
+    "limits": {
+      "instances_retained": 128,
+      "recent_calls_per_instance": 256,
+      "pending_plus_tombstones_per_instance": 1024,
+      "completed_turn_identities_per_instance": 1024,
+      "queued_mutations_per_instance": 32,
+      "broker_events_per_instance": 512,
+      "provider_frame_message_bytes": 4194304,
+      "public_mutation_encoded_bytes": 2097152,
+      "version_check_seconds": 5,
+      "backend_start_discovery_reply_seconds": 30,
+      "provider_write_timeout_seconds": 2,
+      "forwarded_response_deadline_seconds": 180,
+      "post_tree_termination_reap_seconds": 2
+    },
+    "retention_policy": "Only settled call receipts may be removed to maintain the recent-call bound. Unresolved calls and live identity tombstones are not silently evicted; exhausted accounting bounds fail/degrade visibly. Event overflow emits resynchronization-required."
+  },
+  "required_parent_integration": [
+    {
+      "files": ["Cargo.toml", "Cargo.lock", "src/lib.rs"],
+      "change": "Add tungstenite exactly 0.30.0 with default-features=false and features=[handshake]; register private mod codex. Imports are tungstenite::client::client_with_config and tungstenite::protocol::{Message, WebSocket, WebSocketConfig}; fixtures also use tungstenite::accept/client. No TLS, async runtime, SDK or provider registry is required."
+    },
+    {
+      "files": ["src/runtime.rs"],
+      "change": "Expose existing ProcessTree and terminate as pub(crate), and add the three helpers below. Codex deliberately reuses the existing PID/start-identity/session-aware descendant cleanup rather than copying a second production process walker or killing a reusable naked group number. This exposure is REQUIRED before compilation; this worker did not edit runtime.rs.",
+      "existing_visibility_changes": ["pub(crate) struct ProcessTree", "pub(crate) fn terminate(&mut self)"],
+      "helpers": {
+        "capture_owned_session": "pub(crate) fn capture_owned_session(pid: i32) -> Option<Self> { let info = process_info(pid)?; (info.session == pid).then(|| Self::new(info)) }",
+        "root_exited": "pub(crate) fn root_exited(&self) -> bool { process_info(self.root.pid).filter(|info| info.identity == self.root).is_none_or(|info| info.exited) }",
+        "terminated": "pub(crate) fn terminated(&self) -> bool { self.members.iter().all(|identity| process_info(identity.pid).filter(|info| info.identity == *identity).is_none_or(|info| info.exited)) }"
+      },
+      "invariant": "Backend is spawned with setsid. Capture requires session == backend PID. Observe root exit without reaping; retain the original root identity until ProcessTree cleanup so descendants cannot escape accounting through early leader reaping."
+    },
+    {
+      "files": ["src/daemon.rs"],
+      "change": "Own one Broker initialized lazily with the existing private runtime root. Route only agent-open/inspect/prompt/answer/permission/interrupt. Validate the controller and resolve ordinary source/project/name/cwd selection before prepare; pass the resolved cwd. Never change ordinary open/OMP/Zsh defaults."
+    },
+    {
+      "files": ["src/daemon.rs", "src/runtime.rs", "src/integration.rs"],
+      "change": "For agent-open borrow Prepared fields, create the PTY with the caller controller's complete initial Grant, bind the instance before frontend spawn, then run exec env KEY=quoted_value ... Prepared.command as accounted startup source using that same authority. Do not put Prepared.env on the stock shell/context-capture environment; do not use an automatically retired private launch controller. Redact the entire managed frontend startup source in public diagnostics. On an unbound error drop Prepared; after bind use launch_failed/end_terminal for that terminal only, never global Broker shutdown. Return {terminal:ordinary_terminal_object,instance_id,control:complete_Grant,state:agent_inspect}."
+    },
+    {
+      "files": ["src/daemon.rs", "src/client.rs", "src/cli.rs"],
+      "change": "At each closed mutation route, authorize control against target.terminal and pass the resulting exact per-PTY Arc<Authority> plus the complete request to Broker::mutate. Release registry/topology locks before broker admission/provider work. Broker owns provider IDs, queue-consumption rechecks and exact late settlement. Keep ordinary raw amux api framing; no generic provider method passthrough or automatic authority acquisition."
+    },
+    {
+      "files": ["src/daemon.rs"],
+      "change": "Drain take_events through the existing global sequenced event service outside provider I/O. Attach existing sequence/event cursor to inspect/open results, and include authoritative agent facts in ordinary terminal state/snapshot/gap recovery. Public events and snapshots must not include Prepared command/env paths or private handles."
+    },
+    {
+      "files": ["src/daemon.rs", "src/runtime.rs"],
+      "change": "Report accounted frontend-start failure via launch_failed. Call end_terminal on actual frontend/PTy execution end or explicit close; viewer detach and external report/control socket loss must not call it. Daemon shutdown calls Broker::shutdown. Preserve distinct frontend/backend/connection/turn/outcome facts and unknown native settlement."
+    },
+    {
+      "files": ["README.md", "CHANGELOG.md", "specs/adr/0003-codex-first-agent-target.md", "specs/contracts/pty-control.md", "shared task/evidence ledgers"],
+      "change": "Parent owns any integrated user-facing documentation/evidence updates. This worker changed none of these and marked no story/task passing. Preserve the exhausted review cap and defer complete native fencing/presentation acceptance to s08."
+    }
+  ],
+  "deterministic_test_names": [
+    "native_first_initializes_before_discovery_without_bootstrap_turns",
+    "closed_requests_and_wrong_instance_session_control_never_forward",
+    "start_and_exact_turn_steer_never_queue_or_retarget_stale_intent",
+    "questions_preserve_integer_string_identity_keyed_choices_and_free_text",
+    "resolved_tombstones_do_not_reopen_on_duplicates_or_reused_request_ids",
+    "command_and_file_permissions_encode_only_explicit_request_allow_or_deny",
+    "unsupported_approval_scope_and_unavailable_decisions_never_auto_approve",
+    "native_api_response_race_is_unknown_not_an_invented_api_winner",
+    "interrupt_acknowledgement_completion_and_pending_cleanup_are_distinct",
+    "queued_revocation_rechecks_authority_after_real_socket_backpressure",
+    "native_resolution_before_queue_consumption_rejects_the_api_contender",
+    "dropped_public_reply_recovers_one_retained_call_without_replay",
+    "backend_loss_retains_unknown_calls_and_pending_without_restart_or_completion",
+    "force_and_cancel_revoke_authority_without_interrupting_or_erasing_old_calls",
+    "observer_attachments_detach_without_replacing_or_stopping_the_execution",
+    "public_event_gap_recovers_snapshot_without_replaying_agent_actions",
+    "frontend_exit_is_not_completion_and_explicit_close_removes_owned_backend",
+    "daemon_shutdown_reaps_fixture_children_and_removes_private_roots"
+  ],
+  "fixture_helper": {
+    "name": "protocol_fixture_backend",
+    "ignored": true,
+    "guard": "Dedicated private AMUX_CODEX_FIXTURE_GUARD and owned fixture root; private PATH shell invokes only this test binary as backend/frontend. No host Codex or auth can substitute.",
+    "races": "Native-created thread release, exact generated-schema requests, independently initialized native/API peers, deferred acknowledgements, independent completion/resolution, native competing answers, actual Unix socket backpressure, disconnect and frontend exit.",
+    "backpressure_constraint": "Queued-dispatch scenarios must release the controlled paused socket within the broker's two-second write deadline unless intentionally asserting connection loss."
+  },
+  "real_live_tests": {
+    "ignored_by_default": true,
+    "names": ["real_native_first_start", "real_questions_and_permissions", "real_explicit_interrupt"],
+    "guards": [
+      "Exact single root-test selection with --ignored --exact --nocapture --test-threads=1",
+      "AMUX_RUN_REAL_CODEX=1",
+      "AMUX_CODEX_LIVE_APPROVED=1 only after separate explicit user live-run approval",
+      "AMUX_CODEX_MODEL explicitly nonblank",
+      "AMUX_CODEX_AUTH_SOURCE explicitly approved regular non-symlink auth.json source",
+      "Installed codex-cli exactly 0.160.0; genuine native PTY/protocol/rollout prerequisites must exist"
+    ],
+    "limits_seconds": {"watchdog": 1650, "overall_ceiling": 1800, "daemon": 15, "backend": 30, "response": 180},
+    "maximum_meaningful_turns": 6,
+    "turn_accounting": "Actual rollout task_started identities across the private tree; every API start counts, hidden/native/bootstrap/unrequested turns fail. No setup model prompt is used for discovery or native mode selection.",
+    "real_bodies": [
+      "Fresh same-instance native-first discovery with zero turns, two real controlling-PTY amux attachments, API start/exact active-turn steer, native continuation captures, ended-steer rejection and explicit detach/stop cleanup.",
+      "Actual native Plan mode, genuine model-emitted request_user_input, exact keyed structured answer, independent assistant continuation marker, genuine command approval allow and deny with owned out-of-workspace marker effects, stale response rejection and native captures. Missing requests fail within budget, not fixture substitution.",
+      "Genuine pending command approval, detach/force preserving the exact active turn, explicit exact-turn interrupt acknowledgement, retained exact interrupted turn outcome, independently awaited pending cleanup, stale interrupt rejection, deliberate later turn/native continuation and separate process stop."
+    ],
+    "cleanup": "Private mode0700 HOME/config/cache/runtime/CODEX_HOME/workspace/socket roots; opt-in-only private auth copy; PID/birth/ancestry-aware owned process monitoring; bounded child/group teardown and reaping; private terminal restoration checked; auth/schemas/rollouts/markers/raw captures/sockets/root removed. Only redacted actual native evidence is retained on stderr.",
+    "commands_after_separate_approval_only": [
+      "cargo test --test codex_native_smoke real_native_first_start -- --ignored --exact --nocapture --test-threads=1",
+      "cargo test --test codex_native_smoke real_questions_and_permissions -- --ignored --exact --nocapture --test-threads=1",
+      "cargo test --test codex_native_smoke real_explicit_interrupt -- --ignored --exact --nocapture --test-threads=1"
+    ]
+  },
+  "verification": {
+    "build_tests_lint_format_executed": false,
+    "deterministic_tests_executed": false,
+    "live_tests_executed": false,
+    "live_backend_frontend_model_checks_executed": false,
+    "real_auth_copied": false,
+    "global_daemon_config_auth_changed": false,
+    "commit_merge_push_release_performed": false,
+    "reason": "Worker was explicitly restricted to implementation and offline version/schema inspection. Parent integrates both tracks and executes deterministic/build/typecheck/lint/format checks; live checks require separate approval.",
+    "parent_commands_not_run_here": [
+      "cargo test --test agent_interaction",
+      "cargo test --test codex_native_smoke --no-run",
+      "cargo test --test pty_control",
+      "cargo test --workspace",
+      "cargo check --workspace --all-targets",
+      "cargo clippy --workspace --all-targets -- -D warnings",
+      "cargo build --workspace"
+    ]
+  },
+  "unverified_limits_and_acceptance_blockers": [
+    "Compilation, deterministic protocol fixtures, lint/format and actual runtime behavior remain unverified; parent module/dependency/routing and ProcessTree exposure are prerequisites, not worker-owned edits.",
+    "Fresh native-first thread discovery/rejoin, real frontend coexistence, structured question/approval emission, native mode/trust interaction, model continuation and resource cleanup have implementation and test bodies but no new live proof.",
+    "serverRequest/resolved does not identify a winning response. API response application remains unknown absent independently attributable provider evidence; this must continue blocking safe settlement rather than being labeled success.",
+    "Reused typed request-ID resolution lacks turn/item identity and can remain ambiguous; the broker deliberately keeps that pending request/call unknown.",
+    "Permission-profile grants cannot satisfy exact-request allow because this installed schema only offers turn/session scope. Command/file-change request-only decisions are implemented; encountered unsupported shapes remain explicit and never auto-approved.",
+    "The complete native-buffer/application acknowledgement and optimistic native losing-answer presentation seams remain s08 acceptance work. This track did not run an early native-fence spike, patch upstream, clear unknown native batches or claim force-only acceptance.",
+    "Native frontend lifetime reporting depends on parent invoking launch_failed/end_terminal at actual startup failure/PTy process end, not viewer detach.",
+    "Long histories or exhausted retained-identity/call/instance bounds fail visibly instead of silently discarding unresolved work, replaying or restarting.",
+    "macOS/Linux cleanup helpers are inherited from the existing runtime; no new platform or independent review PASS is claimed."
+  ],
+  "worktree_disposition": "Existing session/worktree and all current edits retained; no reset, commit, merge, push, release or worktree/tab cleanup performed. Parent remains sole integration owner."
+}

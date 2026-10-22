@@ -83,6 +83,19 @@ Native Ratatui surface/action evidence: [UI verification](specs/verifications/UI
 
 Mouse wheel and Shift-PageUp/PageDown scroll locally; typing returns to the live surface. Shift-drag selects text even when the foreground application requests mouse reporting; selection copies through the host terminal's OSC 52 support. Managed-application clipboard requests are not forwarded; client selection is the supported clipboard path. Focus, scrolling, selection and picker state belong to this client. Background terminals retain their last size, initially 80×24; opening a picker does not resize them. Only the visible surface follows client resize. If multiple local TUIs show the same terminal, the last attachment/resize determines its PTY geometry.
 
+Each TUI registers its attachment on the original persistent connection and reports selected-terminal and outer-focus views; focus starts unknown. An unowned, unreserved, settled target may be acquired normally.
+
+All application keys, repeats, literal prefixes, paste and application mouse input require current control. Observers keep local navigation, scrolling and selection. Rejected or intercepted input is never replayed after acquisition.
+
+**Prefix Ctrl-L** opens ownership request, owner-response and handoff progress actions. Hiding the panel preserves its claim. An incoming notice does not turn ordinary typing into consent; yield and cancellation are deliberate actions.
+
+**Prefix Ctrl-F** opens explicit force confirmation against fresh ownership facts. Force does not interrupt a turn or kill a process. Stale authority requires resynchronization, never implicit force, reconnect or replay.
+
+Conditional idle/background requests come from external orchestration. Native warnings require current draw-bound consent; human activity aborts the attempt without automatic retry. Keep/withdraw preserves the human's current control.
+
+Detaching marks the attachment departed but does not release ownership or cancel its claim. Use explicit release/handoff actions. Unknown or departed attachment facts cannot establish safe conditional eligibility.
+
+
 ```sh
 amux config '{"prefix":"ctrl-a","projects_dir":"/home/me/projects"}'
 amux detach       # request all currently attached TUIs to detach; processes remain running
@@ -101,15 +114,33 @@ The first runtime/API optimization requires restarting an older pre-change daemo
 
 ## Shell execution versus typing
 
-```sh
-amux input agent 'a message for OMP'
-amux input agent --key enter
-amux input agent --key ctrl-c
-amux input agent --paste 'multiline text'
-amux input main --bytes '[27,91,65]'
+The `input` and `execute` commands require `--control` containing serialized **current ControlHandle JSON**. A controller registration credential, claim, offer or copied public ownership receipt cannot authorize input. Mutation targets use the terminal ID returned by `state`, not a name that may later resolve differently.
 
-amux execute main 'export MODE=debug; cd src; print $PWD'
-amux execute main 'print later' --queue
+Register an external controller once and explicitly acquire an unowned target; this example uses `jq` to preserve JSON types:
+
+```sh
+controller=$(amux api '{"op":"controller-create","role":"external","label":"my script"}' |
+  jq -ec '.result.controller')
+state=$(amux state main)
+terminal=$(printf '%s' "$state" | jq -er '.result.id')
+observed=$(printf '%s' "$state" | jq -ec '.result.ownership.observed')
+grant=$(amux api "$(jq -cn --argjson controller "$controller" --arg terminal "$terminal" \
+  --argjson observed "$observed" \
+  '{op:"ownership-claim",controller:$controller,terminal:$terminal,observed:$observed,mode:"cooperative",when:{kind:"now"}}')")
+control=$(printf '%s' "$grant" | jq -ec 'select(.ok and .result.kind=="control") | .result.control')
+```
+
+Proceed only if a current control was returned. If the result is a pending claim, inspect that same claim and arrange explicit owner yield and offer acceptance; do not send input, repeat the claim or force automatically. Choose an OMP terminal instead of `main` before acquisition when sending application messages.
+
+```sh
+amux input "$terminal" --control "$control" 'a message for the foreground application'
+amux input "$terminal" --control "$control" --key enter
+amux input "$terminal" --control "$control" --key ctrl-c
+amux input "$terminal" --control "$control" --paste 'multiline text'
+amux input "$terminal" --control "$control" --bytes '27,91,65'
+
+amux execute "$terminal" --control "$control" 'export MODE=debug; cd src; print $PWD'
+amux execute "$terminal" --control "$control" 'print later' --queue
 ```
 
 Input goes to the current foreground application. `execute` is shell **source**, not typed text: only an empty confirmed primary Zsh prompt can accept it. Busy applications, earlier pending submissions and partially entered lines are rejected; queueing is explicit. The adapter rechecks native prompt, buffer, generation and typeahead, with an input-epoch handshake that prevents a queued wake key from following user input into a foreground application. Ctrl-C records interrupted source completion without replacing native hooks. Exited/backpressured input and oversized paste display an error without closing the TUI.
@@ -142,6 +173,42 @@ Configuration saves use a stable sibling lock and compare the exact configuratio
 ## Automation
 
 API commands print versioned JSON envelopes and return nonzero on errors. UUIDs are stable within daemon lifetime; saved project UUIDs persist. Names are selectors, and ambiguity is an error.
+
+Raw `amux api` exit status zero means **request success**, not an ownership grant, offer acceptance, shell completion or task success. Check `result.kind` and the current private state. Ordinary cooperative requests preserve the current owner's authority until an explicit yield/release; a ready offer is reserved but still requires explicit acceptance. Public `ownership.observed` is a compare receipt, never authority; public snapshots/events deliberately omit private handles.
+
+Keep controller/claim capabilities in the caller's private memory and reuse them across independent one-shot calls. After a timeout, broken socket or lost accept response, inspect rather than replay:
+
+```sh
+amux api "$(jq -cn --argjson handle "$controller" \
+  '{op:"control-handle",handle:$handle,method:"read"}')"
+# If a control was granted, recover it from result.controls.
+# To give up that current control explicitly (without stopping running work):
+amux api "$(jq -cn --argjson handle "$control" \
+  '{op:"control-handle",handle:$handle,method:"release"}')"
+```
+
+Reading a claim/controller never accepts an offer or reacquires ownership. Do not repeat an uncertain accept: an already-consumed offer rejects duplicates.
+
+Cancelling an ordinary pending claim invalidates old control, leaves the target unowned, grants nobody and retains outstanding calls. A grant completed before cancellation remains valid; release it explicitly.
+
+Force compares fresh ownership/reservation facts and warns `prior-calls-may-apply`, even with no listed calls. Force, cancellation and release never implicitly interrupt a turn, kill a process or erase prior work.
+
+A PTY write acknowledgement is not application settlement. Unknown application input can block safe handoff. Conditional keep/withdraw retains human control; reacquisition policy stays external.
+
+See the [wire contract](specs/contracts/pty-control.md) for exact capabilities, public clock, eligibility, consent, request/result shapes and errors.
+
+### Codex broker acceptance boundary
+
+The concrete broker is pinned to Codex 0.160.0. Its closed operations are `agent-open`, `agent-inspect`, `agent-prompt`, `agent-answer`, `agent-permission` and `agent-interrupt`; this is not a generic provider RPC relay.
+
+The native frontend creates the conversation on the owned backend. The observer binds its live identity without an API-created conversation or setup model turn, then explicitly subscribes when the first requested turn materializes history. Native title auxiliaries are not replacement conversations.
+
+Mutations require current PTY control and exact instance/session identities; answers, permission decisions and interrupts also bind their applicable turn/item/request identities. Receipts report admission and retained outcomes, not task completion.
+
+Separate real-account checks passed native/API start and same-turn steer, a genuine native-originated question answered structurally, permission allow/deny with actual filesystem effects, and exact-turn interruption with process survival. Deny uses request-only `decline`, never `cancel` or a session grant.
+
+Complete-broker acceptance remains unpassed. Unknown winning answers or native/application settlement must block safe grant; force-only results cannot substitute. Actual checks and limits live in [Build evidence](specs/verifications/e03-integration-build.md).
+
 
 ```sh
 amux state agent

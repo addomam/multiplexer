@@ -1,0 +1,41 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s02
+title: Explicit overrides and recoverable one-shot ownership
+spec: e03s02-story.md
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: "Implement ordinary ClaimHandle.cancel and resumed fresh acquisition in src/control.rs/src/daemon.rs; extend tests/pty_control.rs to prove cancel grants nobody, revokes pre-transfer input, removes reservation, retains calls and cannot release an accept-first winner."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [ownership, cancel-accept-races, retained-accounting]
+  - id: 2
+    description: "Implement claim force and forced ownership-claim with public compare receipt in src/control.rs/src/daemon.rs; prove stale receipts cannot revoke newer ownership, stranded reservations need no private requester credential, queued old work is rejected, warnings retain actual calls, and running work continues."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [ownership, force-races, process-lifetime]
+  - id: 3
+    description: "Complete private controller/claim recovery and typed src/client.rs errors for independent raw src/cli.rs API calls; add lost-accept-reply, timeout, socket-close and historical-grant cases in tests/pty_control.rs and update existing API docs with exit0/request-not-grant semantics, explicit release and no replay."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [one-shot, uncertain-outcomes, recovery]
+  - id: 4
+    description: "Finish src/daemon.rs sequenced three-second blocker progress and notification-independent overrides; extend tests/pty_control.rs with blocked/absent subscribers, PTY output and late-old-result cases that prove retained accounting never mutates newer ownership."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [observer-backpressure, integration, progress]
+evidence: specs/verifications/e03-ownership-build.md

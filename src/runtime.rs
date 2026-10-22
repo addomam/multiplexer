@@ -42,7 +42,36 @@ impl Dimensions for Size {
 
 struct Input {
     bytes: Vec<u8>,
-    ack: Option<mpsc::Sender<std::io::Result<()>>>,
+    ack: Option<mpsc::Sender<Result<()>>>,
+    authority: Option<Arc<crate::control::Authority>>,
+    native: bool,
+}
+impl Input {
+    /// Returns false only when the transport itself failed. Revoked queued
+    /// application input is discarded without disabling protocol progress.
+    fn write_to(self, writer: &mut dyn Write) -> bool {
+        let admitted = self.authority.as_ref().map_or(Ok(()), |authority| {
+            if self.native && !self.bytes.is_empty() {
+                authority.forward_native()
+            } else {
+                authority.check()
+            }
+        });
+        if let Err(error) = admitted {
+            if let Some(ack) = self.ack {
+                let _ = ack.send(Err(error));
+            }
+            return true;
+        }
+        // Registration precedes revocation; no ownership lock spans I/O.
+        // Write acknowledgement is delivery, never application settlement.
+        let result = writer.write_all(&self.bytes);
+        let alive = result.is_ok();
+        if let Some(ack) = self.ack {
+            let _ = ack.send(result.map_err(anyhow::Error::from));
+        }
+        alive
+    }
 }
 
 #[derive(Clone)]
@@ -78,6 +107,8 @@ impl EventListener for Listener {
             let _ = self.input.try_send(Input {
                 bytes: response.into_bytes(),
                 ack: None,
+                authority: None,
+                native: false,
             });
         }
     }
@@ -210,6 +241,8 @@ impl Emulator {
             let _ = self.input.try_send(Input {
                 bytes: format(Rgb { r, g, b }).into_bytes(),
                 ack: None,
+                authority: None,
+                native: false,
             });
         }
     }
@@ -323,12 +356,7 @@ impl Terminal {
         let weak = Arc::downgrade(&terminal);
         thread::spawn(move || {
             while let Ok(input) = pending.recv() {
-                let result = writer.write_all(&input.bytes);
-                let failed = result.is_err();
-                if let Some(ack) = input.ack {
-                    let _ = ack.send(result);
-                }
-                if failed || weak.upgrade().is_none() {
+                if !input.write_to(&mut writer) || weak.upgrade().is_none() {
                     break;
                 }
             }
@@ -409,34 +437,85 @@ impl Terminal {
         let size = *self.size.lock();
         json!({"pid":self.pid,"alive":self.alive(),"exit_status":*self.exit_status.lock(),"size":{"cols":size.cols,"rows":size.rows}})
     }
+    /// Direct transport input for low-level PTY consumers, not public API admission.
     pub fn input(&self, bytes: Vec<u8>) -> Result<()> {
+        self.enqueue(bytes, None, true, false)
+    }
+    pub(crate) fn input_authorized(
+        &self,
+        bytes: Vec<u8>,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<()> {
+        authority.check()?;
+        self.enqueue(bytes, Some(authority), true, false)
+    }
+    /// Daemon-classified terminal protocol traffic, never human application input.
+    pub(crate) fn protocol_input_authorized(
+        &self,
+        bytes: Vec<u8>,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<()> {
+        authority.check()?;
+        self.enqueue(bytes, Some(authority), false, false)
+    }
+    pub(crate) fn input_confirmed_authorized(
+        &self,
+        bytes: Vec<u8>,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<()> {
+        authority.check()?;
+        self.enqueue(bytes, Some(authority), false, true)
+    }
+    fn enqueue(
+        &self,
+        bytes: Vec<u8>,
+        authority: Option<Arc<crate::control::Authority>>,
+        native: bool,
+        confirmed: bool,
+    ) -> Result<()> {
         if !self.alive() || self.closing.load(Ordering::Acquire) {
             bail!("exited: terminal no longer accepts input");
         }
         if bytes.len() > MAX_INPUT {
             bail!("invalid-input: input exceeds 64 KiB");
         }
-        self.input
-            .try_send(Input { bytes, ack: None })
-            .map_err(|error| anyhow::anyhow!("backpressure: input queue unavailable: {error}"))
-    }
-    pub fn input_confirmed(&self, bytes: Vec<u8>) -> Result<()> {
-        if !self.alive() || self.closing.load(Ordering::Acquire) {
-            bail!("exited: terminal no longer accepts input");
-        }
-        let (ack, received) = mpsc::channel();
+        let (ack, received) = if confirmed {
+            let (ack, received) = mpsc::channel();
+            (Some(ack), Some(received))
+        } else {
+            (None, None)
+        };
         self.input
             .try_send(Input {
                 bytes,
-                ack: Some(ack),
+                ack,
+                authority,
+                native,
             })
-            .map_err(|error| anyhow::anyhow!("backpressure: {error}"))?;
-        received
-            .recv_timeout(Duration::from_secs(2))
-            .map_err(|error| anyhow::anyhow!("input-timeout: {error}"))??;
+            .map_err(|_| anyhow::anyhow!("backpressure: input queue unavailable"))?;
+        if let Some(received) = received {
+            received
+                .recv_timeout(Duration::from_secs(2))
+                .map_err(|error| anyhow::anyhow!("input-timeout: {error}"))??;
+        }
         Ok(())
     }
     pub fn paste(&self, text: &str) -> Result<()> {
+        self.enqueue_paste(text, None)
+    }
+    pub(crate) fn paste_authorized(
+        &self,
+        text: &str,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<()> {
+        authority.check()?;
+        self.enqueue_paste(text, Some(authority))
+    }
+    fn enqueue_paste(
+        &self,
+        text: &str,
+        authority: Option<Arc<crate::control::Authority>>,
+    ) -> Result<()> {
         let bracketed = self
             .emulator
             .lock()
@@ -459,7 +538,7 @@ impl Terminal {
         } else {
             bytes.extend_from_slice(text.as_bytes());
         }
-        self.input(bytes)
+        self.enqueue(bytes, authority, true, false)
     }
     pub fn resize(&self, cols: usize, rows: usize) -> Result<()> {
         if !(2..=500).contains(&cols) || !(2..=300).contains(&rows) {
@@ -620,7 +699,7 @@ fn process_snapshot() -> BTreeMap<i32, ProcessInfo> {
         .collect()
 }
 
-struct ProcessTree {
+pub(crate) struct ProcessTree {
     root: ProcessIdentity,
     session: i32,
     members: BTreeSet<ProcessIdentity>,
@@ -633,6 +712,25 @@ impl ProcessTree {
             session: root.session,
             members: BTreeSet::from([root.identity]),
         }
+    }
+
+    pub(crate) fn capture_owned_session(pid: i32) -> Option<Self> {
+        let info = process_info(pid)?;
+        (info.session == pid).then(|| Self::new(info))
+    }
+
+    pub(crate) fn root_exited(&self) -> bool {
+        process_info(self.root.pid)
+            .filter(|info| info.identity == self.root)
+            .is_none_or(|info| info.exited)
+    }
+
+    pub(crate) fn terminated(&self) -> bool {
+        self.members.iter().all(|identity| {
+            process_info(identity.pid)
+                .filter(|info| info.identity == *identity)
+                .is_none_or(|info| info.exited)
+        })
     }
 
     fn discover(&mut self, processes: &BTreeMap<i32, ProcessInfo>) {
@@ -710,7 +808,7 @@ impl ProcessTree {
         }
     }
 
-    fn terminate(&mut self) {
+    pub(crate) fn terminate(&mut self) {
         self.freeze();
         for &identity in &self.members {
             identity.signal(libc::SIGTERM);
@@ -833,6 +931,69 @@ fn screen_rows(
 #[cfg(test)]
 mod screen_update_tests {
     use super::*;
+    #[test]
+    fn queued_revoked_bytes_are_dropped_while_protocol_replies_progress() {
+        let mut registry = crate::control::Registry::new();
+        registry.add_target("terminal");
+        let controller = registry
+            .create(
+                &json!({
+                    "version":1,"op":"controller-create","role":"external","label":"queue test"
+                }),
+                0,
+            )
+            .unwrap()["controller"]
+            .clone();
+        let grant = registry
+            .claim(&json!({
+                "version":1,"op":"ownership-claim","controller":controller,
+                "terminal":"terminal","observed":registry.snapshot("terminal")["observed"],
+                "mode":"cooperative","when":{"kind":"now"}
+            }))
+            .unwrap();
+        let authority = registry
+            .authorize("terminal", &grant["control"], 0)
+            .unwrap();
+        let (queue, pending) = mpsc::sync_channel(2);
+        let (ack, response) = mpsc::channel();
+        queue
+            .send(Input {
+                bytes: b"must-not-reach-application".to_vec(),
+                ack: Some(ack),
+                authority: Some(authority),
+                native: true,
+            })
+            .unwrap();
+        registry
+            .handle(
+                &json!({
+                    "version":1,"op":"control-handle","handle":grant["control"],"method":"release"
+                }),
+                0,
+            )
+            .unwrap();
+        queue
+            .send(Input {
+                bytes: b"\x1b[1;1R".to_vec(),
+                ack: None,
+                authority: None,
+                native: false,
+            })
+            .unwrap();
+        let mut delivered = Vec::new();
+        assert!(pending.recv().unwrap().write_to(&mut delivered));
+        assert!(
+            response
+                .recv()
+                .unwrap()
+                .unwrap_err()
+                .to_string()
+                .starts_with("stale-handle:")
+        );
+        assert!(pending.recv().unwrap().write_to(&mut delivered));
+        assert_eq!(delivered, b"\x1b[1;1R");
+        assert_eq!(registry.snapshot("terminal")["unsettled"], json!([]));
+    }
 
     fn emulator(cols: usize, rows: usize) -> Emulator {
         emulator_with_replies(cols, rows).0

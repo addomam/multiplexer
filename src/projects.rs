@@ -152,7 +152,32 @@ fn configuration_path(path: &Path) -> Result<PathBuf> {
     Ok(fs::canonicalize(parent)?.join(path.file_name().context("configuration has no file name")?))
 }
 
-fn configuration_lock(path: &Path) -> Result<File> {
+struct ConfigurationLock(File);
+
+impl AsRawFd for ConfigurationLock {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
+impl Drop for ConfigurationLock {
+    fn drop(&mut self) {
+        // Closing this descriptor is insufficient if a concurrent PTY fork
+        // inherited its open-file description before exec closes CLOEXEC fds.
+        loop {
+            if unsafe { libc::flock(self.as_raw_fd(), libc::LOCK_UN) } == 0 {
+                break;
+            }
+            let error = std::io::Error::last_os_error();
+            if error.kind() != std::io::ErrorKind::Interrupted {
+                eprintln!("amux configuration unlock: {error}");
+                break;
+            }
+        }
+    }
+}
+
+fn configuration_lock(path: &Path) -> Result<ConfigurationLock> {
     let mut name = path
         .file_name()
         .context("configuration has no file name")?
@@ -176,7 +201,7 @@ fn configuration_lock(path: &Path) -> Result<File> {
     file.set_permissions(fs::Permissions::from_mode(0o600))?;
     loop {
         if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } == 0 {
-            return Ok(file);
+            return Ok(ConfigurationLock(file));
         }
         let error = std::io::Error::last_os_error();
         if error.kind() == std::io::ErrorKind::WouldBlock {
@@ -1347,6 +1372,23 @@ mod tests {
     }
 
     #[test]
+    fn completed_configuration_lock_releases_inherited_descriptor() {
+        use std::os::fd::FromRawFd;
+
+        let temp = TempDir::new();
+        let path = temp.0.join("config.json");
+        let mut store = Store::load(&path, None).unwrap();
+        let lock = configuration_lock(&path).unwrap();
+        let descriptor = unsafe { libc::dup(lock.as_raw_fd()) };
+        assert!(descriptor >= 0);
+        let inherited = unsafe { File::from_raw_fd(descriptor) };
+        drop(lock);
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        assert_eq!(Store::load(&path, None).unwrap().config.prefix, "C-a");
+        drop(inherited);
+    }
+
+    #[test]
     fn concurrent_configuration_writers_respect_one_stable_lock() {
         use std::os::unix::fs::OpenOptionsExt;
 
@@ -1388,6 +1430,7 @@ mod tests {
         let results: Vec<_> = (0..2)
             .map(|_| receiver.recv_timeout(Duration::from_secs(2)).unwrap())
             .collect();
+        assert_eq!(unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_UN) }, 0);
         drop(lock);
         for worker in workers {
             worker.join().unwrap();

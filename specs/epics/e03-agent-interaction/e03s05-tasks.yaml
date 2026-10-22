@@ -1,0 +1,65 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s05
+title: Managed same-instance Codex launch and prompts
+spec: e03s05-story.md
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: >-
+      Add only approved tungstenite 0.30.0 handshake dependency in Cargo.toml/Cargo.lock;
+      implement src/codex.rs owned Unix WebSocket handshake, private native/frontend/backend
+      lifetime and native-first authoritative discovery. Create tests/agent_interaction.rs
+      using installed 0.160.0 schema fixtures to prove unavailable-before-discovery,
+      same-instance identity, handshake order and owned cleanup; no bootstrap turn.
+    verify: 'cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Codex lifecycle, integration, protocol fixtures]
+  - id: 2
+    description: >-
+      Wire agent-open/agent-inspect/agent-prompt through src/daemon.rs, src/client.rs,
+      src/cli.rs and src/control.rs; return bound initial control and distinct starting
+      state, validate exact live targets and explicit start/steer with expectedTurnId,
+      and register forwarding atomically with revocation. Expand tests/agent_interaction.rs
+      for queued revocation, stale steer without fallback, event gaps, lost replies and
+      retained late outcomes, preserving tests/pty_control.rs from e03s01.
+    verify: 'cargo test --test agent_interaction && cargo test --test pty_control'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Agent prompts, authority races, recovery]
+  - id: 3
+    description: >-
+      Create tests/codex_native_smoke.rs with ignored root real_native_first_start;
+      enforce exact selection, explicit AMUX_RUN_REAL_CODEX=1 plus nonempty
+      AMUX_CODEX_MODEL, version/auth prerequisites, <=1800s run watchdog,
+      <=15/30/180s daemon/backend/model deadlines and <=6 meaningful turns.
+      Use mode0700 private roots and owned process groups, cleanup credentials,
+      schemas, rollouts, sockets and roots and restore terminal modes on every exit.
+      Update specs/adr/0003-codex-first-agent-target.md and specs/contracts/pty-control.md
+      with actual operation/evidence boundaries, never a Plan-time PASS.
+    verify: 'cargo test --test codex_native_smoke --no-run && cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Smoke prerequisites, cleanup, compatibility]
+  - id: 4
+    description: >-
+      After separate explicit live-run approval, use real_native_first_start in
+      tests/codex_native_smoke.rs to prove fresh native-first discovery without a
+      hidden bootstrap model turn, ordinary native/API same-instance start/steer,
+      actual amux controlling-PTY attachment captures and detach versus explicit
+      stop cleanup. Missing prerequisites fail visibly; fixtures do not substitute.
+      Retain only redacted evidence and never touch global Codex resources.
+    verify: 'test "${AMUX_RUN_REAL_CODEX:-}" = 1 && test -n "${AMUX_CODEX_MODEL:-}" && cargo test --test codex_native_smoke real_native_first_start -- --ignored --exact --nocapture --test-threads=1'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Opt-in real Codex, native surface, interaction-01, interaction-02, interaction-13]

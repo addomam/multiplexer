@@ -1,5 +1,7 @@
 use amux::client;
 use serde_json::{Value, json};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -12,6 +14,8 @@ struct Harness {
     directory: PathBuf,
     socket: PathBuf,
     child: Child,
+    controller: Value,
+    controls: RefCell<HashMap<String, Value>>,
 }
 impl Harness {
     fn new() -> Self {
@@ -44,16 +48,66 @@ impl Harness {
             .stderr(log);
         configure(&directory, &mut command);
         let child = command.spawn().unwrap();
-        let h = Self {
+        let mut h = Self {
             directory,
             socket,
             child,
+            controller: Value::Null,
+            controls: RefCell::new(HashMap::new()),
         };
         h.until(|| h.call(json!({"op":"snapshot"})).ok(), "daemon start");
+        h.controller = h
+            .call(json!({"op":"controller-create","role":"external","label":"acceptance fixture"}))
+            .unwrap()["controller"]
+            .clone();
         h
     }
-    fn call(&self, request: Value) -> anyhow::Result<Value> {
+    fn call(&self, mut request: Value) -> anyhow::Result<Value> {
+        if matches!(request["op"].as_str(), Some("input" | "execute")) {
+            let terminal = request["terminal"].as_str().expect("mutation terminal");
+            let control = self
+                .controls
+                .borrow()
+                .get(terminal)
+                .unwrap_or_else(|| {
+                    panic!("fixture must acquire control before mutating {terminal}")
+                })
+                .clone();
+            request["control"] = control;
+        }
         client::request(&self.socket, request)
+    }
+    fn acquire(&self, id: &str) {
+        if self.controls.borrow().contains_key(id) {
+            return;
+        }
+        // Initial shell readiness can precede automatic-launch dispatch/retirement.
+        // Observe completion before making exactly one explicit ownership claim.
+        let state = self.until(
+            || {
+                let state = self.call(json!({"op":"state","terminal":id})).ok()?;
+                (state["integration"]["shell"]["ready"] == true
+                    && state["ownership"]["owner"].is_null()
+                    && state["ownership"]["reservation"].is_null()
+                    && state["ownership"]["unsettled"]
+                        .as_array()
+                        .is_some_and(Vec::is_empty))
+                .then_some(state)
+            },
+            "shell ready and automatic launch authority retired",
+        );
+        let grant = self
+            .call(json!({"op":"ownership-claim","controller":self.controller,
+            "terminal":id,"observed":state["ownership"]["observed"],
+            "mode":"cooperative","when":{"kind":"now"}}))
+            .unwrap();
+        assert_eq!(
+            grant["kind"], "control",
+            "fixture requires an unowned settled target: {grant}"
+        );
+        self.controls
+            .borrow_mut()
+            .insert(id.to_owned(), grant["control"].clone());
     }
     fn until<T>(&self, mut f: impl FnMut() -> Option<T>, label: &str) -> T {
         let deadline = Instant::now() + Duration::from_secs(12);
@@ -74,6 +128,7 @@ impl Harness {
     fn ready(&self, id: &str) {
         self.call(json!({"op":"wait","terminal":id,"condition":"shell-ready","timeout_ms":10000}))
             .unwrap();
+        self.acquire(id);
     }
     fn main(&self) -> String {
         self.call(json!({"op":"snapshot"})).unwrap()["terminals"][0]["id"]
@@ -130,6 +185,8 @@ fn inherited_git_common_dir_does_not_corrupt_workspace_metadata() {
                     "user.name=Acceptance",
                     "-c",
                     "user.email=acceptance@example.test",
+                    "-c",
+                    "commit.gpgsign=false",
                     "commit",
                     "--allow-empty",
                     "-m",

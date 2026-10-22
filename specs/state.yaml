@@ -1,13 +1,41 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: fix/substrate-defects, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: null
-active_epic: e02
-project_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5]}
+vcs: {kind: git, branch: feat/e03-agent-interaction, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: build_epic
+active_epic: e03
+project_cycle:
+  current_phase: 4
+  completed_phases: [2, 3]
+  mode: standard
+  scope: same-instance-agent-interaction
+  previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}
+elaborate_review:
+  scope: same-instance-agent-interaction-specification
+  authorization: user-approved-new-specification-only-cycle
+  status: passed
+  round: 2
+  max_rounds: 5
+  reviewers: 2
+  evidence: specs/verifications/agent-interaction-design-review.md
+  prior_review_record: verification
+  scores: [100, 97.5]
+  must_fix: 0
+  resolved_should_fix: [SPEC-01]
+plan_review:
+  scope: same-instance-agent-interaction-plan
+  authorization: user-approved-phase-3-standard-quality-gate
+  status: passed
+  round: 1
+  max_rounds: 3
+  shared_specification_rounds_used_before_plan: 2
+  reviewers: 2
+  scores: [100, 100]
+  must_fix: 0
+  evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: survey-context
-  blocked: false
-  reason: "Eight scoped defects fixed, verified and committed on fix/substrate-defects; feature branch retained without merge/push or review-cap waiver. User authorized default-daemon shutdown; shutdown acknowledged and no amux process remained. Next product scope stays execution/workspace tooling, not autonomous orchestration."
-  last_step_completed: substrate-fixes-committed-feature-branch-kept-daemon-stopped
+  next_skill: build-epic
+  blocked: true
+  reason: "e03s01–07 verified; e03s08 complete-broker acceptance still fails because native/application consumption acknowledgement is not established. Unknown blocks safe grant and first acceptance. User subsequently authorized commit, merge and push; feature-branch publication is allowed, but failed runtime acceptance and absent independent Build PASS block merge. Implementation remains in /Users/addomam/projects/amux-e03-build. Preserve historical review caps; no global mutation or release."
+  last_step_completed: e03s05-07-live-verified-and-e03s08-final-gate-executed
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/readiness-orchestration-assessment.md
@@ -20,11 +48,40 @@ handoff:
     - specs/bugs/BUG-substrate-reliability.md
     - specs/verifications/substrate-reliability.md
     - terminal-showcase/tests/multiplexer.rs
+    - specs/planning-context.yaml
+    - specs/verifications/agent-interaction-feasibility.md
+    - specs/archive/spikes/SPIKE-native-agent-interaction.md
+    - specs/tech-architecture/agent-interaction-deepening.md
+    - specs/adr/0001-cooperative-pty-ownership.md
+    - specs/tech-architecture/tech-stack.md
+    - specs/tech-architecture/pty-control-interface-designs.md
+    - specs/adr/0002-capability-control-interface.md
+    - specs/contracts/pty-control.md
+    - specs/contracts/pty-control.schema.yaml
+    - specs/contracts/pty-control.examples.yaml
+    - specs/archive/spikes/SPIKE-pty-control-fencing.md
+    - specs/adr/0003-codex-first-agent-target.md
+    - specs/tech-architecture/pty-control-native-ux.md
+    - specs/verifications/agent-interaction-design-review.md
+    - specs/product/SCOPE_LATEST.yaml
+    - specs/epics/e03-agent-interaction/epic.yaml
+    - specs/epics/e03-agent-interaction/PLAN.md
+    - specs/IMPACT_LATEST.md
+    - specs/PLAN-AUDIT_LATEST.md
+    - specs/verifications/e03-plan-review.md
+    - specs/verifications/e03-ownership-build.md
+    - specs/epics/e03-agent-interaction/build-integration-contract.md
+    - specs/verifications/e03-integration-build.md
+    - specs/verifications/e03-complete-broker-acceptance.json
+    - specs/verifications/e03-worker-retirement.json
   open_bugs: []
   retained_observations:
     - "Initial queued-execution acceptance timeout: cause not established; instrumented acceptance suite, final workspace suite and 24 real cancellation probes passed without weakened tests. See substrate-reliability.md."
+    - "Codex 0.160.0 native/API question race: server accepted Blue once, while native transcript printed its losing Red answer. See SPIKE-native-agent-interaction.md; no amux or upstream fix claimed."
+    - "Private fencing spike: API-to-native question drain and non-cancelling force worked, but PTY-buffered native Enter applied after an intentionally incomplete API-only ledger's false safe grant. Native application acknowledgement remains unproved; no production lock was implemented."
   open_decisions:
-    - "Define initial local workspace/execution operations, capability reporting, lifecycle observations and interaction/failure acceptance criteria before implementation."
+    - "Live checks are separately authorized with cheapest compatible models, preferring local/free inference; no sol. Keep auth/config and owned processes isolated; authorization is not acceptance."
+    - "Final complete-broker validation revisited native/application settlement; unknown blocks the first safe offer. A supported native application-consumption acknowledgement remains missing; no fresh isolated spike or force substitute."
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -35,7 +92,21 @@ decisions:
   - "User clarified amux provides execution/project/workspace tooling; external orchestration owns tasks, autonomous dispatch, retries, merge policy and automatic answers."
   - "Worktree tooling may be built in initially behind a replaceable boundary; containers, VMs and Kubernetes are future targets, not current backend/plugin implementation scope."
   - "Preserve native interaction and expose equivalent operations via CLI/API; observe agent lifecycle/questions with explicit unsupported, unknown and stale states."
+  - "First acceptance workflow is agent interaction in an existing workspace, not worktree provisioning; OMP is preferred but another first harness may be selected if supported interfaces cannot meet the requirements."
+  - "First acceptance requires structured question answers and permission allow/deny; advertising these as unsupported does not satisfy acceptance."
+  - "Native TUI and CLI/API must remain available on the same live agent instance."
+  - "Each live PTY has one interaction owner shared by external controllers and native attachments. Cooperative requests leave the current token valid until owner yield; force or cancellation can invalidate it sooner. Safe transfer settles tracked calls and awaits the reserved requester's acceptance."
+  - "Neither safe nor forced takeover cancels the turn or stops the agent; cancel and stop are separate explicit commands, including when takeover is used to ask a side question."
+  - "The earlier explicit-yield-only and unconditional application-time-fence requirements are superseded by safe/forced handover and orchestrator-directed reacquisition."
+  - "External orchestration decides whether to reacquire after inactivity, on backgrounding, on explicit hand-back or never. amux enforces the request and countdown; human input aborts an attempt without an autonomous retry."
+  - "Inactivity reacquisition may use 60 seconds idle and a 5-second warning; these are suggested request parameters rather than an unconditional amux auto-lock policy."
+  - "Cancelling pending takeover grants no input authority, invalidates the pre-transfer token and leaves the PTY unowned. The prior orchestrator may request a fresh lock immediately; no old token or owner is automatically restored."
+  - "Three seconds triggers visible handoff progress, not automatic transfer. Owner cooperation has no mandatory takeover deadline; force remains available without implying turn cancellation."
+  - "User selected C, typed ControlHandle/ClaimHandle/OfferHandle capabilities, over the initial named-verb recommendation; plumbing and server-validated role/lifecycle separation take priority over immediate CLI ergonomics."
+  - "Use existing amux api for initial raw access. Async submission returns a claim; a client-side waiter may inspect and accept offers until actual control is granted. Exact command names, force flags and porcelain exit conventions are deferred."
+  - "Raw API success is not necessarily ownership acquisition. Local timeout, SIGINT or socket closure does not cancel the claim, release control or prove acquisition failed; inspect authoritative state before explicit cancel/force."
 verification:
+  scope: historical-substrate-reliability-not-e03-acceptance
   mechanical: passing
   runtime: passing
   evidence: specs/verifications/substrate-reliability.md
@@ -113,6 +184,11 @@ metrics:
   story_end: "2026-10-11T22:42:49.975551+00:00"
   timing_scope: e02-shared-implementation-and-verification
   includes_user_suspend: true
+  skill_timings:
+    plan-work:
+      calls: 1
+      total_seconds: 1625.442
+      avg_seconds: 1625.442
 foundation_assessment:
   date: "2026-10-18"
   assessed_head: af21287
@@ -145,3 +221,73 @@ substrate_reliability_revision:
   live_daemon_changed: true
   daemon_shutdown: user-authorized-graceful-shutdown-verified-no-amux-processes
   independent_review: no-new-pass-cap-preserved
+e03_build:
+  authorization: explicit-user-plan-to-build
+  worktree: /Users/addomam/projects/amux-e03-build
+  branch: feat/e03-agent-interaction
+  base: "6318845"
+  baseline: passing-workspace-tests-clippy-build-check
+  baseline_tests: 210
+  baseline_ignored: 5
+  isolated_baseline_smoke: cargo-run-help-passed
+  integration_owner: parent
+  current_story: e03s08
+  runtime_acceptance: failing
+  live_model_authorized: true
+  live_model_scope: four-exact-codex-checks-and-relevant-installed-harness-regressions
+  live_model_policy: cheapest-compatible-prefer-local-or-free-no-sol
+  later_tracks: integrated-separate-slices-verified-complete-acceptance-blocked
+  ownership_evidence: specs/verifications/e03-ownership-build.md
+  integration_contract: specs/epics/e03-agent-interaction/build-integration-contract.md
+  integration_evidence: specs/verifications/e03-integration-build.md
+  native_tests: 29
+  deterministic_codex_tests: 23
+  latest_full_workspace_tests: 301
+  latest_full_workspace_ignored: 10
+  latest_full_workspace_predates_new_regressions: false
+  live_codex_model: gpt-6-luna
+  live_native_title_model: gpt-5.6-luna-or-parent
+  local_model: gemma-4-26B-A4B-it-Q4_0
+  complete_broker_blocker: unknown-native-application-settlement-blocks-safe-offer
+  native_track: {branch: feat/e03-native-control, worktree: /Users/addomam/projects/amux-e03-native, workspace: w16, tab: "w16:t1", pane: "w16:p1", retired: true}
+  codex_track: {branch: feat/e03-codex-structured, worktree: /Users/addomam/projects/amux-e03-codex, workspace: w17, tab: "w17:t1", pane: "w17:p1", retired: true}
+  coding_model_before_live_constraint: openai-codex/gpt-6.1-sol
+  coding_reasoning: xhigh
+  owned_session_root: /private/tmp/amux-e03-herdr-1tcaq3pa
+  track_seed_manifest: specs/verifications/e03-track-seed.json
+  owned_session_root_removed: true
+  worker_retirement_evidence: specs/verifications/e03-worker-retirement.json
+  mechanical: passing
+  independent_showcase_tests: 1
+  omp_tests: 8
+  zsh_syntax: passing
+  live_codex_checks:
+    real_native_first_start: {status: passing, meaningful_turns: 1}
+    real_questions_and_permissions: {status: passing, meaningful_turns: 3}
+    real_explicit_interrupt: {status: passing, meaningful_turns: 2}
+    real_complete_broker_handoff: {status: failing, meaningful_turns: 0, owned_cleanup_verified: true}
+  complete_broker_evidence: specs/verifications/e03-complete-broker-acceptance.json
+  installed_harness_checks:
+    omp: passing-real-account
+    codex: passing-authenticated-local-responses
+    claude_code: passing-authenticated-local-messages
+    opencode: passing-authenticated-local-chat-completions
+    grok: blocked-authenticated-catalog-but-inference-402-entitlement-exhausted
+  owned_live_resources: stopped-and-private-auth-schema-raw-output-roots-removed
+epic_cycle:
+  story: e03s08
+  story_bcps: 8
+  step: 4
+  completed_steps: [1, 2, 3]
+  planning: approved-plan-reused-no-replanning
+  commit_release: user-authorized-commit-merge-push-landing-gates-still-block-merge
+e03_publication:
+  authorization: explicit-user-commit-merge-push
+  branch: feat/e03-agent-interaction
+  remote: origin
+  destination: "https://github.com/addomam/multiplexer.git"
+  publication_scope: non-force-feature-branch-backup
+  merge: blocked
+  merge_blockers: [complete-broker-acceptance-failing, no-independent-build-review-pass]
+  release: not-requested
+  evidence: specs/verifications/e03-integration-build.md

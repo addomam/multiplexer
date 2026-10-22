@@ -1,6 +1,15 @@
-core_value: Project-oriented native terminals with safe local automation.
-summary: A memory-only daemon owns PTYs and complete emulator state; detachable clients organize and operate them.
-in_scope:
+core_value: Safely share one live native agent between human interaction and local automation.
+summary: >-
+  Extend the existing native terminal environment so humans and external
+  orchestrators can exchange exclusive interaction control without replacing the
+  native agent experience, cancelling work on takeover or answering stale requests.
+  The first delivered workflow includes real structured questions and permission
+  decisions on the same live agent seen by native clients.
+
+  Retain the shipped terminal and independent capability-explorer baseline below.
+  This initiative adds ownership, visible handoff and externally requested
+  reacquisition; orchestration decisions remain outside amux.
+delivered_baseline:
   - {story: e01s01, requirement: Host Zsh, daemon PTYs, screen and scrollback, resize, detach and cleanup}
   - {story: e01s02, requirement: Confirmed prompt execution, partial-input protection, exported context capture and child launch}
   - {story: e01s03, requirement: Projects, tree reparenting, saved configuration, recipes, ordered hooks and cached Git metadata}
@@ -11,12 +20,44 @@ in_scope:
   - {story: e02s02, requirement: Polished capability matrix, cycling visual demonstrations and reproducible screenshots}
   - {story: e02s03, requirement: Graphics lifecycles and interactive input and integration inspection}
   - {story: e02s04, requirement: Headless JSON regression, visual verification export and independent amux compatibility testing}
+in_scope:
+  - {story: e03s01, requirement: Exclusive ordinary PTY acquisition and cooperative handoff shared by native clients and raw API callers}
+  - {story: e03s02, requirement: Explicit non-cancelling force, cancellation without requester ownership, and one-shot claim recovery}
+  - {story: e03s03, requirement: Native lock indicators, deliberate takeover controls, request-level progress and multiple-attachment interaction}
+  - {story: e03s04, requirement: Externally requested inactivity/background reacquisition, visible keep-control countdown and immediate hand-back}
+  - {story: e03s05, requirement: One managed local Codex instance with ordinary native interaction, structured observation and prompt submission}
+  - {story: e03s06, requirement: Genuine structured question answers and permission allow/deny with exact live request identity}
+  - {story: e03s07, requirement: Explicit exact-turn cancellation and truthful degraded/exit behavior without accidental process stop}
+  - {story: e03s08, requirement: Complete-broker native/API handoff, authoritative interaction presentation and final real-runtime acceptance}
 out_of_scope:
   - Tiling and nonlocal clients (deferred presentation)
   - ACP, A2A, MCP-UI, A2UI (deferred protocols)
   - Crash recovery, process restoration and exact interpreter cloning (explicitly excluded)
-constraints: [Rust core, stock Zsh, Linux and macOS, no Zig or libghostty, no screen scraping]
+  - Autonomous scheduling, retries, answer selection, acceptance and reacquisition policy (external orchestrator responsibility)
+  - Worktree provisioning in this workflow (deferred; an existing workspace is sufficient)
+  - Additional harness providers and generic plugin infrastructure (deferred; complete one supported local target first)
+  - Remote backends, containers and relay services (excluded from the local workflow)
+  - Upstream harness forks or replacement native UIs (excluded to preserve the ordinary native experience)
+  - Ergonomic lock/wait CLI porcelain and exact flag design (deferred; raw API access is sufficient)
+constraints:
+  - Rust core; stock Zsh and existing OMP behavior remain unchanged.
+  - Preserve Linux/macOS support boundaries; report platform results actually exercised.
+  - No screen scraping, simulated answer keystrokes, shadow agent or hidden bootstrap model turn.
+  - Runtime ownership and interaction state remain memory-only.
+  - Stable target identities, explicit unknown outcomes and no implicit action replay.
+  - Keep PTY processing and explicit overrides independent of slow observers.
+  - No automatic takeover deadline or amux-initiated relock/retry.
+  - Further native-buffer investigation is deferred to final complete-broker validation if unresolved; safe-handoff guarantees are not waived.
 success_criteria:
+  - Humans and automation operate the same live native agent, including real questions and explicit permission allow/deny.
+  - Only the current owner can interact; stale authority and stale agent/request identity fail without reaching the target.
+  - Cooperative handoff safely drains prior forwarded interactions and reserves control until requester acceptance.
+  - Force preserves the running turn and discloses unresolved effects; pending cancellation grants the requester nothing.
+  - Locked native views explain control ownership, allow deliberate takeover, and show actual blockers after three seconds.
+  - Inactivity/background reacquisition occurs only under an external request; human keep preserves control without automatic retry.
+  - Timeout, socket loss and attachment changes expose inspectable state rather than hidden cancellation or fabricated success.
+  - All 32 interaction acceptance scenarios pass under the complete broker before first feature acceptance, with actual native UI and real harness evidence.
+baseline_success_criteria:
   - All ten user vertical-slice steps exercised through the local API and native terminal.
   - Busy and partial-input execution rejected without altering foreground input.
   - Descendant foreground processes terminated on explicit close and shutdown.
@@ -30,4 +71,11 @@ prior_art:
   - '[OK] serde_json, anyhow, clap, uuid, libc: bounded local protocol and Unix lifecycle'
   - 'OMP 18.8.7: verified installed help and tagged ExtensionAPI, native Bun extension import, explicit -e loading'
   - 'Zsh 5.9: documented add-zsh-hook, add-zle-hook-widget, zle -F descriptor callbacks'
-references: [../tech-architecture/DESIGN_PLAN_LATEST.md]
+references:
+  - ../planning-context.yaml
+  - ../tech-architecture/DESIGN_PLAN_LATEST.md
+  - ../contracts/pty-control.md
+  - ../tech-architecture/pty-control-native-ux.md
+  - ../adr/0003-codex-first-agent-target.md
+  - ../verifications/agent-interaction-design-review.md
+  - ../epics/e03-agent-interaction/epic.yaml

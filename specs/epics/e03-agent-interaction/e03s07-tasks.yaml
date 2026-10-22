@@ -1,0 +1,63 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s07
+title: Exact-turn interruption and truthful lifecycle
+spec: e03s07-story.md
+status: passing
+bcps: 5
+tasks:
+  - id: 1
+    description: >-
+      Implement agent-interrupt in src/codex.rs, src/daemon.rs, src/client.rs and
+      src/cli.rs using exact target/control/turn_id and installed turn/interrupt
+      shapes. Expand e03s05-created tests/agent_interaction.rs for stale-turn rejection
+      without retargeting, queued authority recheck, empty acknowledgement distinct
+      from authoritative interrupted completion and uncertain-reply inspection.
+    verify: 'cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Exact-turn interrupt, protocol fixtures, authority races]
+  - id: 2
+    description: >-
+      Integrate src/codex.rs, src/daemon.rs and src/runtime.rs independent pending
+      cleanup, frontend/backend degradation and owned stop cleanup. Expand
+      tests/agent_interaction.rs and e03s01-created tests/pty_control.rs to prove late
+      old-turn results do not mutate a newer turn/owner, gaps expose unknown state,
+      force/cancel never interrupt, detach preserves execution and stop reaps only
+      owned resources without calling exit task success.
+    verify: 'cargo test --test agent_interaction && cargo test --test pty_control'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Lifecycle dimensions, degradation, cleanup]
+  - id: 3
+    description: >-
+      Add ignored root real_explicit_interrupt to tests/codex_native_smoke.rs from
+      e03s05 with exact-selection/env/model checks, <=1800s watchdog, <=15/30/180s
+      phase deadlines, <=6 meaningful turns and actual controlling-PTY captures.
+      Preserve mode0700 private resources, terminal restoration and only-owned
+      process/socket/root/auth/schema/rollout cleanup on every exit. Update
+      specs/adr/0003-codex-first-agent-target.md lifecycle and evidence notes.
+    verify: 'cargo test --test codex_native_smoke --no-run && cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Smoke prerequisites, native surface, cleanup]
+  - id: 4
+    description: >-
+      After separate explicit live-run approval, run real_explicit_interrupt to
+      observe acknowledgement, real exact-turn interrupted completion and any later
+      pending cleanup independently; prove process survival through takeover/detach
+      and separate explicit stop cleanup on the same native/API execution. Missing
+      prerequisites fail, fixture proof does not substitute, and no global Codex
+      resource or binary is changed. Retain redacted evidence only.
+    verify: 'test "${AMUX_RUN_REAL_CODEX:-}" = 1 && test -n "${AMUX_CODEX_MODEL:-}" && cargo test --test codex_native_smoke real_explicit_interrupt -- --ignored --exact --nocapture --test-threads=1'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Opt-in real Codex, interaction-14, lifecycle]

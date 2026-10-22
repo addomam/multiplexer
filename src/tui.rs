@@ -19,7 +19,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod control;
 mod view;
+use control::{Input, NativeControl};
 
 const HEADER: u16 = 3;
 const FRAME: Duration = Duration::from_millis(8);
@@ -68,50 +70,6 @@ fn call(socket: &Session, mut request: Value) -> Result<Value> {
     socket
         .borrow_mut()
         .request(&request, Duration::from_millis(timeout))
-}
-
-#[derive(serde::Serialize)]
-struct InputRequest<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    bytes: &'a [u8],
-}
-
-fn send_input(socket: &Session, terminal: &str, bytes: &[u8], status: &mut String) -> Result<()> {
-    if bytes.len() > crate::runtime::MAX_INPUT {
-        *status = "invalid-input: input exceeds 64 KiB".into();
-        return Ok(());
-    }
-    input_result(
-        socket.borrow_mut().request(
-            &InputRequest {
-                version: 1,
-                persistent: true,
-                op: "input",
-                terminal,
-                bytes,
-            },
-            Duration::from_secs(35),
-        ),
-        status,
-    )
-}
-fn input_result(result: Result<Value>, status: &mut String) -> Result<()> {
-    match result {
-        Ok(_) => Ok(()),
-        Err(error) => {
-            let message = error.to_string();
-            match message.split_once(':').map(|(code, _)| code) {
-                Some("exited" | "backpressure" | "invalid-input" | "not-found") => {
-                    *status = message;
-                    Ok(())
-                }
-                _ => Err(error),
-            }
-        }
-    }
 }
 
 #[derive(serde::Serialize)]
@@ -249,7 +207,7 @@ fn mode(screen: &Value, name: &str) -> bool {
     screen["modes"][name].as_bool().unwrap_or(false)
 }
 
-/// Encode actual terminal input; the picker is the only command interception layer.
+/// Encode native input after classifying wrapper actions and ownership controls.
 fn key_bytes(key: KeyEvent, application_cursor: bool) -> Vec<u8> {
     let modifiers = key.modifiers;
     let modifier = 1
@@ -703,6 +661,7 @@ fn apply_window(
 }
 
 pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
+    let mut authority = NativeControl::register(socket)?;
     let socket = &Session::new(crate::client::Connection::connect(socket)?);
     let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
     let detach_generation = snapshot["detach_generation"].as_u64().unwrap_or(0);
@@ -746,9 +705,11 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut selected = 0usize;
     let mut offset = 0usize;
     let mut status = String::new();
+    authority.report_view(&active, None, &mut status);
     let mut pending_parent: Option<(String, bool)> = None;
     let mut selection = None;
     let mut focused = true;
+    let mut reported_focus = None;
     let mut snapshot_at = Instant::now();
     let mut dirty = true;
     let mut viewport = ScreenViewport::default();
@@ -758,6 +719,12 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut queued_events = 0usize;
     let mut frame_at = Instant::now() - FRAME;
     loop {
+        dirty |= authority.poll(&active, &mut status);
+        // Consume already received human events before changing native view
+        // facts. The picker never changes the selected-terminal provenance.
+        if !event::poll(Duration::ZERO).context("draining input before native view")? {
+            authority.report_view(&active, reported_focus, &mut status);
+        }
         let interval = if !picker && Instant::now() < responsive_until {
             INPUT_FRAME
         } else {
@@ -812,9 +779,15 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                             frame, &screen, &surface, &snapshot, &active, picker, &rows, selected,
                             &query, &status, offset, focused, selection,
                         );
+                        authority.draw(
+                            frame, geometry, &active, &snapshot, picker, &query, &status, offset,
+                        );
                     })
                     .context("drawing terminal surface")?;
                 dirty = false;
+                if !event::poll(Duration::ZERO).context("draining input before native consent")? {
+                    authority.after_draw(&mut status);
+                }
             }
             frame_at = Instant::now();
             urgent_frame = false;
@@ -833,6 +806,23 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         urgent_frame = true;
         queued_events += 1;
         responsive_until = Instant::now() + INPUT_BURST;
+        if let Event::Mouse(mouse) = &event {
+            if authority.mouse_consumed(mouse.kind) {
+                continue;
+            }
+        }
+        let (consume_warning, reset_warning) =
+            authority.warning_event(&active, &event, &mut status);
+        if reset_warning {
+            prefix_pending = false;
+            pending_parent = None;
+        }
+        if consume_warning {
+            picker = active.is_empty();
+            query.clear();
+            selection = None;
+            continue;
+        }
         let previous_prefix = prefix_pending;
         if !matches!(
             event,
@@ -845,6 +835,22 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         }
         let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
         let rows = tree_rows(&snapshot, &query);
+        if let Event::Key(key) = &event {
+            if key.kind != KeyEventKind::Release
+                && previous_prefix
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('l' | 'f'))
+            {
+                picker = false;
+                prefix_pending = false;
+                pending_parent = None;
+                authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
+                continue;
+            }
+        }
+        if authority.panel_event(&event, &mut status) {
+            continue;
+        }
         match event {
             Event::Resize(cols, rows) => {
                 size = (cols, rows);
@@ -858,33 +864,20 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
             }
             Event::FocusGained => {
                 focused = true;
-                if mode(&screen, "focus_reporting") {
-                    send_input(socket, &active, b"\x1b[I", &mut status)?;
-                }
+                reported_focus = Some(true);
             }
             Event::FocusLost => {
                 focused = false;
-                if mode(&screen, "focus_reporting") {
-                    send_input(socket, &active, b"\x1b[O", &mut status)?;
-                }
+                reported_focus = Some(false);
             }
             Event::Paste(paste) => {
                 if picker {
+                    authority.activity(&active, &mut status);
                     query.push_str(&paste.replace(['\n', '\r'], " "));
                     selected = 0;
                 } else {
                     offset = 0;
-                    if paste.len() > crate::runtime::MAX_INPUT {
-                        status = "invalid-input: input exceeds 64 KiB".into();
-                        continue;
-                    }
-                    input_result(
-                        call(
-                            socket,
-                            json!({"op":"input","terminal":active,"text":paste,"paste":true}),
-                        ),
-                        &mut status,
-                    )?;
+                    authority.input(&active, Input::Paste(paste), &mut status);
                 }
             }
             Event::Key(key) if key.kind != KeyEventKind::Release => {
@@ -895,13 +888,13 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                             socket,
                             json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
                         )?;
-                        send_input(
-                            socket,
+                        authority.input(
                             &active,
-                            &key_bytes(prefix, mode(&screen, "application_cursor")),
+                            Input::Bytes(key_bytes(prefix, mode(&screen, "application_cursor"))),
                             &mut status,
-                        )?;
+                        );
                     } else {
+                        authority.activity(&active, &mut status);
                         picker = true;
                         prefix_pending = true;
                         query.clear();
@@ -911,6 +904,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     continue;
                 }
                 if picker {
+                    authority.activity(&active, &mut status);
                     let chosen = rows.get(selected).map(|r| r.id.clone());
                     let control = key.modifiers.contains(KeyModifiers::CONTROL);
                     let empty = active.is_empty()
@@ -1043,6 +1037,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 } else if key.modifiers.contains(KeyModifiers::SHIFT)
                     && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown)
                 {
+                    authority.activity(&active, &mut status);
                     let page = size.1.saturating_sub(HEADER) as usize;
                     offset = if key.code == KeyCode::PageUp {
                         (offset + page).min(screen["history_size"].as_u64().unwrap_or(0) as usize)
@@ -1053,11 +1048,27 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     offset = 0;
                     let bytes = key_bytes(key, mode(&screen, "application_cursor"));
                     if !bytes.is_empty() {
-                        send_input(socket, &active, &bytes, &mut status)?;
+                        authority.input(&active, Input::Bytes(bytes), &mut status);
                     }
                 }
             }
             Event::Mouse(mouse) => {
+                let application_mouse = mode(&screen, "mouse_click")
+                    || mode(&screen, "mouse_drag")
+                    || mode(&screen, "mouse_motion");
+                if picker || mouse.row < HEADER {
+                    authority.suppress_mouse(mouse.kind);
+                }
+                if (picker
+                    || mouse.row < HEADER
+                    || !application_mouse
+                    || mouse.modifiers.contains(KeyModifiers::SHIFT)
+                    || selection.is_some()
+                    || offset != 0)
+                    && !matches!(mouse.kind, MouseEventKind::Moved)
+                {
+                    authority.activity(&active, &mut status);
+                }
                 if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
                     && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
                 {
@@ -1182,10 +1193,11 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     if application_mouse
                         && !mouse.modifiers.contains(KeyModifiers::SHIFT)
                         && offset == 0
+                        && selection.is_none()
                     {
                         let bytes = mouse_bytes(mouse, &screen);
                         if !bytes.is_empty() {
-                            send_input(socket, &active, &bytes, &mut status)?;
+                            authority.application_mouse(&active, mouse.kind, bytes, &mut status);
                         }
                     } else {
                         let point = (mouse.column, mouse.row - HEADER);

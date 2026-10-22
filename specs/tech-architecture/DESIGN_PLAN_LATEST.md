@@ -12,6 +12,16 @@ Terminal admission atomically counts live/retained-exited records plus in-flight
 
 The pinned emulator is wrapped at its parsed ANSI Handler boundary: native controls remain forwarded, DECOM CPR subtracts the tracked top margin, and composed graphemes occupy native narrow/wide cells. Ordinary ASCII avoids segmentation/snapshot work except potential keycap starters. Only the final cluster can be replayed when width changes; rollback retains a fixed set of cells and, only for insert/scroll edge cases, an affected row. Additional grapheme working text is capped at 4096 UTF-8 bytes; crossing the boundary starts a new native scalar segment without discarding text. Upstream cell extension storage remains variable-sized, and physical font shaping is not certified by cursor/cell tests.
 
+## Planned PTY interaction ownership
+
+[ADR 0001](../adr/0001-cooperative-pty-ownership.md) selects one exclusive interaction owner per live PTY, shared by native attachments and external controllers. Cooperative requests retain the owner's token until yield; safe transfer requires settlement and requester acceptance. Force grants control without cancelling the turn; cancelling pending takeover invalidates pre-transfer authority and leaves fresh acquisition available without automatically restoring the old owner.
+
+[ADR 0002](../adr/0002-capability-control-interface.md) selects typed control/claim/offer capabilities. The [normative wire contract](../contracts/pty-control.md) defines their messages, recovery and race rules. Primitive calls return promptly; synchronous acquisition waiting belongs in a client wrapper, and `amux api` is sufficient initial CLI plumbing. A pending claim or ready offer is not input authority, and local wait timeout does not implicitly cancel it. Exact CLI porcelain is deferred, not the native ownership UI or other first-acceptance behavior.
+
+[ADR 0003](../adr/0003-codex-first-agent-target.md) chooses Codex 0.160.0 local app-server/native TUI as the first structured target without changing existing OMP/Zsh defaults. The [native control UX](pty-control-native-ux.md) preserves existing header/body geometry and specifies request, owner notice, wait/cancel/force and conditional hand-back interactions. Native-buffer edge investigation is deferred by user direction to final complete-broker validation if unresolved; safe-grant guarantees are unchanged.
+
+This is a confirmed design, not implemented behavior. The existing input behavior below remains unchanged until implementation; [planning context](../planning-context.yaml) holds the current contract and [architecture exploration](agent-interaction-deepening.md) its source constraints.
+
 ## Shell and OMP
 Stock startup files are sourced through a private ZDOTDIR wrapper. Hooks are appended, not replaced. ZLE descriptor handling performs the final readiness/BUFFER check.
 Raw input always goes to PTY foreground. Shell-source execution is a separate request, refused while busy by default; queueing is explicit.

@@ -1,6 +1,8 @@
 //! No amux Rust imports. The daemon is controlled by its public CLI; expectations
 //! come from the showcase's independent wire exercises and exported JSON, never amux's screen model.
 use serde_json::{Value, json};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt;
 use std::{
     fs,
@@ -13,9 +15,21 @@ struct Daemon {
     socket: PathBuf,
     directory: PathBuf,
     child: Child,
+    controller: Value,
+    controls: RefCell<HashMap<String, Value>>,
 }
 impl Daemon {
-    fn call(&self, value: Value) -> Option<Value> {
+    fn call(&self, mut value: Value) -> Option<Value> {
+        if matches!(value["op"].as_str(), Some("input" | "execute")) {
+            let target = value["terminal"].as_str().expect("mutation terminal");
+            let control = self
+                .controls
+                .borrow()
+                .get(target)
+                .unwrap_or_else(|| panic!("showcase fixture must acquire control for {target}"))
+                .clone();
+            value["control"] = control;
+        }
         let output = Command::new(&self.binary)
             .args(["--socket"])
             .arg(&self.socket)
@@ -33,6 +47,38 @@ impl Daemon {
             )
             .is_some()
         );
+    }
+    fn acquire(&self, id: &str) {
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let state = loop {
+            let state = self.call(json!({"op":"state","terminal":id})).unwrap();
+            if state["integration"]["shell"]["ready"] == true
+                && state["ownership"]["owner"].is_null()
+                && state["ownership"]["reservation"].is_null()
+                && state["ownership"]["unsettled"]
+                    .as_array()
+                    .is_some_and(Vec::is_empty)
+            {
+                break state;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "shell readiness/automatic launch retirement did not complete: {state}"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        };
+        let grant = self
+            .call(json!({"op":"ownership-claim","controller":self.controller,
+            "terminal":id,"observed":state["ownership"]["observed"],
+            "mode":"cooperative","when":{"kind":"now"}}))
+            .unwrap();
+        assert_eq!(
+            grant["kind"], "control",
+            "showcase requires unowned settled target: {grant}"
+        );
+        self.controls
+            .borrow_mut()
+            .insert(id.to_owned(), grant["control"].clone());
     }
 }
 impl Drop for Daemon {
@@ -77,11 +123,13 @@ fn independent_showcase_runs_inside_amux_and_checks_real_cursor_replies() {
         .stderr(log)
         .spawn()
         .unwrap();
-    let daemon = Daemon {
+    let mut daemon = Daemon {
         binary,
         socket,
         directory,
         child,
+        controller: Value::Null,
+        controls: RefCell::new(HashMap::new()),
     };
     let deadline = Instant::now() + Duration::from_secs(15);
     let snapshot = loop {
@@ -96,7 +144,12 @@ fn independent_showcase_runs_inside_amux_and_checks_real_cursor_replies() {
         std::thread::sleep(Duration::from_millis(20));
     };
     let id = snapshot["terminals"][0]["id"].as_str().unwrap();
+    daemon.controller = daemon
+        .call(json!({"op":"controller-create","role":"external","label":"independent showcase"}))
+        .unwrap()["controller"]
+        .clone();
     daemon.wait(id);
+    daemon.acquire(id);
     daemon
         .call(json!({"op":"resize","terminal":id,"cols":100,"rows":30}))
         .unwrap();
