@@ -21,9 +21,9 @@ struct OuterOutput {
 }
 
 fn visible_lines(term: &Term<Listener>) -> Vec<String> {
-    (0..ROWS)
+    (0..term.screen_lines())
         .map(|row| {
-            (0..COLS)
+            (0..term.columns())
                 .map(|col| term.grid()[Point::new(Line(row as i32), Column(col))].c)
                 .collect::<String>()
                 .trim_end()
@@ -86,16 +86,19 @@ struct Listener;
 impl EventListener for Listener {
     fn send_event(&self, _: Event) {}
 }
-struct Geometry;
+struct Geometry {
+    cols: usize,
+    rows: usize,
+}
 impl Dimensions for Geometry {
     fn total_lines(&self) -> usize {
-        ROWS
+        self.rows
     }
     fn screen_lines(&self) -> usize {
-        ROWS
+        self.rows
     }
     fn columns(&self) -> usize {
-        COLS
+        self.cols
     }
 }
 
@@ -190,7 +193,14 @@ impl Attachment {
         fs::create_dir_all(&captures).unwrap();
         fs::set_permissions(&captures, fs::Permissions::from_mode(0o700)).unwrap();
         let output = Arc::new(parking_lot::Mutex::new(OuterOutput {
-            term: Term::new(Config::default(), &Geometry, Listener),
+            term: Term::new(
+                Config::default(),
+                &Geometry {
+                    cols: COLS,
+                    rows: ROWS,
+                },
+                Listener,
+            ),
             raw: Vec::new(),
             error: None,
         }));
@@ -296,6 +306,60 @@ impl Attachment {
             }
         }
     }
+    fn send_queued(&mut self, bytes: &[u8]) {
+        // Keep this owned, unreaped child stopped until every encoded key is queued.
+        struct Resume(libc::pid_t);
+        impl Drop for Resume {
+            fn drop(&mut self) {
+                unsafe {
+                    libc::kill(self.0, libc::SIGCONT);
+                }
+            }
+        }
+        let pid = self.child.id() as libc::pid_t;
+        assert_eq!(unsafe { libc::kill(pid, libc::SIGSTOP) }, 0);
+        let resume = Resume(pid);
+        let deadline = Instant::now() + DEADLINE;
+        loop {
+            let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+            assert_eq!(
+                unsafe {
+                    libc::waitid(
+                        libc::P_PID,
+                        pid as libc::id_t,
+                        &mut info,
+                        libc::WSTOPPED | libc::WNOHANG | libc::WNOWAIT,
+                    )
+                },
+                0
+            );
+            if info.si_code == libc::CLD_STOPPED {
+                break;
+            }
+            assert!(Instant::now() < deadline, "attachment did not stop");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        self.send(bytes);
+        drop(resume);
+    }
+    fn resize(&mut self, h: &Host, terminal: &str, cols: usize, rows: usize) {
+        self.output.lock().term.resize(Geometry { cols, rows });
+        let size = libc::winsize {
+            ws_row: rows as u16,
+            ws_col: cols as u16,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        assert_eq!(
+            unsafe { libc::ioctl(self.master.as_raw_fd(), libc::TIOCSWINSZ, &size) },
+            0
+        );
+        h.until("actual attachment resize reached native PTY", || {
+            let screen =
+                h.call(json!({"op":"screen","terminal":terminal,"offset":0,"limit":rows - 3}));
+            (screen["cols"] == cols && screen["rows"] == rows - 3).then_some(())
+        });
+    }
     fn action(&mut self, suffix: u8) {
         self.send(PREFIX);
         self.send(&[suffix]);
@@ -306,6 +370,7 @@ impl Attachment {
         loop {
             let text = self.text();
             if ![
+                "WINDOWS",
                 "Locked terminal",
                 "Control requested",
                 "Cancel takeover?",
@@ -319,27 +384,33 @@ impl Attachment {
             }
             assert!(
                 Instant::now() < deadline,
-                "ownership panel did not hide:\n{text}"
+                "native panel did not hide:\n{text}"
             );
             std::thread::sleep(Duration::from_millis(15));
         }
     }
     fn capture(&mut self, name: &str) -> Vec<String> {
         self.drain();
-        let (lines, chrome, raw) = {
+        let (lines, chrome, raw, rows, cols) = {
             let output = self.output.lock();
             let lines = visible_lines(&output.term);
-            let chrome: Vec<_> = (0..3).map(|row| (0..COLS).map(|col| {
+            let chrome: Vec<_> = (0..3).map(|row| (0..output.term.columns()).map(|col| {
                 let cell = &output.term.grid()[Point::new(Line(row), Column(col))];
                 json!({"text":cell.c.to_string(), "fg":format!("{:?}",cell.fg), "bg":format!("{:?}",cell.bg)})
             }).collect::<Vec<_>>()).collect();
-            (lines, chrome, output.raw.clone())
+            (
+                lines,
+                chrome,
+                output.raw.clone(),
+                output.term.screen_lines(),
+                output.term.columns(),
+            )
         };
         // Never hold the reader's render lock across capture-file I/O.
         fs::write(self.captures.join(format!("{name}.txt")), lines.join("\n")).unwrap();
         fs::write(self.captures.join(format!("{name}.ansi")), raw).unwrap();
         fs::write(self.captures.join(format!("{name}.json")), serde_json::to_vec_pretty(&json!({
-            "rows":ROWS,"cols":COLS,"header_rows":3,"attachment_pid":self.child.id(),"chrome":chrome
+            "rows":rows,"cols":cols,"header_rows":3,"attachment_pid":self.child.id(),"chrome":chrome
         })).unwrap()).unwrap();
         eprintln!(
             "native surface capture: {}",
@@ -531,7 +602,7 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
         "yield must revoke, not fabricate settlement"
     );
     observer.action(6);
-    observer.wait("Force");
+    observer.wait("Force control?");
     observer.capture("force-risk");
     observer.send(b"\r");
     observer.wait("Controlled here");
@@ -610,8 +681,47 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
     let replacement = h.controller("replacement-owner");
     h.acquire(&terminal, &replacement["controller"]);
     observer.wait("Locked");
+    let pid = h.state(&terminal)["pid"].clone();
+    observer.send_queued(&[PREFIX[0], 6, b'\r']);
+    h.until(
+        "queued confirmation rejected before visible warning",
+        || {
+            (observer.text().contains("Force confirmation blocked")
+                || h.ownership(&terminal)["owner"]["controller_id"] != replacement["controller_id"])
+                .then_some(())
+        },
+    );
+    assert_owner(&h, &terminal, &replacement);
+    let queued = observer.capture("force-queued-before-draw");
+    assert!(queued.join("\n").contains("Prior calls may still apply"));
+    for rows in [7, 10] {
+        observer.hide_panel();
+        observer.action(6);
+        observer.wait("Force control?");
+        observer.resize(&h, &terminal, 80, rows);
+        observer.send_queued(b"\r");
+        h.until(
+            "confirmation rejected after warning becomes invisible",
+            || {
+                (observer.text().contains("Force confirmation blocked")
+                    || h.ownership(&terminal)["owner"]["controller_id"]
+                        != replacement["controller_id"])
+                    .then_some(())
+            },
+        );
+        assert_owner(&h, &terminal, &replacement);
+        let clipped = observer.capture(&format!("force-not-visible-80x{rows}"));
+        assert_eq!(clipped.len(), rows);
+        assert_eq!(h.state(&terminal)["pid"], pid);
+        assert!(
+            bytes(&h).is_empty(),
+            "intercepted confirmation reached the application"
+        );
+        observer.resize(&h, &terminal, COLS, ROWS);
+    }
+    observer.hide_panel();
     observer.action(6);
-    observer.wait("Force");
+    observer.wait("Force control?");
     let winner = h.controller("newest-owner");
     h.call(h.claim_request(&terminal, &winner["controller"], "force"));
     observer.send(b"\r");
@@ -633,7 +743,7 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
         "stale confirmation was reused"
     );
     observer.action(6);
-    observer.wait("Force");
+    observer.wait("Force control?");
     observer.send(b"\r");
     observer.wait("Controlled here");
     assert_ne!(
@@ -1161,7 +1271,7 @@ fn competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_backgr
     assert_eq!(condition(&h, &terminal)["eligibility"], "ineligible");
     assert_eq!(condition(&h, &terminal)["ready_for_consent"], false);
     assert_owner(&h, &terminal, &identity);
-    owner.send(b"\x1b");
+    owner.hide_panel();
     owner.wait("Controlled here");
     owner.send(b"\x1b[O");
     owner.wait("Background consent (owner)");
