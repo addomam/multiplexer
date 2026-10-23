@@ -100,7 +100,15 @@ e03_fix_cycle:
   independent_post_repair_approval: false
   human_delivery_approval: true
   publication_evidence: specs/verifications/e03-publication.json
-  code_commit: 0bb8f2236f5a9c9df214c3ac43afe5ea820151b1
+  code_commit: 8d8365111decb2835e2be46c0c41c901a0b46c04
+  metadata_receipt_commit: 4be2ba3ffec326757ff82225f4d0e0c6854fb302
+  owned_delivery_resources_retired: true
+e03_signing:
+  status: signed-verified-published
+  signed_commits: 2
+  signature_verification: passing-both-commits
+  published_history_changed: true
+  evidence: specs/verifications/e03-publication.json
 gate_trace:
   verdict: WAIVED
   generated_at: "2026-10-22"

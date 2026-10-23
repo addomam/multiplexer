@@ -1,5 +1,5 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: main, signing: unsigned-user-authorized-command-scoped, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+vcs: {kind: git, branch: chore/e03-signing-receipts, signing: configured-1password-ssh, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
 active_flow: fix_bug
 active_epic: e03
 project_cycle:
@@ -34,8 +34,8 @@ plan_review:
 handoff:
   next_skill: orchestrate-project
   blocked: true
-  reason: "Human-approved limited delivery landed/pushed as code commit0bb8f2236f5a9c9df214c3ac43afe5ea820151b1; remote SHA and exact verified feature tree confirmed after clean-clone308 preflight. Implementation worktree retired; feature history backed up. No further implementation is pending in this delivery. e03s08/allfour remain failing/deferred to future supported native/application-fence and authoritative-answer proof; do not reopen settled scope, reset reviews, run new live models or release."
-  last_step_completed: human-approved-limited-delivery-landed-and-pushed
+  reason: "Signed limited delivery is published and remotely verified: implementation8d8365111decb2835e2be46c0c41c901a0b46c04; signed receipt4be2ba3ffec326757ff82225f4d0e0c6854fb302. Both signatures verified; original trees/messages/author headers preserved. User performed the explicitly approved history replacement after the assistant tool guard blocked it; no bypass. Original fix/substrate-defects checkout and user changes preserved; unsigned identities archived. User now authorizes publishing the remaining owned receipts and starting ACP-first integration, with best-effort terminal fallback and the non-ACP integration API deferred. e03s08/allfour and failed5/5 review remain unchanged/deferred. No new live-model runs/global configuration/release."
+  last_step_completed: signed-limited-delivery-published-and-remote-tip-verified
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/readiness-orchestration-assessment.md
@@ -331,16 +331,33 @@ e03_publication:
   publication_scope: human-approved-current-limited-delivery-not-complete-broker
   merge: landed
   push: verified
-  code_commit: 0bb8f2236f5a9c9df214c3ac43afe5ea820151b1
+  code_commit: 8d8365111decb2835e2be46c0c41c901a0b46c04
   source_feature_commit: f1f00851453dd90e3d924f150b3882f1c6406f41
   verified_code_tree: 6310c4f7b65e35dc38c0a3c59d5cb9ae72b26355
   ci_status: not-configured-no-checks-not-a-CI-pass
+  receipt_commit: 4be2ba3ffec326757ff82225f4d0e0c6854fb302
+  receipt_tree: 2542d40cf73d6228e1acce54b322827396c3a335
+  publisher_clone_removed: true
+  receipt_source_archive_branch: archive/e03-publication-receipt-32a0875
   merge_blockers: []
   release: not-requested
   evidence: specs/verifications/e03-publication.json
   accepted_limitations: specs/security/EXCEPTIONS.md
   complete_broker_PASS_claimed: false
   existing_feature_backup_commit: f50c3fc058fdd60e603ad3a732dba0862c748626
+e03_signing:
+  authorization: explicit-user-sign-commits
+  status: signed-verified-published
+  signing_branch: sign/e03-main-20261023
+  unsigned_archive_branch: archive/e03-unsigned-main-3dc9070
+  targets: [0bb8f2236f5a9c9df214c3ac43afe5ea820151b1, 3dc90708dbfd729d4bc8d670338f0fd1d930d698]
+  signed_commits: [8d8365111decb2835e2be46c0c41c901a0b46c04, 4be2ba3ffec326757ff82225f4d0e0c6854fb302]
+  signature_verification: passing-both-commits
+  blocker: null
+  published_history_rewrite_authorized: true
+  published_history_changed: true
+  global_git_or_auth_config_changed: false
+  evidence: specs/verifications/e03-publication.json
 e03_scoped_review:
   scope: e03-build-current-delivery
   round: 5

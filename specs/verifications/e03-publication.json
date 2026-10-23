@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "record_phase": "code-landed-and-remotely-verified-before-metadata-receipt-publication",
+  "record_phase": "signed-delivery-and-completed-resource-retirement-receipt",
   "repository": "https://github.com/addomam/multiplexer.git",
   "authorization": {
     "user_reply": "looks great",
@@ -97,7 +97,7 @@
     "implementation_worktree": "/Users/addomam/projects/amux-e03-build",
     "feature_history_preserved_on_remote": true,
     "herdr_worker_retirement": "specs/verifications/e03-worker-retirement.json",
-    "temporary_publisher_clone": "Retire after metadata receipt is pushed and remote identity verified; final original-worktree handoff records actual removal.",
+    "temporary_publisher_clone": "Removed after exact remote/tree proof, clean-work verification and preservation of every source ref on origin or the original repository archive branch.",
     "new_live_model_runs": 0,
     "global_daemon_config_auth_changes": false,
     "release_or_tag_created": false
@@ -110,5 +110,132 @@
       "script": "2cc44ee9e0d079047c409693d10539712bdfbdf076bfb4fb48b2be44056392b0",
       "terminal-showcase-report.json": "34d6efe4b7757855ee7a52db7aa4ad7f44b61d4727a2ec6ceba54d3a14b66043"
     }
+  },
+  "published_snapshot": {
+    "metadata_commit": "3dc90708dbfd729d4bc8d670338f0fd1d930d698",
+    "path": "specs/verifications/e03-publication.json",
+    "phase": "code-landed-and-remotely-verified-before-metadata-receipt-publication",
+    "note": "Historical unsigned receipt snapshot; the signed replacement preserves its tree. This subsequent bookkeeping receipt records actual signature publication and completed cleanup."
+  },
+  "final_delivery": {
+    "remote_main_commit": "4be2ba3ffec326757ff82225f4d0e0c6854fb302",
+    "remote_main_tree": "2542d40cf73d6228e1acce54b322827396c3a335",
+    "implementation_commit": "8d8365111decb2835e2be46c0c41c901a0b46c04",
+    "receipt_source_commit": "32a0875127360516001136bfdecfa09b98022984",
+    "receipt_source_archive_branch": "archive/e03-publication-receipt-32a0875",
+    "source_feature_backup_commit": "f1f00851453dd90e3d924f150b3882f1c6406f41",
+    "ci": {
+      "workflow_runs": 0,
+      "check_runs": 0,
+      "commit_statuses": 0,
+      "conclusion": "not-configured-no-checks-not-a-CI-pass"
+    },
+    "github_advisory_last_observed": {
+      "number": 1,
+      "state": "open",
+      "fixed_at": null,
+      "package": "time",
+      "patched_version": "0.3.47"
+    },
+    "github_dependency_graph": {
+      "default_branch": "main",
+      "time": "0.3.47",
+      "time-core": "0.1.8",
+      "remaining_alert_status_cause": "not-established; no dismissal or closure claimed"
+    },
+    "publisher_clone_removed": true,
+    "implementation_worktree_removed": true,
+    "original_checkout_preserved": true,
+    "origin_main_tracking_ref_updated": true
+  },
+  "commit_signing": {
+    "user_request": "im back, sign the commits",
+    "status": "SIGNED-verified-published",
+    "targets": [
+      "0bb8f2236f5a9c9df214c3ac43afe5ea820151b1",
+      "3dc90708dbfd729d4bc8d670338f0fd1d930d698"
+    ],
+    "signed_commits": [
+      {
+        "original": "0bb8f2236f5a9c9df214c3ac43afe5ea820151b1",
+        "signed": "8d8365111decb2835e2be46c0c41c901a0b46c04",
+        "tree": "6310c4f7b65e35dc38c0a3c59d5cb9ae72b26355",
+        "signature_verified": true,
+        "exact_message_and_author_header_preserved": true
+      },
+      {
+        "original": "3dc90708dbfd729d4bc8d670338f0fd1d930d698",
+        "signed": "4be2ba3ffec326757ff82225f4d0e0c6854fb302",
+        "tree": "2542d40cf73d6228e1acce54b322827396c3a335",
+        "signature_verified": true,
+        "exact_message_and_author_header_preserved": true
+      }
+    ],
+    "signature_verification": "PASS-both-git-verify-commit-with-configured-allowed-signers",
+    "verification_output": "Good \"git\" signature for gitlog@addomam.net with ED25519 key SHA256:M+zzzSiRDN2dZqdQ+4BJS0gwNaxTNzpi5ZptTkw9a7U",
+    "preservation": {
+      "unsigned_archive_branch": "archive/e03-unsigned-main-3dc9070",
+      "signing_branch": "sign/e03-main-20261023",
+      "signing_branch_tip": "4be2ba3ffec326757ff82225f4d0e0c6854fb302",
+      "original_checkout_code_preserved": true
+    },
+    "attempts": [
+      {
+        "frontend": "configured op-ssh-sign",
+        "error": "failed to fill whole buffer"
+      },
+      {
+        "frontend": "configured op-ssh-sign with explicit 1Password agent and application foregrounded",
+        "error": "failed to fill whole buffer"
+      },
+      {
+        "frontend": "command-scoped OpenSSH ssh-keygen with the same 1Password agent and signing key",
+        "error": "communication with agent failed"
+      },
+      {
+        "frontend": "configured op-ssh-sign with explicit 1Password agent after user requested retry",
+        "result": "both-commits-signed-and-cryptographically-verified"
+      }
+    ],
+    "diagnosis": {
+      "configured_public_key_fingerprint": "SHA256:M+zzzSiRDN2dZqdQ+4BJS0gwNaxTNzpi5ZptTkw9a7U",
+      "matching_key_available_in_1password_agent": true,
+      "authentication_log_messages": [
+        "ssh authorization prompt timed out",
+        "AppCancel invoked by a timed-out prompt due to serialized queue delay",
+        "SystemAuthError(FailedSystemAuthenticationChallenge)"
+      ],
+      "attempt_timeout_timestamps_utc": [
+        "2026-10-23T12:48:30.282Z",
+        "2026-10-23T12:50:47.148Z",
+        "2026-10-23T12:52:37.431Z"
+      ],
+      "conclusion": "Earlier signing attempts timed out during system authentication. After user requested retry, the configured 1Password signer successfully signed both commits."
+    },
+    "next_action": "No signing or publication work remains. Complete-broker acceptance remains failing and deferred under the existing limited-delivery exception.",
+    "publication_decision": {
+      "selected": "Replace published main",
+      "explicit_history_rewrite_approval": true
+    },
+    "publication_attempt": {
+      "command": "git push --force-with-lease=refs/heads/main:3dc90708dbfd729d4bc8d670338f0fd1d930d698 origin refs/heads/sign/e03-main-20261023:refs/heads/main",
+      "outcome": "BLOCKED-before-execution-by-tool-guard",
+      "error": "Force-push guard matched --force-with-lease.",
+      "remote_push_executed": false,
+      "remote_main_observed_after_block": "3dc90708dbfd729d4bc8d670338f0fd1d930d698",
+      "expected_signed_remote_tip": "4be2ba3ffec326757ff82225f4d0e0c6854fb302"
+    },
+    "publication_completed": {
+      "actor": "user",
+      "user_report": "ok done",
+      "remote_main_commit": "4be2ba3ffec326757ff82225f4d0e0c6854fb302",
+      "verification_command": "git ls-remote origin refs/heads/main",
+      "remote_tip_matches_verified_signed_chain": true,
+      "assistant_guard_bypassed": false
+    },
+    "published_history_rewrite_authorized": true,
+    "published_history_changed": true,
+    "global_git_or_auth_config_changed": false,
+    "assistant_pushes_executed": 0
   }
 }
