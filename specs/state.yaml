@@ -1,5 +1,5 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/e03-agent-interaction, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+vcs: {kind: git, branch: main, signing: unsigned-user-authorized-command-scoped, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
 active_flow: fix_bug
 active_epic: e03
 project_cycle:
@@ -32,10 +32,10 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: release-branch
-  blocked: false
-  reason: "User replied looks great to the verified repair/held-delivery report and authorized overnight work plus unsigned commits. Proceed with previously requested commit/merge/push of this limited delivery, using an isolated primary clone and command-scoped signing override. Preserve failed5/5 review and failing e03s08/allfour acceptance tasks; no independent PASS, round6, new live models/global changes or release."
-  last_step_completed: post-cap-repair-human-delivery-approved
+  next_skill: orchestrate-project
+  blocked: true
+  reason: "Human-approved limited delivery landed/pushed as code commit0bb8f2236f5a9c9df214c3ac43afe5ea820151b1; remote SHA and exact verified feature tree confirmed after clean-clone308 preflight. Implementation worktree retired; feature history backed up. No further implementation is pending in this delivery. e03s08/allfour remain failing/deferred to future supported native/application-fence and authoritative-answer proof; do not reopen settled scope, reset reviews, run new live models or release."
+  last_step_completed: human-approved-limited-delivery-landed-and-pushed
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/readiness-orchestration-assessment.md
@@ -96,6 +96,7 @@ handoff:
     - specs/verifications/e03-build-review-round5.json
     - specs/bugs/BUG-e03-smoke-cleanup-identity.md
     - specs/verifications/e03-smoke-cleanup-runtime.json
+    - specs/verifications/e03-publication.json
   open_bugs: [e03-native-settlement]
   retained_observations:
     - "Initial queued-execution acceptance timeout: cause not established; instrumented acceptance suite, final workspace suite and 24 real cancellation probes passed without weakened tests. See substrate-reliability.md."
@@ -232,7 +233,7 @@ bug_cycle:
   baseline: f50c3fc058fdd60e603ad3a732dba0862c748626
   runtime_acceptance: failing
   historical_review_cap: preserved
-  status: verified-post-cap-repair-human-delivery-approved
+  status: limited-delivery-landed-native-acceptance-deferred
   decisions: {codex: upstream-unmodified-limitations-accepted, minimum_rust: "1.88"}
   review_gate: user-approved-post-cap-delivery-no-independent-pass
   accepted_limitations: specs/security/EXCEPTIONS.md
@@ -258,7 +259,10 @@ substrate_reliability_revision:
   independent_review: no-new-pass-cap-preserved
 e03_build:
   authorization: explicit-user-plan-to-build
-  worktree: /Users/addomam/projects/amux-e03-build
+  worktree: null
+  retired_worktree: /Users/addomam/projects/amux-e03-build
+  worktree_retired: true
+  feature_backup_commit: f1f00851453dd90e3d924f150b3882f1c6406f41
   branch: feat/e03-agent-interaction
   base: "6318845"
   baseline: passing-workspace-tests-clippy-build-check
@@ -317,17 +321,23 @@ epic_cycle:
   step: 4
   completed_steps: [1, 2, 3]
   planning: approved-plan-reused-no-replanning
-  commit_release: user-approved-post-cap-limited-delivery-commit-merge-push
+  commit_release: human-approved-limited-delivery-landed-not-full-epic-acceptance
 e03_publication:
   authorization: explicit-user-commit-merge-push
-  branch: feat/e03-agent-interaction
+  branch: main
+  source_branch: feat/e03-agent-interaction
   remote: origin
   destination: "https://github.com/addomam/multiplexer.git"
   publication_scope: human-approved-current-limited-delivery-not-complete-broker
-  merge: authorized-pending-verified-landing
+  merge: landed
+  push: verified
+  code_commit: 0bb8f2236f5a9c9df214c3ac43afe5ea820151b1
+  source_feature_commit: f1f00851453dd90e3d924f150b3882f1c6406f41
+  verified_code_tree: 6310c4f7b65e35dc38c0a3c59d5cb9ae72b26355
+  ci_status: not-configured-no-checks-not-a-CI-pass
   merge_blockers: []
   release: not-requested
-  evidence: specs/verifications/e03-integration-build.md
+  evidence: specs/verifications/e03-publication.json
   accepted_limitations: specs/security/EXCEPTIONS.md
   complete_broker_PASS_claimed: false
   existing_feature_backup_commit: f50c3fc058fdd60e603ad3a732dba0862c748626

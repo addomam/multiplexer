@@ -84,7 +84,7 @@ stories:
     acceptance_disposition: user-accepted-current-delivery-exception
     exception: specs/security/EXCEPTIONS.md
 e03_fix_cycle:
-  status: verified-post-cap-repair-human-delivery-approved
+  status: limited-delivery-landed-native-acceptance-deferred
   native_bug: specs/bugs/BUG-e03-native-settlement.md
   dependency_bug: specs/bugs/BUG-time-rfc2822-dos.md
   runtime_acceptance: failing
@@ -99,6 +99,8 @@ e03_fix_cycle:
   repaired_finding: specs/bugs/BUG-e03-smoke-cleanup-identity.md
   independent_post_repair_approval: false
   human_delivery_approval: true
+  publication_evidence: specs/verifications/e03-publication.json
+  code_commit: 0bb8f2236f5a9c9df214c3ac43afe5ea820151b1
 gate_trace:
   verdict: WAIVED
   generated_at: "2026-10-22"

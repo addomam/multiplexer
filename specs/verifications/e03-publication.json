@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "record_phase": "code-landed-and-remotely-verified-before-metadata-receipt-publication",
+  "repository": "https://github.com/addomam/multiplexer.git",
+  "authorization": {
+    "user_reply": "looks great",
+    "instruction": "overnight work; unsigned commits if signing unavailable",
+    "scope": "previously requested commit/merge/push of repaired limited delivery",
+    "independent_source_inspection_claimed": false
+  },
+  "source_feature": {
+    "branch": "feat/e03-agent-interaction",
+    "commit": "f1f00851453dd90e3d924f150b3882f1c6406f41",
+    "tree": "6310c4f7b65e35dc38c0a3c59d5cb9ae72b26355",
+    "remote_backup_verified": true
+  },
+  "implementation_landing": {
+    "baseline_main": "93e5a8b2cfa8db8282b1fbad519b194f2ba2e688",
+    "commit": "0bb8f2236f5a9c9df214c3ac43afe5ea820151b1",
+    "tree": "6310c4f7b65e35dc38c0a3c59d5cb9ae72b26355",
+    "remote_main_sha_verified": true,
+    "exact_verified_feature_tree": true,
+    "procedure": "installed protected-main land-branch.sh; normal push, no skip-verify/force/release",
+    "author": "Addison Omead Amiri <gitlog@addomam.net>",
+    "signature": "N (unsigned)",
+    "global_signing_config_changed": false
+  },
+  "clean_clone_verification": {
+    "artifact": "artifact://654",
+    "seconds": 135.8,
+    "rust_tests_passed": 308,
+    "suites": 29,
+    "ignored": 10,
+    "workspace_clippy_warnings_denied": "PASS",
+    "workspace_all_targets_check": "PASS",
+    "workspace_build": "PASS",
+    "format": "PASS",
+    "independent_showcase_passed": 1,
+    "showcase_seconds": 3.67,
+    "omp_tests_passed": 8,
+    "omp_assertions": 49,
+    "zsh_syntax": "PASS",
+    "actual_cli_help_before_and_after_landing": "PASS",
+    "cache_note": "Reused owned feature target directory; actual clone source was compiled/verified. Target removed with retired implementation worktree."
+  },
+  "prior_actual_changed_path_smoke": {
+    "evidence": "specs/verifications/e03-smoke-cleanup-runtime.json",
+    "artifact": "artifact://630",
+    "healthy_and_discovery_failure_cases": "PASS",
+    "no_fixture_fallback": true,
+    "models_called": 0
+  },
+  "ci": {
+    "workflow_runs": 0,
+    "check_runs": 0,
+    "commit_statuses": 0,
+    "conclusion": "not-configured-no-checks-not-a-CI-pass"
+  },
+  "dependency_advisory": {
+    "number": 1,
+    "state": "open",
+    "fixed_at": null,
+    "package": "time",
+    "patched_version": "0.3.47",
+    "manifest": "Cargo.lock",
+    "locked_graph_time": "0.3.47",
+    "locked_graph_command": "cargo tree --locked -i time",
+    "github_state_note": "GitHub still reported open at this observation despite the patched published lockfile; no dismissal or closure claimed."
+  },
+  "review": {
+    "round": 5,
+    "max_rounds": 5,
+    "automated_verdict": "FAIL-preserved",
+    "general_scores": [
+      97.5,
+      100
+    ],
+    "security_unwaived_high": 0,
+    "additional_automated_rounds": 0,
+    "independent_post_repair_pass": false,
+    "delivery_disposition": "explicit-user-approved-after-verified-repair",
+    "original_report": "specs/verifications/e03-build-review-round5.json",
+    "original_report_sha256": "c5f0cd72f950d61239bbb5f501a4213d53f403ada2013bc33e1483569e3c71df"
+  },
+  "complete_broker": {
+    "story": "e03s08",
+    "status": "FAILING",
+    "tasks_failing": 4,
+    "original_report": "specs/verifications/e03-complete-broker-acceptance.json",
+    "original_report_sha256": "cb71f0d2ba4b9d7f3f18b90548e9909f652c02326e3aaff4474c6fa0e894f70e",
+    "native_fence_and_optimistic_history_limits": "accepted/deferred-to-future-ACP-not-fixed",
+    "unknown_blocks_safe_grant": true,
+    "force_only_acceptance_claimed": false
+  },
+  "resource_cleanup_at_record": {
+    "implementation_worktree_removed": true,
+    "implementation_worktree": "/Users/addomam/projects/amux-e03-build",
+    "feature_history_preserved_on_remote": true,
+    "herdr_worker_retirement": "specs/verifications/e03-worker-retirement.json",
+    "temporary_publisher_clone": "Retire after metadata receipt is pushed and remote identity verified; final original-worktree handoff records actual removal.",
+    "new_live_model_runs": 0,
+    "global_daemon_config_auth_changes": false,
+    "release_or_tag_created": false
+  },
+  "original_checkout": {
+    "branch": "fix/substrate-defects",
+    "head": "6318845636bf33ac6800b0dadf2e6692e04bd399",
+    "working_code_and_user_changes_preserved": true,
+    "scratch_sha256": {
+      "script": "2cc44ee9e0d079047c409693d10539712bdfbdf076bfb4fb48b2be44056392b0",
+      "terminal-showcase-report.json": "34d6efe4b7757855ee7a52db7aa4ad7f44b61d4727a2ec6ceba54d3a14b66043"
+    }
+  }
+}
