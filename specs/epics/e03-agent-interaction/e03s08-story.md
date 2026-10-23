@@ -3,6 +3,8 @@ story_id: e03s08
 title: Complete-broker native and API handoff acceptance
 maturity: 3
 status: failing
+acceptance_disposition: user-accepted-deferred-to-future-ACP-not-passed
+limitation_record: specs/security/EXCEPTIONS.md
 type: feat
 context: specs/planning-context.yaml
 risk: P0
@@ -146,3 +148,5 @@ The supported native application seam and truthful accepted-answer presentation 
 ## 20 Evidence and handoff
 
 All tasks are failing; no runtime, native probe, model call, build, test, lint or validation ran during Plan. At Build/Verify retain redacted all32 scenario-to-assertion/native-capture mapping, exact model/installed version, actual turn/deadline accounting, owned cleanup results and explicitly unresolved seams. Distinguish deterministic fixtures, real-daemon regressions, real Codex smoke and independent showcase evidence. First acceptance is blocked until every criterion passes; parent owns final state/index/quality integration and user phase confirmation.
+
+Subsequent explicit user amendment (2026-10-22): keep upstream Codex unmodified, accept the documented temporary native input-fence and optimistic-answer limitations, and defer this full acceptance gate to future ACP proof. This story and its tasks remain failing, not completed. The current delivery exception does not change safe-grant semantics or claim an ACP connector already satisfies the contracts. See `specs/security/EXCEPTIONS.md` and the PLAN amendment.

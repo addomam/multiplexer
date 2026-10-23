@@ -1,0 +1,198 @@
+{
+  "scope": "e03-native-force-presentation",
+  "status": "PASS-runtime-and-approved-checks-final-round5-required",
+  "complete_broker_acceptance": "failing-user-accepted-limitations-not-fixed",
+  "red": {
+    "commit": "23a7016",
+    "artifact": "artifact://558",
+    "exit": 101,
+    "actual_native_test_seconds": 0.98,
+    "observed": "Queued shortcut/Enter changed ownership before warning draw."
+  },
+  "focused_green": {
+    "artifact": "artifact://561",
+    "tests": 1,
+    "seconds": 1.81,
+    "boundaries": [
+      "queued-pre-draw",
+      "previously-visible-warning-resized-undrawable80x7",
+      "clipped80x10",
+      "stale-observation",
+      "fresh-visible-confirmation",
+      "same-process-no-intercepted-bytes"
+    ]
+  },
+  "ownership_suite": {
+    "artifact": "artifact://567",
+    "tests": 34,
+    "seconds": 8.77,
+    "normal_parallel_execution": true
+  },
+  "workspace": {
+    "artifact": "artifact://570",
+    "rust_tests": 307,
+    "ignored": 10,
+    "suites": 29,
+    "clippy": "PASS-workspace-all-targets-Dwarnings-locked",
+    "check": "PASS-workspace-all-targets-locked",
+    "build": "PASS-workspace-locked",
+    "format": "PASS",
+    "compound_command_exit": 101,
+    "exit_reason": "Final ignored-showcase command selected a workspace package incorrectly; all preceding Rust gates passed. Correct package command completed separately."
+  },
+  "remaining_approved_checks": {
+    "artifact": "artifact://577",
+    "compound_exit": 0,
+    "showcase": {
+      "package": "terminal-showcase",
+      "target": "multiplexer",
+      "test": "independent_showcase_runs_inside_amux_and_checks_real_cursor_replies",
+      "passed": 1,
+      "seconds": 3.46
+    },
+    "omp": {
+      "passed": 8,
+      "assertions": 49
+    },
+    "stock_zsh_syntax": "PASS",
+    "actual_cli_help": "PASS"
+  },
+  "preserved_failures": [
+    {
+      "artifact": "artifact://556",
+      "kind": "fixture compile API correction",
+      "detail": "Alacritty resize takes Geometry by value; fixed before actual RED."
+    },
+    {
+      "artifact": "artifact://564",
+      "kind": "initial full suite failed",
+      "detail": "One remaining old Force text barrier matched pre-dialog progress; strengthened to actual modal title. A genuine native acceptance callback also timed out; cause NOT established. No timeout/acceptance weakened or retry added; proxy now surfaces a genuine earlier rejection instead of misleading timeout. Subsequent normal-parallel34 and workspace307 passed."
+    },
+    {
+      "kind": "initial standalone smoke harness failed",
+      "detail": "Harness stopped draining actual PTY during ownership wait; confirmation deadline and native cleanup wait failed. Cleanup completed only after closing its sole owned master: native -15, private daemon0, root removed. Backpressure is an inference, not a claimed product root cause. Revised harness continuously drained/rendered terminal and passed without fallback."
+    }
+  ],
+  "implementation": {
+    "state": "hidden/drawn/confirmable bound to captured panel",
+    "arming": "only successful completed frame plus drained native event queue",
+    "invalidation": [
+      "new force dialog",
+      "every redraw",
+      "resize before event dispatch",
+      "scroll"
+    ],
+    "visibility": "same pinned Paragraph wrapping at interior dimensions; entire warning must fit",
+    "dependency": "existing pinned Ratatui0.30.0 rendered-line-info opt-in only; no terminal library version replacement",
+    "input": "blocked confirmation consumed, never replayed"
+  },
+  "actual_native_smoke": {
+    "scope": "actual-private-daemon-native-force-presentation",
+    "models_called": 0,
+    "real_auth_used": false,
+    "global_changes": false,
+    "surfaces": {
+      "queued_110x28": [
+        "╭ amux · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner ─────────────────╮╭──────────╮",
+        "│ main · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner                  ││  Switch  │",
+        "╰Force confirmation blocked: read the full warning; enlarge if needed, then press Enter again────╯╰──────────╯",
+        "6e6/b6c1a34c-83c2-4545-9890-b69bd7f1938c.zsh; _amux_complete b6c1a34c-83c2-4545-9890-b69bd7f1938c $?          ",
+        "FORCE_SMOKE_LIVE                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "            ┌Force control?──────────────────────────────────────────────────────────────────────┐            ",
+        "            │Terminal #fd524c3a-3ed0-43fe-9776-23c20f7ed6e6                                      │            ",
+        "            │Current owner: #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner           │            ",
+        "            │Reservation: none                                                                   │            ",
+        "            │Prior calls may still apply. Turn/process keeps running.                            │            ",
+        "            │Enter Force control · Esc Keep viewing                                              │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            └────────────────────────────────────────────────────────────────────────────────────┘            ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              "
+      ],
+      "blocked_80x7": [
+        "╭ amux · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visibl╮╭──────────╮",
+        "│ main · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visibl││  Switch  │",
+        "╰Force confirmation blocked: read the full warning; enlarge if need╯╰──────────╯",
+        "x_complete b6c1a34c-83c2-4545-9890-b69bd7f1938c $?                              ",
+        "FORCE_SMOKE_LIVE                                                                ",
+        "                                                                                ",
+        "                                                                                "
+      ],
+      "blocked_80x10": [
+        "╭ amux · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visibl╮╭──────────╮",
+        "│ main · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visibl││  Switch  │",
+        "╰Force confirmation blocked: read the full warning; enlarge if need╯╰──────────╯",
+        "24c3a-3ed0-43fe-9776-23c20f7ed6e6/b6c1a34c-83c2-4545-9890-b69bd7f1938c.zsh; _amu",
+        "x┌Force control?──────────────────────────────────────────────────────────────┐ ",
+        "F│Terminal #fd524c3a-3ed0-43fe-9776-23c20f7ed6e6                              │ ",
+        " │Current owner: #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner   │ ",
+        " │Reservation: none                                                           │ ",
+        " └────────────────────────────────────────────────────────────────────────────┘ ",
+        "                                                                                "
+      ],
+      "fresh_visible_110x28": [
+        "╭ amux · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner ─────────────────╮╭──────────╮",
+        "│ main · 🔒 Locked · #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner                  ││  Switch  │",
+        "╰Prefix ^L control · Prefix ^F force · Prefix ^Q detach──────────────────────────────────────────╯╰──────────╯",
+        "FORCE_SMOKE> builtin source /private/tmp/amux-e03-force-0ztgp63m/integration/fd524c3a-3ed0-43fe-9776-23c20f7ed",
+        "6e6/b6c1a34c-83c2-4545-9890-b69bd7f1938c.zsh; _amux_complete b6c1a34c-83c2-4545-9890-b69bd7f1938c $?          ",
+        "FORCE_SMOKE_LIVE                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "            ┌Force control?──────────────────────────────────────────────────────────────────────┐            ",
+        "            │Terminal #fd524c3a-3ed0-43fe-9776-23c20f7ed6e6                                      │            ",
+        "            │Current owner: #24d32968-f96a-4c71-942d-321ee821a049 · visible-risk-owner           │            ",
+        "            │Reservation: none                                                                   │            ",
+        "            │Prior calls may still apply. Turn/process keeps running.                            │            ",
+        "            │Enter Force control · Esc Keep viewing                                              │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            │                                                                                    │            ",
+        "            └────────────────────────────────────────────────────────────────────────────────────┘            ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              ",
+        "                                                                                                              "
+      ]
+    },
+    "queued_before_draw": "consumed-no-submit-no-replay",
+    "small_and_clipped": "blocked-human-owner-preserved",
+    "fresh_visible_confirmation": "committed-to-native-attachment",
+    "application_bytes": "FRESH-only",
+    "shell_pid_preserved": true,
+    "implicit_interrupt": false,
+    "native_detach_exit": 0,
+    "daemon_shutdown_seconds": 0.244,
+    "daemon_exit": 0,
+    "owned_process_cleanup": "observed-before-fallback",
+    "status": "PASS",
+    "fallback_used": false,
+    "private_root_removed": true,
+    "owned_fds_closed": true,
+    "reader_joined": true
+  },
+  "toolchain": "1.95.0",
+  "minimum_rust_1_88_execution": "not-claimed",
+  "linux_execution": "not-claimed",
+  "new_live_model_calls": 0,
+  "historical_caps": "unchanged"
+}

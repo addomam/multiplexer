@@ -61,6 +61,7 @@ struct Instance {
     state: Mutex<State>,
     sender: mpsc::SyncSender<Job>,
     stop: AtomicBool,
+    cleanup: Mutex<()>,
     process: Mutex<Option<OwnedBackend>>,
     connection: Mutex<Option<UnixStream>>,
     worker: Mutex<Option<JoinHandle<()>>>,
@@ -390,6 +391,7 @@ impl Broker {
             root: root.to_owned(),
             sender,
             stop: AtomicBool::new(false),
+            cleanup: Mutex::new(()),
             process: Mutex::new(Some(backend)),
             connection: Mutex::new(Some(control_socket)),
             worker: Mutex::new(None),
@@ -668,6 +670,9 @@ impl Drop for Prepared {
 
 impl Instance {
     fn close(&self, reason: &'static str) {
+        // Stop revokes work; this lock makes concurrent callers wait for the
+        // same worker/process/resource teardown attempt to finish.
+        let _cleanup = self.cleanup.lock();
         if self.stop.swap(true, Ordering::AcqRel) {
             return;
         }
@@ -1257,10 +1262,10 @@ fn run(instance: Arc<Instance>, mut socket: Socket, receiver: mpsc::Receiver<Job
                     state.emit("agent-call", public);
                     result
                 };
-                if let Ok(message) = message {
-                    if send(&mut socket, &message).is_err() {
-                        break;
-                    }
+                if let Ok(message) = message
+                    && send(&mut socket, &message).is_err()
+                {
+                    break;
                 }
             }
             Err(mpsc::TryRecvError::Empty) => {}
@@ -1614,16 +1619,15 @@ fn handle_message(
     let session = params.get("threadId").and_then(Value::as_str);
     if method == "thread/started" {
         let thread = &params["thread"];
-        if let Some(current) = state.session.as_deref() {
-            if thread["id"].as_str() != Some(current)
-                && thread["source"].get("subAgent").is_none()
-                && thread["parentThreadId"].is_null()
-                // Native 0.160.0 generates titles in a separate ephemeral
-                // thread. That auxiliary is not a replacement conversation.
-                && !(thread["ephemeral"] == true && thread["threadSource"] == "thread_title")
-            {
-                state.degrade("native-session-replaced");
-            }
+        if let Some(current) = state.session.as_deref()
+            && thread["id"].as_str() != Some(current)
+            && thread["source"].get("subAgent").is_none()
+            && thread["parentThreadId"].is_null()
+            // Native 0.160.0 generates titles in a separate ephemeral
+            // thread. That auxiliary is not a replacement conversation.
+            && !(thread["ephemeral"] == true && thread["threadSource"] == "thread_title")
+        {
+            state.degrade("native-session-replaced");
         }
         return Ok(());
     }
@@ -2175,6 +2179,7 @@ mod tests {
             sender,
             stop: AtomicBool::new(false),
             process: Mutex::new(Some(backend)),
+            cleanup: Mutex::new(()),
             connection: Mutex::new(None),
             worker: Mutex::new(Some(worker)),
             state: Mutex::new(State {
@@ -2235,13 +2240,21 @@ mod tests {
         shutdown.join().unwrap();
         let resources_removed = !root.0.exists();
         for pid in [backend_pid, descendant_pid] {
-            assert_eq!(unsafe { libc::kill(pid, 0) }, -1, "owned PID {pid} survived");
-            assert_eq!(std::io::Error::last_os_error().raw_os_error(), Some(libc::ESRCH));
+            assert_eq!(
+                unsafe { libc::kill(pid, 0) },
+                -1,
+                "owned PID {pid} survived"
+            );
+            assert_eq!(
+                std::io::Error::last_os_error().raw_os_error(),
+                Some(libc::ESRCH)
+            );
         }
         assert!(cleanup_started && shutdown_started);
         assert!(resources_removed, "private root survived completed cleanup");
-        assert!(!premature, "shutdown returned while terminal cleanup was paused");
+        assert!(
+            !premature,
+            "shutdown returned while terminal cleanup was paused"
+        );
     }
 }
-
-[Showing lines 2114-2244 of 2245. Use :2245 to continue]

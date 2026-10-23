@@ -4,6 +4,8 @@ story_id: e03s08
 title: Complete-broker native and API handoff acceptance
 spec: e03s08-story.md
 status: failing
+acceptance_disposition: user-accepted-deferred-to-future-ACP-not-passed
+limitation_record: specs/security/EXCEPTIONS.md
 bcps: 8
 tasks:
   - id: 1

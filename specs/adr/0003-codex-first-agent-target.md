@@ -72,3 +72,9 @@ Separate exact live checks now pass native/API start/steer, a genuine native-ori
 `availableDecisions` describes native menu choices. The pinned response handler independently accepts request-only `decline`, even when that menu omits it, and maps `cancel` to interruption instead. amux uses `decline` for deny, never a session/policy grant or `cancel`; allow remains constrained by the offered request. This distinction was reproduced in a failing-before/passing-after regression and then exercised with real deny/no-file-effect/continued-turn proof.
 
 The final complete-broker check reached its first safe offer and failed because application settlement remained unknown. It did not reach or pass all 32 scenarios, the stopped-native-buffer edge or winning-answer presentation. No timer, whole-turn finish or force-only path substitutes for that missing fence. See [integrated Build evidence](../verifications/e03-integration-build.md) for exact exercised boundaries and cleanup.
+
+## User-authorized temporary acceptance deferral
+
+After the failed complete-broker check and source-level diagnosis, the user chose to keep upstream Codex unmodified and explicitly accepted its temporary native fence and losing-answer presentation limitations. Complete-broker/all32 proof is deferred to future ACP integration, not retroactively passed. Existing native/API operations remain useful; unknown native input still blocks safe grant and force remains explicitly risky and non-cancelling.
+
+This is an explicit amendment to the current delivery gate, not evidence that an ACP connector already exists or inherently solves native buffering. Before closing the original gap, that integration must prove the same generation-bound native application cut and authoritative answer presentation. No upstream patch, replacement UI or ACP implementation is included. See [accepted limitations](../security/EXCEPTIONS.md).

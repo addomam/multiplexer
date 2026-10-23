@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-22",
+  "scope": "e03-current-delivery-round2-lifecycle-remediation",
+  "historical_counters_reset": false,
+  "red_checkpoint": "e3ffb1c",
+  "review_round2": "FAIL; exact reports retained in e03-build-review-round2.json",
+  "before": {
+    "concurrent_shutdown": {
+      "job": "bg_110",
+      "artifact": "artifact://446",
+      "exit": 101,
+      "failed": 1,
+      "message": "shutdown returned while terminal cleanup was paused",
+      "owned_process_and_root_assertions_preceded_the_failure": true
+    },
+    "removed_target_events": {
+      "job": "bg_109",
+      "artifact": "artifact://447",
+      "exit": 101,
+      "failed": 1,
+      "message": "removed terminals still consume view-event history"
+    }
+  },
+  "focused_after": {
+    "artifact": "artifact://456",
+    "concurrent_shutdown": {
+      "passed": 1,
+      "seconds": 0.49
+    },
+    "removed_target_events": {
+      "passed": 1,
+      "seconds": 3.01
+    },
+    "late_settlement_and_reclamation": {
+      "passed": 1
+    },
+    "public_daemon_cleanup_before_fixture_drop": {
+      "passed": 1,
+      "seconds": 1.43
+    }
+  },
+  "intermediate_failures_retained": [
+    {
+      "artifact": "artifact://456",
+      "step": "first full preflight",
+      "result": "FAIL",
+      "failure": "shell_races concurrent_first_opens_publish_one_main_and_valid_default_parents: openpty OS code -6 during overlap with instrumented workspace run",
+      "diagnosis": "Overlap was removed for final verification. Resource-pressure attribution remains inference: kernel PTY capacity511; post-run distinct open slave devices21 and no amux master descriptors. No saturation peak or product fix for this OS error is claimed; no assertion was weakened."
+    },
+    {
+      "artifact": "artifact://460",
+      "step": "overlapping instrumented workspace run",
+      "result": "FAIL",
+      "failure": "native competing attachment test missed background-consent modal and emitted [O",
+      "root_cause": "The picker capture already contained Controlled here. Its supposed close wait could succeed before Escape was consumed, allowing the next focus sequence to merge with it. Existing hide_panel now also waits for WINDOWS to disappear; the test uses that actual visible-state barrier. No fixed sleep or product/parser change was added."
+    }
+  ],
+  "final_preflight": {
+    "artifact": "artifact://463",
+    "exit": 0,
+    "total_command_seconds": 99.84,
+    "rust_passed": 304,
+    "rust_ignored": 10,
+    "rust_suites": 29,
+    "native_modal_case_exact_passed": 1,
+    "native_modal_case_seconds": 1.09,
+    "strict_clippy": true,
+    "workspace_check_build_fmt": true,
+    "independent_showcase_exact_passed": 1,
+    "independent_showcase_seconds": 3.69,
+    "omp_passed": 8,
+    "omp_assertions": 49,
+    "zsh_syntax": true,
+    "actual_cli_help": true
+  },
+  "actual_cli_tui_smoke": {
+    "status": "PASS",
+    "model_calls": 0,
+    "real_auth_used": false,
+    "global_config_or_daemon_changed": false,
+    "actual_binary": "target/debug/amux",
+    "opened_closed_removed_terminals": 4,
+    "removed_target_view_events": 0,
+    "native_focus_observed": true,
+    "native_owner_panel_and_deliberate_yield_observed": true,
+    "safe_offer_explicitly_accepted": true,
+    "actual_stock_zsh_source_result": "E03_LIFECYCLE_OK",
+    "intercepted_observer_key_not_replayed": true,
+    "detach_recipe_note": "An initial detach binding sent while the ownership modal was open was consumed; native Escape, a newly drawn picker, then Ctrl-Q detached successfully. No product change or forced process cleanup.",
+    "native_detach_exit": 0,
+    "daemon_exit": 0,
+    "shutdown_seconds": 0.245,
+    "owned_shells_gone": true,
+    "reader_joined": true,
+    "forced_cleanup": false,
+    "private_root_removed": true
+  },
+  "coverage_policy": {
+    "decision": "Use the approved Plan gates",
+    "source": "explicit user choice via coverage_landing",
+    "scope": "Only the generic broader 95% business-logic coverage landing threshold is waived for this delivery; final metrics must be reported honestly. Approved Plan preflight/runtime proof and fresh independent Build/security approval remain mandatory. No security or complete-Codex acceptance waiver is inferred."
+  },
+  "profiling_resource_cleanup": "complete: no open references; owned private probes/profiles/target/downloaded matching tools and generated default profile removed",
+  "complete_broker_acceptance": "unchanged failing/user-deferred; no native fence or winner-presentation fix claimed"
+}

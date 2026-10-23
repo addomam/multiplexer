@@ -66,6 +66,7 @@ struct HookJob {
 struct Daemon {
     state: Mutex<State>,
     controls: Mutex<crate::control::Registry>,
+    pending_launches: Mutex<BTreeMap<String, LaunchControl>>,
     codex: crate::codex::Broker,
     changed: Condvar,
     integration: Arc<Integration>,
@@ -410,10 +411,35 @@ impl Daemon {
         })
     }
 
+    fn retire_settled_launch(&self, terminal: &str) {
+        let launch = {
+            let mut pending = self.pending_launches.lock();
+            if !pending
+                .get(terminal)
+                .is_some_and(|launch| launch.authority.settled_or_ended())
+            {
+                return;
+            }
+            pending.remove(terminal).expect("pending private launch")
+        };
+        let mut controls = self.controls.lock();
+        // Normal capability validation makes a late release harmless after
+        // force. Closing this private controller never closes the newer owner.
+        let _ = controls.handle(&json!({
+            "version":1,"op":"control-handle","handle":launch.grant["control"],"method":"release"
+        }), 0);
+        let _ = controls.handle(
+            &json!({
+                "version":1,"op":"control-handle","handle":launch.controller,"method":"close"
+            }),
+            0,
+        );
+    }
+
     fn discard_unpublished(&self, terminal: &str, launch: Option<&LaunchControl>) {
         {
             let mut controls = self.controls.lock();
-            controls.end_target(terminal);
+            controls.remove_target(terminal);
             if let Some(launch) = launch.filter(|launch| launch.retire) {
                 let _ = controls.handle(&json!({
                     "version":1,"op":"control-handle","handle":launch.controller,"method":"close"
@@ -602,11 +628,11 @@ impl Daemon {
             .as_ref()
             .filter(|control| !control.retire)
             .map(|control| control.grant.clone());
-        if let Some(instance) = &agent_instance {
-            if let Err(error) = self.codex.bind(instance, &id) {
-                self.discard_unpublished(&id, startup_control.as_ref());
-                return Err(error);
-            }
+        if let Some(instance) = &agent_instance
+            && let Err(error) = self.codex.bind(instance, &id)
+        {
+            self.discard_unpublished(&id, startup_control.as_ref());
+            return Err(error);
         }
         let weak = Arc::downgrade(self);
         let exit_id = id.clone();
@@ -617,6 +643,7 @@ impl Daemon {
             Arc::new(move |status| {
                 if let Some(daemon) = weak.upgrade() {
                     daemon.controls.lock().end_target(&exit_id);
+                    daemon.retire_settled_launch(&exit_id);
                     daemon.codex.end_terminal(&exit_id);
                     daemon.flush_runtime_events();
                     let mut state = daemon.state.lock();
@@ -698,6 +725,9 @@ impl Daemon {
             thread::spawn(move || {
                 let deadline = Instant::now() + Duration::from_secs(15);
                 while daemon.integration.awaiting_initial_prompt(&launch_id)
+                    && startup_control
+                        .as_ref()
+                        .is_some_and(|launch| launch.authority.check().is_ok())
                     && Instant::now() < deadline
                     && !daemon.stopping.load(Ordering::Relaxed)
                 {
@@ -721,27 +751,16 @@ impl Daemon {
                             )
                         })
                 };
-                // Retire successful or definitively undispatched/rejected work,
-                // never a timed-out dispatch whose settlement is unknown.
-                if startup_control
-                    .as_ref()
-                    .is_some_and(|control| control.retire)
-                    && (result.is_ok()
-                        || daemon.controls.lock().snapshot(&launch_id)["unsettled"]
-                            .as_array()
-                            .is_some_and(Vec::is_empty))
-                {
-                    let launch = startup_control.as_ref().expect("launch authority");
-                    let controller = &launch.controller;
-                    let control = &launch.grant["control"];
-                    let mut controls = daemon.controls.lock();
-                    let _ = controls.handle(&json!({"version":1,"op":"control-handle","handle":control,"method":"release"}), 0);
-                    let _ = controls.handle(&json!({"version":1,"op":"control-handle","handle":controller,"method":"close"}), 0);
+                if let Some(launch) = startup_control.filter(|launch| launch.retire) {
+                    daemon
+                        .pending_launches
+                        .lock()
+                        .insert(launch_id.clone(), launch);
+                    // Also covers settlement/end racing ahead of registration.
+                    daemon.retire_settled_launch(&launch_id);
                 }
-                if managed_launch {
-                    if let Err(error) = &result {
-                        daemon.codex.launch_failed(&launch_id, &error.to_string());
-                    }
+                if managed_launch && let Err(error) = &result {
+                    daemon.codex.launch_failed(&launch_id, &error.to_string());
                 }
                 daemon.flush_runtime_events();
                 let mut state = daemon.state.lock();
@@ -985,24 +1004,22 @@ impl Daemon {
                         _ => controls.handle(&request, connection),
                     };
                     drop(controls);
-                    if result.is_ok() {
-                        if let Some((terminal, focused, authority)) = focus {
-                            let entry = self.state.lock().terminals.get(&terminal).cloned();
-                            if let Some(entry) = entry {
-                                if entry.terminal.screen(0, Some(0))["modes"]["focus_reporting"]
-                                    == true
-                                {
-                                    // A concurrent revocation must drop this report too.
-                                    let _ = entry.terminal.protocol_input_authorized(
-                                        if focused {
-                                            b"\x1b[I".to_vec()
-                                        } else {
-                                            b"\x1b[O".to_vec()
-                                        },
-                                        authority,
-                                    );
-                                }
-                            }
+                    if result.is_ok()
+                        && let Some((terminal, focused, authority)) = focus
+                    {
+                        let entry = self.state.lock().terminals.get(&terminal).cloned();
+                        if let Some(entry) = entry
+                            && entry.terminal.screen(0, Some(0))["modes"]["focus_reporting"] == true
+                        {
+                            // A concurrent revocation must drop this report too.
+                            let _ = entry.terminal.input_authorized(
+                                if focused {
+                                    b"\x1b[I".to_vec()
+                                } else {
+                                    b"\x1b[O".to_vec()
+                                },
+                                authority,
+                            );
                         }
                     }
                     result
@@ -1171,13 +1188,24 @@ impl Daemon {
                 let selector = request["terminal"]
                     .as_str()
                     .context("invalid-request: terminal required")?;
-                let mut state = self.state.lock();
-                let id = if state.terminals.contains_key(selector) {
+                let state = self.state.lock();
+                let id = if state.terminals.contains_key(selector)
+                    || Uuid::parse_str(selector).is_ok()
+                {
                     selector.to_owned()
                 } else {
                     Self::resolve(&state, selector).unwrap_or_else(|_| selector.to_owned())
                 };
-                let result = self.integration.report(&id, request["event"].clone())?;
+                drop(state);
+                let result = self.integration.report(&id, request["event"].clone());
+                if matches!(
+                    request["event"]["kind"].as_str(),
+                    Some("execution-accepted" | "execution-rejected")
+                ) {
+                    self.retire_settled_launch(&id);
+                }
+                let result = result?;
+                let mut state = self.state.lock();
                 Self::emit(
                     &mut state,
                     "integration",
@@ -1228,6 +1256,7 @@ impl Daemon {
             "close" => {
                 let entry = self.entry(&request)?;
                 self.controls.lock().end_target(&entry.terminal.id);
+                self.retire_settled_launch(&entry.terminal.id);
                 entry.terminal.close();
                 Ok(entry.terminal.status())
             }
@@ -1257,10 +1286,10 @@ impl Daemon {
                     .values()
                     .find(|terminal| terminal.project_id == entry.project_id)
                     .map(|terminal| terminal.terminal.id.clone());
-                if let Some(project) = state.store.projects.get_mut(&entry.project_id) {
-                    if project.main_terminal.as_deref() == Some(&entry.terminal.id) {
-                        project.main_terminal = next;
-                    }
+                if let Some(project) = state.store.projects.get_mut(&entry.project_id)
+                    && project.main_terminal.as_deref() == Some(&entry.terminal.id)
+                {
+                    project.main_terminal = next;
                 }
                 Self::emit(
                     &mut state,
@@ -1270,6 +1299,8 @@ impl Daemon {
                 );
                 self.changed.notify_all();
                 drop(state);
+                self.controls.lock().remove_target(&entry.terminal.id);
+                self.retire_settled_launch(&entry.terminal.id);
                 self.integration.remove(&entry.terminal.id);
                 Ok(json!({"removed":entry.terminal.id}))
             }
@@ -1474,17 +1505,17 @@ fn validate_mutation_fields(request: &Value, allowed: &[&str]) -> Result<()> {
         bail!("invalid-request: unknown mutation field {field}");
     }
     for field in ["persistent", "paste", "queue"] {
-        if let Some(value) = fields.get(field) {
-            if !value.is_boolean() {
-                bail!("invalid-request: {field} must be boolean");
-            }
+        if let Some(value) = fields.get(field)
+            && !value.is_boolean()
+        {
+            bail!("invalid-request: {field} must be boolean");
         }
     }
     for field in ["terminal", "text", "key", "source"] {
-        if let Some(value) = fields.get(field) {
-            if !value.is_string() {
-                bail!("invalid-request: {field} must be a string");
-            }
+        if let Some(value) = fields.get(field)
+            && !value.is_string()
+        {
+            bail!("invalid-request: {field} must be a string");
         }
     }
     if fields.get("bytes").is_some_and(|value| !value.is_array()) {
@@ -1669,6 +1700,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         }),
         changed: Condvar::new(),
         controls: Mutex::new(crate::control::Registry::new()),
+        pending_launches: Mutex::new(BTreeMap::new()),
         codex: crate::codex::Broker::new(runtime)?,
         integration,
         git: GitCache::new(),
@@ -1805,20 +1837,19 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 if let Some(current) = state.terminals.get_mut(&entry.terminal.id) {
                     current.cwd = cwd;
                 }
-                if let Some(project) = state.store.projects.get_mut(&entry.project_id) {
-                    if !project.saved
-                        && project.main_terminal.as_deref() == Some(&entry.terminal.id)
-                        && project.context != context
-                    {
-                        project.context = context.clone();
-                        Daemon::emit(
-                            &mut state,
-                            "project-context",
-                            None,
-                            json!({"project_id":entry.project_id,"context":context}),
-                        );
-                        daemon.changed.notify_all();
-                    }
+                if let Some(project) = state.store.projects.get_mut(&entry.project_id)
+                    && !project.saved
+                    && project.main_terminal.as_deref() == Some(&entry.terminal.id)
+                    && project.context != context
+                {
+                    project.context = context.clone();
+                    Daemon::emit(
+                        &mut state,
+                        "project-context",
+                        None,
+                        json!({"project_id":entry.project_id,"context":context}),
+                    );
+                    daemon.changed.notify_all();
                 }
             }
         }

@@ -6,7 +6,7 @@ amux is the execution substrate, not an autonomous orchestrator. It provides ter
 
 ## Install and start
 
-Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. Ratatui 0.30.0 uses the existing Crossterm 0.29 backend; the crate now declares Rust 1.86, matching Ratatui's minimum. That minimum toolchain is not independently verified. Requires stock `/bin/zsh`. OMP is optional until launched.
+Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. amux now declares Rust **1.88** so its locked `time 0.3.47` dependency includes the RFC2822 stack-exhaustion fix. That minimum toolchain is not independently verified. Ratatui 0.30.0 still uses the existing Crossterm 0.29 backend; the independent terminal-showcase package retains its own Rust 1.86 declaration. Requires stock `/bin/zsh`. OMP is optional until launched.
 
 ```sh
 cargo install --path . --locked
@@ -208,6 +208,12 @@ Mutations require current PTY control and exact instance/session identities; ans
 Separate real-account checks passed native/API start and same-turn steer, a genuine native-originated question answered structurally, permission allow/deny with actual filesystem effects, and exact-turn interruption with process survival. Deny uses request-only `decline`, never `cancel` or a session grant.
 
 Complete-broker acceptance remains unpassed. Unknown winning answers or native/application settlement must block safe grant; force-only results cannot substitute. Actual checks and limits live in [Build evidence](specs/verifications/e03-integration-build.md).
+
+#### Accepted upstream Codex limitations
+
+Raw PTY input has no generic application-consumption acknowledgement. With unmodified Codex 0.160.0, even the startup trust confirmation can leave native input unknown and cooperative handoff blocked indefinitely. amux keeps that blocker: PTY delivery, redraw, request resolution or turn completion never manufactures a safe grant. Explicit force remains a separate warned operation, without implicit interruption or process termination.
+
+Codex can also display a losing locally submitted question answer as accepted. Its resolved notification does not identify the winner; do not treat native question history or a response-write receipt as authoritative winner proof. The user explicitly accepted these temporary upstream limitations and deferred complete-broker/all32 acceptance to future ACP integration. The recorded failed check remains failed, not waived into a PASS. ACP adoption must actually prove the native input cut and truthful answer presentation before closing the issue. No Codex patch, replacement UI or ACP connector is included here. See [accepted limitations](specs/security/EXCEPTIONS.md).
 
 
 ```sh

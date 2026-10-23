@@ -1,6 +1,6 @@
 workflow_mode: solo-git
 vcs: {kind: git, branch: feat/e03-agent-interaction, signing: disabled-local, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: build_epic
+active_flow: fix_bug
 active_epic: e03
 project_cycle:
   current_phase: 4
@@ -32,10 +32,10 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: build-epic
-  blocked: true
-  reason: "e03s01–07 verified; e03s08 complete-broker acceptance still fails because native/application consumption acknowledgement is not established. Unknown blocks safe grant and first acceptance. User subsequently authorized commit, merge and push; feature-branch publication is allowed, but failed runtime acceptance and absent independent Build PASS block merge. Implementation remains in /Users/addomam/projects/amux-e03-build. Preserve historical review caps; no global mutation or release."
-  last_step_completed: e03s05-07-live-verified-and-e03s08-final-gate-executed
+  next_skill: release-branch
+  blocked: false
+  reason: "User replied looks great to the verified repair/held-delivery report and authorized overnight work plus unsigned commits. Proceed with previously requested commit/merge/push of this limited delivery, using an isolated primary clone and command-scoped signing override. Preserve failed5/5 review and failing e03s08/allfour acceptance tasks; no independent PASS, round6, new live models/global changes or release."
+  last_step_completed: post-cap-repair-human-delivery-approved
   required_reading:
     - CONVENTIONS.md
     - specs/verifications/readiness-orchestration-assessment.md
@@ -74,11 +74,34 @@ handoff:
     - specs/verifications/e03-integration-build.md
     - specs/verifications/e03-complete-broker-acceptance.json
     - specs/verifications/e03-worker-retirement.json
-  open_bugs: []
+    - specs/bugs/BUG-e03-native-settlement.md
+    - specs/bugs/BUG-time-rfc2822-dos.md
+    - specs/security/EXCEPTIONS.md
+    - specs/bugs/BUG-e03-focus-settlement.md
+    - specs/bugs/BUG-waitid-stop-resume.md
+    - specs/verifications/e03-focus-runtime.json
+    - specs/verifications/e03-build-review-round1.json
+    - specs/verifications/e03-build-review-round2.json
+    - specs/bugs/BUG-e03-target-retirement.md
+    - specs/bugs/BUG-e03-cleanup-completion.md
+    - specs/verifications/e03-build-review-round3.json
+    - specs/verifications/e03-lifecycle-runtime.json
+    - specs/verifications/e03-current-delivery-coverage.json
+    - specs/bugs/BUG-e03-late-launch-retirement.md
+    - specs/bugs/BUG-e03-removed-shell-settlement.md
+    - specs/verifications/e03-late-settlement-runtime.json
+    - specs/verifications/e03-build-review-round4.json
+    - specs/bugs/BUG-e03-force-presentation.md
+    - specs/verifications/e03-force-presentation-runtime.json
+    - specs/verifications/e03-build-review-round5.json
+    - specs/bugs/BUG-e03-smoke-cleanup-identity.md
+    - specs/verifications/e03-smoke-cleanup-runtime.json
+  open_bugs: [e03-native-settlement]
   retained_observations:
     - "Initial queued-execution acceptance timeout: cause not established; instrumented acceptance suite, final workspace suite and 24 real cancellation probes passed without weakened tests. See substrate-reliability.md."
     - "Codex 0.160.0 native/API question race: server accepted Blue once, while native transcript printed its losing Red answer. See SPIKE-native-agent-interaction.md; no amux or upstream fix claimed."
     - "Private fencing spike: API-to-native question drain and non-cancelling force worked, but PTY-buffered native Enter applied after an intentionally incomplete API-only ledger's false safe grant. Native application acknowledgement remains unproved; no production lock was implemented."
+    - "Initial round4 full suite had one genuine callback timeout (artifact564); cause not established. No timeout/expectation weakened; subsequent normal-parallel34 ownership/307 workspace passed. Earlier genuine rejection now surfaces directly. See e03-force-presentation-runtime.json."
   open_decisions:
     - "Live checks are separately authorized with cheapest compatible models, preferring local/free inference; no sol. Keep auth/config and owned processes isolated; authorization is not acceptance."
     - "Final complete-broker validation revisited native/application settlement; unknown blocks the first safe offer. A supported native application-consumption acknowledgement remains missing; no fresh isolated spike or force substitute."
@@ -202,7 +225,19 @@ foundation_assessment:
   scope_clarified: "2026-10-19"
   superseded_recommendation: amux-owned-autonomous-orchestration-and-durable-task-ledger
   followup_evidence: specs/verifications/substrate-reliability.md
-bug_cycle: null
+bug_cycle:
+  current_step: 4
+  completed_steps: [1, 2, 3]
+  scopes: [e03-native-application-settlement, time-dependency-advisory, e03-focus-settlement, waitid-stop-resume, e03-target-retirement, e03-cleanup-completion, e03-late-launch-retirement, e03-removed-shell-settlement, e03-force-presentation, e03-smoke-cleanup-identity]
+  baseline: f50c3fc058fdd60e603ad3a732dba0862c748626
+  runtime_acceptance: failing
+  historical_review_cap: preserved
+  status: verified-post-cap-repair-human-delivery-approved
+  decisions: {codex: upstream-unmodified-limitations-accepted, minimum_rust: "1.88"}
+  review_gate: user-approved-post-cap-delivery-no-independent-pass
+  accepted_limitations: specs/security/EXCEPTIONS.md
+  full_Codex_acceptance: deferred-to-future-ACP-not-passed
+  patched_time: "0.3.47"
 substrate_reliability_revision:
   status: committed-verified-feature-branch-kept
   baseline_head: af21287
@@ -233,6 +268,8 @@ e03_build:
   integration_owner: parent
   current_story: e03s08
   runtime_acceptance: failing
+  runtime_acceptance_disposition: user-accepted-deferred-to-future-ACP-not-passed
+  accepted_limitations: specs/security/EXCEPTIONS.md
   live_model_authorized: true
   live_model_scope: four-exact-codex-checks-and-relevant-installed-harness-regressions
   live_model_policy: cheapest-compatible-prefer-local-or-free-no-sol
@@ -240,9 +277,9 @@ e03_build:
   ownership_evidence: specs/verifications/e03-ownership-build.md
   integration_contract: specs/epics/e03-agent-interaction/build-integration-contract.md
   integration_evidence: specs/verifications/e03-integration-build.md
-  native_tests: 29
+  native_tests: 34
   deterministic_codex_tests: 23
-  latest_full_workspace_tests: 301
+  latest_full_workspace_tests: 308
   latest_full_workspace_ignored: 10
   latest_full_workspace_predates_new_regressions: false
   live_codex_model: gpt-6-luna
@@ -257,7 +294,7 @@ e03_build:
   track_seed_manifest: specs/verifications/e03-track-seed.json
   owned_session_root_removed: true
   worker_retirement_evidence: specs/verifications/e03-worker-retirement.json
-  mechanical: passing
+  mechanical: passing-after-focus-accounting-and-Darwin-reaper-fixes
   independent_showcase_tests: 1
   omp_tests: 8
   zsh_syntax: passing
@@ -280,14 +317,32 @@ epic_cycle:
   step: 4
   completed_steps: [1, 2, 3]
   planning: approved-plan-reused-no-replanning
-  commit_release: user-authorized-commit-merge-push-landing-gates-still-block-merge
+  commit_release: user-approved-post-cap-limited-delivery-commit-merge-push
 e03_publication:
   authorization: explicit-user-commit-merge-push
   branch: feat/e03-agent-interaction
   remote: origin
   destination: "https://github.com/addomam/multiplexer.git"
-  publication_scope: non-force-feature-branch-backup
-  merge: blocked
-  merge_blockers: [complete-broker-acceptance-failing, no-independent-build-review-pass]
+  publication_scope: human-approved-current-limited-delivery-not-complete-broker
+  merge: authorized-pending-verified-landing
+  merge_blockers: []
   release: not-requested
   evidence: specs/verifications/e03-integration-build.md
+  accepted_limitations: specs/security/EXCEPTIONS.md
+  complete_broker_PASS_claimed: false
+  existing_feature_backup_commit: f50c3fc058fdd60e603ad3a732dba0862c748626
+e03_scoped_review:
+  scope: e03-build-current-delivery
+  round: 5
+  status: exhausted-failed-user-authorized-delivery
+  historical_counters: unchanged
+  self_audit: specs/verifications/AUDIT-e03-current-delivery.md
+  reviewers: [E03BuildReviewA5, E03BuildReviewB5, E03SecurityReview5]
+  max_rounds: 5
+  round_1: {status: failed, scores: [96.875, 96.875], unique_must_fix: 1, evidence: specs/verifications/e03-build-review-round1.json}
+  round_2: {status: failed, scores: [96.875, 100], unique_general_must_fix: 1, unwaived_high_security: 1, evidence: specs/verifications/e03-build-review-round2.json}
+  round_3: {status: failed, scores: [93.75, 96.875], unique_general_must_fix: 2, unwaived_high_security: 0, evidence: specs/verifications/e03-build-review-round3.json}
+  round_4: {status: failed, scores: [100, 96.875], unique_general_must_fix: 1, unwaived_high_security: 0, evidence: specs/verifications/e03-build-review-round4.json}
+  round_5: {status: failed, scores: [97.5, 100], unique_general_must_fix: 1, unwaived_high_security: 0, evidence: specs/verifications/e03-build-review-round5.json}
+  post_cap_repair: {authorization: repair-then-human-review, status: user-approved-limited-delivery, automated_rounds_added: 0, independent_post_repair_pass: false, evidence: specs/verifications/e03-smoke-cleanup-runtime.json}
+  human_delivery_approval: {quote: "looks great", instruction: "overnight work; commit unsigned if signing unavailable", scope: previously-authorized-limited-delivery-commit-merge-push, independent_source_review_claimed: false}

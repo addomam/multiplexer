@@ -78,6 +78,13 @@ struct Reply {
 }
 
 #[derive(Clone)]
+enum ForcePresentation {
+    Hidden,
+    Drawn,
+    Confirmable,
+}
+
+#[derive(Clone)]
 enum PanelKind {
     Locked,
     Progress,
@@ -92,6 +99,7 @@ enum PanelKind {
         observed: Value,
         owner: String,
         reservation: String,
+        presentation: ForcePresentation,
     },
 }
 struct Panel {
@@ -687,6 +695,7 @@ impl NativeControl {
             return;
         };
         self.call_offset = 0;
+        status.clear();
         self.panel = Some(Panel {
             target: target.to_owned(),
             kind: PanelKind::Force {
@@ -698,13 +707,28 @@ impl NativeControl {
                         .unwrap_or("none"),
                     40,
                 ),
+                presentation: ForcePresentation::Hidden,
             },
         });
+    }
+
+    fn invalidate_force_confirmation(&mut self) {
+        if let Some(Panel {
+            kind: PanelKind::Force { presentation, .. },
+            ..
+        }) = self.panel.as_mut()
+        {
+            *presentation = ForcePresentation::Hidden;
+        }
     }
 
     /// A visible ownership panel captures all application gestures. Local picker
     /// and selection remain available after Escape; no event is held for replay.
     pub(super) fn panel_event(&mut self, event: &Event, status: &mut String) -> bool {
+        if matches!(event, Event::Resize(..)) {
+            self.invalidate_force_confirmation();
+            return false;
+        }
         let Some(panel) = self.panel.as_ref() else {
             return false;
         };
@@ -721,6 +745,7 @@ impl NativeControl {
                     match key.code {
                         KeyCode::Up | KeyCode::PageUp => {
                             self.call_offset = self.call_offset.saturating_sub(1);
+                            self.invalidate_force_confirmation();
                             return true;
                         }
                         KeyCode::Down | KeyCode::PageDown => {
@@ -730,6 +755,7 @@ impl NativeControl {
                                 .and_then(|o| o["unsettled"].as_array())
                                 .map_or(0, |calls| calls.len().saturating_sub(1));
                             self.call_offset = self.call_offset.saturating_add(1).min(last);
+                            self.invalidate_force_confirmation();
                             return true;
                         }
                         _ => {}
@@ -767,7 +793,11 @@ impl NativeControl {
                             status,
                         );
                     }
-                    PanelKind::Force { observed, .. } if key.code == KeyCode::Enter => {
+                    PanelKind::Force {
+                        observed,
+                        presentation,
+                        ..
+                    } if key.code == KeyCode::Enter => {
                         if self
                             .ownership
                             .get(&target)
@@ -778,6 +808,8 @@ impl NativeControl {
                                 target,
                                 kind: PanelKind::Progress,
                             });
+                        } else if !matches!(presentation, ForcePresentation::Confirmable) {
+                            *status = "Force confirmation blocked: read the full warning; enlarge if needed, then press Enter again".into();
                         } else {
                             self.submit(
                                 &target,
@@ -928,6 +960,15 @@ impl NativeControl {
     }
 
     pub(super) fn after_draw(&mut self, status: &mut String) {
+        // The caller reaches this only after a successful frame and drained input.
+        if let Some(Panel {
+            kind: PanelKind::Force { presentation, .. },
+            ..
+        }) = self.panel.as_mut()
+            && matches!(presentation, ForcePresentation::Drawn)
+        {
+            *presentation = ForcePresentation::Confirmable;
+        }
         let ready: Vec<_> = self
             .warnings
             .iter()
@@ -1179,6 +1220,9 @@ impl NativeControl {
     }
 
     fn draw_panel(&self, frame: &mut Frame<'_>, body: Rect, panel: &mut Panel) {
+        if let PanelKind::Force { presentation, .. } = &mut panel.kind {
+            *presentation = ForcePresentation::Hidden;
+        }
         let target = &panel.target;
         let width = body.width.saturating_sub(2).min(86);
         let wrapped_call_rows = 100usize.div_ceil(usize::from(width.saturating_sub(2).max(1)));
@@ -1246,18 +1290,23 @@ impl NativeControl {
             width,
             height,
         );
+        let paragraph = Paragraph::new(lines.join("\n")).wrap(Wrap { trim: false });
+        // Measure the same wrapping at the interior width, without border rows.
+        let force_visible = matches!(panel.kind, PanelKind::Force { .. })
+            && paragraph.line_count(width - 2) <= usize::from(height - 2);
         frame.render_widget(Clear, area);
         frame.render_widget(
-            Paragraph::new(lines.join("\n"))
-                .wrap(Wrap { trim: false })
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(title)
-                        .border_style(Style::default().fg(Color::Yellow)),
-                ),
+            paragraph.block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(title)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            ),
             area,
         );
+        if force_visible && let PanelKind::Force { presentation, .. } = &mut panel.kind {
+            *presentation = ForcePresentation::Drawn;
+        }
         if let (
             Some((claim, observed)),
             PanelKind::Owner {

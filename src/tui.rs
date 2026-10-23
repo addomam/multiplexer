@@ -806,10 +806,10 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         urgent_frame = true;
         queued_events += 1;
         responsive_until = Instant::now() + INPUT_BURST;
-        if let Event::Mouse(mouse) = &event {
-            if authority.mouse_consumed(mouse.kind) {
-                continue;
-            }
+        if let Event::Mouse(mouse) = &event
+            && authority.mouse_consumed(mouse.kind)
+        {
+            continue;
         }
         let (consume_warning, reset_warning) =
             authority.warning_event(&active, &event, &mut status);
@@ -835,18 +835,17 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         }
         let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
         let rows = tree_rows(&snapshot, &query);
-        if let Event::Key(key) = &event {
-            if key.kind != KeyEventKind::Release
-                && previous_prefix
-                && key.modifiers.contains(KeyModifiers::CONTROL)
-                && matches!(key.code, KeyCode::Char('l' | 'f'))
-            {
-                picker = false;
-                prefix_pending = false;
-                pending_parent = None;
-                authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
-                continue;
-            }
+        if let Event::Key(key) = &event
+            && key.kind != KeyEventKind::Release
+            && previous_prefix
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+            && matches!(key.code, KeyCode::Char('l' | 'f'))
+        {
+            picker = false;
+            prefix_pending = false;
+            pending_parent = None;
+            authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
+            continue;
         }
         if authority.panel_event(&event, &mut status) {
             continue;

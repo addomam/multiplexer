@@ -338,6 +338,13 @@ impl Registry {
         }
     }
 
+    pub(crate) fn remove_target(&mut self, terminal: &str) {
+        self.end_target(terminal);
+        if let Some(target) = self.targets.remove(terminal) {
+            self.retired.push(target);
+        }
+    }
+
     pub(crate) fn create(&mut self, request: &Value, connection: u64) -> Result<Value> {
         self.create_at(request, connection, Instant::now())
     }
@@ -813,7 +820,7 @@ impl Registry {
                     .map(|(kind, data)| (kind, terminal.clone(), data)),
             );
         }
-        // Replaced lifetimes without retained work/history need no registry root.
+        // Retired lifetimes without retained work/history need no registry root.
         self.retired.retain(|target| {
             let target = target.lock();
             !target.calls.is_empty() || !target.claims.is_empty()
@@ -1055,6 +1062,9 @@ impl Registry {
             .expect("view revision exhausted");
         for target_ref in self.all_targets() {
             let mut target = target_ref.lock();
+            if !target.alive {
+                continue;
+            }
             let now = target.observe(now);
             if let Some(view) = &view {
                 target.views.insert(id.to_owned(), view.clone());
@@ -1073,6 +1083,28 @@ impl Registry {
 impl Authority {
     pub(crate) fn check(&self) -> Result<()> {
         self.check_locked(&self.target.lock())
+    }
+
+    // Private launch retirement is not a safe-grant proof: ended targets may
+    // still have outstanding calls, which remain retained independently.
+    pub(crate) fn settled_or_ended(&self) -> bool {
+        let target = self.target.lock();
+        !target.alive
+            || !target.calls.values().any(|call| {
+                call.controller_id == self.controller_id && call.generation == self.generation
+            })
+    }
+
+    pub(crate) fn call_pending(&self, id: &str) -> bool {
+        self.target
+            .lock()
+            .calls
+            .iter()
+            .any(|((generation, call_id), call)| {
+                *generation == self.generation
+                    && call_id == id
+                    && call.controller_id == self.controller_id
+            })
     }
 
     fn check_locked(&self, target: &Target) -> Result<()> {
@@ -3724,11 +3756,15 @@ mod tests {
             .unwrap();
         authority.settle_at("source", "unknown", now);
         let claim = acquire(&mut registry, &b["controller"], "pty", now);
+        let retired = Arc::downgrade(&registry.targets["pty"]);
         registry.end_target("pty");
         let ended = method(&mut registry, &claim["claim"], "read", now);
         assert_eq!(ended["phase"], "target-ended");
         assert_eq!(ended["ownership"]["unsettled"][0]["outcome"], "unknown");
         assert!(ended.get("offer").is_none());
+        registry.remove_target("pty");
+        registry.take_events();
+        error(authority.check(), "target-ended");
         authority.settle_at("source", "applied", now + Duration::from_secs(1));
         registry.tick(now + Duration::from_secs(30));
         let ended = method(
@@ -3746,6 +3782,14 @@ mod tests {
                 .is_empty()
         );
         assert!(ended.get("offer").is_none());
+        method(&mut registry, &a["controller"], "close", now);
+        method(&mut registry, &b["controller"], "close", now);
+        drop(authority);
+        registry.take_events();
+        assert!(
+            retired.upgrade().is_none(),
+            "settled, closed history retained its target"
+        );
     }
 
     #[test]

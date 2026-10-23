@@ -380,7 +380,7 @@ impl Terminal {
         thread::spawn(move || {
             // Keep the original shell's zombie identity until its descendants have
             // been recorded. Retained natural exits must not rediscover a reused PID.
-            let mut info = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
+            let mut info = std::mem::MaybeUninit::<libc::siginfo_t>::zeroed();
             let exit_observed = loop {
                 let result = unsafe {
                     libc::waitid(
@@ -391,7 +391,15 @@ impl Terminal {
                     )
                 };
                 if result == 0 {
-                    break true;
+                    let code = unsafe { info.assume_init_ref() }.si_code;
+                    if matches!(code, libc::CLD_EXITED | libc::CLD_KILLED | libc::CLD_DUMPED) {
+                        break true;
+                    }
+                    // Darwin can return stop/continue notifications despite
+                    // WEXITED. Never hold the cleanup lock while that child
+                    // still lives; WNOWAIT notifications may repeat until exit.
+                    thread::sleep(Duration::from_millis(20));
+                    continue;
                 }
                 if std::io::Error::last_os_error().raw_os_error() != Some(libc::EINTR) {
                     break false;
@@ -448,15 +456,6 @@ impl Terminal {
     ) -> Result<()> {
         authority.check()?;
         self.enqueue(bytes, Some(authority), true, false)
-    }
-    /// Daemon-classified terminal protocol traffic, never human application input.
-    pub(crate) fn protocol_input_authorized(
-        &self,
-        bytes: Vec<u8>,
-        authority: Arc<crate::control::Authority>,
-    ) -> Result<()> {
-        authority.check()?;
-        self.enqueue(bytes, Some(authority), false, false)
     }
     pub(crate) fn input_confirmed_authorized(
         &self,
@@ -785,11 +784,11 @@ impl ProcessTree {
             for &identity in &self.members {
                 if let Some(info) =
                     process_info(identity.pid).filter(|info| info.identity == identity)
+                    && !info.stopped
+                    && !info.exited
                 {
-                    if !info.stopped && !info.exited {
-                        identity.signal(libc::SIGSTOP);
-                        stopped = false;
-                    }
+                    identity.signal(libc::SIGSTOP);
+                    stopped = false;
                 }
             }
             self.discover(&process_snapshot());

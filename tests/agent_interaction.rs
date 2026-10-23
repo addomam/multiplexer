@@ -465,10 +465,10 @@ impl Drop for Host {
         let mut pids = self.terminal_pids.borrow().clone();
         pids.push(self.daemon.id() as i32);
         for name in ["backend.pid", "frontend.pid"] {
-            if let Ok(contents) = fs::read_to_string(self.root.join(name)) {
-                if let Ok(pid) = contents.trim().parse::<i32>() {
-                    pids.push(pid);
-                }
+            if let Ok(contents) = fs::read_to_string(self.root.join(name))
+                && let Ok(pid) = contents.trim().parse::<i32>()
+            {
+                pids.push(pid);
             }
         }
         for pid in pids {
@@ -1911,16 +1911,33 @@ fn frontend_exit_is_not_completion_and_explicit_close_removes_owned_backend() {
 
 #[test]
 fn daemon_shutdown_reaps_fixture_children_and_removes_private_roots() {
-    let host = Host::new();
+    let mut host = Host::new();
     let agent = host.open();
     host.ready(&agent);
     host.start(&agent);
     let root = host.root.clone();
+    let backend_socket = PathBuf::from(
+        host.driver(json!({"action":"stats"}))["listen"]
+            .as_str()
+            .unwrap(),
+    );
     let socket = host.socket.clone();
     let daemon_pid = host.daemon.id() as i32;
     let backend_pid: i32 = host.log("backend.pid").trim().parse().unwrap();
     let frontend_pid: i32 = host.log("frontend.pid").trim().parse().unwrap();
-    drop(host);
+    host.call(json!({"op":"shutdown"}));
+    let shutdown_deadline = Instant::now() + Duration::from_secs(3);
+    let status = loop {
+        if let Some(status) = host.daemon.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            Instant::now() < shutdown_deadline,
+            "daemon required fixture fallback cleanup"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    assert!(status.success());
     let deadline = Instant::now() + DEADLINE;
     for pid in [daemon_pid, backend_pid, frontend_pid] {
         loop {
@@ -1937,6 +1954,11 @@ fn daemon_shutdown_reaps_fixture_children_and_removes_private_roots() {
         }
     }
     assert!(!socket.exists(), "owned daemon socket survived shutdown");
+    assert!(
+        !backend_socket.parent().unwrap().exists(),
+        "managed private root survived daemon exit"
+    );
+    drop(host);
     assert!(!root.exists(), "private fixture root survived cleanup");
 }
 

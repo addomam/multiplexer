@@ -445,10 +445,11 @@ fn close_terminates_term_ignoring_separate_session_descendant() {
 fn wait_file(path: &std::path::Path) -> String {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        if let Ok(text) = std::fs::read_to_string(path) {
-            if !text.is_empty() && text.ends_with('\n') {
-                return text;
-            }
+        if let Ok(text) = std::fs::read_to_string(path)
+            && !text.is_empty()
+            && text.ends_with('\n')
+        {
+            return text;
         }
         assert!(Instant::now() < deadline, "missing {}", path.display());
         std::thread::sleep(Duration::from_millis(10));

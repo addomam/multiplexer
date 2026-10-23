@@ -1,6 +1,6 @@
 # e03 implementation threat model
 
-Scope: approved same-instance agent interaction and per-PTY capability ownership. Build and subsequently bounded real-harness checks with existing auth and cheapest compatible non-sol models are authorized; global daemon/config/auth changes, commit/merge/push/release are not. Parent remains the integration owner; implementation is isolated from the original checkout.
+Scope: approved same-instance agent interaction and per-PTY capability ownership. Build, bounded real-harness checks and subsequent commit/merge/push were separately authorized. The user now accepts documented temporary limitations with upstream Codex unmodified and approves Rust 1.88 for patched dependencies. Global daemon/config/auth changes and release remain unauthorized. Parent remains the integration owner; implementation is isolated from the original checkout.
 
 ## Trust and assets
 
@@ -20,7 +20,7 @@ The private same-user Unix socket already permits process/config control. Capabi
 
 ## Risk and gates
 
-High correctness/concurrency risk; no new cross-user privilege boundary. Unknown native application settlement blocks safe grant and first acceptance. Force is explicit unresolved-risk acceptance, never interruption or process stop. Keep/withdraw preserves the same human control; ordinary cancellation invalidates prior control and grants nobody. Tests must preserve stock Zsh/OMP and independent terminal-query behavior.
+High correctness/concurrency risk; no new cross-user privilege boundary. Unknown native application settlement still blocks safe grant. Full first acceptance remains unproved; the user's explicit [temporary Codex exception](../../EXCEPTIONS.md) permits current limited delivery without claiming complete-broker/all32 PASS. Force is explicit unresolved-risk acceptance, never interruption or process stop. Keep/withdraw preserves the same human control; ordinary cancellation invalidates prior control and grants nobody. Tests must preserve stock Zsh/OMP and independent terminal-query behavior.
 
 The implementation uses private 0700 roots and 0600 auth/schema/log files. Real harness checks use private profiles/copies, not global login or refresh. Local inference binds authenticated loopback only. Rendered retained evidence redacts private references and wrapped credential strings; raw PTY/auth/provider logs are disposable. Bounded outer-PTY readers continue through owned process teardown, then join before saved terminal modes are restored using the retained master on Darwin.
 
@@ -29,3 +29,5 @@ Scoped turn/pending observation, actual native mode selection and the separate g
 This maintained threat model is not a vulnerability scan PASS, independent review, runtime acceptance or reset of the historical review cap.
 
 Completed auth/profile/schema/raw-output roots and owned inference/diagnostic resources were removed. Worker source was byte-verified into private recovery archives before retiring their sessions and worktrees; no unmerged source was discarded. See the integrated Build and worker-retirement evidence. The final workspace/Clippy/check/build/native/showcase/OMP/Zsh checks passed; this remains self-verification, not an independent security review.
+
+The accepted exception covers unavailable native fencing and optimistic native losing-answer history only. It does not waive private credentials/resources, authority and retained-call accounting, no-replay or any existing regression. Native safe transfer can remain blocked after ordinary input; do not suppress that blocker. Future ACP integration must demonstrate the actual missing contracts, not assume protocol adoption closes them. The dependency advisory is not excepted: the user approved Rust 1.88 and the first patched `time` resolution.

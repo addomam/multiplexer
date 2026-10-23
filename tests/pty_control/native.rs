@@ -646,7 +646,7 @@ fn observer_physical_keys_repeat_literal_prefix_paste_mouse_never_replay_after_f
     observer.wait("Waiting");
     observer.capture("input-confirmation-consumed");
     observer.action(6);
-    observer.wait("Force");
+    observer.wait("Force control?");
     observer.send(b"\r");
     observer.wait("Controlled here");
     observer.send(b"\x1b[<32;13;8M\x1b[<0;13;8m");

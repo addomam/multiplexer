@@ -1,6 +1,6 @@
-//! Opt-in, billable, real-provider checks. Never run these with a wildcard filter.
-//! Each selected test deliberately fails when a required provider/native seam is
-//! unavailable. A provider receipt is neither task acceptance nor proof of a winner.
+//! Billable real-provider cases require exact opt-in; never use wildcard filters.
+//! The nonignored cleanup regression uses isolated local processes, no models/auth.
+//! Missing required live seams fail; a receipt is neither acceptance nor a winner.
 use parking_lot::Mutex;
 use serde_json::{Value, json};
 use std::cell::Cell;
@@ -303,8 +303,8 @@ impl Owned {
         }
         self.groups.clear();
         for (pid, _, group, _) in &rows {
-            // Every current member must belong to our recorded ancestry before
-            // a process-group signal is allowed, including leaderless groups.
+            // Track private groups wholly within the observed ancestry for
+            // liveness/diagnostics, never for group-wide fallback signals.
             if self.known.contains_key(pid)
                 && *group > 1
                 && *group != unsafe { libc::getpgrp() }
@@ -342,28 +342,49 @@ impl Owned {
             }
             thread::sleep(POLL);
         }
-        if self.discover().is_err() {
-            errors.push("owned-tree refresh before termination failed");
-        }
         for signal in [libc::SIGTERM, libc::SIGKILL] {
-            if self.discover().is_err() {
-                errors.push("owned identity refresh before signal failed");
-            }
-            for &group in &self.groups {
-                if group_alive(group) {
-                    unsafe {
-                        libc::kill(-group, signal);
-                    }
+            let candidates: Vec<_> = match self.discover() {
+                Ok(()) => self.known.keys().copied().collect(),
+                Err(_) => {
+                    errors.push("owned identity refresh before signal failed");
+                    Vec::new()
                 }
-            }
-            // Descendants which did not create a private group still belong to
-            // this tree. Never signal the test runner's/global process group.
-            for &pid in self.known.keys() {
-                let group = unsafe { libc::getpgid(pid) };
-                if group > 0 && !self.groups.contains(&group) {
+            };
+            // Never signal a whole group: membership may change after discovery.
+            // Bound per-PID refreshes within the watchdog's teardown allowance.
+            let signal_deadline = Instant::now() + Duration::from_secs(10);
+            let mut refresh = false;
+            for pid in candidates {
+                // Direct children are handled below without releasing their PID
+                // identity between its check and signal, even if ps is unavailable.
+                if self.children.iter().any(|child| child.id() as i32 == pid) {
+                    continue;
+                }
+                if Instant::now() >= signal_deadline {
+                    errors.push("owned signal validation deadline");
+                    break;
+                }
+                if refresh && self.discover().is_err() {
+                    errors.push("owned identity refresh before signal failed");
+                    break;
+                }
+                refresh = true;
+                if self.known.contains_key(&pid) {
                     unsafe {
                         libc::kill(pid, signal);
                     }
+                }
+            }
+            for child in &mut self.children {
+                match child.try_wait() {
+                    Ok(None) => {
+                        // Only this still-unreaped child handle authorizes the PID.
+                        unsafe {
+                            libc::kill(child.id() as i32, signal);
+                        }
+                    }
+                    Ok(Some(_)) => {}
+                    Err(_) => errors.push("owned direct-child state unavailable"),
                 }
             }
             let end = Instant::now() + Duration::from_secs(2);
@@ -378,7 +399,7 @@ impl Owned {
             }
         }
         for child in &mut self.children {
-            if child.try_wait().ok().flatten().is_none() {
+            if matches!(child.try_wait(), Ok(None)) {
                 let _ = child.kill();
             }
             if !bounded_reap(child, Duration::from_secs(2)).unwrap_or(false) {
@@ -386,20 +407,20 @@ impl Owned {
             }
         }
         if self.groups.iter().any(|group| group_alive(*group)) {
-            errors.push("owned process group survived teardown");
+            errors.push("tracked process group still present after teardown");
         }
         if self
             .known
             .keys()
             .any(|pid| unsafe { libc::kill(*pid, 0) == 0 })
         {
-            errors.push("owned descendant survived teardown");
+            errors.push("tracked process identity still present after teardown");
         }
         if !errors.is_empty() {
-            // Identity-only diagnostics permit safe survivor cleanup without
-            // retaining command lines, credentials, or the private auth root.
+            // Historical diagnostics require fresh manual ownership validation;
+            // they are not signal authority and contain no command lines/auth.
             eprintln!(
-                "owned cleanup identities: root={} known={:?} groups={:?}",
+                "tracked cleanup identities: root={} known={:?} groups={:?}",
                 self.root.display(),
                 self.known,
                 self.groups
@@ -524,6 +545,17 @@ fn owned_cleanup_discovery_failure_preserves_unowned_pid_and_group() {
     };
     // A real filesystem error makes every ownership refresh fail before ps runs.
     fs::create_dir(root.join("process-table")).unwrap();
+    owned.register(
+        Command::new("/bin/sleep")
+            .arg("60")
+            .env_clear()
+            .process_group(0)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
     let errors = owned.cleanup();
     let statuses = [
         sentinels.children[0].try_wait().unwrap(),
@@ -535,6 +567,10 @@ fn owned_cleanup_discovery_failure_preserves_unowned_pid_and_group() {
         "failed discovery signaled an unowned group/PID: {errors:?}"
     );
     assert!(!root.exists(), "private cleanup files survived");
+    assert!(
+        owned.children[0].try_wait().unwrap().is_some(),
+        "still-unreaped direct child was not terminated after discovery failure"
+    );
 }
 
 struct Guard {

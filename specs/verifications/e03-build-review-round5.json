@@ -1,0 +1,378 @@
+{
+  "scope": "e03-build-current-delivery",
+  "round": 5,
+  "max_rounds": 5,
+  "historical_counters_reset": false,
+  "verdict": "FAIL",
+  "general_scores": [
+    97.5,
+    100
+  ],
+  "unique_general_must_fix": 1,
+  "unwaived_high_security": 0,
+  "human_decision_required": true,
+  "merge_permitted": false,
+  "reports": {
+    "E03BuildReviewA5": {
+      "verdict": "FAIL",
+      "total_items": 40,
+      "must_fix": 1,
+      "should_fix": 0,
+      "score": 97.5,
+      "findings": [
+        "P1 / must-fix \u2014 Fail closed when smoke-test ownership discovery fails \u2014 /Users/addomam/projects/amux-e03-build/tests/codex_native_smoke.rs:348-365 (particularly 349-355). Owned::cleanup records a failed discover() but continues sending SIGTERM/SIGKILL through the previous self.groups and self.known snapshots. Its preceding graceful-wait loop calls Child::try_wait(), so original children can already have been reaped; their PID/process-group numbers are then reusable. If /bin/ps fails or exceeds discover()'s one-second deadline, an unrelated process that has reused a recorded number passes group_alive()/getpgid() and receives the signal without any current birth/ownership validation. The watchdog also enters this cleanup path specifically after discovery failure. This new opt-in harness therefore violates the non-waived only-owned cleanup boundary on its failure path. Minimal correction: never perform PID/group fallback signaling using stale snapshots after discovery failure; preserve the cleanup error and signal only independently revalidated owned identities (or unreaped direct children), with current ownership validation before each fallback signal."
+      ],
+      "inspection_and_provenance": "Independent read-only review of /Users/addomam/projects/amux-e03-build against 6318845636bf33ac6800b0dadf2e6692e04bd399, using git diff and source/document inspection of the integrated working tree, not RED HEAD alone. Read the shared round5 brief first, CONVENTIONS.md, PLAN.md including its delivery amendment, build-integration-contract.md, the PTY control contract and schema/example sections, native UX, ADR 0003, e03 threat model, EXCEPTIONS.md, current self-audit, and recorded focus/lifecycle/late-settlement/Force runtime evidence. Independently inspected production paths in control.rs, daemon.rs, integration.rs, codex.rs, runtime.rs/runtime/compatibility.rs, tui.rs/tui/control.rs, client.rs, cli.rs and the projects.rs configuration-lock change; traced capability and queued-work producers through actual dispatch consumers, shell epoch/wake/acceptance and retired settlement routing, automatic-launch retirement, provider request/event routing, and process cleanup. Inspected the stock Zsh adapter, unchanged OMP reporter/lifecycle boundary, migrated acceptance/shell-race/showcase producers, and relevant ownership/native/provider/smoke regressions and cleanup guards. The reported cleanup finding is source-derived and anchored in a file added by this patch; no unrelated-process signal or exploit was executed. No files were edited, no Git state mutated, no tests/builds/lint/formatters or processes/providers/network checks were run, and no peer reviewer payloads were read or peers contacted. Parent-recorded executions were treated only as supplied evidence, not my testing. The unexplained earlier acceptance timeout remains unexplained; historical partial coverage is not current coverage, and failed complete-broker/all32 acceptance remains failing under the narrow user exceptions. This review is final scoped round5/max5 and does not reset historical caps.",
+      "score_calculation": "100 \u00d7 (40 \u2212 1 \u2212 0) / 40 = 97.5%. FAIL despite exceeding 94%, because must_fix is nonzero.",
+      "checklist": [
+        {
+          "item": "Minted capability kind and closed request validation",
+          "result": "PASS"
+        },
+        {
+          "item": "Control binding to controller, target lifetime and generation",
+          "result": "PASS"
+        },
+        {
+          "item": "Claim/offer non-authority and public capability redaction",
+          "result": "PASS"
+        },
+        {
+          "item": "Exclusive acquisition and generation revocation",
+          "result": "PASS"
+        },
+        {
+          "item": "Cooperative yield, reservation and explicit offer acceptance",
+          "result": "PASS"
+        },
+        {
+          "item": "Stale and consumed offer rejection",
+          "result": "PASS"
+        },
+        {
+          "item": "Ordinary cancellation grants nobody and retains calls",
+          "result": "PASS"
+        },
+        {
+          "item": "Compared force preserves unresolved-call warnings and running work",
+          "result": "PASS"
+        },
+        {
+          "item": "Private recovery avoids ambiguous mutation replay",
+          "result": "PASS"
+        },
+        {
+          "item": "Native queued writer revalidates authority at consumption",
+          "result": "PASS"
+        },
+        {
+          "item": "Native unknown batches remain safe-transfer blockers",
+          "result": "PASS"
+        },
+        {
+          "item": "Structured jobs revalidate identity and authority at dispatch",
+          "result": "PASS"
+        },
+        {
+          "item": "Shell FIFO execution retains originating authority",
+          "result": "PASS"
+        },
+        {
+          "item": "Shell epoch/wake consumers reject revoked continuations",
+          "result": "PASS"
+        },
+        {
+          "item": "Exact native acceptance is distinguished from command completion",
+          "result": "PASS"
+        },
+        {
+          "item": "Late automatic launch settlement retires private control",
+          "result": "PASS"
+        },
+        {
+          "item": "Settlement-before-registration and target-end launch retirement",
+          "result": "PASS"
+        },
+        {
+          "item": "Late release cannot revoke forced ownership; managed caller control retained",
+          "result": "PASS"
+        },
+        {
+          "item": "Unknown execution retains original private source without replay",
+          "result": "PASS"
+        },
+        {
+          "item": "Removed integration atomically retains settlement-only lookup",
+          "result": "PASS"
+        },
+        {
+          "item": "Removed acceptance is negative permission; exact settlement lookup consumed",
+          "result": "PASS"
+        },
+        {
+          "item": "UUID report selectors do not retarget replacement display names",
+          "result": "PASS"
+        },
+        {
+          "item": "Removed/ended ownership stops native-view propagation",
+          "result": "PASS"
+        },
+        {
+          "item": "Conditional consent validates original connection and displayed revisions",
+          "result": "PASS"
+        },
+        {
+          "item": "Idle/background eligibility and warning rechecked at acceptance",
+          "result": "PASS"
+        },
+        {
+          "item": "Keep/withdraw preserves human control without reacquisition policy",
+          "result": "PASS"
+        },
+        {
+          "item": "Native keys, repeats, paste and literal prefix share authority gate",
+          "result": "PASS"
+        },
+        {
+          "item": "Application mouse gestures and intercepted tails are not replayed",
+          "result": "PASS"
+        },
+        {
+          "item": "Focus is authorized unknown application input, not human activity",
+          "result": "PASS"
+        },
+        {
+          "item": "Force warning captures target/observation and validates staleness",
+          "result": "PASS"
+        },
+        {
+          "item": "Force requires complete wrapped content and successful drained-input frame",
+          "result": "PASS"
+        },
+        {
+          "item": "Force resize/redraw/scroll and queued confirmation boundaries",
+          "result": "PASS"
+        },
+        {
+          "item": "Codex native-first same-instance/thread identity and closed prompt intent",
+          "result": "PASS"
+        },
+        {
+          "item": "Typed pending request identities, keyed answers and request-only permissions",
+          "result": "PASS"
+        },
+        {
+          "item": "Explicit turn interruption, late outcomes, tombstones and degradation",
+          "result": "PASS"
+        },
+        {
+          "item": "Codex concurrent close/shutdown completion and lock ordering",
+          "result": "PASS"
+        },
+        {
+          "item": "Production birth-qualified process teardown and true-exit reaper path",
+          "result": "PASS"
+        },
+        {
+          "item": "Opt-in smoke failure cleanup signals only currently owned processes",
+          "result": "FAIL \u2014 must-fix finding"
+        },
+        {
+          "item": "Stock Zsh/OMP and migrated busy/readiness/query regression boundaries",
+          "result": "PASS"
+        },
+        {
+          "item": "Approved dependency/MSRV changes and honest limited-delivery evidence",
+          "result": "PASS"
+        }
+      ],
+      "confidence": 0.91
+    },
+    "E03BuildReviewB5": {
+      "verdict": "PASS",
+      "total_items": 40,
+      "must_fix": 0,
+      "should_fix": 0,
+      "score": 100,
+      "findings": [],
+      "inspection_and_provenance": "Independent read-only inspection of /Users/addomam/projects/amux-e03-build against 6318845636bf33ac6800b0dadf2e6692e04bd399 using git diff and ranged source reads; reviewed the integrated working tree, including uncommitted corrections, rather than RED HEAD alone. Read local://e03-current-delivery-review-round5.md first. Inspected CONVENTIONS.md; specs/epics/e03-agent-interaction/{PLAN.md,build-integration-contract.md}; specs/contracts/pty-control.md and relevant schema/examples; specs/tech-architecture/pty-control-native-ux.md; specs/adr/0003-codex-first-agent-target.md; specs/security/{EXCEPTIONS.md,epics/e03/THREAT_MODEL.md}; specs/verifications/{AUDIT-e03-current-delivery.md,e03-force-presentation-runtime.json,e03-late-settlement-runtime.json,e03-complete-broker-acceptance.json}; README.md, CHANGELOG.md, Cargo.toml and Cargo.lock. Read the production implementations in src/control.rs, src/codex.rs and src/tui/control.rs, and affected source-to-sink regions in src/{daemon.rs,integration.rs,runtime.rs,tui.rs,client.rs,cli.rs,projects.rs,lib.rs}, src/runtime/compatibility.rs, integrations/zsh/adapter.zsh and the existing integrations/omp/amux.ts reporting consumer. Inspected relevant ownership, late-settlement, native Force, provider identity/backpressure/lifecycle, real-smoke isolation and full-acceptance assertions in tests/{pty_control.rs,pty_control/native.rs,agent_interaction.rs,codex_native_smoke.rs,codex_native_smoke/complete.rs,codex_native_smoke/capture.rs,acceptance.rs,shell_races.rs,runtime.rs} and terminal-showcase/tests/multiplexer.rs. Traced actual runtime queue consumption, original-connection worker routing, ZLE pre-evaluation permission, provider message dispatch and cleanup lock ordering\u2014not just emitting APIs. No edits, builds, tests, linters, formatters, spawned application processes, network/model calls, Git mutations, peer contact or peer-review payload reads. Runtime/preflight results cited in repository evidence remain parent-observed evidence, not testing performed by this review.",
+      "explanation": "No evidence-backed, patch-introduced must-fix or should-fix defect was found in the inspected integrated implementation under the explicitly amended limited-delivery contract. This PASS is an independent static review gate, not complete-broker/all32 acceptance, a current coverage measurement, or verification of Rust 1.88/Linux execution.",
+      "confidence": 0.89,
+      "checklist": [
+        {
+          "item": "Minted capability kind and possession checks",
+          "result": "PASS"
+        },
+        {
+          "item": "PTY lifetime and ownership generation binding",
+          "result": "PASS"
+        },
+        {
+          "item": "Non-authorizing controller, claim and offer handles",
+          "result": "PASS"
+        },
+        {
+          "item": "Exclusive ownership and reserved cooperative handoff",
+          "result": "PASS"
+        },
+        {
+          "item": "Explicit offer acceptance and duplicate acceptance rejection",
+          "result": "PASS"
+        },
+        {
+          "item": "Stale cancel/force/accept cannot revoke a newer owner",
+          "result": "PASS"
+        },
+        {
+          "item": "Ordinary cancellation grants nobody and retains calls",
+          "result": "PASS"
+        },
+        {
+          "item": "Force compares observations and retains unresolved-risk accounting",
+          "result": "PASS"
+        },
+        {
+          "item": "Force does not implicitly interrupt or kill processes",
+          "result": "PASS"
+        },
+        {
+          "item": "Private recovery observes rather than retries ambiguous mutations",
+          "result": "PASS"
+        },
+        {
+          "item": "Public input and execute require exact-target current control",
+          "result": "PASS"
+        },
+        {
+          "item": "Queued runtime input revalidates at actual writer dispatch",
+          "result": "PASS"
+        },
+        {
+          "item": "Native unknown accounting survives revocation and target end",
+          "result": "PASS"
+        },
+        {
+          "item": "Automatic emulator replies remain distinct from application input",
+          "result": "PASS"
+        },
+        {
+          "item": "Application focus is authorized/accounted without human-activity reset",
+          "result": "PASS"
+        },
+        {
+          "item": "Shell FIFO execution retains its originating authority",
+          "result": "PASS"
+        },
+        {
+          "item": "Shell epoch/wake continuations revalidate authority",
+          "result": "PASS"
+        },
+        {
+          "item": "ZLE acceptance/rejection routes to exact retained execution",
+          "result": "PASS"
+        },
+        {
+          "item": "Unknown acknowledgement retains original private source without replay",
+          "result": "PASS"
+        },
+        {
+          "item": "Private automatic launch retirement handles late settlement and registration races",
+          "result": "PASS"
+        },
+        {
+          "item": "Late launch retirement cannot release newer forced or caller-owned control",
+          "result": "PASS"
+        },
+        {
+          "item": "Removal atomically publishes settlement-only callback lookup",
+          "result": "PASS"
+        },
+        {
+          "item": "Removed acceptance returns negative pre-evaluation permission",
+          "result": "PASS"
+        },
+        {
+          "item": "Stable UUID callback identity cannot fall through to replacement display name",
+          "result": "PASS"
+        },
+        {
+          "item": "Removed ownership targets retain required history without live view fan-out",
+          "result": "PASS"
+        },
+        {
+          "item": "Original-connection view serial and human-activity provenance",
+          "result": "PASS"
+        },
+        {
+          "item": "Conditional eligibility, consent, revisions and settlement rechecked at acceptance",
+          "result": "PASS"
+        },
+        {
+          "item": "Conditional keep/withdraw preserves human control without automatic rearming",
+          "result": "PASS"
+        },
+        {
+          "item": "Unknown/new/departed attachment facts do not fabricate background consent",
+          "result": "PASS"
+        },
+        {
+          "item": "Native key/repeat/paste/literal-prefix/mouse routes share authority gating",
+          "result": "PASS"
+        },
+        {
+          "item": "Intercepted input and mouse gesture tails are consumed without replay",
+          "result": "PASS"
+        },
+        {
+          "item": "Force dialog captures target/observation and rejects stale confirmation",
+          "result": "PASS"
+        },
+        {
+          "item": "Force arming requires a successful frame and drained input queue",
+          "result": "PASS"
+        },
+        {
+          "item": "Force wrapped-content fit and resize/scroll/redraw invalidation",
+          "result": "PASS"
+        },
+        {
+          "item": "Same-instance native-first Codex discovery without hidden bootstrap turn",
+          "result": "PASS"
+        },
+        {
+          "item": "Closed prompt/answer/permission/interrupt dispatch and exact typed identities",
+          "result": "PASS"
+        },
+        {
+          "item": "Provider backpressure, tombstones, unknown outcomes and late lifecycle settlement",
+          "result": "PASS"
+        },
+        {
+          "item": "Owned cleanup serialization, birth-qualified process handling and private resources",
+          "result": "PASS"
+        },
+        {
+          "item": "Stock Zsh/OMP, readiness/busy/partial-input and independent cursor-reply regression preservation",
+          "result": "PASS"
+        },
+        {
+          "item": "Approved dependency/MSRV scope and honest retained acceptance/evidence disclosures",
+          "result": "PASS"
+        }
+      ],
+      "scope_limits": [
+        "The documented missing stock-Codex native application fence and optimistic losing-answer history remain accepted temporary limitations, not fixes or safe-grant waivers.",
+        "Complete-broker/all32 acceptance remains failed; unknown settlement continues to block safe grants.",
+        "The genuine previously observed acceptance-callback timeout has no established cause; subsequent parent-reported passes do not establish a root cause.",
+        "Historical partial coverage is not current-source coverage; the expressly waived broader generic 95% threshold was not imposed.",
+        "Final scoped review round5/max5 and historical review counters were not reset."
+      ]
+    },
+    "E03SecurityReview5": {
+      "verdict": "PASS \u2014 scoped current-delivery security review only; not complete-broker acceptance",
+      "unwaived_high": 0,
+      "findings": [],
+      "inspection_and_provenance": "Independently inspected the actual integrated on-disk working tree at /Users/addomam/projects/amux-e03-build, using the assigned comparison base 6318845636bf33ac6800b0dadf2e6692e04bd399 as scope. Review was of current file contents, not HEAD23a7016 alone or just the latest UI correction; no Git diff command was executed. Read the round5 shared brief first, CONVENTIONS.md, e03 PLAN/delivery amendment and build-integration-contract.md, security THREAT_MODEL.md and EXCEPTIONS.md, pty-control.md plus schema/examples, native UX, ADR0003 and the current self-audit. Production paths inspected: src/control.rs, daemon.rs, integration.rs, runtime.rs, runtime/compatibility.rs, codex.rs, tui.rs, tui/control.rs, client.rs, cli.rs; the relevant trusted hook execution in projects.rs; integrations/zsh/adapter.zsh and integrations/omp/{amux,lifecycle}.ts; Cargo.toml and relevant Cargo.lock entries. Traced minted-kind lookup and lifetime/generation checks through dispatch; cooperative reservation/settlement/acceptance and cancel/force accounting; original-connection conditional consent and activity; keys/repeats/paste/literal-prefix/mouse/focus admission; complete visible Force warning measurement and successful-frame/drained-input arming; FIFO epoch/wake/source acceptance, timeout retention, automatic launch retirement and exact removed-target settlement with stable UUID routing; native-first Codex instance/session/turn/item/typed-request identities, request-only decisions, tombstones and unknown outcomes; private endpoint/auth handling, public capability redaction and serialized birth-qualified owned teardown. Same-user source/hooks execution was treated as intentional authority, not an introduced injection bypass. Inspected relevant regression source in tests/pty_control.rs, tests/pty_control/native.rs, tests/agent_interaction.rs, tests/integration.rs, tests/acceptance.rs, tests/shell_races.rs, terminal-showcase/tests/multiplexer.rs and selected live-fixture guard/capture/redaction code. Read parent integration, lifecycle, late-settlement and Force runtime records and the failed complete-broker report as documentary evidence only, not my testing. No security candidate survived source-to-sink/control review with a credible in-scope exploit path. No edits, builds, tests, lint, formatters, process/daemon/provider/model/network calls, exploit execution, Git mutation, peer contact or peer reviewer payload reading occurred. The narrow upstream native-fence/optimistic-history and generic coverage exceptions remain narrow: unknown still blocks safe grants, privacy/cleanup are not waived, and the recorded complete-broker/all32 acceptance remains failing."
+    }
+  }
+}

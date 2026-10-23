@@ -1621,6 +1621,89 @@ fn event_gap_snapshot_recovers_public_reservation_but_only_private_read_recovers
 }
 
 #[test]
+fn forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity() {
+    let mut h = Host::new();
+    let terminal = h.main();
+    let mut native = Connection::connect(&h.socket, DEADLINE).unwrap();
+    let registration = native
+        .persistent(json!({"op":"controller-create","role":"attachment","label":"focus consumer"}));
+    native.persistent(
+        json!({"op":"control-handle","handle":registration["controller"],
+        "method":"view","view":{"serial":1,"terminal":terminal,"focused":null}}),
+    );
+    let grant =
+        native.persistent(h.claim_request(&terminal, &registration["controller"], "cooperative"));
+    let source = format!(
+        "stty raw -echo; printf '\\033[?1004h'; {}; kill -STOP $$; \
+         IFS= read -r -k 3 focus; printf '%s' \"$focus\" > '{}'; \
+         stty -raw echo; printf '\\033[?1004l'",
+        h.marker_source("focus-ready"),
+        h.root.join("focus-consumed").display()
+    );
+    h.execute(&terminal, &grant["control"], &source);
+    h.marker("focus-ready");
+    let pid = h.state(&terminal)["pid"].as_i64().unwrap() as i32;
+    h.until("application stopped before focus consumption", || {
+        let status = Command::new("ps")
+            .args(["-p", &pid.to_string(), "-o", "stat="])
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&status.stdout)
+            .trim_start()
+            .starts_with('T')
+            .then_some(())
+    });
+    h.until("application enabled focus reporting", || {
+        (h.call(json!({"op":"screen","terminal":terminal}))["modes"]["focus_reporting"] == true)
+            .then_some(())
+    });
+    let before = h.ownership(&terminal)["activity_revision"].clone();
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
+    native.persistent(
+        json!({"op":"control-handle","handle":registration["controller"],
+        "method":"view","view":{"serial":2,"terminal":terminal,"focused":true}}),
+    );
+    let calls = h.native_calls(&terminal);
+    assert_eq!(calls[0]["outcome"], "unknown");
+    assert_eq!(h.ownership(&terminal)["activity_revision"], before);
+
+    let requester = h.controller("focus handoff requester");
+    let claim = h.claim(&terminal, &requester["controller"]);
+    h.yield_to(&grant["control"], &claim);
+    let progress = h.handle(&claim["claim"], "read");
+    assert_eq!(progress["phase"], "waiting-settlement");
+    assert!(progress.get("offer").is_none());
+    assert!(h.ownership(&terminal)["owner"].is_null());
+    assert!(!h.root.join("focus-consumed").exists());
+
+    assert_eq!(unsafe { libc::kill(pid, libc::SIGCONT) }, 0);
+    h.until("old focus actually consumed after yield", || {
+        fs::read(h.root.join("focus-consumed"))
+            .ok()
+            .filter(|bytes| bytes == b"\x1b[I")
+    });
+    assert_eq!(
+        h.handle(&claim["claim"], "read")["phase"],
+        "waiting-settlement"
+    );
+    assert_eq!(h.native_calls(&terminal)[0]["id"], calls[0]["id"]);
+
+    h.call(json!({"op":"shutdown"}));
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let status = loop {
+        if let Some(status) = h.daemon.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "stop/resume must not strand the reaper or require fixture force cleanup"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    assert!(status.success());
+}
+
+#[test]
 fn removed_terminals_do_not_receive_later_native_view_events() {
     let h = Host::new();
     let terminal = h.main();
@@ -1658,8 +1741,6 @@ fn removed_terminals_do_not_receive_later_native_view_events() {
     );
     assert_eq!(views, [terminal.as_str()]);
 }
-
-[Showing lines 1705-1743 of 1744. Use :1744 to continue]
 
 // Delay a genuine native permission callback at the transport boundary. The
 // original request survives termination of its sender; nothing is resubmitted.
@@ -1712,6 +1793,10 @@ impl ShellReportGate {
                     let _ = capture_tx.send(request.clone());
                     let _ = release_rx.recv_timeout(DEADLINE);
                 }
+                if !held && request["event"]["kind"] == "execution-rejected" {
+                    // Surface a genuine pre-acceptance rejection, not a misleading timeout.
+                    let _ = capture_tx.send(request.clone());
+                }
                 let response = wire(&real, request, DEADLINE).unwrap();
                 if hold {
                     let _ = result_tx.send(response.clone());
@@ -1724,20 +1809,40 @@ impl ShellReportGate {
         });
         fs::write(
             h.root.join("startup/.zshrc"),
-            format!("PS1='OWNERSHIP_NATIVE> '\nexport AMUX_SOCKET='{}'\n", path.display()),
-        ).unwrap();
-        Self { captured, release, result, stop, worker: Some(worker) }
+            format!(
+                "PS1='OWNERSHIP_NATIVE> '\nexport AMUX_SOCKET='{}'\n",
+                path.display()
+            ),
+        )
+        .unwrap();
+        Self {
+            captured,
+            release,
+            result,
+            stop,
+            worker: Some(worker),
+        }
     }
 
     fn captured(&self, terminal: &str) -> Value {
-        let request = self.captured.recv_timeout(DEADLINE).expect("genuine native acceptance");
+        let request = self
+            .captured
+            .recv_timeout(DEADLINE)
+            .expect("genuine native acceptance");
         assert_eq!(request["terminal"], terminal);
+        assert_eq!(
+            request["event"]["kind"], "execution-accepted",
+            "{}",
+            request["event"]
+        );
         request
     }
 
     fn forward(&self) -> Value {
         self.release.send(()).unwrap();
-        self.result.recv_timeout(DEADLINE).expect("original report response")
+        self.result
+            .recv_timeout(DEADLINE)
+            .expect("original report response")
     }
 }
 
@@ -1757,7 +1862,9 @@ impl Drop for ShellReportGate {
 
 fn unknown_startup(h: &Host, terminal: &str, execution: &Value) {
     h.until("actual startup acknowledgement deadline", || {
-        h.ownership(terminal)["unsettled"].as_array()?.iter()
+        h.ownership(terminal)["unsettled"]
+            .as_array()?
+            .iter()
             .any(|call| call["id"] == *execution && call["outcome"] == "unknown")
             .then_some(())
     });
@@ -1770,10 +1877,21 @@ fn late_automatic_startup_acceptance_retires_control_without_replay() {
     let marker = h.root.join("launch-once");
     let terminal = h.call(json!({"op":"open","source":h.main(),
         "command":format!("print -r -- launch >> '{}'", marker.display())}))["id"]
-        .as_str().unwrap().to_owned();
+        .as_str()
+        .unwrap()
+        .to_owned();
     let report = gate.captured(&terminal);
     let execution_id = &report["event"]["execution_id"];
     unknown_startup(&h, &terminal, execution_id);
+    let source_file = h
+        .root
+        .join("integration")
+        .join(&terminal)
+        .join(format!("{}.zsh", execution_id.as_str().unwrap()));
+    assert!(
+        source_file.exists(),
+        "unknown dispatch lost its original source"
+    );
     assert!(!h.ownership(&terminal)["owner"].is_null());
     success(gate.forward());
     let completed = h.until("real delayed command completion", || {
@@ -1781,9 +1899,13 @@ fn late_automatic_startup_acceptance_retires_control_without_replay() {
         (result["status"] == "completed").then_some(result)
     });
     let ownership = h.ownership(&terminal);
-    assert!(ownership["owner"].is_null(), "inaccessible launch owner: {ownership}; completion: {completed}");
+    assert!(
+        ownership["owner"].is_null(),
+        "inaccessible launch owner: {ownership}; completion: {completed}"
+    );
     assert_eq!(completed["exit_status"], 0, "{completed}");
     assert_eq!(fs::read_to_string(marker).unwrap(), "launch\n");
+    assert!(!source_file.exists(), "completed source was not cleaned");
     let next = h.controller("after late startup");
     assert_eq!(h.acquire(&terminal, &next["controller"])["mode"], "safe");
 }
@@ -1794,32 +1916,105 @@ fn removed_terminal_consumes_original_shell_settlement_without_retargeting() {
     let gate = ShellReportGate::new(&h);
     let terminal = h.call(json!({"op":"open","source":h.main(),
         "command":h.marker_source("REMOVED_SOURCE_MUST_NOT_RUN")}))["id"]
-        .as_str().unwrap().to_owned();
+        .as_str()
+        .unwrap()
+        .to_owned();
     let report = gate.captured(&terminal);
     unknown_startup(&h, &terminal, &report["event"]["execution_id"]);
     let observer = h.controller("retained ended claim");
     let claim = h.claim(&terminal, &observer["controller"]);
+    let private = h.root.join("integration").join(&terminal);
+    assert!(
+        private.join("commands").exists(),
+        "live integration FIFO missing"
+    );
     h.call(json!({"op":"close","terminal":terminal}));
     h.call(json!({"op":"wait","terminal":terminal,"condition":"exited","timeout_ms":10000}));
     h.call(json!({"op":"remove","terminal":terminal}));
-    assert!(!h.root.join("runtime/integration").join(&terminal).exists());
+    assert!(!private.exists(), "removed integration resources retained");
     let before = h.handle(&claim["claim"], "read");
-    assert_eq!(before["ownership"]["unsettled"][0]["id"], report["event"]["execution_id"], "{before}");
+    assert_eq!(
+        before["ownership"]["unsettled"][0]["id"], report["event"]["execution_id"],
+        "{before}"
+    );
     // Reuse only the display name, never the old stable target identity.
     fs::write(h.root.join("startup/.zshrc"), "PS1='OWNERSHIP_NATIVE> '\n").unwrap();
     let replacement = h.call(json!({"op":"open","source":h.main(),"name":terminal}))["id"]
-        .as_str().unwrap().to_owned();
+        .as_str()
+        .unwrap()
+        .to_owned();
     h.ready(&replacement);
     let replacement_before = h.state(&replacement);
+    denied(
+        h.response(json!({"op":"report","terminal":terminal,
+        "event":{"kind":"shell-ready","pid":0}})),
+        &["target-ended"],
+    );
+    denied(
+        h.response(json!({"op":"report","terminal":terminal,
+        "event":{"kind":"execution-rejected","execution_id":uuid::Uuid::new_v4().to_string(),
+        "reason":"stale-handle"}})),
+        &["integration-lost"],
+    );
+    assert_eq!(
+        stable_calls(&h.handle(&claim["claim"], "read")["ownership"]["unsettled"]),
+        stable_calls(&before["ownership"]["unsettled"])
+    );
     denied(gate.forward(), &["target-ended", "stale-handle"]);
     let after = h.handle(&claim["claim"], "read");
     assert_eq!(after["ownership"]["unsettled"], json!([]), "{after}");
     assert_ne!(after["phase"], "offered");
     assert!(after["offer"].is_null());
-    assert_eq!(h.state(&replacement)["ownership"], replacement_before["ownership"]);
+    assert_eq!(
+        h.state(&replacement)["ownership"],
+        replacement_before["ownership"]
+    );
     assert!(!h.root.join("REMOVED_SOURCE_MUST_NOT_RUN").exists());
     // The settlement-only lookup is consumed, not retained as live integration.
     denied(h.response(report), &["integration-lost"]);
-    h.handle(&claim["claim"], "close");
     h.handle(&observer["controller"], "close");
+}
+
+#[test]
+fn late_startup_rejection_preserves_forced_owner_and_live_shell() {
+    let h = Host::new();
+    let gate = ShellReportGate::new(&h);
+    let terminal = h.call(json!({"op":"open","source":h.main(),
+        "command":h.marker_source("FORCED_STARTUP_MUST_NOT_REPLAY")}))["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let report = gate.captured(&terminal);
+    let execution_id = &report["event"]["execution_id"];
+    unknown_startup(&h, &terminal, execution_id);
+    let pid = h.state(&terminal)["pid"].clone();
+    let next = h.controller("force during delayed startup");
+    let forced = h.call(h.claim_request(&terminal, &next["controller"], "force"));
+    assert_eq!(forced["unsettled"][0]["id"], *execution_id);
+    denied(gate.forward(), &["stale-handle"]);
+    let rejected = execution(&h.state(&terminal), execution_id);
+    assert_eq!(rejected["status"], "rejected", "{rejected}");
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
+    assert_eq!(
+        h.handle(&forced["control"], "read")["control"],
+        forced["control"]
+    );
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert!(
+        !h.root
+            .join("integration")
+            .join(&terminal)
+            .join(format!("{}.zsh", execution_id.as_str().unwrap()))
+            .exists()
+    );
+    h.handle(&forced["control"], "release");
+    let fresh = h.acquire(&terminal, &next["controller"]);
+    assert_eq!(fresh["mode"], "safe");
+    h.input(
+        &terminal,
+        &fresh["control"],
+        &format!("{}\r", h.marker_source("LATE_REJECTION_SHELL_ALIVE")),
+    );
+    h.marker("LATE_REJECTION_SHELL_ALIVE");
+    assert!(!h.root.join("FORCED_STARTUP_MUST_NOT_REPLAY").exists());
 }

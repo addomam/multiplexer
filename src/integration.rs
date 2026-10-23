@@ -56,6 +56,7 @@ pub struct Integration {
     socket: PathBuf,
     executable: PathBuf,
     terminals: Mutex<BTreeMap<String, Terminal>>,
+    retired: Mutex<BTreeMap<String, BTreeMap<String, Arc<crate::control::Authority>>>>,
     acknowledgement: Condvar,
 }
 fn now() -> u64 {
@@ -130,6 +131,7 @@ impl Integration {
             socket: socket.to_owned(),
             executable: executable.to_owned(),
             terminals: Mutex::new(BTreeMap::new()),
+            retired: Mutex::new(BTreeMap::new()),
             acknowledgement: Condvar::new(),
         }))
     }
@@ -201,9 +203,10 @@ impl Integration {
     }
     pub fn report(&self, id: &str, event: Value) -> Result<Value> {
         let mut terminals = self.terminals.lock();
-        let terminal = terminals
-            .get_mut(id)
-            .ok_or_else(|| anyhow!("integration-lost: terminal integration missing"))?;
+        let Some(terminal) = terminals.get_mut(id) else {
+            drop(terminals);
+            return self.report_retired(id, event);
+        };
         match event["kind"].as_str().unwrap_or("") {
             "shell-context" => {
                 let cwd = event["cwd"]
@@ -249,6 +252,9 @@ impl Integration {
                             authority.settle(execution, "rejected");
                             if let Some(current) = terminal.executions.get_mut(execution) {
                                 *current = json!({"execution_id":execution,"status":"rejected","reason":"stale-handle"});
+                                let _ = fs::remove_file(
+                                    self.directory.join(id).join(format!("{execution}.zsh")),
+                                );
                             }
                             self.acknowledgement.notify_all();
                             return Err(error);
@@ -257,10 +263,10 @@ impl Integration {
                         // Acceptance settles dispatch, not command completion.
                         authority.settle(execution, "applied");
                     }
-                } else if event["kind"] == "execution-rejected" {
-                    if let Some(authority) = terminal.authorities.get(execution) {
-                        authority.settle(execution, "rejected");
-                    }
+                } else if event["kind"] == "execution-rejected"
+                    && let Some(authority) = terminal.authorities.get(execution)
+                {
+                    authority.settle(execution, "rejected");
                 }
                 if let Some(current) = terminal.executions.get_mut(execution) {
                     if event["kind"] == "execution-accepted" {
@@ -268,6 +274,9 @@ impl Integration {
                         *current = json!({"execution_id":execution,"status":"accepted"});
                     } else if event["kind"] == "execution-rejected" {
                         *current = json!({"execution_id":execution,"status":"rejected","reason":event["reason"]});
+                        let _ = fs::remove_file(
+                            self.directory.join(id).join(format!("{execution}.zsh")),
+                        );
                     } else {
                         *current = json!({"execution_id":execution,"status":"completed","exit_status":event["exit_status"]});
                     }
@@ -459,13 +468,13 @@ impl Integration {
             u8::from(queue),
             terminal.shell.prompt_generation
         );
-        if let Some(authority) = terminal.authorities.get(&execution) {
-            if let Err(error) = authority.forward(&execution, "shell-execute") {
-                terminal.executions.remove(&execution);
-                terminal.authorities.remove(&execution);
-                let _ = fs::remove_file(&path);
-                return Err(error);
-            }
+        if let Some(authority) = terminal.authorities.get(&execution)
+            && let Err(error) = authority.forward(&execution, "shell-execute")
+        {
+            terminal.executions.remove(&execution);
+            terminal.authorities.remove(&execution);
+            let _ = fs::remove_file(&path);
+            return Err(error);
         }
         // A single sub-PIPE_BUF write prevents timed ZLE reads from consuming a partial request.
         if let Err(error) = fifo.write_all(frame.as_bytes()) {
@@ -501,7 +510,6 @@ impl Integration {
             }
             let remaining = deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
-                let _ = fs::remove_file(&path);
                 if let Some(t) = terminals.get_mut(id) {
                     // Unknown acknowledgement is not rejection. Preserve the
                     // execution and authority so late exact reports can settle it.
@@ -520,10 +528,53 @@ impl Integration {
         if valid_id(id).is_err() {
             return;
         }
-        let _ = self.terminals.lock().remove(id);
+        let mut terminals = self.terminals.lock();
+        if let Some(terminal) = terminals.remove(id) {
+            let pending: BTreeMap<_, _> = terminal
+                .authorities
+                .into_iter()
+                .filter(|(execution, authority)| authority.call_pending(execution))
+                .collect();
+            if !pending.is_empty() {
+                // Publish before releasing the active-map lock: a racing report
+                // must see either the full live record or its settlement lookup.
+                self.retired.lock().insert(id.to_owned(), pending);
+            }
+        }
+        drop(terminals);
         // Preparation can fail before publishing its integration record.
         let _ = fs::remove_dir_all(self.directory.join(id));
         self.acknowledgement.notify_all();
+    }
+
+    fn report_retired(&self, id: &str, event: Value) -> Result<Value> {
+        let mut retired = self.retired.lock();
+        let pending = retired
+            .get_mut(id)
+            .ok_or_else(|| anyhow!("integration-lost: terminal integration missing"))?;
+        ensure!(
+            matches!(
+                event["kind"].as_str(),
+                Some("execution-accepted" | "execution-rejected")
+            ),
+            "target-ended: only exact outstanding shell settlements remain"
+        );
+        let execution = event["execution_id"]
+            .as_str()
+            .ok_or_else(|| anyhow!("invalid-request: missing execution ID"))?;
+        let authority = pending
+            .remove(execution)
+            .ok_or_else(|| anyhow!("integration-lost: no outstanding shell settlement"))?;
+        // Acceptance is ZLE's pre-evaluation permission handshake. A removed
+        // target must receive a negative reply, never permission for fresh work.
+        authority.settle(execution, "rejected");
+        if pending.is_empty() {
+            retired.remove(id);
+        }
+        if event["kind"] == "execution-accepted" {
+            bail!("target-ended: terminal integration removed");
+        }
+        Ok(json!({"retired":true,"execution_id":execution,"status":"rejected"}))
     }
 }
 fn agent_snapshot(agent: &Agent, timestamp: u64) -> Value {
@@ -598,10 +649,10 @@ pub fn helper(args: &[String]) -> Result<()> {
                 let mut env: BTreeMap<String, String> = std::env::vars()
                     .filter(|(k, _)| !private.contains(&k.as_str()))
                     .collect();
-                if env.get("ZDOTDIR") == std::env::var("AMUX_INTEGRATION").ok().as_ref() {
-                    if let Ok(original) = std::env::var("AMUX_USER_ZDOTDIR") {
-                        env.insert("ZDOTDIR".into(), original);
-                    }
+                if env.get("ZDOTDIR") == std::env::var("AMUX_INTEGRATION").ok().as_ref()
+                    && let Ok(original) = std::env::var("AMUX_USER_ZDOTDIR")
+                {
+                    env.insert("ZDOTDIR".into(), original);
                 }
                 json!({"kind":"shell-context","pid":argument(2)?.parse::<u32>()?,"cwd":argument(3)?,"env":env})
             }

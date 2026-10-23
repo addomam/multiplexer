@@ -1,0 +1,295 @@
+{
+  "date": "2026-10-22",
+  "scope": "round2 corrected e03 working-tree source, before round3 late-settlement fixes",
+  "predates_round3_late_settlement_fixes": true,
+  "current_source_coverage_claimed": false,
+  "status": "PARTIAL-COLLECTION-LOWER-BOUND-NOT-COMPLETE-COVERAGE-PASS",
+  "toolchain": "Rust1.95.0 / LLVM22.1.2-rust-1.95.0-stable",
+  "tools_provenance": {
+    "archive": "https://static.rust-lang.org/dist/2026-04-16/llvm-tools-1.95.0-aarch64-apple-darwin.tar.xz",
+    "sha256": "f3cf1f1532b31d39fa9f5bf67fd0388766e66d26db856c607eb4d855e957104e",
+    "checksum_matched_installed_channel_manifest": true,
+    "extraction_only_no_installer_or_global_toolchain_changes": true
+  },
+  "execution": {
+    "workspace_artifact": "artifact://470",
+    "workspace_passed": 304,
+    "workspace_ignored": 10,
+    "workspace_suites": 29,
+    "extra_provider_fixture_passed": 23,
+    "extra_provider_fixture_ignored": 1,
+    "extra_provider_fixture_seconds": 4.05,
+    "extra_fixture_is_not_added_to_unique_test_count": true,
+    "model_calls": 0
+  },
+  "collection": {
+    "instrumentation": "-C instrument-coverage; Darwin continuous counters/data/bitmap sections aligned0x4000; explicit target isolates host compiler outputs",
+    "provider_fixture_note": "Permanent fixture env_clear was preserved. A disposable exact-binary exec launcher reintroduced only LLVM_PROFILE_FILE for the private instrumented daemon, then was removed with the private target tree. No production or permanent fixture source changed for profiling.",
+    "raw_profile_rejected_count": 3,
+    "rejected_module_signature": "10292914078117687086_0",
+    "rejected_module_identified_as": "actual amux CLI executable via list-only/help profile signatures",
+    "matching_tool_rejection_confirmed": true,
+    "rejection_cause": "not established; do not attribute to a compiler plugin or claim Apple-version mismatch solved it",
+    "merge": "--failure-mode=all retains valid profiles and emits all3corruption warnings; this is intentionally partial extraction, not a successful complete collection",
+    "denominator": "all compiled project source; /.cargo/, /rustc/ and /tests/ paths excluded; standard source summary still includes inline unit-test bodies",
+    "missing_counts_make_metrics_conservative_lower_bounds": true
+  },
+  "source_summary_including_inline_tests": {
+    "branches": {
+      "count": 0,
+      "covered": 0,
+      "notcovered": 0,
+      "percent": 0
+    },
+    "functions": {
+      "count": 1260,
+      "covered": 1123,
+      "percent": 89.12698412698413
+    },
+    "instantiations": {
+      "count": 2499,
+      "covered": 1498,
+      "percent": 59.943977591036415
+    },
+    "lines": {
+      "count": 18051,
+      "covered": 16174,
+      "percent": 89.60168411722343
+    },
+    "mcdc": {
+      "count": 0,
+      "covered": 0,
+      "notcovered": 0,
+      "percent": 0
+    },
+    "regions": {
+      "count": 31941,
+      "covered": 28424,
+      "notcovered": 3517,
+      "percent": 88.98907360445823
+    }
+  },
+  "production_module_lcov_lower_bounds": {
+    "src/codex.rs": {
+      "lcov_lines": 1547,
+      "covered": 1273,
+      "percent": 82.28829993535876,
+      "inline_test_start_excluded": 2120
+    },
+    "src/control.rs": {
+      "lcov_lines": 1460,
+      "covered": 1417,
+      "percent": 97.05479452054794,
+      "inline_test_start_excluded": 1976
+    },
+    "src/projects.rs": {
+      "lcov_lines": 872,
+      "covered": 822,
+      "percent": 94.26605504587155,
+      "inline_test_start_excluded": 1190
+    }
+  },
+  "source_file_line_lower_bounds": [
+    {
+      "file": "/Users/addomam/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/sys/thread_local/native/mod.rs",
+      "lines": {
+        "count": 14,
+        "covered": 5,
+        "percent": 35.714285714285715
+      }
+    },
+    {
+      "file": "src/cli.rs",
+      "lines": {
+        "count": 183,
+        "covered": 141,
+        "percent": 77.04918032786885
+      }
+    },
+    {
+      "file": "src/client.rs",
+      "lines": {
+        "count": 393,
+        "covered": 325,
+        "percent": 82.69720101781171
+      }
+    },
+    {
+      "file": "src/codex.rs",
+      "lines": {
+        "count": 1726,
+        "covered": 1435,
+        "percent": 83.14020857473928
+      }
+    },
+    {
+      "file": "src/control.rs",
+      "lines": {
+        "count": 2992,
+        "covered": 2927,
+        "percent": 97.82754010695187
+      }
+    },
+    {
+      "file": "src/daemon.rs",
+      "lines": {
+        "count": 1614,
+        "covered": 1489,
+        "percent": 92.25526641883519
+      }
+    },
+    {
+      "file": "src/integration.rs",
+      "lines": {
+        "count": 593,
+        "covered": 526,
+        "percent": 88.70151770657672
+      }
+    },
+    {
+      "file": "src/main.rs",
+      "lines": {
+        "count": 6,
+        "covered": 6,
+        "percent": 100
+      }
+    },
+    {
+      "file": "src/projects.rs",
+      "lines": {
+        "count": 1805,
+        "covered": 1703,
+        "percent": 94.34903047091413
+      }
+    },
+    {
+      "file": "src/runtime.rs",
+      "lines": {
+        "count": 1174,
+        "covered": 1125,
+        "percent": 95.82623509369677
+      }
+    },
+    {
+      "file": "src/runtime/compatibility.rs",
+      "lines": {
+        "count": 286,
+        "covered": 273,
+        "percent": 95.45454545454545
+      }
+    },
+    {
+      "file": "src/tui.rs",
+      "lines": {
+        "count": 1224,
+        "covered": 863,
+        "percent": 70.50653594771242
+      }
+    },
+    {
+      "file": "src/tui/control.rs",
+      "lines": {
+        "count": 1146,
+        "covered": 1015,
+        "percent": 88.56893542757417
+      }
+    },
+    {
+      "file": "src/tui/view.rs",
+      "lines": {
+        "count": 406,
+        "covered": 309,
+        "percent": 76.10837438423646
+      }
+    },
+    {
+      "file": "terminal-showcase/src/app.rs",
+      "lines": {
+        "count": 933,
+        "covered": 764,
+        "percent": 81.88638799571275
+      }
+    },
+    {
+      "file": "terminal-showcase/src/capability.rs",
+      "lines": {
+        "count": 542,
+        "covered": 512,
+        "percent": 94.4649446494465
+      }
+    },
+    {
+      "file": "terminal-showcase/src/exercises.rs",
+      "lines": {
+        "count": 222,
+        "covered": 193,
+        "percent": 86.93693693693693
+      }
+    },
+    {
+      "file": "terminal-showcase/src/graphics.rs",
+      "lines": {
+        "count": 665,
+        "covered": 642,
+        "percent": 96.54135338345866
+      }
+    },
+    {
+      "file": "terminal-showcase/src/headless.rs",
+      "lines": {
+        "count": 70,
+        "covered": 67,
+        "percent": 95.71428571428572
+      }
+    },
+    {
+      "file": "terminal-showcase/src/main.rs",
+      "lines": {
+        "count": 55,
+        "covered": 31,
+        "percent": 56.36363636363636
+      }
+    },
+    {
+      "file": "terminal-showcase/src/presentation.rs",
+      "lines": {
+        "count": 1043,
+        "covered": 1003,
+        "percent": 96.16490891658677
+      }
+    },
+    {
+      "file": "terminal-showcase/src/protocol.rs",
+      "lines": {
+        "count": 687,
+        "covered": 585,
+        "percent": 85.1528384279476
+      }
+    },
+    {
+      "file": "terminal-showcase/src/terminal.rs",
+      "lines": {
+        "count": 272,
+        "covered": 235,
+        "percent": 86.39705882352942
+      }
+    }
+  ],
+  "production_lcov_note": "LCOV DA line records are deduplicated by source line and cut before each displayed top-level inline unit-test module. These metrics use LCOV line accounting, not the whole-file LLVM summary denominator.",
+  "landing_policy": {
+    "decision": "Use the approved Plan gates",
+    "source": "explicit user choice via coverage_landing",
+    "scope": "Only the generic broader 95% business-logic coverage landing threshold is waived for this delivery; final metrics must be reported honestly. Approved Plan preflight/runtime proof and fresh independent Build/security approval remain mandatory. No security or complete-Codex acceptance waiver is inferred."
+  },
+  "resource_cleanup": {
+    "private_profile_probe_target_and_downloaded_tool_tree_removed": true,
+    "no_open_references_before_removal": true,
+    "owned_default_profile_removed": true,
+    "no_installer_or_global_toolchain_change": true
+  },
+  "unverified": [
+    "minimum Rust1.88 execution",
+    "Linux",
+    "complete-broker/native-fence/winner/all32 acceptance"
+  ]
+}

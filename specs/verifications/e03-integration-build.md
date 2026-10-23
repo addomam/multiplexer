@@ -157,3 +157,65 @@ At the final Build handoff, both checkouts remained in Build with complete accep
 ## Subsequent publication authorization
 
 The user explicitly requested commit, merge and push after receiving the blocked-acceptance report. Commit and normal feature-branch push are authorized. Merge remains gated: `e03s08` has a real failing complete-broker check, and no independent Build PASS is claimed. Preserve the failing task statuses and exhausted historical review counters; publication does not establish runtime acceptance. Retain implementation on `feat/e03-agent-interaction`, without moving `main`, forcing a push or creating a release.
+
+## Authorized fixes and delivery amendment — 2026-10-22
+
+The user explicitly chose unmodified upstream Codex, accepted temporary native application-fence/optimistic-answer limitations and deferred full correctness acceptance to future ACP integration. This changes current landing scope, not the original failing test or safe-grant semantics. e03s08 and all four tasks remain failing; all32 is not accepted. Unknown still blocks safe grant. Future ACP must prove the missing contracts. See `specs/security/EXCEPTIONS.md`, the PLAN amendment and registered bug records.
+
+Separately approved Rust 1.88 and narrowly updated time 0.3.45 → 0.3.47, time-core 0.1.7 → 0.1.8 and num-conv 0.1.0 → 0.2.2. Locked metadata confirms exactly one patched time and honest package minimums. Ratatui/Crossterm and the independent showcase's minimum are unchanged. Equivalent let chains fix 19 existing sites newly rejected by raised-MSRV Clippy without suppressions.
+
+Post-fix `artifact://352` (Rust/Cargo 1.95.0): strict workspace Clippy, all-target check, workspace build and format check passed; 301 Rust tests passed in 29 suites with 10 ignored; exactly one independent real-terminal showcase passed; 8 OMP lifecycle tests passed (49 assertions); Zsh syntax and actual CLI help passed. Rust 1.88 execution and coverage were not measured.
+
+Separate actual-binary private-daemon/outer-PTY smoke passed: native prompt and current-control indicator rendered; native input produced the stock-Zsh file effect; resize was exercised; native detach exited0 preserving the same shell/daemon; shutdown exited0 and the birth-qualified owned shell was gone. Root removed; no auth copied, model called or global configuration changed. First throwaway driver sent input before client authority was drawn; it was intercepted without replay. Corrected driver waited for drawn authority. See `specs/verifications/e03-fix-runtime.json`.
+
+The dependency issue is fixed in the current resolution; GitHub alert ingestion/closure is not claimed. The accepted native limitation is not fixed. Self-audit and fresh e03-scoped dual-independent Build/security review precede the already-authorized main landing; historical review caps remain unchanged.
+
+## Review-discovered focus accounting and observed Darwin shutdown correction
+
+Fresh scoped round1 was FAIL: both independent general reviewers scored96.875% with the same single must-fix focus-accounting hole. The separate security specialist's no-findings report did not override that result. Retain `e03-build-review-round1.json`; historical review counters are unchanged.
+
+Application focus now uses existing native dispatch accounting without resetting human inactivity; the obsolete unaccounted helper is removed. The paused-consumer regression failed before that correction. Actual outer-TUI focus/yield then proved no false safe offer but exposed a separate shutdown lockup: Darwin waitid returned CLD_STOPPED despite WEXITED, and the reaper held the cleanup mutex while waiting for a living child. A private C diagnostic and blocked-thread sample established the seam. Only true exit statuses now permit serialized reaping; non-exit notifications back off while preserving zombie/birth identity.
+
+The permanent regression also requires clean shutdown within3s, without fixture fallback kills. It failed before the reaper fix and passed afterward in0.82s. Final `artifact://406`: all302 Rust tests passed (10ignored/29suites), strict workspace Clippy/check/build/format, one independent showcase, 8 OMP lifecycle tests/49assertions, Zsh syntax and actual CLI help passed.
+
+Separate current-source real outer-TUI stop/focus/deliberate-yield/resume smoke passed in0.762s: focus remained unknown without human activity, no safe offer/new owner, actual old focus consumed after yield, clean exit0 detach/shutdown and birth-qualified shell gone; no forced cleanup required. Both failed and passing smoke evidence is retained in `e03-focus-runtime.json`. Private roots/readers were cleaned; no auth/models/global daemon or configuration changes. Refreshed self-audit is READY for fresh round2; no independent current-source or full complete-broker PASS is yet claimed.
+
+## Round2/3 lifecycle remediation and final current-delivery proof
+
+Round2 failed on actual removed-target registry retention and concurrent Codex cleanup completion; complete findings remain in e03-build-review-round2.json. Both were reproduced and corrected, including cleanup before fixture fallback. Round2-correction preflight passed304 Rust tests; actual controlling-PTY smoke passed native yield/safe accept/source/no replay/detach/shutdown with owned resources removed. See e03-lifecycle-runtime.json.
+
+Round3 general reviews failed A93.75%/B96.875% on two unique late-settlement consumers; security independently passed with no unwaived HIGH, not overriding general failure. Preserve e03-build-review-round3.json. Private launch leases now survive unknown acknowledgement and retire after exact settlement/end without releasing a newer owner. Original private source remains available while unknown and is never resent. Removed targets retain only exact pending shell settlement lookup, not live context/agent state or filesystem resources. Stable report UUIDs cannot retarget to a same-name replacement.
+
+Test-only RED checkpoint ad280c4 preserves both consumer reproductions. Final serialized artifact528 passed307 Rust tests/10 ignored/29 suites, strict workspace Clippy/check/build/format, exact independent showcase1, OMP8/49 assertions, Zsh syntax and actual help. Separate actual CLI/private-daemon/stock-Zsh smoke delayed the genuine native callback past the actual timeout: unknown/source0600 retained, original source executed once/exit0, automatic owner retired, normal safe acquisition succeeded, source cleaned, shutdown0 in0.462s, proxy joined, owned shells/socket/root gone without fallback. No auth/model/global changes. See e03-late-settlement-runtime.json.
+
+Coverage is historical round2 partial collection, not current-source coverage or a complete PASS; exact tool failures/lower bounds and removed profiling resources remain in e03-current-delivery-coverage.json. The user selected approved Plan gates rather than the broader generic95% threshold. Fresh round4 within unchanged max5 must approve before landing. e03s08/allfour tasks and failed all32/native-fence acceptance remain unchanged.
+
+## Round4 correction — runtime verified, final round5 required
+
+Round4 A100%/security PASS could not override B96.875%/one native Force presentation must-fix. Complete reports: e03-build-review-round4.json. Real queued shortcut/Enter failed before correction (RED23a7016/artifact558), then passed with completed-frame/drained-input consent and exact pinned Paragraph wrapping. Formerly visible warnings resized to80x7 or clipped80x10 cannot force; fresh visible confirmation preserves process/no replay. No terminal library version replaced.
+
+All34 ownership cases PASS567/8.77s; workspace307/10ignored/29suites and strict Clippy/check/build/fmt PASS570. Its final showcase command selected the wrong workspace package; corrected exact ignored showcase PASS1/3.46s, OMP8/49, Zsh syntax and actual CLI help completed577/exit0. Initial564 exposed an old Force text barrier, strengthened to actual modal title, plus one genuine callback timeout with cause NOT established. No timeout/expectation weakened; subsequent34/307 passed and genuine earlier rejection now yields direct diagnostics.
+
+Separate actual continuously drained native TUI/private daemon/stock-Zsh smoke proved queued/invisible/clipped boundaries, retained human control, fresh takeover, unchanged shell PID/FRESH-only bytes. Detach0/shutdown0/0.244s; owned processes/socket/root/fds/reader gone without fallback. No auth/model/global changes. Initial undrained harness failed; its native -15/daemon0/root cleanup is disclosed, not product proof. Actual rendered surfaces/all attempts: e03-force-presentation-runtime.json. Self-audit READY; FINAL dual Build/security round5 of max5 required. Historical caps/failing e03s08/allfour tasks/all32 report unchanged; no merge/release/full-broker PASS yet.
+
+## Final review5 — FAIL; cap exhausted, no landing
+
+Independent A97.5%/one P1 must-fix, B100%/no findings, security PASS/no unwaived HIGH. Complete original reports: e03-build-review-round5.json. General A found unsafe stale-identity fallback signaling in opt-in smoke Owned::cleanup after failed discovery/reaping. No unrelated-process signal/exploit/live-model test was run; no correction is claimed. This privacy/resource boundary is not user-waived. BUG-e03-smoke-cleanup-identity.md remains failing. Runtime307/native Force proofs cannot override the AND-gate. Review cap exhausted5/5: human decision required; no round6 or counter reset, final fix commit, merge, push or release.
+
+## Post-cap human-authorized repair — verified; human review pending
+
+The user selected “Repair, then human review,” not a sixth automated review or immediate landing. The round5 P1 was reproduced with a real private process-table filesystem failure and two separately test-owned stale PID/group sentinels. RED ec6add1/artifact611 killed both with SIGTERM; no unrelated user process or forced OS PID reuse was involved.
+
+Smoke cleanup now authorizes no fallback signals after failed discovery, removes group-wide fallback delivery, revalidates each nondirect PID and uses direct children only while try_wait proves them unreaped. Reaped direct IDs never enter numeric fallback; state errors fail closed and repeated validation is bounded. Stale survivor identities are labeled tracked, not owned or signal authority. The same cleanup serves normal/drop/watchdog paths; existing private roots/readers/terminal restoration/error propagation remain.
+
+Actual-source local executable smoke630 passed healthy TERM-ignoring child/descendant teardown and discovery-failure sentinel preservation/direct-child teardown. Expected discovery/survivor failures remain errors, not success. All fixture children reaped and private roots removed before completion; no fallback, auth/model/global mutation. Temporary source/executable/object files removed before strict final preflight. Initial passing smoke621 and the intermediate exact regression are distinguished in e03-smoke-cleanup-runtime.json.
+
+Final frozen-source artifact635 passed308 Rust tests/10 ignored/29 suites, strict workspace Clippy/check/build/format, independent showcase1/3.71s, OMP8/49 assertions, Zsh syntax and actual CLI help. Implementation SHA2569d944123a0ed5d65a20b66d9510128a9892b076b1633ab574f9d102928b10e5c. No subsequent implementation edit or current-source coverage claim.
+
+Human review is now the external blocker. The verified fix remains uncommitted; no final landing commit/merge/push or forbidden round6. Original final review5 remains FAIL/exhausted5/5, all historical counters unchanged. e03s08/allfour tasks, failed all32 report, upstream native-fence/history limitations and fail-closed unknown grants remain unchanged. Failed acceptance SHA256cb71f0d2ba4b9d7f3f18b90548e9909f652c02326e3aaff4474c6fa0e894f70e; full round5 report SHA256c5f0cd72f950d61239bbb5f501a4213d53f403ada2013bc33e1483569e3c71df.
+
+## Human delivery approval and overnight execution
+
+The user replied “looks great” to the verified-repair/held-delivery report, authorized overnight work and permitted unsigned commits when signing is unavailable. Combined with the earlier explicit commit/merge/push request, this approves the repaired current limited delivery. It is a human delivery decision after exhausted5/5, not an independent post-repair PASS or a claim of source inspection. State/execution/security records now distinguish that authorization from immutable historical failed reviews and runtime snapshots.
+
+Implementation is unchanged since actual local smoke630 and final full preflight635. Commit on the isolated feature branch, preserve its history, land only through the protected-main script in a clean disposable primary clone, verify normal remote receipts and configured CI if present, and retire only safely integrated owned resources. Use command-scoped unsigned signing configuration, no global changes, new live-model runs, release or force-push. Keep e03s08/allfour tasks and failed all32 evidence unchanged.

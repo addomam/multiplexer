@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-22",
+  "focused_regression": "forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity",
+  "before_focus_fix": {
+    "job": "bg_100",
+    "exit_code": 101,
+    "failure": "missing retained native forwarding"
+  },
+  "after_focus_fix_before_reaper_fix": {
+    "job": "bg_104",
+    "exit_code": 101,
+    "failure": "strict shutdown deadline exceeded"
+  },
+  "final_regression": {
+    "artifact": "artifact://406",
+    "passed": true,
+    "elapsed_seconds": 0.82
+  },
+  "final_workspace": {
+    "rust_tests_passed": 302,
+    "ignored": 10,
+    "suites": 29,
+    "artifact": "artifact://406"
+  },
+  "actual_native_smoke_before_reaper_fix": {
+    "kind": "actual-native-focus-paused-consumer-handoff",
+    "model_calls": 0,
+    "global_configuration_changes": false,
+    "verdict": "FAIL",
+    "actual_outer_focus_event": true,
+    "consumer_paused_before_delivery": true,
+    "focus_retained_unknown": true,
+    "focus_did_not_advance_human_activity": true,
+    "native_deliberate_yield": true,
+    "no_safe_offer_or_new_owner": true,
+    "old_focus_consumed_after_yield": true,
+    "unknown_not_cleared_by_delivery_or_resume": true,
+    "teardown_failure": "daemon close blocked on process-tree mutex held by reaper in child.wait",
+    "private_root_removed": true,
+    "owned_forced_cleanup_completed": true
+  },
+  "actual_native_smoke_after_both_fixes": {
+    "kind": "actual-native-focus-paused-consumer-handoff",
+    "model_calls": 0,
+    "global_configuration_changes": false,
+    "verdict": "PASS",
+    "actual_outer_focus_event": true,
+    "consumer_paused_before_delivery": true,
+    "focus_retained_unknown": true,
+    "focus_did_not_advance_human_activity": true,
+    "native_deliberate_yield": true,
+    "no_safe_offer_or_new_owner": true,
+    "old_focus_consumed_after_yield": true,
+    "unknown_not_cleared_by_delivery_or_resume": true,
+    "owned_shutdown_and_reap": true,
+    "forced_cleanup_required": false,
+    "private_root_removed": true,
+    "elapsed_seconds": 0.762
+  },
+  "waitid_diagnostic": {
+    "host": "Darwin",
+    "requested_flags": [
+      "WEXITED",
+      "WNOWAIT"
+    ],
+    "returned_success": true,
+    "returned_si_code": 5,
+    "meaning": "CLD_STOPPED"
+  },
+  "global_mutations": false,
+  "new_model_calls": 0
+}

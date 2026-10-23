@@ -100,3 +100,16 @@ final_gate:
   native_application_fence: final-complete-broker-validation-if-unresolved
   unknown_settlement: blocks-safe-grant-and-first-acceptance
   force_cancels_turn: false
+acceptance_amendment:
+  date: "2026-10-22"
+  authority: explicit-user-decision-after-observed-failure
+  delta: MODIFIED
+  before: complete-Codex-all32-proof-blocks-current-delivery
+  after: current-upstream-Codex-limitations-user-accepted-full-proof-deferred-to-future-ACP
+  codex_unmodified: true
+  current_landing_requires_complete_Codex: false
+  full_acceptance_proven: false
+  unknown_still_blocks_safe_grant: true
+  original_failing_evidence_retained: true
+  future_ACP_requires_actual_native_fence_and_winner_proof: true
+  record: specs/security/EXCEPTIONS.md
