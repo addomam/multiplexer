@@ -1,13 +1,13 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: chore/e03-signing-receipts, signing: configured-1password-ssh, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: fix_bug
-active_epic: e03
+vcs: {kind: git, branch: feat/acp-agent-interaction, signing: configured-1password-ssh, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: build_epic
+active_epic: e04
 project_cycle:
   current_phase: 4
-  completed_phases: [2, 3]
+  completed_phases: [1, 2, 3]
   mode: standard
-  scope: same-instance-agent-interaction
-  previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}
+  scope: acp-agent-interaction
+  previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}
 elaborate_review:
   scope: same-instance-agent-interaction-specification
   authorization: user-approved-new-specification-only-cycle
@@ -32,11 +32,44 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: orchestrate-project
-  blocked: true
-  reason: "Signed limited delivery is published and remotely verified: implementation8d8365111decb2835e2be46c0c41c901a0b46c04; signed receipt4be2ba3ffec326757ff82225f4d0e0c6854fb302. Both signatures verified; original trees/messages/author headers preserved. User performed the explicitly approved history replacement after the assistant tool guard blocked it; no bypass. Original fix/substrate-defects checkout and user changes preserved; unsigned identities archived. User now authorizes publishing the remaining owned receipts and starting ACP-first integration, with best-effort terminal fallback and the non-ACP integration API deferred. e03s08/allfour and failed5/5 review remain unchanged/deferred. No new live-model runs/global configuration/release."
-  last_step_completed: signed-limited-delivery-published-and-remote-tip-verified
+  next_skill: develop-tdd
+  blocked: false
+  reason: >-
+    Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
+    ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
+    New e04 architecture round2 passed independently (96.875/100, zero must-fix); round1 failure retained.
+    Official schema-only types plus bounded owned stdio selected; advisory cancellation/auth/provenance details recorded for Plan review.
+    User confirmed architecture and selected Plan, then Build if reviews pass.
+    Both e04 Plan round3 independent reviews passed 100/100 with zero findings; conditional Build authorization is active.
+    Existing explicit ACP close and daemon shutdown only; broader lifecycle UX is user-deferred.
+  last_step_completed: e04-Plan-round3-dual-pass-Build-starting-e04s01
   required_reading:
+    - specs/epics/e04-acp-agent-interaction/PLAN.md
+    - specs/epics/e04-acp-agent-interaction/build-integration-contract.md
+    - specs/epics/e04-acp-agent-interaction/epic.yaml
+    - specs/epics/e04-acp-agent-interaction/e04s01-story.md
+    - specs/epics/e04-acp-agent-interaction/e04s01-tasks.yaml
+    - specs/epics/e04-acp-agent-interaction/e04s02-story.md
+    - specs/epics/e04-acp-agent-interaction/e04s02-tasks.yaml
+    - specs/epics/e04-acp-agent-interaction/e04s03-story.md
+    - specs/epics/e04-acp-agent-interaction/e04s03-tasks.yaml
+    - specs/epics/e04-acp-agent-interaction/e04s04-story.md
+    - specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml
+    - specs/tech-architecture/e04-TEST_PLAN_LATEST.md
+    - specs/security/epics/e04/THREAT_MODEL.md
+    - specs/verifications/e04-plan-review-round1.json
+    - specs/verifications/e04-plan-review-round2.json
+    - specs/verifications/e04-plan-static-round3.json
+    - specs/verifications/AUDIT-e04-plan.md
+    - specs/verifications/e04-plan-static.json
+    - specs/epics/e04-acp-agent-interaction/context.yaml
+    - specs/adr/0004-acp-authoritative-input.md
+    - specs/epics/e04-acp-agent-interaction/epic.yaml
+    - specs/product/GLOSSARY_LATEST.yaml
+    - specs/execution-status.yaml
+    - specs/verifications/e04-architecture-review-round1.json
+    - specs/verifications/AUDIT-e04-architecture.md
+    - specs/verifications/e04-architecture-review-round2.json
     - CONVENTIONS.md
     - specs/verifications/readiness-orchestration-assessment.md
     - specs/verifications/daily-use-checkpoint.md
@@ -104,8 +137,9 @@ handoff:
     - "Private fencing spike: API-to-native question drain and non-cancelling force worked, but PTY-buffered native Enter applied after an intentionally incomplete API-only ledger's false safe grant. Native application acknowledgement remains unproved; no production lock was implemented."
     - "Initial round4 full suite had one genuine callback timeout (artifact564); cause not established. No timeout/expectation weakened; subsequent normal-parallel34 ownership/307 workspace passed. Earlier genuine rejection now surfaces directly. See e03-force-presentation-runtime.json."
   open_decisions:
-    - "Live checks are separately authorized with cheapest compatible models, preferring local/free inference; no sol. Keep auth/config and owned processes isolated; authorization is not acceptance."
-    - "Final complete-broker validation revisited native/application settlement; unknown blocks the first safe offer. A supported native application-consumption acknowledgement remains missing; no fresh isolated spike or force substitute."
+    - "New ACP live-model/auth checks require separate approval; previous e03 harness/model permissions are not a blanket ACP authorization."
+    - "Historical e03 native/application settlement remains unresolved and its acceptance failing; ACP admission is a separately approved boundary, not a native-fence repair."
+    - "E04 Plan round3 passed 100/100; conditional Build authorization is active. New live checks and ACP publication remain separate."
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -315,7 +349,7 @@ e03_build:
     opencode: passing-authenticated-local-chat-completions
     grok: blocked-authenticated-catalog-but-inference-402-entitlement-exhausted
   owned_live_resources: stopped-and-private-auth-schema-raw-output-roots-removed
-epic_cycle:
+e03_epic_cycle:
   story: e03s08
   story_bcps: 8
   step: 4
@@ -373,3 +407,63 @@ e03_scoped_review:
   round_5: {status: failed, scores: [97.5, 100], unique_general_must_fix: 1, unwaived_high_security: 0, evidence: specs/verifications/e03-build-review-round5.json}
   post_cap_repair: {authorization: repair-then-human-review, status: user-approved-limited-delivery, automated_rounds_added: 0, independent_post_repair_pass: false, evidence: specs/verifications/e03-smoke-cleanup-runtime.json}
   human_delivery_approval: {quote: "looks great", instruction: "overnight work; commit unsigned if signing unavailable", scope: previously-authorized-limited-delivery-commit-merge-push, independent_source_review_claimed: false}
+e03_receipt_publication:
+  authorization: explicit-user-merge-main-and-push
+  source_branch: chore/e03-signing-receipts
+  source_commit: d4763ae84a48dbd65a4e9986262a2b52b708a933
+  signed_main: a46eaddeb79a9a42628d9cb39cd60945ece27fbb
+  remote_tip: verified
+  signature: verified-1password-ssh-ED25519
+  implementation_changed: false
+  source_branch_retained: true
+  workspace_preflight: {status: passing, artifact: 'artifact://731', rust_passed: 308, suites: 29, ignored: 10}
+e04_architecture_review:
+  scope: e04-acp-architecture
+  status: passed-user-confirmed
+  round: 2
+  max_rounds: 5
+  independent_reviewers_required: 2
+  minimum_score_each: 94
+  e03_counters: preserved
+  round_1: {status: failed, scores: [96.875, 93.75], unique_must_fix: 1, unique_should_fix: 1, evidence: specs/verifications/e04-architecture-review-round1.json}
+  remediation: official-schema-only-bounded-stdio-and-explicit-Cancelled-permission-obligations
+  scores: [96.875, 100]
+  must_fix: 0
+  should_fix: 1
+  advisory_disposition: recorded-in-ADR-and-required-next-Plan-review
+  evidence: specs/verifications/e04-architecture-review-round2.json
+e04_authorization:
+  research_architecture: explicit-user-start-ACP
+  human_surface: explicit-user-amux-owned-ACP-view
+  handoff_boundary: explicit-user-amux-input-admission-ACP-only
+  Plan: explicit-user-approved-reviewed-architecture
+  Build: explicit-user-conditional-on-two-independent-passing-new-Plan-reviews
+  live_models: separate-approval-required
+  merge_push_release: not-authorized
+  phase_decision: "Plan, then Build if reviews pass"
+  lifecycle: explicit-user-existing-ACP-close-and-daemon-shutdown-only
+  lifecycle_deferred: broader-handling-after-user-hands-on-UX-feedback
+e04_plan_review:
+  scope: e04-acp-plan
+  status: passed
+  round: 3
+  max_rounds: 5
+  independent_reviewers_required: 2
+  minimum_score_each: 94
+  e03_counters: preserved
+  architecture_post_review_clarifications: mandatory-review-input
+  plan: specs/epics/e04-acp-agent-interaction/PLAN.md
+  reviewers: [E04PlanA3, E04PlanB3]
+  round_1: {verdict: FAIL, scores: [93.75, 100], must_fix: 0, should_fix: 2, evidence: specs/verifications/e04-plan-review-round1.json}
+  round_2: {verdict: FAIL, scores: [96.875, 96.875], must_fix_each: 1, evidence: specs/verifications/e04-plan-review-round2.json}
+  round_3: {verdict: PASS, scores: [100, 100], must_fix: 0, should_fix: 0, evidence: specs/verifications/e04-plan-review-round3.json}
+epic_cycle:
+  scope: e04-acp-agent-interaction
+  story: e04s01
+  story_bcps: 8
+  step: 4
+  completed_steps: [0, 1, 2, 3]
+  started_at: "2026-10-23T14:46:59-05:00"
+  baseline: {commit: a46eaddeb79a9a42628d9cb39cd60945ece27fbb, evidence: 'artifact://731', workspace_rust_passed: 308, omp_passed: 8}
+  audit_result: pending
+  runtime_acceptance: failing-not-exercised

@@ -3,3 +3,4 @@ epics:
   - {id: e01, capsule: e01-native-terminal, wsjf: 1, title: Native local terminal MVP}
   - {id: e02, capsule: e02-terminal-showcase, wsjf: 1, title: Independent terminal capability explorer}
   - {id: e03, capsule: e03-agent-interaction, wsjf: 0.414, title: Same-instance agent interaction and exclusive PTY control}
+  - {id: e04, capsule: e04-acp-agent-interaction, wsjf: null, priority_source: explicit-user-next-initiative, title: ACP-first agent interaction}

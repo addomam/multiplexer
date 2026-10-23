@@ -1,3 +1,13 @@
+# Current Plan audit — e04 ACP
+
+**Verdict: READY FOR BUILD — e04 Plan round3 passed independently 100/100 with zero findings.** User's conditional Plan-to-Build authorization is active. Current packet: `epics/e04-acp-agent-interaction/PLAN.md`, integration contract, four 20-section stories/22 failing tasks, test plan and threat model. Rounds1–2 failures and all historical e03 caps/acceptance remain preserved. Full current gate: `verifications/e04-plan-review-round3.json`; no runtime acceptance is implied.
+
+Preflight: Rust2024 + existing ratatui/crossterm, solo-git isolated feature branch, default and workspace Cargo test/Clippy/check/build/fmt commands, OMP Bun and Zsh syntax. No CI configured/claimed. Baseline already exercised (308 workspace Rust tests/8 OMP tests plus actual CLI help); no ACP runtime exists yet. Scope/deltas, exact interfaces, package API source quotes, lock/capacity/lifecycle/privacy contracts and actual CLI/PTY proof obligations are explicit. No new non-ACP API/provider framework, live-model/auth/global config changes or ACP publication.
+
+Static capsule validation and independent review results belong to `verifications/AUDIT-e04-plan.md` and the new e04 Plan review records. Neither this index nor historical Plan quality proves runtime acceptance. The earlier e03 audit below is preserved as historical evidence, not the current authorization gate.
+
+---
+
 # Plan audit — e03 agent interaction
 
 **Verdict: READY — Plan artifacts, parent checks and independent dual quality gate passed.** Build still requires explicit phase confirmation; this is not runtime acceptance.

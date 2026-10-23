@@ -1,0 +1,218 @@
+{
+  "type": "architecture-review",
+  "scope": "e04-acp-architecture",
+  "round": 2,
+  "max_rounds": 5,
+  "verdict": "PASS",
+  "source_baseline": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+  "reviewed_document_snapshots": {
+    "ADR_0004": "C5BA",
+    "context": "6834",
+    "impact": "DD9E",
+    "scope": "21B0",
+    "self_audit": "E0C0",
+    "design_index": "0C3D"
+  },
+  "reports": {
+    "E04ArchitectureA2": {
+      "verdict": "PASS",
+      "score": 96.875,
+      "criteria_checked": [
+        "01 Atomic admission versus revoke — PASS: one authority-lock memory transaction orders the generation check with commit; no check-then-enqueue window (ADR 0004 lines 59-61).",
+        "02 Admission transaction stays memory-only — PASS: no process, pipe, socket, filesystem, wait, or join under that lock (ADR 0004 line 61).",
+        "03 Admitted work stays canonical after handoff — PASS: accepted work is not removed, rebound, or relabeled as the new owner's input (ADR 0004 lines 63-69).",
+        "04 Force is authority-only — PASS: force must not send session/cancel or $/cancel_request, discard the outcome map, kill, or replace the session (ADR 0004 line 71).",
+        "05 Retained request maps are not destructor cancels — PASS: schema 1.12.0 is data-only; outgoing records are registered before the writer and retained across handoff, timeout, and owner drop (ADR 0004 line 81). SDK SentRequest drop is not on the selected path.",
+        "06 No SDK detach-as-transfer — PASS: the SDK runtime is not selected, so detach cannot be the ownership implementation.",
+        "07 Pending-question takeover — PASS: cooperative grant seals the amux cut and must not wait for session/prompt; ACP receipts stay out of the native calls ledger that blocks offers (ADR 0004 lines 65-67; control.rs refresh_conditional lines 1725-1727).",
+        "08 Exact identities — PASS: target, instance, connection generation, ACP session, work, JSON-RPC request, tool call, interaction revision, owner generation, and event sequence stay distinct and are validated at admission (ADR 0004 line 77).",
+        "09 Request-scoped forms are not guessed onto the latest prompt — PASS: elicitation requestId is the JSON-RPC request id, including pre-session auth (protocol elicitation; schema CreateElicitationRequest).",
+        "10 Winning response is local policy — PASS: first valid amux admission is not claimed as an ACP first-winner protocol (ADR 0004 line 91).",
+        "11 Losing answers stay out of history — PASS: competing and stale submissions are rejected without optimistic losing-answer history (ADR 0004 line 91).",
+        "12 Admission, pipe write, and delivery are not agent application — PASS: selected/submitted/failed/unknown are defined against admission, transport, and evidence; none implies application (ADR 0004 lines 65-67 and 91).",
+        "13 Starting-state request-scoped forms — PASS: open reserves the target before async initialize and allows request-scoped elicitation without a hidden prompt (ADR 0004 line 24).",
+        "14 No hidden discovery prompt — PASS: identity, capabilities, and readiness are not probed with a concealed prompt (ADR 0004 line 24).",
+        "15 Explicit cancel uncertainty — PASS: session/cancel has no ack; confirmed only when the original prompt response supplies the stop reason (ADR 0004 line 97; protocol prompt-turn cancellation).",
+        "16 Close and timeout are not confirmed cancel — PASS: closure is processed once, unresolved work becomes unknown, and late local write errors are not relabeled as agent outcomes or confirmed cancellation (ADR 0004 lines 83 and 97).",
+        "17 Permission cancel outcome — FAIL should-fix: pending permissions get RequestPermissionOutcome::Cancelled with reserved capacity and no second response, but a permission that arrives while cancel is pending can still be published as human-selectable and win Selected. See should_fix.",
+        "18 Birth-identity cleanup — PASS: SDK 3.5.0 ChildGuard::terminate kill_process_group's the child PID (acp_agent.rs:313-327) and is not selected. Reuse setsid plus capture_owned_session (codex.rs:371-376, runtime.rs:716-718).",
+        "19 Owned-only cleanup races — PASS: failed startup, late publication, and concurrent close/shutdown clean only birth-qualified owned resources and preserve unrelated sentinels (ADR 0004 line 101; IMPACT line 34).",
+        "20 Privacy — PASS: prompts, answers, credentials, environment, and auth stay out of public metadata and committed evidence; raw transport tracing is excluded; forms must not collect secrets (ADR 0004 lines 87 and 103).",
+        "21 Snapshot cost — PASS: topology snapshots are content-free; transcript access is explicit and incremental; slow clients do not join PTY processing (IMPACT lines 10 and 21).",
+        "22 Lock order — PASS: authority then ACP state; no callback into authority while holding ACP state; Daemon::snapshot must not extend its state.lock span (daemon.rs:253-268) across ACP state (ADR 0004 line 109).",
+        "23 Bounded framing and queues on the selected path — PASS: schema 1.12.0 with default features off has no runtime, Lines, Channel, or task queue. The reader caps bytes before newline accumulation and parse; every inter-worker queue has count and byte budgets; a full queue fails or degrades with unknown outcomes (ADR 0004 line 51). SDK 3.5.0 ByteStreams::into_lines and Channel::duplex remain unbounded and are not selected (jsonrpc.rs:7506-7587).",
+        "24 Outstanding work is not evicted — PASS: retention pressure rejects new admission instead of dropping in-flight requests (ADR 0004 line 83).",
+        "25 Legacy Codex and PTY settlement unchanged — PASS: closed Codex operations and native-input settlement are not aliased; e03s08 remains failing (execution-status.yaml e03s08; SCOPE_LATEST.yaml).",
+        "26 Stock Zsh, OMP, and terminal identity — PASS: an ACP view is not a dummy PTY; terminal screen, resize, input, and execute stay PTY-only (ADR 0004 line 22; IMPACT line 29).",
+        "27 Wire v1 versus crate 1.12.0 — PASS: crate and schema versions are not wire versions. ProtocolVersion::V1 exists; unstable_protocol_v2 is not a default feature and is excluded. MSRV 1.88.0 matches Cargo.toml rust-version 1.88. Locked feature unification remains Plan work.",
+        "28 One foreground prompt — PASS: a second prompt is busy; no steer fallback, hidden queue, or retry (ADR 0004 line 79).",
+        "29 Permission option fidelity — PASS: exact offered option_id; no synthesized allow-once; dismiss is not deny; no automatic approval (ADR 0004 line 89; SelectedPermissionOutcome.option_id).",
+        "30 URL elicitation and credential forms — PASS: URL mode is not advertised and gets Invalid params (-32602); forms do not collect credentials; ElicitationAction::Cancel is distinct from Decline (ADR 0004 line 87).",
+        "31 Delegation is not a sandbox — PASS: filesystem and terminal client capabilities are not advertised, and that absence is not a security guarantee (ADR 0004 line 103).",
+        "32 Memory-only runtime and no plugin framework — PASS: reconnect is a new instance; no restoration, remote protocol, or generic provider abstraction (context.yaml; ADR 0004 lines 83 and 113)."
+      ],
+      "must_fix": [],
+      "should_fix": [
+        {
+          "id": "E04-ARCH-R2-01",
+          "title": "Do not offer a late permission for human selection while session cancel is pending",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "91-99",
+          "priority": "should-fix",
+          "smell": "incomplete state rule, not a new abstraction",
+          "body": "An admitted session/cancel correctly commits RequestPermissionOutcome::Cancelled for permissions already pending, reserves that response capacity before acceptance, and refuses a second response after a canonical selection (lines 97-99). A permission that arrives while that cancel is still pending is also required to receive Cancelled under the retained cancel work. The same section still treats the first valid human admission as the canonical response (line 91), and line 99 only says no new human answer is inferred. A real allow or reject is not an inference. If that late request is published as selectable before Cancelled is committed, the human submission can win the canonical race, send Selected after session/cancel, and authorize the tool during cancellation. The protocol requires Cancelled for a pending session/request_permission once session/cancel has been sent. The same window applies to a session-scoped form: it must be ElicitationAction::Cancel, not Decline, and must not be left human-answerable. Reserve the response slot before retaining the inbound request; if egress capacity is gone, fail or degrade that work as unknown rather than offering a human choice."
+        }
+      ],
+      "consider": [
+        {
+          "id": "E04-ARCH-C1",
+          "title": "Fix the ProtocolVersion import citation before Plan copies it",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "34-41",
+          "body": "ProtocolVersion and ProtocolVersion::V1 live at the crate root, not in agent_client_protocol_schema::v1 (docs.rs 1.12.0 returns 404 for the v1 path). InitializeRequest, ContentBlock, and CancelNotification are in v1 and their constructors exist. This is a citation error, not a reason to reject the schema crate."
+        },
+        {
+          "id": "E04-ARCH-C2",
+          "title": "Give authentication-required an authenticate transition in Plan",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "22-24",
+          "body": "The view can show authentication-required, and ClientRequest::AuthenticateRequest is a stable schema variant. The named local operations are open, inspect, prompt, answer, permission, interrupt, and close. Plan should add protocol-driven authenticate for an advertised agent-type method so that state is not terminal. Do not advertise auth.terminal or URL elicitation to fill the gap."
+        },
+        {
+          "id": "E04-ARCH-C3",
+          "title": "Do not fake a native attachment to reuse conditional claims",
+          "file": "src/control.rs",
+          "lines": "457-462",
+          "body": "Conditional claims currently require a live attachment owner with native_connection. An ACP view is not a PTY. Reusing that gate by fabricating a native connection would violate the no-dummy-PTY rule. Plan should add an ACP eligibility path or state that conditional idle-yield is unavailable for agent views, while preserving the PTY path."
+        }
+      ],
+      "verification_performed": [
+        "Read ADR 0004, e04 context.yaml, epic.yaml, IMPACT_LATEST.md, SCOPE_LATEST.yaml, GLOSSARY_LATEST.yaml, DESIGN_PLAN_LATEST.md e04 section, AUDIT-e04-architecture.md, CONVENTIONS.md, and state.yaml / execution-status.yaml e03 and e04 counters.",
+        "Confirmed e03s08 remains failing, e04s01-e04s04 remain failing, and the exhausted e03 five-round review record is not reset.",
+        "Verified agent-client-protocol-schema 1.12.0 Cargo.toml: edition 2024, rust-version 1.88.0, default feature schemars only, unstable_protocol_v2 not in the unstable umbrella, dependencies anyhow/derive_more/serde/serde_json/serde_with/strum and optional schemars, no tokio or SDK runtime.",
+        "Verified schema 1.12.0 types: JsonRpcMessage::wrap/into_inner, AgentRequest::method, ClientRequest::method, RequestPermissionOutcome::Cancelled, SelectedPermissionOutcome.option_id, ElicitationAction::{Accept, Decline, Cancel}, CancelNotification::new, InitializeRequest::new, ContentBlock.",
+        "Verified stable v1 stdio framing is newline-delimited UTF-8 with no embedded newlines, session/cancel MUST answer pending session/request_permission with cancelled, and elicitation cancel is distinct from decline.",
+        "Verified SDK 3.5.0 ByteStreams::into_lines uses uncapped BufReader.lines and Channel::duplex uses mpsc::unbounded, and ChildGuard::terminate kill_process_group's the child PID.",
+        "Compared the grant cut with control.rs calls.is_empty and the native-owner conditional gate, and the snapshot rule with Daemon::snapshot holding state.lock across terminal_snapshot."
+      ],
+      "limits": [
+        "Score is 100*(32-0-1)/32 = 96.875. PASS because must-fix is zero and the score is at least 94. This is not Build authorization or ACP runtime proof.",
+        "No builds, tests, formatters, live models, adapter installs, or auth probes were run.",
+        "Numeric caps, exact request schemas, launch ergonomics, and locked transitive feature unification were treated as Plan work unless the selected mechanism made the guarantee impossible.",
+        "schema-v1.26.0 commit e2d83349 was not byte-compared with crates.io 1.12.0; type checks used the published 1.12.0 docs and Cargo.toml.",
+        "Did not inspect the other current-round reviewer's report.",
+        "No substantive Fowler smell is accepted. Broker, view, admission transaction, and bounded stdio worker each have a Reason for Depth. The identity set is deliberate separation. The round-1 Leaky Abstraction is closed by not selecting the SDK runtime."
+      ]
+    },
+    "E04ArchitectureB2": {
+      "verdict": "PASS",
+      "score": 100,
+      "criteria_checked": [
+        "01 Atomic admission versus revoke — PASS: one authority-lock memory transaction orders the generation check with commit; no check-then-enqueue window (ADR 0004 lines 57-65). Compatible with control.rs grant/refresh_conditional, which blocks offers on the native calls ledger, because ACP receipts are forbidden from that ledger.",
+        "02 Admission transaction stays memory-only — PASS: no process, pipe, socket, filesystem, wait, or join under that lock (ADR 0004 line 59).",
+        "03 Admitted work stays canonical after handoff — PASS: accepted work is not removed, rebound, or relabeled as the new owner's input (ADR 0004 line 66; glossary accepted_work).",
+        "04 Force is authority-only — PASS: force must not send session/cancel or $/cancel_request, drop the retained mapping, detach, kill, or replace the session (ADR 0004 line 71).",
+        "05 Retained request/outcome maps, no destructor cancel — PASS: maps are registered before the writer and survive handoff, owner drop, and local timeout; no SDK SentRequest Drop path is selected (ADR 0004 line 81).",
+        "06 SDK detach/drop is not transfer — PASS: the SDK runtime is not selected, so detach cannot implement ownership; retained maps are independent of caller tokens (ADR 0004 lines 45-49, 81).",
+        "07 Human takeover of a pending question — PASS: cooperative grant seals the amux cut and must not wait for the in-flight session/prompt; ACP receipts stay out of the native calls ledger that blocks offers (ADR 0004 line 69; IMPACT control.rs row).",
+        "08 Exact identities — PASS: target, instance, connection generation, ACP session, work, JSON-RPC request, tool call, interaction revision, owner generation, and event sequence stay distinct and are validated at admission (ADR 0004 line 77).",
+        "09 Request-scoped forms are not guessed onto the latest prompt — PASS: pinned ElicitationRequestScope.request_id is the JSON-RPC RequestId and is defined as outside a session (schema 1.12.0); ADR line 77 binds it to connection/request/instance.",
+        "10 Winning response labels — PASS: first valid amux admission is local policy; selected/submitted/failed/unknown are defined against admission, transport write, failure evidence, and unconfirmed later result (ADR 0004 line 91).",
+        "11 Losing answers stay out of history — PASS: competing and stale submissions are rejected without optimistic losing-answer history (ADR 0004 line 91).",
+        "12 Admission, pipe write, and callback delivery are not agent application — PASS: application is confirmed, rejected, or unknown only from evidence (ADR 0004 lines 67 and 91).",
+        "13 Starting-state request-scoped forms — PASS: open reserves the target before async initialize; the FIFO consumer is not a synchronous waiter and continues while initialize/new-session/prompt are outstanding (ADR 0004 lines 22 and 81).",
+        "14 No hidden discovery prompt — PASS: identity, capabilities, and readiness are not probed with a concealed prompt (ADR 0004 line 22).",
+        "15 Explicit cancel uncertainty — PASS: session/cancel is a notification; confirmation waits for the original prompt response and is not implied by the notification or permission responses (ADR 0004 line 97; pinned prompt-turn cancellation).",
+        "16 Close and timeout are not confirmed cancel — PASS: socket closure and local timeout are unknown; ordered closure is processed once and late local write errors are not relabeled as agent outcomes (ADR 0004 lines 83 and 97).",
+        "17 Permission cancel obligation — PASS: admitted session/cancel commits RequestPermissionOutcome::Cancelled for still-pending permissions, reserves response capacity before send, gives no second response to a canonical selection, and applies the same Cancelled obligation to later permissions of that session without allow/deny (ADR 0004 lines 97-99; schema docs MUST).",
+        "18 Birth-identity cleanup — PASS: SDK ChildGuard::terminate still kill-process-group's by child PID; architecture rejects it and reuses amux birth-qualified descendant cleanup (runtime.rs ProcessInfo start time; ADR 0004 lines 49 and 101).",
+        "19 Owned-only cleanup races — PASS: failed startup, late publication, and concurrent close/shutdown clean only birth-qualified owned resources and preserve unrelated sentinels (ADR 0004 line 101; IMPACT).",
+        "20 Privacy — PASS: prompts, answers, credentials, environment, and auth stay out of public metadata and committed evidence; forms must not collect secrets; raw transport tracing is excluded (ADR 0004 line 101).",
+        "21 Snapshot cost — PASS: topology snapshots are content-free; transcript access is explicit and incremental; slow clients do not join PTY processing (ADR 0004 line 109; DESIGN_PLAN e04).",
+        "22 Lock order — PASS: authority then ACP state; no callback into authority while holding ACP state; Daemon::snapshot must not extend its state.lock/terminal_snapshot span across ACP state (ADR 0004 lines 59 and 109; daemon.rs:253-268 holds state.lock across controls.lock).",
+        "23 Bounded stdout frames on the selected path — PASS: schema-only 1.12.0 has no transport/task queues; the reader caps frame bytes before newline accumulation and parse; every ingress/egress/application queue has count and byte budgets; a dedicated writer keeps blocking pipe writes off the consumer; overflow fails closed with unknown outcomes (ADR 0004 lines 45-51). Pinned stdio framing is newline-delimited, not Content-Length.",
+        "24 Outstanding work is not evicted — PASS: retention pressure rejects new admission instead of dropping in-flight requests (ADR 0004 line 83).",
+        "25 Legacy Codex and PTY settlement unchanged — PASS: closed Codex operations and native-input settlement are not aliased; e03s08 remains failing and the five-round review record is not reset (SCOPE, state.yaml, execution-status.yaml).",
+        "26 Stock Zsh, OMP, and terminal identity — PASS: an ACP view is not a dummy PTY; terminal screen/resize/input/execute stay PTY-only (ADR 0004 line 20; SCOPE constraints).",
+        "27 Wire v1 versus crate versions — PASS: ProtocolVersion::V1 is wire v1; schema 1.12.0 commit e2d83349 matches the cited schema pin; SDK 3.5.0 is not selected; unstable v2 is feature-gated and off; default features only add schemars (published Cargo.toml, MSRV 1.88.0, matching workspace rust-version).",
+        "28 One foreground prompt — PASS: a second prompt is busy; no steer fallback, hidden queue, or retry (ADR 0004 line 79). ClientRequest in 1.12.0 has no steer method.",
+        "29 Permission option fidelity — PASS: exact offered option ids; no synthesized allow-once; dismiss is not deny; no automatic approval (ADR 0004 line 89).",
+        "30 URL elicitation and credential forms — PASS: URL mode is not advertised and gets the specified Invalid params (-32602); forms do not collect credentials (ADR 0004 line 87; pinned elicitation docs).",
+        "31 Delegation is not a sandbox — PASS: filesystem and terminal client capabilities are not advertised, and that absence is not a security guarantee (ADR 0004 line 101).",
+        "32 Memory-only runtime and no plugin framework — PASS: reconnect is a new instance; no restoration, remote protocol, or generic provider abstraction (ADR 0004 lines 11 and 83; CONVENTIONS.md)."
+      ],
+      "must_fix": [],
+      "should_fix": [],
+      "consider": [
+        {
+          "id": "E04-ARCH-C1",
+          "title": "Confirm cancellation only on stopReason cancelled",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "97",
+          "body": "Line 97 correctly refuses to confirm cancel from the notification, permission responses, closure, or timeout, and waits until the original prompt response. A literal reading of \"supplies a stop reason\" also matches end_turn, refusal, max_tokens, and max_turn_requests. Plan should confirm cancellation only for stopReason cancelled, record any other prompt result as its own protocol outcome, and release the single foreground slot on a JSON-RPC error so a non-conforming abort error cannot leave the session busy."
+        },
+        {
+          "id": "E04-ARCH-C2",
+          "title": "Keep reading stderr after the retention cap",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "101",
+          "body": "Pinned stdio transport allows the agent to log on stderr. Line 101 bounds stderr and fails closed on overflow, but stopping the stderr read while the child still lives fills the OS pipe and can stall the agent. Plan should keep discarding after the cap or fail and reap; do not leave a live child with a stopped stderr reader."
+        },
+        {
+          "id": "E04-ARCH-C3",
+          "title": "Answer unadvertised agent requests with a JSON-RPC error",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "51,101",
+          "body": "Schema 1.12.0 AgentRequest is the agent-to-client enum and includes fs, terminal, permission, elicitation, and extension requests. Permissions and forms are specified; unadvertised fs/terminal calls are only described as not advertised. A consumer that consumes those requests without an error response can stall the foreground prompt. Plan should return the JSON-RPC error and not treat silence as rejection."
+        },
+        {
+          "id": "E04-ARCH-C4",
+          "title": "Do not invert ClientRequest and AgentRequest",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "40-42",
+          "body": "In schema 1.12.0, ClientRequest is what the client sends to the agent, and AgentRequest is what the agent sends to the client. Both expose method(). Plan should match inbound permission and elicitation traffic on AgentRequest, not on ClientRequest."
+        }
+      ],
+      "verification_performed": [
+        "Read ADR 0004, e04 context.yaml and epic.yaml, IMPACT_LATEST.md, SCOPE_LATEST.yaml, GLOSSARY_LATEST.yaml, VISION_LATEST.yaml, DESIGN_PLAN_LATEST.md e04 section, AUDIT-e04-architecture.md, round1 evidence, state.yaml, and execution-status.yaml on feat/acp-agent-interaction at a46eaddeb79a9a42628d9cb39cd60945ece27fbb.",
+        "Confirmed e03s08 remains failing, the five-round e03 review record is exhausted without an independent pass, and e04s01-e04s04 remain failing with no ACP implementation started.",
+        "Compared admission and snapshot claims with src/control.rs refresh_conditional/calls blocking and src/daemon.rs snapshot holding state.lock across terminal_snapshot/controls.lock.",
+        "Compared birth-identity cleanup with src/runtime.rs ProcessInfo start-time capture and UninstalledChild PID signaling, and with SDK 3.5.0 ChildGuard::terminate kill_process_group by child id.",
+        "Verified published agent-client-protocol-schema 1.12.0: commit e2d83349, edition 2024, rust-version 1.88.0, default feature schemars only, no tokio/SDK runtime dependency, ProtocolVersion::V1, JsonRpcMessage::wrap/into_inner, ClientRequest/AgentRequest::method, RequestPermissionOutcome::Cancelled, ElicitationAction::Cancel/Decline, and ElicitationRequestScope.request_id.",
+        "Verified pinned schema-v1.26.0 stdio transport is newline-delimited UTF-8 JSON-RPC with no embedded newlines, and prompt-turn cancellation requires Cancelled permission responses with confirmation only from the prompt stop reason.",
+        "Did not run builds, tests, formatters, installs, adapter launches, auth probes, or live model calls, and did not read the other current-round review."
+      ],
+      "limits": [
+        "Score is 100*(32-0-0)/32 = 100. PASS because must-fix is zero and the score is at least 94.",
+        "No substantive Fowler smell is a fix: the round1 Leaky Abstraction is removed by not selecting the SDK runtime; broker, view, admission transaction, and bounded worker each have a stated boundary. The ten-identity tuple is a data clump for code review, already deferred by the self-audit, not an architecture contradiction.",
+        "Exact numeric caps, request/snapshot/form shapes, launch ergonomics, and locked feature unification remain Plan work. The selected mechanisms do not make the resource, privacy, or cancel guarantees impossible.",
+        "The illustrative v1 import of ProtocolVersion is crate-root in 1.12.0; that snippet path is not an architecture failure because ProtocolVersion::V1 exists and is not behind unstable_protocol_v2.",
+        "This review did not re-open settled product choices or treat historical e03s08 as passed."
+      ]
+    }
+  },
+  "prior_round": "e04-architecture-review-round1.json",
+  "historical_e03_review_counters": "unchanged",
+  "runtime_implementation": "not-started",
+  "new_live_model_calls": 0,
+  "gate_limits": [
+    "Architecture quality only; explicit architecture confirmation still required before Plan.",
+    "No detailed Plan/Build authorization or ACP runtime acceptance implied."
+  ],
+  "post_review_clarifications": {
+    "status": "recorded-in-ADR-next-Plan-review-required",
+    "recorded_in": "specs/adr/0004-acp-authoritative-input.md",
+    "recorded_snapshot": "B53D",
+    "review_boundary": "Round2 reviewed C5BA; subsequent advisory clarifications are not a claimed extra architecture round and must be covered by the new Plan review.",
+    "items": [
+      "Atomic nonselectable late permissions/forms during admitted cancellation",
+      "Root ProtocolVersion import citation",
+      "Explicit advertised agent-type authentication transition",
+      "Genuine ACP-view attachment eligibility for conditional ownership",
+      "Only cancelled stop reason confirms interruption; protocol error releases foreground slot",
+      "Continue stderr drain after retention cap or fail and reap",
+      "Error responses for unadvertised requests; no silent consumption",
+      "AgentRequest inbound versus ClientRequest outbound"
+    ]
+  }
+}

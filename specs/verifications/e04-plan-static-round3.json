@@ -1,0 +1,43 @@
+{
+  "scope": "e04-acp-plan",
+  "round": 3,
+  "status": "static-passing-not-runtime",
+  "strict_yaml_documents_including_frontmatter": 13,
+  "historical_execution_duplicate_gate_trace": "Preserved; parsed with existing last-key YAML semantics, not claimed strict-valid.",
+  "stories": 4,
+  "numbered_sections_per_story": 20,
+  "tasks": 22,
+  "step_verify_exact_matches": 22,
+  "unique_shell_syntax_checked_commands": 11,
+  "scenario_count": 23,
+  "all_scenarios_mapped": true,
+  "all_new_tasks_failing": true,
+  "consistency_checker": {
+    "critical": 0,
+    "high": 0,
+    "med": 0,
+    "limitation": "Installed checker root/verify extraction supplemented by direct strict YAML and exact step/command/scenario validation."
+  },
+  "checks_not_run": [
+    "Future ACP tests/example/runtime: not implemented",
+    "Live providers/models/auth"
+  ],
+  "commands": [
+    "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s01_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s02_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture && cargo test --test pty_control --test agent_interaction",
+    "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture && cargo test --test pty_control",
+    "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture && cargo test --test pty_control native",
+    "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture",
+    "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture",
+    "cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture"
+  ],
+  "lifecycle_correction": "User explicitly selected existing ACP close and daemon shutdown; native shell close/remove preserves ACP. No new project-close route.",
+  "previous_failed_rounds": [
+    1,
+    2
+  ]
+}

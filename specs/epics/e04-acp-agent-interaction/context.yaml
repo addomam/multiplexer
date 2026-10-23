@@ -1,0 +1,116 @@
+type: architecture-context
+context: Explicit ACP-only human-surface and admission-boundary decisions; historical native acceptance remains failing.
+feature: acp-agent-interaction
+epic: e04
+phase: build
+status: e04s01-starting-RED
+problem: Native terminal input cannot supply the proven application-consumption boundary required by complete-broker ownership acceptance.
+user_goal: Make ACP the solid interaction path, retain terminal-only tools as best-effort fallback, then separately design a thin non-ACP integration API.
+explicit_user_decisions:
+  - {id: ACP-human-surface, selected: amux-owned-view, alternative: upstream-native-TUI-plus-sidecar, scope: ACP-only}
+  - {id: ACP-handoff-boundary, selected: amux-input-admission, alternative: wait-for-provider-application, scope: ACP-only}
+  - {id: deferred-adapter-API, selected: after-solid-ACP, scope: no-generic-plugin-framework-now}
+phase_authorization:
+  research_and_architecture: user-authorized-start-ACP
+  plan: explicit-user-approved-reviewed-architecture
+  build: explicit-user-conditional-on-two-independent-passing-new-Plan-reviews
+  live_models: separately-approved-only
+  ACP_merge_push_release: not-authorized
+  user_phase_decision: "Plan, then Build if reviews pass"
+architecture_review:
+  scope: e04-acp-architecture
+  round: 2
+  max_rounds: 5
+  verdict: PASS
+  scores: [96.875, 100]
+  must_fix: 0
+  evidence: specs/verifications/e04-architecture-review-round2.json
+  post_review_clarifications: recorded-in-ADR-mandatory-next-Plan-review-input
+baseline:
+  main: a46eaddeb79a9a42628d9cb39cd60945ece27fbb
+  implementation: 8d8365111decb2835e2be46c0c41c901a0b46c04
+  signed_receipt: 4be2ba3ffec326757ff82225f4d0e0c6854fb302
+  source_checkout: /Users/addomam/projects/multiplexer
+  source_checkout_policy: preserve-dirty-fix-substrate-defects-no-switch-reset-stash-or-broad-stage
+  primary_clone: /Users/addomam/projects/amux-acp
+  implementation_worktree: /Users/addomam/projects/amux-acp-build
+  branch: feat/acp-agent-interaction
+  default_preflight: {status: passing, artifact: 'artifact://707', rust_passed: 197, suites: 11, ignored: 7}
+  workspace_preflight:
+    status: passing
+    artifact: 'artifact://731'
+    rust_passed: 308
+    suites: 29
+    ignored: 10
+    checks: [actual-amux-help, workspace-test, strict-workspace-clippy, workspace-check, workspace-build, rustfmt-check, omp-bun-8-tests-49-assertions, zsh-syntax]
+    new_live_model_calls: 0
+    note: Verified identical runtime before ACP worktree creation; no ACP implementation exists yet.
+historical_boundaries:
+  e03s08: failing
+  e03_complete_broker: failing-native-application-fence-unresolved
+  e03_build_review: exhausted-5-of-5-without-post-repair-independent-pass
+  e03_delivery: explicitly-user-approved-limited-delivery
+  ACP_is_not: a-retroactive-native-application-acknowledgement-or-review-reset
+architecture:
+  decision: specs/adr/0004-acp-authoritative-input.md
+  impact: specs/IMPACT_LATEST.md
+  broker: one-concrete-ACP-instance-per-owned-local-adapter-and-session
+  human_surface: separate-amux-agent-view-not-a-terminal
+  schema: {package: agent-client-protocol-schema, version: 1.12.0, wire_protocol: v1, default_features: false, classification: OK, MSRV: 1.88.0}
+  SDK_runtime_not_selected: 3.5.0-unbounded-Line-Channel-and-task-queues-conflict-with-resource-contract
+  process_transport: amux-owned-birth-qualified-process-and-preaccumulation-capped-stdio-using-official-schema-envelopes
+  process_helper_excluded: SDK-AcpAgent-ChildGuard-does-not-match-owned-cleanup-contract
+  ingress_egress_queues: explicit-byte-and-count-budgets-no-hidden-unbounded-SDK-queue
+  admission: bounded-memory-commit-atomically-ordered-with-control-revocation
+  already_admitted_work: retained-and-allowed-to-complete-after-transfer
+  provider_application: separate-confirmed-rejected-or-unknown-observation-never-implied-by-admission
+  capabilities_initial: [form-elicitation-after-full-supported-schema-implementation]
+  capabilities_not_advertised: [url-elicitation, client-filesystem, client-terminal, unstable-v2]
+  identities: [target, instance, connection-generation, ACP-session, amux-work, JSON-RPC-request, tool-call, interaction-revision, owner-generation, event-sequence]
+  state_persistence: none
+  force: authority-only-never-cancel-drop-request-or-kill
+  explicit_interrupt: session-cancel-notification-confirmed-only-through-original-prompt-outcome
+  cancel_permission_obligation: admitted-session-cancel-commits-Cancelled-responses-for-pending-and-late-session-permissions-with-reserved-capacity
+  ordinary_pending_cancel: invalidate-prior-control-grant-nobody-retain-admitted-work
+  conditional_keep_withdraw: preserve-human-control
+  reacquisition_policy: external
+  input_replay: forbidden
+proposed_story_outcomes:
+  - {id: e04s01, outcome: One ACP session available through API and actual amux conversation view with truthful prompt streams and owned cleanup}
+  - {id: e04s02, outcome: Real forms and offered permissions share exact request identity and canonical disposition across API and human view}
+  - {id: e04s03, outcome: Admission-fenced handoff and stale-input rejection preserve running work and truthful explicit cancellation/recovery}
+  - {id: e04s04, outcome: Complete cross-adapter ACP acceptance with separately approved real checks and unchanged terminal fallback regressions}
+implementation_ownership:
+  integration_owner: parent-assistant
+  shared_files_exclusive: [src/control.rs, src/daemon.rs, src/client.rs, src/cli.rs, src/tui.rs, src/tui/control.rs, src/tui/view.rs, src/projects.rs, src/lib.rs, Cargo.toml, Cargo.lock, specs/state.yaml, specs/execution-status.yaml]
+  possible_backend_slice: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs]
+  possible_view_slice: [src/tui/agent.rs]
+  dispatch_gate: reviewed-interfaces-and-substantial-independent-work-only
+  conflicting_edits: integration-owner-sequences
+  retirement: integrate-and-preserve-work-before-cleaning-owned-session-processes-tab-and-worktree
+verification_policy:
+  before_live_approval: deterministic-local-ACP-peer-real-daemon-CLI-and-controlling-PTY-TUI-only
+  race_proof: explicit-barriers-at-admission-revocation-response-and-close-boundaries
+  runtime_proof: actual-shared-session-actions-and-rendered-human-surface-not-tests-alone
+  cleanup: verify-owned-process-exit-and-resource-removal-before-fixture-fallback-with-unrelated-sentinels
+  privacy: no-prompts-answers-auth-or-raw-output-in-public-metadata-or-committed-evidence
+  acceptance: fixtures-do-not-prove-real-adapter-compatibility
+  ledger: every-task-starts-failing-and-flips-only-after-its-actual-command-passes
+research:
+  skills: ACP-query-zero-matches
+  context7: not-mounted-primary-tagged-sources-used
+  protocol_schema: {version: schema-v1.26.0, commit: e2d83349bc9e28a4059ea3acefa1c91c966f74e2}
+  rust_sdk: {version: 3.5.0, commit: 305aefda6fbe88be6ae8b9088003e383f909b135, MSRV: '1.88'}
+  codex_adapter: {package: '@agentclientprotocol/codex-acp', version: 2.2.2, commit: 202e66e63343ec4f5a5e35ab590251d813d129ca, locked_backend: '@openai/codex 0.160.1', native_tui_attachment: unsupported}
+  claude_adapter: {package: '@agentclientprotocol/claude-agent-acp', version: 0.94.0, commit: 7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1, agent_SDK: 0.3.303, native_cli: 2.1.303, Node_minimum: '22'}
+  runtime_installs_or_launches: none
+plan_contracts:
+  exact_API_and_launch: specs/epics/e04-acp-agent-interaction/build-integration-contract.md
+  schema_and_validation: specs/epics/e04-acp-agent-interaction/PLAN.md
+  resource_and_lifecycle: specs/epics/e04-acp-agent-interaction/PLAN.md
+  story_and_risk_matrix: specs/tech-architecture/e04-TEST_PLAN_LATEST.md
+  status: reviewed-Plan-round3-100-100
+user_lifecycle_decision:
+  choice: existing-explicit-ACP-close-and-daemon-shutdown
+  preserve: native-shell-close-remove-leaves-ACP-views-alive
+  deferred: broader-project-lifecycle-handling-after-hands-on-UX-feedback

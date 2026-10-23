@@ -1,0 +1,109 @@
+type: feat
+context: specs/epics/e04-acp-agent-interaction/context.yaml
+story_id: e04s02
+title: Genuine forms and permission decisions
+spec: e04s02-story.md
+status: failing
+bcps: 8
+risk: P0
+tasks:
+- id: 1
+  description: Implement official typed request-/session-scoped genuine forms with retained exact RPC scope, asynchronous
+    bootstrap support and capability enablement only after full supported field paths.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P0-01
+  - SC-e04s02-P1-06
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 2
+  description: Render/edit all known flat primitive, enum and multiselect controls with required/optional/default and supported
+    validation semantics, explicit review/accept/decline/cancel and truthful pattern/format limits.
+  verify: "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P1-02
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 3
+  description: Implement same-session tool permissions with exact offered IDs/kinds/scope and actual human/API allow/deny
+    paths; never synthesize options or implicit dismissal.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P0-03
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 4
+  description: Linearize competing API/native form/permission decisions with authority admission, retaining selected/submitted/failed/unknown
+    evidence while excluding rejected losing answers from shared history.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P0-04
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 5
+  description: Commit explicit cancellation obligations and pending/late session permission/form dispositions atomically with
+    reserved writer capacity before publication; selected requests never receive duplicate responses.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P0-05
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 6
+  description: Exercise genuine question/permission human surfaces and protocol errors with private CLI/controlling-PTY smoke,
+    observe owned cleanup and record redacted evidence.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s02-P0-01
+  - SC-e04s02-P0-03
+  - SC-e04s02-P1-06
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+evidence: specs/verifications/e04s02-build.md

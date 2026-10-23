@@ -46,3 +46,7 @@ _Avoid_: Automatic grant, current control
 - Cancel takeover versus cancel turn: withdrawing the transfer invalidates pre-transfer authority and leaves the PTY unowned, but does not interrupt agent work.
 - Controller versus connection: a registered controller capability survives external one-shot calls; native view provenance is bound to its original attachment connection. See the [wire contract](../contracts/pty-control.md).
 - Successful raw request versus acquired control: a pending claim can be a successful API result, but only granted current **ControlHandle** authority means acquisition completed.
+
+## e04 planned ACP boundary
+
+Official `agent-client-protocol-schema = "=1.12.0"` [OK], `default-features = false`, Rust MSRV 1.88, stable wire v1. This is a reviewed-Plan candidate, not an installed/runtime-accepted dependency. Concrete bounded owned stdio uses existing threads/process cleanup and ratatui; the full SDK's unbounded transport runtime/process helper is not selected. Verify serde_json preserve_order/raw_value feature unification and actual lockfile/MSRV with workspace regressions during Build. No async executor, generic provider/plugin SDK or persisted ACP session state. See e04 PLAN, integration contract and ADR0004.

@@ -1,0 +1,75 @@
+type: feat
+context: specs/epics/e04-acp-agent-interaction/context.yaml
+story_id: e04s04
+title: Complete ACP acceptance and truthful fallback
+spec: e04s04-story.md
+status: failing
+bcps: 8
+risk: P0
+tasks:
+- id: 1
+  description: Exercise integrated actual CLI/controlling-PTY prompt, genuine questions/permissions, running ownership and
+    stale-input rejection with observed cleanup; write redacted complete local matrix.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s04-P0-01
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 2
+  description: Prove complete broker resource/privacy/owned-process boundaries under hostile frames, stalled traffic and concurrent
+    snapshot/ownership/shutdown; no false settlement or unrelated cleanup.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s04-P1-04
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 3
+  description: Run full workspace/default preflight, OMP/Zsh/independent showcase and final revisit of native buffer/application
+    fence; document best-effort terminal fallback without altering historical e03 failure/caps.
+  verify: "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture"
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s04-P0-03
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 4
+  description: Only after separate exact live approval, run fail-closed ignored e04s04_live_adapters against real pinned Codex
+    and Claude adapters with genuine questions/allow/deny, same-session handoff, bounded cheapest approved models, redacted
+    evidence and owned cleanup. Missing approval or a failed/unsupported row remains failing, never skipped-to-pass.
+  verify: cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture
+  risk: P0
+  status: failing
+  scenarios:
+  - SC-e04s04-P0-02
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+evidence: specs/verifications/e04s04-build.md
