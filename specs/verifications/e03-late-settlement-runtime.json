@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-22",
+  "scope": "round3 late-settlement fixes in current feature working tree",
+  "status": "PASS-RUNTIME-AND-PREFLIGHT-INDEPENDENT-ROUND4-PENDING",
+  "red_checkpoint": "ad280c4",
+  "failed_before": [
+    {
+      "artifact": "artifact://513",
+      "test": "late_automatic_startup_acceptance_retires_control_without_replay",
+      "exit": 101,
+      "seconds": 5.95,
+      "observed": "exact late acknowledgement settled the call but left automatic launch owning the PTY; native source completion exit127 after its private source was deleted"
+    },
+    {
+      "artifact": "artifact://517",
+      "test": "removed_terminal_consumes_original_shell_settlement_without_retargeting",
+      "exit": 101,
+      "seconds": 6.31,
+      "observed": "original callback incorrectly resolved to a replacement whose display name was the old stable UUID, returning its live integration snapshot"
+    }
+  ],
+  "fixture_errors_preserved": [
+    {
+      "artifact": "artifact://515",
+      "cause": "claim-state unsettled calls are nested under ownership; corrected fixture before valid production reproduction"
+    },
+    {
+      "artifact": "artifact://523",
+      "cause": "resource assertions assumed AMUX_RUNTIME_DIR; actual daemon integration root is socket parent. Corrected paths and added positive live FIFO/source checks, no production behavior or acceptance weakened"
+    }
+  ],
+  "focused_green": {
+    "note": "bg120: both actual regressions6.03s/6.25s and strict Clippy passed; bg121 forced-owner boundary6.01s passed before fixture-only resource-path failure."
+  },
+  "final_preflight": {
+    "artifact": "artifact://528",
+    "command_exit": 0,
+    "rust_passed": 307,
+    "rust_ignored": 10,
+    "suites": 29,
+    "pty_control_passed": 34,
+    "workspace_clippy_strict": true,
+    "workspace_check_all_targets": true,
+    "workspace_build": true,
+    "format_check": true,
+    "independent_showcase_exact": {
+      "passed": 1,
+      "seconds": 3.79
+    },
+    "omp": {
+      "passed": 8,
+      "assertions": 49
+    },
+    "zsh_syntax": true,
+    "actual_cli_help": true,
+    "serialized_resource_owning_runs": true
+  },
+  "actual_cli_native_smoke": {
+    "scenario": "actual CLI startup plus genuinely delayed stock-Zsh permission callback",
+    "model_calls": 0,
+    "auth_copied": false,
+    "global_mutations": false,
+    "status": "PASS",
+    "prior_owner_label": "automatic launch",
+    "real_deadline_retained_unknown": true,
+    "source_private_until_settlement": true,
+    "genuine_report_forwarded_once": true,
+    "command_completion_exit": 0,
+    "command_file_exact": "actual-late\\n",
+    "post_owner": null,
+    "post_unsettled": [],
+    "cooperative_grant": "safe",
+    "completed_source_removed": true,
+    "shutdown_seconds": 0.462,
+    "daemon_exit": 0,
+    "proxy_joined": true,
+    "owned_shells_gone": true,
+    "socket_removed": true,
+    "fallback_signal_required": false,
+    "private_root_removed": true
+  },
+  "coverage": "specs/verifications/e03-current-delivery-coverage.json; historical round2 partial lower bound, not current-source coverage",
+  "privacy": {
+    "new_model_calls": 0,
+    "auth_copied": false,
+    "global_changes": false,
+    "proxy_and_owned_runtime_removed": true
+  },
+  "acceptance": {
+    "complete_broker": "failing-user-accepted-deferred",
+    "all32_PASS": false,
+    "unknown_blocks_safe_grant": true,
+    "historical_caps": "unchanged",
+    "round3": "FAIL",
+    "round4": "pending"
+  }
+}

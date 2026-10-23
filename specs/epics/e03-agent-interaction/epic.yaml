@@ -1,0 +1,115 @@
+type: feat
+context: specs/planning-context.yaml
+id: e03
+title: Same-instance agent interaction and exclusive PTY control
+scope: specs/product/SCOPE_LATEST.yaml
+plan: specs/epics/e03-agent-interaction/PLAN.md
+status_source: specs/execution-status.yaml
+requirements: specs/planning-context.yaml
+bcps: 58
+wsjf:
+  business_value: 8
+  time_criticality: 3
+  risk_reduction: 13
+  job_size: 58
+  score: 0.414
+  basis: planning-estimates-only; sole pending epic
+implementation_authorized: true
+stories:
+  - id: e03s01
+    title: Exclusive ordinary PTY control and cooperative handoff
+    bcps: 8
+    delta: MODIFIED
+    risk: P0
+    depends_on: []
+    spec: e03s01-story.md
+    tasks: e03s01-tasks.yaml
+    acceptance: [interaction-07, interaction-08, interaction-25, interaction-27, interaction-28, interaction-29, interaction-30]
+  - id: e03s02
+    title: Explicit overrides and recoverable one-shot ownership
+    bcps: 8
+    delta: ADDED
+    risk: P0
+    depends_on: [e03s01]
+    spec: e03s02-story.md
+    tasks: e03s02-tasks.yaml
+    acceptance: [interaction-09, interaction-10, interaction-12, interaction-18, interaction-26, interaction-31, interaction-32]
+  - id: e03s03
+    title: Native ownership UX across attached clients
+    bcps: 5
+    delta: MODIFIED
+    risk: P0
+    depends_on: [e03s02]
+    spec: e03s03-story.md
+    tasks: e03s03-tasks.yaml
+    acceptance: [interaction-16, interaction-17, interaction-24]
+  - id: e03s04
+    title: Externally requested conditional reacquisition
+    bcps: 8
+    delta: ADDED
+    risk: P0
+    depends_on: [e03s03]
+    spec: e03s04-story.md
+    tasks: e03s04-tasks.yaml
+    acceptance: [interaction-11, interaction-19, interaction-20, interaction-21, interaction-22, interaction-23]
+  - id: e03s05
+    title: Managed same-instance Codex launch and prompts
+    bcps: 8
+    delta: ADDED
+    risk: P0
+    depends_on: [e03s02]
+    spec: e03s05-story.md
+    tasks: e03s05-tasks.yaml
+    acceptance: [interaction-01, interaction-02, interaction-13]
+  - id: e03s06
+    title: Structured questions and permission decisions
+    bcps: 8
+    delta: ADDED
+    risk: P0
+    depends_on: [e03s05]
+    spec: e03s06-story.md
+    tasks: e03s06-tasks.yaml
+    acceptance: [interaction-03, interaction-04, interaction-05, interaction-06, interaction-15]
+  - id: e03s07
+    title: Exact-turn interruption and truthful lifecycle
+    bcps: 5
+    delta: ADDED
+    risk: P0
+    depends_on: [e03s06]
+    spec: e03s07-story.md
+    tasks: e03s07-tasks.yaml
+    acceptance: [interaction-14]
+  - id: e03s08
+    title: Complete-broker native and API handoff acceptance
+    bcps: 8
+    delta: MODIFIED
+    risk: P0
+    depends_on: [e03s04, e03s07]
+    spec: e03s08-story.md
+    tasks: e03s08-tasks.yaml
+    acceptance: [interaction-10]
+    final_acceptance: all-32-interaction-scenarios
+verification_entrypoints:
+  - {path: tests/pty_control.rs, creator: e03s01, kind: deterministic-real-daemon}
+  - {path: tests/agent_interaction.rs, creator: e03s05, kind: deterministic-protocol-fixtures-not-real-harness-proof}
+  - {path: tests/codex_native_smoke.rs, creator: e03s05, kind: explicit-opt-in-real-harness}
+final_gate:
+  all_scenarios: required
+  native_surface: actual-controlling-PTY-proof-required
+  real_questions_and_permission_allow_deny: required
+  native_application_fence: final-complete-broker-validation-if-unresolved
+  unknown_settlement: blocks-safe-grant-and-first-acceptance
+  force_cancels_turn: false
+acceptance_amendment:
+  date: "2026-10-22"
+  authority: explicit-user-decision-after-observed-failure
+  delta: MODIFIED
+  before: complete-Codex-all32-proof-blocks-current-delivery
+  after: current-upstream-Codex-limitations-user-accepted-full-proof-deferred-to-future-ACP
+  codex_unmodified: true
+  current_landing_requires_complete_Codex: false
+  full_acceptance_proven: false
+  unknown_still_blocks_safe_grant: true
+  original_failing_evidence_retained: true
+  future_ACP_requires_actual_native_fence_and_winner_proof: true
+  record: specs/security/EXCEPTIONS.md

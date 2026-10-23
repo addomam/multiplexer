@@ -1,0 +1,40 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s04
+title: Externally requested conditional reacquisition
+spec: e03s04-story.md
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: "Extend src/control.rs/src/daemon.rs conditional claims and public ownership with immutable when, eligibility, readiness, consent and one daemon monotonic clock source; explicit-instant unit tests inside src/control.rs plus real-daemon tests/pty_control.rs cases prove idle versus warning/none, draw-bound original-connection consent revisions, event/gap snapshot recovery and no requester capability disclosure, without a public test-clock API."
+    verify: "cargo test --lib && cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [conditional-control, public-clock, consent-provenance]
+  - id: 2
+    description: "Wire src/tui/control.rs/src/tui/view.rs/src/tui.rs actual warning draw-before-consent, requested duration, pending-ack explicit keep, key/prefix consumption and owning local activity classification; controlling-PTY tests prove key/paste/mouse/local selection abort without rotating human control, replay or local timer grants."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, keep-control, consent-ack-races]
+  - id: 3
+    description: "Implement src/control.rs conditional accept atomic owner/generation/activity/view/consent/warning/settlement recheck; extend tests/pty_control.rs with both activity-versus-accept winners, old offers, changed/unknown/new attachment facts, stale serials and zero warning remainder blocked on unresolved calls while human authority remains valid."
+    verify: "cargo test --lib && cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [conditional-control, acceptance-races, multi-attachment]
+  - id: 4
+    description: "Complete src/control.rs/src/daemon.rs withdraw/release/supersession/no-rearm and src/tui/control.rs background owner/all consent; real attachment tests cover unknown/departed views, picker-not-background and immediate explicit hand-back, explicit-instant tests prove no-request indefinite control, and existing API/native docs explain public clock, activity provenance and external-only policy."
+    verify: "cargo test --lib && cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, background-scope, external-policy]

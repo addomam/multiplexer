@@ -1,0 +1,1267 @@
+mode: schema
+status: design-contract-not-implemented
+transport: amux-api-v1
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  title: PTY control capability wire revision 1 (design only)
+  description: Ownership request extensions, ownership-specific replies and public ownership events; not all preexisting
+    amux messages. Stateful authority checks remain server obligations.
+  oneOf:
+  - $ref: '#/$defs/Request'
+  - $ref: '#/$defs/OwnershipResponse'
+  - $ref: '#/$defs/OwnershipEvent'
+  $defs:
+    Id:
+      type: string
+      minLength: 1
+    Counter:
+      type: integer
+      minimum: 0
+    Role:
+      enum:
+      - external
+      - attachment
+    Phase:
+      enum:
+      - waiting-owner
+      - watching
+      - countdown
+      - waiting-settlement
+      - offered
+      - granted
+      - cancelled
+      - withdrawn
+      - aborted-by-owner
+      - superseded
+      - target-ended
+    Purpose:
+      enum:
+      - manual
+      - conditional
+    Observation:
+      type: object
+      properties:
+        generation:
+          $ref: '#/$defs/Counter'
+        reservation_id:
+          anyOf:
+          - $ref: '#/$defs/Id'
+          - type: 'null'
+      required:
+      - generation
+      - reservation_id
+      additionalProperties: false
+    ControllerHandle:
+      type: object
+      properties:
+        kind:
+          const: controller
+        ref:
+          $ref: '#/$defs/Id'
+      required:
+      - kind
+      - ref
+      additionalProperties: false
+    ControlHandle:
+      type: object
+      properties:
+        kind:
+          const: control
+        ref:
+          $ref: '#/$defs/Id'
+      required:
+      - kind
+      - ref
+      additionalProperties: false
+    ClaimHandle:
+      type: object
+      properties:
+        kind:
+          const: claim
+        ref:
+          $ref: '#/$defs/Id'
+      required:
+      - kind
+      - ref
+      additionalProperties: false
+    OfferHandle:
+      type: object
+      properties:
+        kind:
+          const: offer
+        ref:
+          $ref: '#/$defs/Id'
+      required:
+      - kind
+      - ref
+      additionalProperties: false
+    When:
+      oneOf:
+      - type: object
+        properties:
+          kind:
+            const: now
+        required:
+        - kind
+        additionalProperties: false
+      - type: object
+        properties:
+          kind:
+            const: human-idle
+          idle_ms:
+            $ref: '#/$defs/Counter'
+          warning_ms:
+            type: integer
+            minimum: 1
+        required:
+        - kind
+        - idle_ms
+        - warning_ms
+        additionalProperties: false
+      - type: object
+        properties:
+          kind:
+            const: views-backgrounded
+          scope:
+            enum:
+            - owner
+            - all
+        required:
+        - kind
+        - scope
+        additionalProperties: false
+    ConditionalClock:
+      oneOf:
+      - type: object
+        properties:
+          kind:
+            enum:
+            - idle
+            - warning
+          remaining_ms:
+            $ref: '#/$defs/Counter'
+        required:
+        - kind
+        - remaining_ms
+        additionalProperties: false
+      - type: object
+        properties:
+          kind:
+            const: none
+          remaining_ms:
+            type: 'null'
+        required:
+        - kind
+        - remaining_ms
+        additionalProperties: false
+    ConditionalObservation:
+      type: object
+      properties:
+        when:
+          allOf:
+          - $ref: '#/$defs/When'
+          - not:
+              properties:
+                kind:
+                  const: now
+        eligibility:
+          enum:
+          - eligible
+          - ineligible
+          - unknown
+        ready_for_consent:
+          type: boolean
+        consent:
+          enum:
+          - awaiting
+          - recorded
+        clock:
+          $ref: '#/$defs/ConditionalClock'
+      required:
+      - when
+      - eligibility
+      - ready_for_consent
+      - consent
+      - clock
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            ready_for_consent:
+              const: true
+        then:
+          properties:
+            eligibility:
+              const: eligible
+            consent:
+              const: awaiting
+      - if:
+          properties:
+            when:
+              properties:
+                kind:
+                  const: human-idle
+        then:
+          properties:
+            clock:
+              properties:
+                kind:
+                  enum:
+                  - idle
+                  - warning
+      - if:
+          properties:
+            when:
+              properties:
+                kind:
+                  const: views-backgrounded
+        then:
+          properties:
+            clock:
+              properties:
+                kind:
+                  const: none
+      - if:
+          properties:
+            clock:
+              properties:
+                kind:
+                  const: warning
+        then:
+          properties:
+            consent:
+              const: recorded
+    Owner:
+      type: object
+      properties:
+        controller_id:
+          $ref: '#/$defs/Id'
+        role:
+          $ref: '#/$defs/Role'
+        label:
+          type: string
+      required:
+      - controller_id
+      - role
+      - label
+      additionalProperties: false
+    Call:
+      type: object
+      properties:
+        id:
+          $ref: '#/$defs/Id'
+        kind:
+          enum:
+          - native-input
+          - shell-execute
+          - agent-mutation
+        controller_id:
+          $ref: '#/$defs/Id'
+        generation:
+          $ref: '#/$defs/Counter'
+        outcome:
+          enum:
+          - pending
+          - unknown
+        elapsed_ms:
+          $ref: '#/$defs/Counter'
+        agent_instance:
+          $ref: '#/$defs/Id'
+        session:
+          $ref: '#/$defs/Id'
+        request_id:
+          type:
+          - string
+          - integer
+      required:
+      - id
+      - kind
+      - controller_id
+      - generation
+      - outcome
+      - elapsed_ms
+      additionalProperties: false
+    ViewFact:
+      type: object
+      properties:
+        controller_id:
+          $ref: '#/$defs/Id'
+        connected:
+          type: boolean
+        reported:
+          type: boolean
+        serial:
+          $ref: '#/$defs/Counter'
+        terminal:
+          anyOf:
+          - $ref: '#/$defs/Id'
+          - type: 'null'
+        focused:
+          type:
+          - boolean
+          - 'null'
+      required:
+      - controller_id
+      - connected
+      - reported
+      - serial
+      - terminal
+      - focused
+      additionalProperties: false
+    Reservation:
+      type: object
+      properties:
+        claim_id:
+          $ref: '#/$defs/Id'
+        requester_id:
+          $ref: '#/$defs/Id'
+        purpose:
+          $ref: '#/$defs/Purpose'
+        phase:
+          $ref: '#/$defs/Phase'
+        conditional:
+          $ref: '#/$defs/ConditionalObservation'
+      required:
+      - claim_id
+      - requester_id
+      - purpose
+      - phase
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            purpose:
+              const: conditional
+        then:
+          required:
+          - conditional
+        else:
+          not:
+            required:
+            - conditional
+    PublicOwnership:
+      type: object
+      properties:
+        terminal:
+          $ref: '#/$defs/Id'
+        observed:
+          $ref: '#/$defs/Observation'
+        owner:
+          anyOf:
+          - $ref: '#/$defs/Owner'
+          - type: 'null'
+        reservation:
+          anyOf:
+          - $ref: '#/$defs/Reservation'
+          - type: 'null'
+        unsettled:
+          type: array
+          items:
+            $ref: '#/$defs/Call'
+        activity_revision:
+          $ref: '#/$defs/Counter'
+        view_revision:
+          $ref: '#/$defs/Counter'
+        views:
+          type: array
+          items:
+            $ref: '#/$defs/ViewFact'
+      required:
+      - terminal
+      - observed
+      - owner
+      - reservation
+      - unsettled
+      - activity_revision
+      - view_revision
+      - views
+      additionalProperties: false
+    Blocker:
+      oneOf:
+      - type: object
+        properties:
+          kind:
+            enum:
+            - owner
+            - owner-consent
+            - condition
+            - requester-acceptance
+          elapsed_ms:
+            $ref: '#/$defs/Counter'
+        required:
+        - kind
+        - elapsed_ms
+        additionalProperties: false
+      - type: object
+        properties:
+          kind:
+            const: settlement
+          call:
+            $ref: '#/$defs/Call'
+        required:
+        - kind
+        - call
+        additionalProperties: false
+    ClaimSummary:
+      type: object
+      properties:
+        claim:
+          $ref: '#/$defs/ClaimHandle'
+        claim_id:
+          $ref: '#/$defs/Id'
+        terminal:
+          $ref: '#/$defs/Id'
+        purpose:
+          $ref: '#/$defs/Purpose'
+        phase:
+          $ref: '#/$defs/Phase'
+      required:
+      - claim
+      - claim_id
+      - terminal
+      - purpose
+      - phase
+      additionalProperties: false
+    Warning:
+      type: object
+      properties:
+        code:
+          const: prior-calls-may-apply
+        calls:
+          type: array
+          items:
+            $ref: '#/$defs/Call'
+      required:
+      - code
+      - calls
+      additionalProperties: false
+    Grant:
+      type: object
+      properties:
+        kind:
+          const: control
+        control:
+          $ref: '#/$defs/ControlHandle'
+        terminal:
+          $ref: '#/$defs/Id'
+        generation:
+          $ref: '#/$defs/Counter'
+        mode:
+          enum:
+          - safe
+          - forced
+          - resumed
+        unsettled:
+          type: array
+          items:
+            $ref: '#/$defs/Call'
+        warning:
+          $ref: '#/$defs/Warning'
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - control
+      - terminal
+      - generation
+      - mode
+      - unsettled
+      - seq
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            mode:
+              const: safe
+        then:
+          properties:
+            unsettled:
+              maxItems: 0
+          not:
+            required:
+            - warning
+      - if:
+          properties:
+            mode:
+              const: forced
+        then:
+          required:
+          - warning
+    ClaimState:
+      type: object
+      properties:
+        kind:
+          const: claim-state
+        claim:
+          $ref: '#/$defs/ClaimHandle'
+        claim_id:
+          $ref: '#/$defs/Id'
+        purpose:
+          $ref: '#/$defs/Purpose'
+        phase:
+          $ref: '#/$defs/Phase'
+        terminal:
+          $ref: '#/$defs/Id'
+        ownership:
+          $ref: '#/$defs/PublicOwnership'
+        blockers:
+          type: array
+          items:
+            $ref: '#/$defs/Blocker'
+        offer:
+          $ref: '#/$defs/OfferHandle'
+        current:
+          type: boolean
+        control:
+          $ref: '#/$defs/ControlHandle'
+        grant_generation:
+          $ref: '#/$defs/Counter'
+        grant_mode:
+          enum:
+          - safe
+          - forced
+          - resumed
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - claim
+      - claim_id
+      - purpose
+      - phase
+      - terminal
+      - ownership
+      - blockers
+      - seq
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            phase:
+              const: offered
+        then:
+          required:
+          - offer
+        else:
+          not:
+            required:
+            - offer
+      - if:
+          properties:
+            phase:
+              const: granted
+        then:
+          required:
+          - current
+          - grant_generation
+          - grant_mode
+          allOf:
+          - if:
+              properties:
+                current:
+                  const: true
+            then:
+              required:
+              - control
+            else:
+              not:
+                required:
+                - control
+        else:
+          not:
+            anyOf:
+            - required:
+              - current
+            - required:
+              - control
+            - required:
+              - grant_generation
+            - required:
+              - grant_mode
+      - if:
+          properties:
+            phase:
+              enum:
+              - watching
+              - countdown
+        then:
+          properties:
+            purpose:
+              const: conditional
+    ControllerCreated:
+      type: object
+      properties:
+        kind:
+          const: controller-created
+        controller:
+          $ref: '#/$defs/ControllerHandle'
+        controller_id:
+          $ref: '#/$defs/Id'
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - controller
+      - controller_id
+      - seq
+      additionalProperties: false
+    ControllerState:
+      type: object
+      properties:
+        kind:
+          const: controller-state
+        controller:
+          $ref: '#/$defs/ControllerHandle'
+        controller_id:
+          $ref: '#/$defs/Id'
+        controls:
+          type: array
+          items:
+            $ref: '#/$defs/Grant'
+        claims:
+          type: array
+          items:
+            $ref: '#/$defs/ClaimSummary'
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - controller
+      - controller_id
+      - controls
+      - claims
+      - seq
+      additionalProperties: false
+    ControlState:
+      type: object
+      properties:
+        kind:
+          const: control-state
+        control:
+          $ref: '#/$defs/ControlHandle'
+        ownership:
+          $ref: '#/$defs/PublicOwnership'
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - control
+      - ownership
+      - seq
+      additionalProperties: false
+    Transition:
+      type: object
+      properties:
+        kind:
+          const: transition
+        outcome:
+          enum:
+          - yielded
+          - released
+          - consent-recorded
+          - kept
+          - withdrawn
+          - cancelled
+          - view-recorded
+          - activity-recorded
+          - controller-closed
+        ownership:
+          anyOf:
+          - $ref: '#/$defs/PublicOwnership'
+          - type: 'null'
+        seq:
+          $ref: '#/$defs/Counter'
+      required:
+      - kind
+      - outcome
+      - ownership
+      - seq
+      additionalProperties: false
+    Request:
+      oneOf:
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: controller-create
+          persistent:
+            type: boolean
+          role:
+            $ref: '#/$defs/Role'
+          label:
+            type: string
+        required:
+        - version
+        - op
+        - role
+        - label
+        additionalProperties: false
+        allOf:
+        - if:
+            properties:
+              role:
+                const: attachment
+          then:
+            properties:
+              persistent:
+                const: true
+            required:
+            - persistent
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: ownership-claim
+          persistent:
+            type: boolean
+          controller:
+            $ref: '#/$defs/ControllerHandle'
+          terminal:
+            $ref: '#/$defs/Id'
+          observed:
+            $ref: '#/$defs/Observation'
+          mode:
+            const: cooperative
+          when:
+            $ref: '#/$defs/When'
+        required:
+        - version
+        - op
+        - controller
+        - terminal
+        - observed
+        - mode
+        - when
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: ownership-claim
+          persistent:
+            type: boolean
+          controller:
+            $ref: '#/$defs/ControllerHandle'
+          terminal:
+            $ref: '#/$defs/Id'
+          observed:
+            $ref: '#/$defs/Observation'
+          mode:
+            const: force
+        required:
+        - version
+        - op
+        - controller
+        - terminal
+        - observed
+        - mode
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControllerHandle'
+          method:
+            const: read
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControllerHandle'
+          method:
+            const: close
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControllerHandle'
+          method:
+            const: view
+          view:
+            type: object
+            properties:
+              serial:
+                $ref: '#/$defs/Counter'
+              terminal:
+                anyOf:
+                - $ref: '#/$defs/Id'
+                - type: 'null'
+              focused:
+                type:
+                - boolean
+                - 'null'
+            required:
+            - serial
+            - terminal
+            - focused
+            additionalProperties: false
+        required:
+        - version
+        - op
+        - handle
+        - method
+        - view
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: read
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: release
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: activity
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: yield-to
+          claim_id:
+            $ref: '#/$defs/Id'
+        required:
+        - version
+        - op
+        - handle
+        - method
+        - claim_id
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: keep
+          claim_id:
+            $ref: '#/$defs/Id'
+        required:
+        - version
+        - op
+        - handle
+        - method
+        - claim_id
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ControlHandle'
+          method:
+            const: consent-to
+          claim_id:
+            $ref: '#/$defs/Id'
+          view_serial:
+            $ref: '#/$defs/Counter'
+          activity_revision:
+            $ref: '#/$defs/Counter'
+        required:
+        - version
+        - op
+        - handle
+        - method
+        - claim_id
+        - view_serial
+        - activity_revision
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ClaimHandle'
+          method:
+            const: read
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ClaimHandle'
+          method:
+            const: cancel
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ClaimHandle'
+          method:
+            const: withdraw
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/ClaimHandle'
+          method:
+            const: force
+          observed:
+            $ref: '#/$defs/Observation'
+        required:
+        - version
+        - op
+        - handle
+        - method
+        - observed
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: control-handle
+          persistent:
+            type: boolean
+          handle:
+            $ref: '#/$defs/OfferHandle'
+          method:
+            const: accept
+        required:
+        - version
+        - op
+        - handle
+        - method
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: input
+          persistent:
+            type: boolean
+          terminal:
+            $ref: '#/$defs/Id'
+          control:
+            $ref: '#/$defs/ControlHandle'
+          text:
+            type: string
+          bytes:
+            type: array
+            items:
+              type: integer
+              minimum: 0
+              maximum: 255
+          key:
+            $ref: '#/$defs/Id'
+          paste:
+            type: boolean
+        required:
+        - version
+        - op
+        - terminal
+        - control
+        additionalProperties: false
+        anyOf:
+        - required:
+          - text
+        - required:
+          - bytes
+        - required:
+          - key
+      - type: object
+        properties:
+          version:
+            const: 1
+          op:
+            const: execute
+          persistent:
+            type: boolean
+          terminal:
+            $ref: '#/$defs/Id'
+          control:
+            $ref: '#/$defs/ControlHandle'
+          source:
+            type: string
+          queue:
+            type: boolean
+        required:
+        - version
+        - op
+        - terminal
+        - control
+        - source
+        additionalProperties: false
+    OwnershipResponse:
+      oneOf:
+      - type: object
+        properties:
+          version:
+            const: 1
+          ok:
+            const: true
+          result:
+            oneOf:
+            - $ref: '#/$defs/ControllerCreated'
+            - $ref: '#/$defs/ControllerState'
+            - $ref: '#/$defs/Grant'
+            - $ref: '#/$defs/ClaimState'
+            - $ref: '#/$defs/ControlState'
+            - $ref: '#/$defs/Transition'
+        required:
+        - version
+        - ok
+        - result
+        additionalProperties: false
+      - type: object
+        properties:
+          version:
+            const: 1
+          ok:
+            const: false
+          error:
+            type: object
+            properties:
+              code:
+                enum:
+                - unsupported-version
+                - invalid-request
+                - stale-handle
+                - wrong-handle-kind
+                - controller-mismatch
+                - target-ended
+                - already-owner
+                - control-reserved
+                - stale-observation
+                - wrong-claim-kind
+                - claim-completed
+                - not-ready
+                - stale-offer
+                - offer-consumed
+                - stale-view
+                - not-native-connection
+                - condition-unavailable
+                - settlement-unavailable
+                - controller-busy
+              message:
+                type: string
+            required:
+            - code
+            - message
+            additionalProperties: false
+        required:
+        - version
+        - ok
+        - error
+        additionalProperties: false
+    OwnershipEvent:
+      type: object
+      properties:
+        seq:
+          $ref: '#/$defs/Counter'
+        kind:
+          enum:
+          - control-requested
+          - control-progress
+          - control-yielded
+          - control-offered
+          - control-granted
+          - control-cancelled
+          - control-withdrawn
+          - control-aborted
+          - control-call-settled
+          - control-view-changed
+        terminal:
+          $ref: '#/$defs/Id'
+        data:
+          type: object
+          properties:
+            ownership:
+              $ref: '#/$defs/PublicOwnership'
+            claim_id:
+              $ref: '#/$defs/Id'
+            mode:
+              enum:
+              - safe
+              - forced
+              - resumed
+            blockers:
+              type: array
+              items:
+                $ref: '#/$defs/Blocker'
+            call_id:
+              $ref: '#/$defs/Id'
+            outcome:
+              enum:
+              - applied
+              - rejected
+              - unknown
+          required:
+          - ownership
+          additionalProperties: false
+      required:
+      - seq
+      - kind
+      - terminal
+      - data
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            kind:
+              enum:
+              - control-requested
+              - control-progress
+              - control-offered
+              - control-cancelled
+              - control-withdrawn
+              - control-aborted
+        then:
+          properties:
+            data:
+              required:
+              - claim_id
+      - if:
+          properties:
+            kind:
+              const: control-progress
+        then:
+          properties:
+            data:
+              required:
+              - blockers
+      - if:
+          properties:
+            kind:
+              const: control-granted
+        then:
+          properties:
+            data:
+              required:
+              - mode
+      - if:
+          properties:
+            kind:
+              const: control-call-settled
+        then:
+          properties:
+            data:
+              required:
+              - call_id
+              - outcome

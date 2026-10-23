@@ -1,0 +1,19 @@
+{
+  "base_commit": "6318845",
+  "source_worktree": "/Users/addomam/projects/amux-e03-build",
+  "source_branch": "feat/e03-agent-interaction",
+  "seed": "verified uncommitted e03s01–02, 241 passing workspace tests",
+  "native": {"branch":"feat/e03-native-control","path":"/Users/addomam/projects/amux-e03-native","workspace":"w16","tab":"w16:t1","pane":"w16:p1"},
+  "codex": {"branch":"feat/e03-codex-structured","path":"/Users/addomam/projects/amux-e03-codex","workspace":"w17","tab":"w17:t1","pane":"w17:p1"},
+  "sha256": {
+    "src/control.rs": "24b72720c828bba3fd7f13b7d4eba8a5ea0485b52e7216f98730c8e16e4c01d6",
+    "src/tui.rs": "630a15bb2a9eaa4efc3d5efa55a3c64a4534bfa03c9623c17a481650a24180a5",
+    "tests/pty_control.rs": "0fa5966f67ce62cc36401160459bf052bb26c8f91e21a47e1c06a466993fdeed",
+    "src/daemon.rs": "6992b8d22a606143ebdbc887c748da2730e0d9da95259b560ecbb8385f1e4178",
+    "src/integration.rs": "067117994db46be3bbd6104bc7cb8433a3fef584b43272577c3c144dd1b525a7",
+    "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+    "src/cli.rs": "02e75e44d7ce610395400740b01fb08e66ca02f232ae42937df7fec775a21926",
+    "src/runtime.rs": "009d318b21ec530e90a30042bf0a534ee72798c379a226f282320e98694942b4"
+  },
+  "integration": "Copy only worker-owned files. Shared daemon/client/CLI/runtime edits belong to parent. No commit/merge authorization. Do not discard a worktree until all its changes are safely retained and integrated."
+}

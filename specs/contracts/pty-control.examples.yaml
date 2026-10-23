@@ -1,0 +1,1747 @@
+contract: pty-control.schema.yaml
+scope: Static shape fixtures only; stateful authority and races require real daemon/harness proof.
+cases:
+- name: Register an external controller on a one-shot socket
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: controller-create
+    role: external
+    label: orchestrator
+- name: Register a native attachment on its persistent connection
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: controller-create
+    role: attachment
+    label: native window
+    persistent: true
+- name: Ordinary async claim
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: now
+- name: Orchestrator idle policy with visible grace
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: human-idle
+      idle_ms: 60000
+      warning_ms: 5000
+- name: Explicit background scope owner
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: views-backgrounded
+      scope: owner
+- name: Explicit background scope all
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: views-backgrounded
+      scope: all
+- name: Force a stranded public reservation without its private handle
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: abandoned-claim
+    mode: force
+- name: Controller read
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: read
+- name: Controller close
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: close
+- name: Unknown focus survives raw CLI top-level null filtering
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: view
+    view:
+      serial: 4
+      terminal: pty-example
+      focused: null
+- name: Explicitly no selected view
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: view
+    view:
+      serial: 5
+      terminal: null
+      focused: false
+- name: Control read
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: read
+- name: Control release
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: release
+- name: Control activity
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: activity
+- name: Owner yield-to
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: yield-to
+    claim_id: claim-example
+- name: Owner keep
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: keep
+    claim_id: claim-example
+- name: Visible-warning conditional consent
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: consent-to
+    claim_id: claim-example
+    view_serial: 3
+    activity_revision: 19
+- name: Claim read
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: claim
+      ref: claim-private-example
+    method: read
+- name: Claim cancel
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: claim
+      ref: claim-private-example
+    method: cancel
+- name: Claim withdraw
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: claim
+      ref: claim-private-example
+    method: withdraw
+- name: Force an existing live claim against observed ownership
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: claim
+      ref: claim-private-example
+    method: force
+    observed:
+      generation: 7
+      reservation_id: claim-example
+- name: Accept reserved offered authority
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: offer
+      ref: offer-private-example
+    method: accept
+- name: Borrow current control for native text
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    text: hello
+- name: Borrow current control for bracketed paste
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    text: 'hello
+
+      '
+    paste: true
+- name: Borrow current control for raw bytes
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    bytes:
+    - 0
+    - 27
+    - 255
+- name: Borrow current control for a named key
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    key: enter
+- name: Preserve existing text-over-key precedence
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    text: literal
+    key: enter
+- name: Guard source execution without changing queue policy
+  definition: Request
+  valid: true
+  message:
+    version: 1
+    op: execute
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    source: printf ok
+    queue: true
+- name: Waiting is a successful result with an owner blocker
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: waiting-owner
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: owner
+        elapsed_ms: 3100
+      seq: 120
+- name: An offered result is not control
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: offered
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner: null
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: offered
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: requester-acceptance
+        elapsed_ms: 0
+      seq: 120
+      offer:
+        kind: offer
+        ref: offer-private-example
+- name: Conditional countdown retains the human owner
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: conditional
+      phase: countdown
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: conditional
+          phase: countdown
+          conditional:
+            when:
+              kind: human-idle
+              idle_ms: 60000
+              warning_ms: 5000
+            eligibility: eligible
+            ready_for_consent: false
+            consent: recorded
+            clock:
+              kind: warning
+              remaining_ms: 5000
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: condition
+        elapsed_ms: 0
+      seq: 120
+- name: Unknown application is visible, not a safe grant
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: waiting-settlement
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner: null
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-settlement
+        unsettled:
+        - &id001
+          id: dispatch-example
+          kind: agent-mutation
+          controller_id: orchestrator-example
+          generation: 6
+          outcome: unknown
+          elapsed_ms: 3100
+          agent_instance: instance-example
+          session: conversation-example
+          request_id: 41
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: settlement
+        call: *id001
+      seq: 120
+- name: Safe grant returns actual input authority
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control
+      control:
+        kind: control
+        ref: control-private-example
+      terminal: pty-example
+      generation: 9
+      mode: safe
+      unsettled: []
+      seq: 125
+- name: Force retains unresolved-call warning
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control
+      control:
+        kind: control
+        ref: control-private-example
+      terminal: pty-example
+      generation: 9
+      mode: forced
+      unsettled:
+      - &id002
+        id: dispatch-example
+        kind: agent-mutation
+        controller_id: orchestrator-example
+        generation: 6
+        outcome: unknown
+        elapsed_ms: 3100
+        agent_instance: instance-example
+        session: conversation-example
+        request_id: 41
+      seq: 125
+      warning:
+        code: prior-calls-may-apply
+        calls:
+        - *id002
+- name: Prior controller reacquires fresh authority without pretending old work settled
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control
+      control:
+        kind: control
+        ref: control-private-example
+      terminal: pty-example
+      generation: 9
+      mode: resumed
+      unsettled:
+      - id: dispatch-example
+        kind: agent-mutation
+        controller_id: orchestrator-example
+        generation: 6
+        outcome: unknown
+        elapsed_ms: 3100
+        agent_instance: instance-example
+        session: conversation-example
+        request_id: 41
+      seq: 125
+- name: Historical grant cannot masquerade as current authority
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: granted
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: null
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers: []
+      seq: 120
+      current: false
+      grant_generation: 8
+      grant_mode: safe
+- name: Private inspection recovers a current grant after lost acceptance reply
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: granted
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: null
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers: []
+      seq: 120
+      current: true
+      grant_generation: 8
+      grant_mode: safe
+      control:
+        kind: control
+        ref: control-private-example
+- name: Controller creation returns a private recovery credential
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: controller-created
+      controller:
+        kind: controller
+        ref: controller-private-example
+      controller_id: orchestrator-example
+      seq: 101
+- name: Controller inspection recovers controls and discoverable claims
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: controller-state
+      controller:
+        kind: controller
+        ref: controller-private-example
+      controller_id: orchestrator-example
+      controls:
+      - kind: control
+        control:
+          kind: control
+          ref: control-private-example
+        terminal: pty-example
+        generation: 9
+        mode: safe
+        unsettled: []
+        seq: 125
+      claims:
+      - claim:
+          kind: claim
+          ref: claim-private-example
+        claim_id: claim-example
+        terminal: pty-example
+        purpose: manual
+        phase: granted
+      seq: 127
+- name: Current control inspection
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control-state
+      control:
+        kind: control
+        ref: control-private-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      seq: 128
+- name: Cancellation reports a committed transition, not control
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: transition
+      outcome: cancelled
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 8
+          reservation_id: null
+        owner: null
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      seq: 129
+- name: Stale offer is an explicit error
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: false
+    error:
+      code: stale-offer
+      message: Inspect the claim; this offer is no longer current.
+- name: Public three-second progress contains no capabilities
+  definition: OwnershipEvent
+  valid: true
+  message:
+    seq: 121
+    kind: control-progress
+    terminal: pty-example
+    data:
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      claim_id: claim-example
+      blockers:
+      - kind: owner
+        elapsed_ms: 3100
+- name: Public settlement updates retained old-call identity
+  definition: OwnershipEvent
+  valid: true
+  message:
+    seq: 130
+    kind: control-call-settled
+    terminal: pty-example
+    data:
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      call_id: dispatch-example
+      outcome: applied
+- name: A ClaimHandle cannot authorize input
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: claim
+      ref: claim-private-example
+    text: unsafe
+- name: An OfferHandle cannot authorize input
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: offer
+      ref: offer-private-example
+    text: unsafe
+- name: A controller credential is not input authority
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: controller
+      ref: controller-private-example
+    text: unsafe
+- name: Missing control is rejected
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: execute
+    terminal: pty-example
+    source: printf bad
+- name: Claims cannot accept themselves
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: claim
+      ref: claim-private-example
+    method: accept
+- name: Offers cannot force control
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: offer
+      ref: offer-private-example
+    method: force
+    observed:
+      generation: 7
+      reservation_id: null
+- name: A controller cannot yield PTY authority
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: yield-to
+    claim_id: claim-example
+- name: A control cannot cancel an ordinary pending claim by private handle method
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: cancel
+- name: An arbitrary method is not a new extension point
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: control-private-example
+    method: invoke
+    args:
+      method: execute
+- name: Force requires a compare receipt
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    mode: force
+- name: Force does not smuggle an inactivity policy
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: force
+    when:
+      kind: human-idle
+      idle_ms: 60000
+      warning_ms: 5000
+- name: No implicit global background scope
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: views-backgrounded
+- name: No silent takeover deadline
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: now
+    timeout_ms: 10000
+- name: No negative inactivity interval
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: human-idle
+      idle_ms: -1
+      warning_ms: 5000
+- name: No invisible zero-duration keep-control warning
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: ownership-claim
+    controller:
+      kind: controller
+      ref: controller-private-example
+    terminal: pty-example
+    observed:
+      generation: 7
+      reservation_id: null
+    mode: cooperative
+    when:
+      kind: human-idle
+      idle_ms: 60000
+      warning_ms: 0
+- name: Attachment identity needs its native connection
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: controller-create
+    role: attachment
+    label: native window
+- name: View reports require a serial
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: controller
+      ref: controller-private-example
+    method: view
+    view:
+      terminal: pty-example
+      focused: true
+- name: Native source labels cannot bypass authority or forge human activity
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    text: x
+    source: native
+- name: Byte boundaries remain enforced
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+    bytes:
+    - 256
+- name: Empty input payload is not a keypress
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: input
+    terminal: pty-example
+    control:
+      kind: control
+      ref: control-private-example
+- name: Unsupported API version is not accepted as v1
+  definition: Request
+  valid: false
+  message:
+    version: 2
+    op: controller-create
+    role: external
+    label: wrong version
+- name: A forced grant must disclose unresolved risk
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control
+      control:
+        kind: control
+        ref: control-private-example
+      terminal: pty-example
+      generation: 9
+      mode: forced
+      unsettled:
+      - id: dispatch-example
+        kind: agent-mutation
+        controller_id: orchestrator-example
+        generation: 6
+        outcome: unknown
+        elapsed_ms: 3100
+        agent_instance: instance-example
+        session: conversation-example
+        request_id: 41
+      seq: 125
+- name: Safe grants cannot claim unsettled work is drained
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control
+      control:
+        kind: control
+        ref: control-private-example
+      terminal: pty-example
+      generation: 9
+      mode: safe
+      unsettled:
+      - id: dispatch-example
+        kind: agent-mutation
+        controller_id: orchestrator-example
+        generation: 6
+        outcome: unknown
+        elapsed_ms: 3100
+        agent_instance: instance-example
+        session: conversation-example
+        request_id: 41
+      seq: 125
+- name: Offered is not granted
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: offered
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner: null
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: offered
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: requester-acceptance
+        elapsed_ms: 0
+      seq: 120
+      offer:
+        kind: offer
+        ref: offer-private-example
+      control:
+        kind: control
+        ref: control-private-example
+- name: Offered state must carry the private acceptance capability
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: offered
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner: null
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: offered
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers:
+      - kind: requester-acceptance
+        elapsed_ms: 0
+      seq: 120
+- name: A historical grant cannot expose itself as current control
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: granted
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: null
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers: []
+      seq: 120
+      current: false
+      grant_generation: 8
+      grant_mode: safe
+      control:
+        kind: control
+        ref: control-private-example
+- name: A current grant inspection must return actual authority
+  definition: OwnershipResponse
+  valid: false
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: claim-state
+      claim:
+        kind: claim
+        ref: claim-private-example
+      claim_id: claim-example
+      purpose: manual
+      phase: granted
+      terminal: pty-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: null
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      blockers: []
+      seq: 120
+      current: true
+      grant_generation: 8
+      grant_mode: safe
+- name: Public events must not leak input authority
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 121
+    kind: control-progress
+    terminal: pty-example
+    data:
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      claim_id: claim-example
+      blockers:
+      - kind: owner
+        elapsed_ms: 3100
+      control:
+        kind: control
+        ref: control-private-example
+- name: Nested public owner metadata must not leak private handles
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 121
+    kind: control-progress
+    terminal: pty-example
+    data:
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: claim-example
+        owner:
+          controller_id: human-example
+          role: attachment
+          label: native window
+          control:
+            kind: control
+            ref: control-private-example
+        reservation:
+          claim_id: claim-example
+          requester_id: orchestrator-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      claim_id: claim-example
+      blockers:
+      - kind: owner
+        elapsed_ms: 3100
+- name: Public forced grant reports the committed mode without leaking capabilities
+  definition: OwnershipEvent
+  valid: true
+  message:
+    seq: 150
+    kind: control-granted
+    terminal: pty-example
+    data:
+      ownership: &ownership_event_after_grant
+        terminal: pty-example
+        observed:
+          generation: 9
+          reservation_id: null
+        owner:
+          controller_id: orchestrator-example
+          role: external
+          label: orchestrator
+        reservation: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views: []
+      mode: forced
+- name: Settlement events identify which retained call resolved
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 151
+    kind: control-call-settled
+    terminal: pty-example
+    data:
+      ownership: *ownership_event_after_grant
+      outcome: applied
+- name: Settlement events cannot omit the resolution outcome
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 152
+    kind: control-call-settled
+    terminal: pty-example
+    data:
+      ownership: *ownership_event_after_grant
+      call_id: dispatch-example
+- name: Grant events cannot hide whether acquisition was forced
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 153
+    kind: control-granted
+    terminal: pty-example
+    data:
+      ownership: *ownership_event_after_grant
+- name: Progress events cannot omit their blocker list
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 154
+    kind: control-progress
+    terminal: pty-example
+    data:
+      ownership: &ownership_event_pending
+        terminal: pty-example
+        observed:
+          generation: 9
+          reservation_id: claim-example
+        owner:
+          controller_id: orchestrator-example
+          role: external
+          label: orchestrator
+        reservation:
+          claim_id: claim-example
+          requester_id: human-example
+          purpose: manual
+          phase: waiting-owner
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views: []
+      claim_id: claim-example
+- name: Request events require the public claim identity
+  definition: OwnershipEvent
+  valid: false
+  message:
+    seq: 155
+    kind: control-requested
+    terminal: pty-example
+    data:
+      ownership: *ownership_event_pending
+- name: Request events expose public claim identity without private claim authority
+  definition: OwnershipEvent
+  valid: true
+  message:
+    seq: 156
+    kind: control-requested
+    terminal: pty-example
+    data:
+      ownership: *ownership_event_pending
+      claim_id: claim-example
+- name: The human owner reads an external idle policy without requester credentials
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control-state
+      control:
+        kind: control
+        ref: human-control-private-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: idle-claim-example
+        owner: &conditional_human_owner
+          controller_id: human-example
+          role: attachment
+          label: native window
+        reservation:
+          claim_id: idle-claim-example
+          requester_id: orchestrator-example
+          purpose: conditional
+          phase: watching
+          conditional:
+            when:
+              kind: human-idle
+              idle_ms: 60000
+              warning_ms: 9000
+            eligibility: eligible
+            ready_for_consent: true
+            consent: awaiting
+            clock:
+              kind: idle
+              remaining_ms: 0
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views: &conditional_foreground_views
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 3
+          terminal: pty-example
+          focused: true
+      seq: 200
+- name: Public progress refreshes the nondefault warning clock for the human owner
+  definition: OwnershipEvent
+  valid: true
+  message:
+    seq: 201
+    kind: control-progress
+    terminal: pty-example
+    data:
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: idle-claim-example
+        owner: *conditional_human_owner
+        reservation:
+          claim_id: idle-claim-example
+          requester_id: orchestrator-example
+          purpose: conditional
+          phase: countdown
+          conditional:
+            when:
+              kind: human-idle
+              idle_ms: 60000
+              warning_ms: 9000
+            eligibility: eligible
+            ready_for_consent: false
+            consent: recorded
+            clock:
+              kind: warning
+              remaining_ms: 7400
+        unsettled: []
+        activity_revision: 19
+        view_revision: 4
+        views: *conditional_foreground_views
+      claim_id: idle-claim-example
+      blockers:
+      - kind: condition
+        elapsed_ms: 1600
+- name: The owner distinguishes all-views background consent from an idle warning
+  definition: OwnershipResponse
+  valid: true
+  message:
+    version: 1
+    ok: true
+    result:
+      kind: control-state
+      control:
+        kind: control
+        ref: human-control-private-example
+      ownership:
+        terminal: pty-example
+        observed:
+          generation: 7
+          reservation_id: background-claim-example
+        owner: *conditional_human_owner
+        reservation:
+          claim_id: background-claim-example
+          requester_id: orchestrator-example
+          purpose: conditional
+          phase: watching
+          conditional:
+            when:
+              kind: views-backgrounded
+              scope: all
+            eligibility: eligible
+            ready_for_consent: true
+            consent: awaiting
+            clock:
+              kind: none
+              remaining_ms: null
+        unsettled: []
+        activity_revision: 19
+        view_revision: 8
+        views:
+        - controller_id: human-example
+          connected: true
+          reported: true
+          serial: 4
+          terminal: pty-example
+          focused: false
+        - controller_id: viewer-example
+          connected: true
+          reported: true
+          serial: 12
+          terminal: pty-example
+          focused: false
+      seq: 202
+- name: Conditional reservations cannot omit the owner-readable condition
+  definition: Reservation
+  valid: false
+  message:
+    claim_id: idle-claim-example
+    requester_id: orchestrator-example
+    purpose: conditional
+    phase: watching
+- name: Unknown background eligibility cannot invite consent
+  definition: ConditionalObservation
+  valid: false
+  message:
+    when:
+      kind: views-backgrounded
+      scope: all
+    eligibility: unknown
+    ready_for_consent: true
+    consent: awaiting
+    clock:
+      kind: none
+      remaining_ms: null
+- name: A warning clock cannot precede recorded consent
+  definition: ConditionalObservation
+  valid: false
+  message:
+    when:
+      kind: human-idle
+      idle_ms: 60000
+      warning_ms: 9000
+    eligibility: eligible
+    ready_for_consent: false
+    consent: awaiting
+    clock:
+      kind: warning
+      remaining_ms: 7400
+- name: Background reacquisition cannot invent an idle warning timer
+  definition: ConditionalObservation
+  valid: false
+  message:
+    when:
+      kind: views-backgrounded
+      scope: all
+    eligibility: eligible
+    ready_for_consent: false
+    consent: recorded
+    clock:
+      kind: warning
+      remaining_ms: 9000
+- name: Immediate acquisition is not a conditional policy
+  definition: ConditionalObservation
+  valid: false
+  message:
+    when:
+      kind: now
+    eligibility: eligible
+    ready_for_consent: true
+    consent: awaiting
+    clock:
+      kind: none
+      remaining_ms: null
+- name: Public conditional observations cannot leak a private offer
+  definition: ConditionalObservation
+  valid: false
+  message:
+    when:
+      kind: views-backgrounded
+      scope: owner
+    eligibility: eligible
+    ready_for_consent: false
+    consent: recorded
+    clock:
+      kind: none
+      remaining_ms: null
+    offer:
+      kind: offer
+      ref: requester-offer-private-example
+- name: Conditional consent requires the activity revision used by its display
+  definition: Request
+  valid: false
+  message:
+    version: 1
+    op: control-handle
+    handle:
+      kind: control
+      ref: human-control-private-example
+    method: consent-to
+    claim_id: idle-claim-example
+    view_serial: 3

@@ -1,0 +1,33 @@
+{
+  "type": "investigation",
+  "context": "headless-terminal-response-fixtures",
+  "phase": "before-round-4-remediation",
+  "command": "target/debug/terminal-showcase --headless --responses /tmp/showcase-review-paste.bin --json",
+  "traces": [
+    {
+      "name": "utf8-c1",
+      "events": [
+        "Csi([50, 48, 48, 126])",
+        "PasteData([195])",
+        "Csi([50, 48, 49, 126])",
+        "Input([67])",
+        "Csi([50, 48, 49, 126])",
+        "Input([113])"
+      ]
+    },
+    {
+      "name": "literal-header",
+      "events": [
+        "Csi([50, 48, 48, 126])",
+        "PasteData([27, 80, 116, 109, 117, 120, 59, 108, 105, 116, 101, 114, 97, 108, 27, 91, 50, 48, 49, 126, 113])"
+      ]
+    },
+    {
+      "name": "overlap",
+      "events": [
+        "Csi([50, 48, 48, 126])",
+        "PasteData([116, 101, 120, 116, 27, 27, 91, 50, 48, 49, 126, 113])"
+      ]
+    }
+  ]
+}

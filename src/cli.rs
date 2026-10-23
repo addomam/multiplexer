@@ -71,6 +71,9 @@ enum Command {
     },
     Input {
         terminal: String,
+        /// Serialized current ControlHandle JSON; never a controller credential.
+        #[arg(long)]
+        control: String,
         text: Option<String>,
         #[arg(long)]
         key: Option<String>,
@@ -81,6 +84,9 @@ enum Command {
     },
     Execute {
         terminal: String,
+        /// Serialized current ControlHandle JSON; never implicitly acquired.
+        #[arg(long)]
+        control: String,
         source: String,
         #[arg(long)]
         queue: bool,
@@ -184,6 +190,7 @@ fn request_for(command: Command) -> Result<Value> {
         }
         Command::Input {
             terminal,
+            control,
             text,
             key,
             paste,
@@ -197,13 +204,18 @@ fn request_for(command: Command) -> Result<Value> {
                 })
                 .transpose()
                 .context("bytes must be comma-separated values in 0..255")?;
-            json!({"op":"input","terminal":terminal,"text":text,"key":key,"paste":paste,"bytes":bytes})
+            let control: Value = serde_json::from_str(&control).context("invalid control JSON")?;
+            json!({"op":"input","terminal":terminal,"control":control,"text":text,"key":key,"paste":paste,"bytes":bytes})
         }
         Command::Execute {
             terminal,
+            control,
             source,
             queue,
-        } => json!({"op":"execute","terminal":terminal,"source":source,"queue":queue}),
+        } => {
+            let control: Value = serde_json::from_str(&control).context("invalid control JSON")?;
+            json!({"op":"execute","terminal":terminal,"control":control,"source":source,"queue":queue})
+        }
         Command::Screen {
             terminal,
             offset,
@@ -284,12 +296,9 @@ pub fn run() -> Result<()> {
                 }
                 Err(error) => {
                     let message = format!("{error:#}");
-                    let (code, detail) = message
-                        .split_once(": ")
-                        .filter(|(code, _)| {
-                            !code.is_empty()
-                                && code.bytes().all(|c| c.is_ascii_lowercase() || c == b'-')
-                        })
+                    let (code, detail) = error
+                        .downcast_ref::<crate::client::DaemonError>()
+                        .map(|error| (error.code.as_str(), error.message.as_str()))
                         .unwrap_or(("request-failed", message.as_str()));
                     println!(
                         "{}",
@@ -332,6 +341,7 @@ mod tests {
     fn bytes_are_validated_before_sending() {
         let command = Command::Input {
             terminal: "t1".into(),
+            control: r#"{"kind":"control","ref":"fixture"}"#.into(),
             text: None,
             key: None,
             paste: false,
@@ -341,6 +351,7 @@ mod tests {
         assert!(
             request_for(Command::Input {
                 terminal: "t1".into(),
+                control: r#"{"kind":"control","ref":"fixture"}"#.into(),
                 text: None,
                 key: None,
                 paste: false,
@@ -348,5 +359,34 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    #[test]
+    fn mutations_require_serialized_control_and_preserve_it() {
+        for args in [
+            vec!["amux", "input", "t1", "hello"],
+            vec!["amux", "execute", "t1", "print hello"],
+        ] {
+            assert!(Args::try_parse_from(args).is_err());
+        }
+        let control = r#"{"kind":"control","ref":"private-fixture"}"#;
+        for args in [
+            vec!["amux", "input", "t1", "--control", control, "hello"],
+            vec!["amux", "execute", "t1", "--control", control, "print hello"],
+        ] {
+            let parsed = Args::try_parse_from(args).unwrap();
+            let request = request_for(parsed.command.unwrap()).unwrap();
+            assert_eq!(
+                request["control"],
+                json!({"kind":"control","ref":"private-fixture"})
+            );
+        }
+        let view = request_for(Command::Api {
+            request: r#"{"op":"control-handle","handle":{"kind":"controller","ref":"view"},"method":"view","view":{"serial":1,"terminal":null,"focused":null}}"#.into(),
+        }).unwrap();
+        assert!(view["view"]["terminal"].is_null());
+        assert!(view["view"]["focused"].is_null());
+        assert!(view["view"].get("terminal").is_some());
+        assert!(view["view"].get("focused").is_some());
     }
 }

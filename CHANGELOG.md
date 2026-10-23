@@ -1,5 +1,52 @@
 # Changelog
 
+## Unreleased — e03 ownership and agent interaction (Build)
+
+- Breaking API/CLI cutover: public `input` and `execute` require a current control capability; CLI callers must supply serialized `--control` JSON. Raw client requests never acquire ownership implicitly.
+- Preserve daemon rejection codes in concrete `client::DaemonError` values and the CLI JSON envelope instead of parsing diagnostic text.
+- Register native attachments once on their original persistent connection, report serial selected-terminal/focus views with initially unknown focus, and cache per-terminal control. Unowned settled targets may be acquired normally; observers and stale controls cannot forward keys, literal prefixes, mouse or separate paste, and failed input is never replayed.
+- Migrate acceptance, shell-race and independent-showcase fixtures to explicit external registration/acquisition and cached controls without changing original shell readiness, partial-input, busy or latency assertions.
+- Document request-success-not-grant semantics, inspect-after-uncertainty recovery, ordinary pending cancellation granting nobody, and retained work after force/cancel.
+- Add native request/owner-response/progress/cancel and deliberate fresh-force panels, plus externally requested idle/background reacquisition. Draw-bound consent, local activity, keep/withdraw and stale offers preserve human control without automatic rearming.
+- Integrate a concrete Codex 0.160.0 same-instance broker with exact turn/request identities, retained outcomes, request-only permission decisions and explicit interrupt separate from ownership. Native-first discovery reads the live thread; ephemeral native title helpers do not replace its identity.
+- Verify separate live start/steer, genuine question, permission allow/deny and exact-turn interrupt checks. Keep complete-broker acceptance failing on unknown native/application settlement; native winning-answer races and all32 acceptance remain unproved. See `specs/verifications/e03-integration-build.md`; Plan approval and mechanical tests are not acceptance.
+- Explicitly unlock completed configuration-writer guards before closing their descriptors so a fork-inherited duplicate cannot keep the writer lock alive.
+- Subscribe explicitly to the native-created Codex thread after its first requested turn, recovering authoritative completion from its paginated initial turn snapshot. No hidden bootstrap turn or API mutation replay.
+- Keep Codex request-only denial distinct from its native menu: supported `decline` does not become the interrupting `cancel`; permission allow remains constrained to the request.
+- Verify live output through the supported paginated turn API, including authoritative proposed-plan items, instead of assuming legacy rollout files.
+- Disable inherited signing only for temporary acceptance-fixture commits; never invoke the user's signing agent or modify global Git configuration.
+- Raise amux's declared Rust minimum to 1.88 and update `time` to 0.3.47, `time-core` to 0.1.8 and `num-conv` to 0.2.2 to remove GHSA-r6v5-fh4h-64xc. Keep Ratatui/Crossterm and the independent showcase's Rust minimum unchanged; no upstream backport or fork.
+- Record the user's explicit acceptance of unmodified Codex's missing native input fence and optimistic losing-answer history. Defer full native/structured correctness and all32 acceptance to future ACP proof, retain failed evidence and fail-closed grants, and do not claim the limitation is fixed.
+- Retain application-requested focus reports in the native unknown-input ledger without resetting human inactivity. A paused consumer cannot receive old-generation focus after a falsely safe handoff; remove the obsolete unaccounted focus helper.
+- Accept only true exit notifications before serializing child reaping with process cleanup. Darwin may return stopped-child status despite `WEXITED`; filtering it avoids a stop/resume shutdown deadlock while preserving zombie/birth identity and descendant cleanup.
+- Retire actually removed or unpublished PTYs outside the live ownership map. Reclaim empty state and stop ended-target view-event fan-out while retaining required claims, unknown calls and their truthful late settlements.
+- Serialize concurrent managed-agent close/shutdown through completion of the same teardown attempt, so daemon shutdown cannot abandon another caller's worker join, owned-process cleanup or private-root removal. Verify owned cleanup before fixture fallback.
+- Retire private automatic-launch ownership after exact late shell settlement, without releasing a newer forced owner. Keep the original private source file while acknowledgement is unknown; delayed native acceptance runs it once, not a replay, and definite rejection/completion cleans it.
+- Keep only outstanding shell settlement lookup after PTY removal, not live shell/context/agent state or filesystem resources. Late callbacks remain bound to their original stable UUID even if a replacement reuses it as a display name; removed native acceptance receives a negative permission reply and cannot revive authority.
+- Bind native Force confirmation to a completed, fully visible warning and drained event queue. Consume queued Enter without takeover/replay, invalidate on resize/scroll and block undrawable or clipped dialogs; keep fresh observation checks and the same live process. Use only the pinned Ratatui paragraph-measurement feature, with no terminal library version replacement.
+- Fail closed when opt-in smoke cleanup cannot refresh process ownership. Remove group-wide fallback signals, validate each descendant PID and signal direct children only while unreaped. Bound validation work, preserve cleanup errors and label stale survivor identities as tracked—not owned. Add a no-model regression and verify healthy/failure teardown with isolated local processes.
+
+## Unreleased — Execution substrate reliability
+
+- Correct DECOM-origin-relative CPR through the parsed ANSI Handler boundary; preserve native control behavior and independent expected replies.
+- Compose joined graphemes in native narrow/wide cells, including chunked UTF-8, flags/modifiers/keycaps, CJK/combining, overwrite, wrapping and variation-width replay. Final-cluster working text is limited to 4 KiB; oversized input starts a new native scalar segment without dropping text.
+- Prevent shared-config lost updates with canonical file identity, stable nonblocking writer locks, exact snapshot comparison and explicit `config-busy` / `config-conflict` errors. Sync both private replacement file and containing directory before success.
+- Add daemon-wide terminal admission: default 64, configurable 1–256, counting retained exits and pending opens. Refund failed opens; clean partial integration resources and uninstalled PTY children.
+- Centralize latest-20 hook/launch/enqueue diagnostics, with UTF-8-safe 16 KiB strings and explicit command/source/output truncation.
+- Require bounded initialized API-v1 readiness for existing/new daemons, serialize automatic starts and clean startup sockets on failure without replacing unresponsive peers.
+- Cancel active hook process groups on shutdown, reap their owned workers and skip pending hooks instead of waiting for configured timeouts.
+- Breaking Rust-library change: `projects::run_hooks` now requires an explicit `&AtomicBool` cancellation argument. CLI/API framing remains version 1.
+- Verify 210 workspace Rust tests, the strict independent-showcase integration, 8 OMP tests, Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle probes. Retain the initial queued-execution timeout observation and exact limits in `specs/verifications/substrate-reliability.md`; no independent review PASS or live-daemon upgrade is implied.
+
+## Unreleased — Terminal capability explorer
+
+- Independent `terminal-showcase` Rust workspace package; amux's default binary and implementation remain unchanged.
+- Fullscreen capability matrix with explicit protocol/visual evidence, eight cycling demonstrations, deterministic screenshot mode and bounded row-differential redraws.
+- Independent incremental CSI/OSC/DCS/APC parser and correlated terminal queries; missing replies remain Unknown rather than Unsupported.
+- Color/Unicode/typography/control specimens, Kitty/Sixel/iTerm procedural image lifecycles, advanced input inspector and explicit-consent integration actions.
+- POSIX terminal/signal RAII cleanup, resize handling, bracketed-paste-safe controls, headless JSON regressions and visual pass/fail export.
+- Ordinary-shell amux compatibility regression exposes origin-mode CPR and joined-emoji cursor mismatches without sharing the multiplexer oracle. Strict `--probe --check` preserves failures and exits nonzero.
+
 ## Unreleased — Ratatui UI
 
 - Ratatui 0.30.0 rendering with the existing Crossterm 0.29 input/backend and Rust minimum raised to 1.86.

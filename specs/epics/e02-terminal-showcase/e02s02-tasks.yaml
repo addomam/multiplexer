@@ -1,0 +1,11 @@
+story_id: e02s02
+title: Visual dashboard and demonstrations
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: Visual dashboard and demonstrations
+    verify: "cargo run -p terminal-showcase -- --headless --json"
+    risk: P0
+    status: passing
+    allure: {severity: critical, categories: [terminal, compatibility]}

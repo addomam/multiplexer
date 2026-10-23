@@ -1,0 +1,302 @@
+feature_name: Same-instance agent interaction with human takeover
+status: plan-reviewed-awaiting-build-confirmation
+problem_statement: >-
+  A human and an external orchestrator need to interact with the same live agent
+  in an existing workspace through the native agent TUI and structured amux
+  CLI/API operations. They must be able to submit prompts, observe lifecycle and
+  pending input, answer questions, allow or deny permission requests, and cancel
+  work without unintended races, answering a stale request, or confusing cycle
+  completion with task success. Each live PTY needs exclusive interaction
+  ownership shared by native clients and external controllers, cooperative
+  handoff, explicit non-cancelling force and orchestrator-directed reacquisition.
+actors:
+  - Humans using one or more attached native TUI clients and amux CLI.
+  - External orchestrator using the local amux API or CLI.
+  - Agent harness providing authoritative lifecycle and interaction operations.
+  - amux daemon owning execution resources, interaction ownership and observations.
+constraints:
+  - Preserve ordinary native TUI interaction and CLI/API control on the same live agent instance.
+  - First acceptance requires real structured question answers and permission allow/deny.
+  - OMP 18.8.7 is preferred, not mandatory; choose another first harness if supported interfaces fit better.
+  - A headless/RPC-only agent or separate shadow instance does not establish native-TUI coexistence.
+  - Do not implement structured interaction by screen scraping or simulated terminal keystrokes.
+  - Keep runtime and interaction ownership in memory; configuration may be persisted.
+  - Use stable identities and explicit errors; lost or stale observation is not success.
+  - Keep process lifetime, activity, pending interaction, cycle completion and task acceptance distinct.
+  - Local same-user control is trusted; an interaction lock is an ownership mechanism, not a security sandbox.
+  - Preserve existing project/workspace/execution/terminal distinctions and stock Zsh interaction.
+  - Do not block PTY processing or ownership revocation on slow observers or takeover hooks.
+  - No implementation or phase advancement is authorized merely by specification confirmation.
+out_of_scope:
+  - Worktree provisioning in the first acceptance workflow.
+  - Autonomous scheduling, dispatch, retries, answer selection, task acceptance, merge policy or lock-reacquisition policy inside amux.
+  - Durable task ledgers, runtime restoration or process/conversation recovery.
+  - Remote backends, containers, VMs or Kubernetes implementations.
+  - Generic plugin infrastructure or new remote control services.
+  - Silent upstream harness patches, forks or replacement of the ordinary native UI.
+  - Ergonomic CLI porcelain, exact lock/check/wait command names and force-flag spelling in the first capability-plumbing cut; raw API access is sufficient, without waiving native UI or structured-interaction acceptance.
+key_decisions:
+  - decision: Start with agent interaction in an existing workspace.
+    rationale: The user selected agent-interaction-first rather than workspace provisioning or a combined first workflow.
+  - decision: Require structured question answers and permission allow/deny before first acceptance.
+    rationale: Observation-only input-needed status and native-only answers do not meet the selected acceptance bar.
+  - decision: Prefer OMP but permit another first harness if supported interfaces cannot meet the contract.
+    rationale: The user explicitly prioritized the interaction contract over a particular harness.
+  - decision: Native and programmatic clients operate on one live agent instance.
+    rationale: Separate launch modes or a shadow agent would not preserve human/automation continuity.
+  - decision: Every live PTY has one daemon-arbitrated interaction lock shared by native clients and external controllers.
+    rationale: Multiple attached clients and ordinary shells need the same ownership handoff as orchestrator-managed agent sessions.
+  - decision: A cooperative control request leaves the current owner's token valid until it relinquishes control, unless force or cancellation invalidates it first.
+    rationale: The user selected allowing the owner to finish a coordination step and respond rather than revoking authority merely on request.
+  - decision: Safe handoff requires owner relinquishment, authoritative settlement of tracked calls and acceptance by the reserved requester.
+    rationale: A notification or acknowledgement alone must not grant concurrent ownership, and the prior orchestrator must not reacquire during the transfer gap.
+  - decision: Cancelling pending takeover invalidates the pre-transfer token and leaves the PTY unowned without forwarding requester input.
+    rationale: The previous orchestrator may request a fresh lock immediately; cancellation neither grants human control nor automatically restores the previous owner.
+  - decision: Explicit force takeover grants human input immediately without cancelling the current turn or stopping the agent.
+    rationale: The user may want to course-correct or ask a side question; already-dispatched calls may still land and must be disclosed rather than called safely fenced.
+  - decision: Keep cancellation and process stop separate from both safe and forced takeover.
+    rationale: The user explicitly rejected assuming that force takeover implies an intent to cancel work.
+  - decision: Validate mutation tokens atomically with local dispatch tracking; safe handover additionally requires authoritative resolution of outstanding calls.
+    rationale: A valid token at socket-write time cannot retract a call already forwarded to a harness that does not understand that token.
+  - decision: The external orchestrator decides whether and when to request its lock again.
+    rationale: It may request reacquisition after user inactivity, on backgrounding or explicit hand-back, or never; amux supplies mechanisms and does not invent policy.
+  - decision: Reacquisition can include a visible inactivity countdown that human input cancels.
+    rationale: The user proposed 60 seconds idle followed by a 5-second warning; aborting the attempt leaves control with the human and does not trigger an amux retry.
+  - decision: Ownership requests, transitions and handover progress emit sequenced events; explicit force and cancellation do not wait for hook consumers.
+    rationale: Cooperative handoff intentionally waits for the owner, but slow observers must not prevent an explicit override or cancellation.
+  - decision: Show handover blockers after 3 seconds without an automatic takeover deadline.
+    rationale: A responsive owner may continue cooperating; stalled or unsuitable activity can be overridden explicitly without assuming cancellation intent.
+  - decision: Select typed ControlHandle, ClaimHandle and OfferHandle capabilities as the public ownership Interface.
+    rationale: The user chose alternative C and prioritized correct role/lifecycle plumbing over immediate shell-command ergonomics.
+  - decision: Keep primitive calls nonblocking and implement synchronous acquisition waiting as a client-side wrapper over the same claim/read/accept protocol.
+    rationale: One-shot callers can retain serializable claims, while the persistent native client must stay responsive to force, cancel and progress.
+  - decision: A local timeout or closed wait connection does not automatically cancel a claim or surrender control.
+    rationale: Acquisition may already have committed; inspect authoritative claim/controller state before explicitly cancelling or forcing instead of replaying an uncertain action.
+  - decision: Defer deeper native-buffer/application-fence investigation while completing the rest of the specification.
+    rationale: The user identified the spike broker as intentionally incomplete and requested revisiting this edge during final complete-broker validation if it remains unresolved; no safe-handoff acceptance guarantee was waived.
+  - decision: Use Codex CLI 0.160.0 local app-server and ordinary native TUI as the first structured-agent implementation target.
+    rationale: Real same-instance questions and permission allow/deny have been proved on its local route; this selects a design target, not a production acceptance PASS. OMP and existing launch defaults remain unchanged.
+  - decision: Use the existing configurable native prefix with Ctrl-L for request/control panel and Ctrl-F for explicitly confirmed force.
+    rationale: Those suffixes do not collide with existing picker actions; no native body geometry change or replay of intercepted input is required.
+main_flow:
+  - Launch a supported agent in an existing workspace and identify its live instance/session.
+  - Attach the ordinary native TUI and inspect capabilities and lifecycle through CLI/API.
+  - Submit a prompt through a supported structured operation.
+  - Observe an authoritative question or permission request with instance/session/request identity.
+  - Answer the question or allow/deny the permission through native interaction or CLI/API.
+  - Observe the same request resolve and the agent continue; distinguish cycle completion from task acceptance.
+  - Acquire the PTY interaction lock for the controlling native client or external controller and bind input/mutations to its current authority.
+  - Display the locked-session indicator to non-owning views; intercept their agent-directed input to offer control without forwarding or replaying that input.
+  - Request control and notify the current owner; keep that owner's token valid while it reaches a handoff point.
+  - On owner relinquishment, invalidate prior authority, reject undispatched old-token mutations and settle tracked forwarded calls while reserving transfer for the requester.
+  - Offer the safe transfer to the requester and grant fresh authority only on its acceptance, or grant explicitly forced control with unresolved-call warnings.
+  - On cancellation before grant, withdraw the request, invalidate the pre-transfer token and leave the PTY available for fresh acquisition rather than automatically restoring its old owner.
+  - Continue the already-running agent turn; cancellation and process stop require separate commands.
+  - Let the orchestrator observe human interaction and request reacquisition under its chosen inactivity, backgrounding or explicit hand-back policy.
+  - Cancel a pending reacquisition countdown on human input; otherwise grant only when that request's conditions still hold and issue a fresh token.
+  - Keep human control indefinitely when no eligible reacquisition request exists.
+interaction_ownership:
+  scope: live-pty
+  unowned: No controller has input authority; viewing remains available and a controller must acquire fresh authority before interaction.
+  owned:
+    controller: One external controller or native client attachment owns the PTY; additional attachments are observers until handoff.
+    observations: Viewing, lifecycle inspection and non-mutating observation remain available.
+    native_input: Only the owning attachment may deliver ordinary native input; other attachments retain an explicit request/force-control path.
+    mutations: Native input and external interaction mutations must carry or be bound to current ownership; missing or stale authority and competing owners are rejected.
+    appearance: Show a lock icon and a distinct border color when another controller owns the PTY, so ownership is not communicated by color alone.
+    takeover_entry: A dedicated shortcut requests control; other agent-directed input from a focused non-owner opens confirmation without reaching the PTY.
+    input_replay: Do not replay the key that opened or confirmed the control prompt into the PTY.
+    protocol_progress: Automatic terminal query replies and necessary lifecycle/settlement reports continue independently of interaction ownership.
+  handoff:
+    pending: Record and notify the control request while retaining the current owner's valid token; do not grant requester input or revoke merely on request.
+    owner_notification: Notify an external owner through sequenced events or show an owning native client a popup identifying the requesting attachment/controller.
+    relinquish: On the owner's explicit yield, invalidate its token and reject its undispatched queued mutations; keep tracked forwarded calls for settlement.
+    reservation: Reserve the transfer for its requester so an orchestrator or another attachment cannot acquire during the relinquish/accept gap.
+    drain: After yield, wait for authoritative settlement of forwarded calls, not merely socket writes or completion of the whole agent turn; retain unknown outcomes explicitly.
+    progress_after_seconds: 3
+    progress: If control is still unavailable, show the owner response being awaited and outstanding request identities, kinds, elapsed time and missing outcomes.
+    automatic_takeover_deadline: false
+    waiting: Continue waiting while cooperation progresses; stalled or unknown progress is visible, never an automatic grant or inferred cancellation.
+    controls: While pending, offer wait, cancel takeover request and a dedicated force-takeover shortcut; force does not require waiting for a timer.
+    acceptance: The reserved requester accepts the offered handoff; the daemon atomically commits a fresh generation only if the same transfer is still current.
+    safe_grant: Grant fresh authority only after yield, authoritative settlement and requester acceptance, with no unaccounted prior-owner mutation still able to land.
+    forced_grant: Immediately invalidate prior authority and grant the requesting controller input despite unresolved forwarded calls; visibly disclose that those calls may still apply.
+    forced_safety: Revoked tokens and undispatched calls remain rejected; outstanding-call records survive force, cancellation and fresh acquisition.
+    running_work: Both safe and forced handoff keep the current turn and process running; cancel turn and stop process are separate commands.
+    cancel_request: Before grant, withdraw the request/reservation, invalidate the pre-transfer token even if the owner has not yielded, and leave the PTY unowned without replaying requester input.
+    cancelled_reacquisition: The previous controller may request fresh authority immediately without a human-inactivity delay; it is not automatically restored and its old token remains invalid.
+    unsettled_after_cancel: Unowned does not mean settled; retain outstanding calls. A different controller still requires safe settlement or explicit force before receiving input authority.
+    request_identity: Yield, acceptance, cancellation and force are checked against current transfer/ownership identity; a late response cannot revive a cancelled transfer or revoke a newer owner.
+    notification: Emit sequenced request/progress/relinquished/offered/granted/cancelled events with PTY/controller identity, generation, safe or forced mode and unresolved requests.
+    independence: Notifications do not grant authority; explicit force/cancellation and PTY processing never wait for consumers.
+    effects: Do not claim to undo already-applied effects or retract calls already forwarded to the harness; inspect actual interactions rather than fabricating empty history.
+  reacquisition:
+    policy_owner: External orchestrator, not amux.
+    request_required: Human ownership alone never starts an amux auto-relock timer; the orchestrator must request acquisition under explicit conditions through the same handoff mechanism.
+    inactivity: Support an orchestrator-requested inactivity threshold and visible warning countdown, measured from human interaction rather than agent output.
+    suggested_idle_seconds: 60
+    suggested_warning_seconds: 5
+    warning: Display the remaining time and a press-any-key action to keep human control.
+    human_intervention: Human input cancels the pending attempt and retains human ownership; emit its cancellation without automatically rearming it.
+    subsequent_policy: The orchestrator decides whether a cancelled attempt means no further requests, a different policy or a later new request.
+    backgrounding: Permit acquisition when the session is backgrounded only under an explicit orchestrator request with that condition; backgrounding alone does not transfer ownership.
+    explicit_hand_back: Support immediate intentional hand-back without requiring an inactivity timeout.
+    indefinite_human: If the orchestrator does not request the lock again, retain human ownership indefinitely.
+    observations: Expose user-activity and focus/background observations and ownership outcomes so external policy can choose when to request; interpretation of user prompts remains external.
+    grant: Recheck ownership generation, human activity and request conditions atomically with transfer; issue a fresh token and never revive old authority.
+  guarded_actions:
+    identity: Bind PTY authority to the live PTY lifetime, owning controller and ownership generation, not a selector, socket connection or boolean lock alone.
+    agent_identity: Agent-targeted operations additionally identify the current harness instance, conversation/session and pending request; these are distinct from PTY ownership.
+    validation: Reject missing or revoked ownership for interaction mutations from any controller, including native-client input; observations and internal protocol progress do not require taking control.
+    dispatch: Serialize token validation, ownership transitions and registration of dispatched calls so a racing mutation is either rejected or tracked for handover.
+    application: Requesting control preserves the current token; relinquishment, force or cancellation invalidates it and prevents undispatched calls from forwarding. Safe grant settles earlier forwarded calls; force explicitly accepts their unresolved risk.
+    reacquisition: Every acquisition returns fresh authority and never revives a token from an earlier ownership generation.
+    termination: PTY exit/replacement or daemon restart invalidates its authority; a stale harness/session/request identity separately invalidates agent-targeted operations.
+capability_interface:
+  selection: typed-runtime-capabilities
+  authority: ControlHandle
+  pending_intent: ClaimHandle
+  ready_transfer: OfferHandle
+  enforcement: The daemon validates handle kind, controller, PTY lifetime, generation and transfer phase; a claim or offer cannot authorize input.
+  controller: A ControllerHandle registers a stable caller and recovers its own current capabilities across one-shot calls; it never authorizes input.
+  operation_set: Closed ownership-specific methods, not a generic object registry, delegated capability system or plugin/RPC framework.
+  lifetime: Serializable references to daemon-memory state survive ordinary one-shot socket closure, not daemon restart or invalidated target/authority.
+  asynchronous: Submit a claim, retain its handle and inspect progress without blocking the daemon; an offered handoff is not acquired control.
+  inspection: Claim reads are non-mutating; safe acquisition completes when explicit offer acceptance commits a current ControlHandle.
+  synchronous: A client-side waiter may await progress and accept a ready offer using bounded primitive calls; no daemon handoff call or native event loop waits synchronously for cooperation.
+  timeout: A timed-out or interrupted waiter neither cancels the claim nor proves acquisition failed; inspect authoritative state and choose explicit cancel or force.
+  raw_api: Reuse the existing amux api entry point; raw API exit 0 means successful request, not necessarily a granted lock.
+  cli_porcelain: Deferred; a future acquisition waiter may make exit 0 mean actual ControlHandle acquisition without freezing flags or command names now.
+  force: Explicit claim force or forced-claim creation skips cooperation but preserves the turn and unresolved-call warnings; a current compare-and-act observation can override a stranded reservation without its missing requester's private handle.
+  hot_input: Cache current control authority and borrow it with input bytes; no registration, handle creation or negotiation per keystroke.
+  conditional_consent: Human authority remains valid through conditional countdown/drain/offer; consent checks the displayed activity revision and native view serial, and acceptance atomically rechecks activity, views, consent and settlement before revoking and granting.
+  conditional_observation: Public reservation state exposes immutable condition parameters, eligibility, consent readiness and the current daemon-clock remainder to the owning native attachment without sharing requester claim/offer capabilities.
+  conditional_abort: Keep/activity or requester withdrawal aborts conditional intent without revoking human authority; this is not ordinary takeover cancellation.
+  background_scope: Requests explicitly choose owner or all live attachment views; unknown observations block affirmative eligibility, and view serial/revision checks reject late facts.
+acceptance_scenarios:
+  - id: interaction-01
+    criterion: Native TUI and structured CLI/API operate on the same live instance with no shadow agent or UI replacement.
+  - id: interaction-02
+    criterion: A CLI/API prompt is accepted by that instance and authoritative activity/continuation/completion is observable.
+  - id: interaction-03
+    criterion: A real harness question is inspectable and answerable structurally, including its supported choice/free-text semantics.
+  - id: interaction-04
+    criterion: A real permission request is inspectable and can be explicitly allowed or denied through CLI/API.
+  - id: interaction-05
+    criterion: Native and API responses share the authoritative pending request; only the first valid response applies.
+  - id: interaction-06
+    criterion: Late, duplicate, cancelled, resolved, timed-out or previous-session responses cannot answer a different request.
+  - id: interaction-07
+    criterion: Every PTY permits input from only its owning controller/attachment while preserving observation, native protocol progress and explicit handoff for others.
+  - id: interaction-08
+    criterion: Safe handoff requires owner yield, authoritative settlement and requester acceptance before the daemon commits fresh ownership; notification alone never grants control.
+  - id: interaction-09
+    criterion: Takeover does not automatically cancel the already-running agent turn or terminate its process.
+  - id: interaction-10
+    criterion: Relinquishment, force and cancellation reject undispatched calls under invalidated authority; safe grant settles forwarded calls, including native input, while force discloses their unresolved risk. A PTY write or unrelated question resolution cannot certify native application settlement.
+  - id: interaction-11
+    criterion: Human control persists unless explicitly handed back or an orchestrator-requested reacquisition meets its conditions; no eligible request means no automatic relocking.
+  - id: interaction-12
+    criterion: A slow, failed or absent hook consumer cannot delay explicit force/cancellation or PTY processing; cooperative handoff may intentionally wait for its current owner.
+  - id: interaction-13
+    criterion: Report/control loss, process exit and event gaps expose explicit unknown/unavailable/resynchronization states rather than fabricated success or replay.
+  - id: interaction-14
+    criterion: Explicit turn cancellation is distinguished from cancellation acknowledgement, cycle completion and process stop.
+  - id: interaction-15
+    criterion: Missing mandatory harness interfaces block first acceptance; they are not relabelled unsupported to weaken the contract.
+  - id: interaction-16
+    criterion: A locked session displays both lock icon and distinct border; the takeover shortcut and other intercepted input open their appropriate flow without forwarding or replaying prompt-opening keys.
+  - id: interaction-17
+    criterion: Pending handoff shows owner-response and request-level blockers after 3 seconds; no timer automatically grants control, and wait, cancel and force remain usable while waiting.
+  - id: interaction-18
+    criterion: Explicit force grants input without interrupting the turn or stopping the agent, warns about unresolved dispatched calls and continues rejecting revoked-token automation.
+  - id: interaction-19
+    criterion: An orchestrator-requested inactivity reacquisition shows a countdown after its configured idle threshold; agent output alone does not reset human inactivity.
+  - id: interaction-20
+    criterion: Human input during the reacquisition countdown cancels that attempt and preserves human ownership; amux neither retries nor rearms it autonomously.
+  - id: interaction-21
+    criterion: Backgrounding permits immediate reacquisition only for an eligible explicit orchestrator request; otherwise backgrounding preserves human ownership.
+  - id: interaction-22
+    criterion: Reacquisition revalidates current ownership and activity at grant time and returns a fresh token; stale requests or old tokens cannot take a newer ownership generation.
+  - id: interaction-23
+    criterion: Explicit hand-back can transfer control without waiting for inactivity; no reacquisition request leaves human control intact indefinitely.
+  - id: interaction-24
+    criterion: A second attached native client must request control through the same protocol as an external controller; the owning client receives the request and observers cannot inject keys, paste or application mouse input.
+  - id: interaction-25
+    criterion: Merely requesting control leaves the current token usable; owner yield, explicit force or cancellation invalidates it and prevents later undispatched old-token calls from forwarding.
+  - id: interaction-26
+    criterion: Cancelling before grant gives no input authority to the requester, invalidates the prior token and leaves fresh acquisition available; the previous orchestrator is not automatically restored.
+  - id: interaction-27
+    criterion: Delayed yield, accept, cancel or force messages for an obsolete transfer cannot resurrect it or invalidate a newer owner's authority.
+  - id: interaction-28
+    criterion: The reserved handoff requester cannot lose ownership to an opportunistic acquisition between old-owner relinquishment and its acceptance; cancelled reservations cannot block fresh acquisition.
+  - id: interaction-29
+    criterion: A pending claim or ready offer cannot authorize native/agent input; only a current correctly bound ControlHandle can, and stale or wrong-kind capabilities fail without forwarding.
+  - id: interaction-30
+    criterion: Reading a claim or observing a ready offer does not acquire ownership; accepting that offer atomically returns current control authority or an explicit non-granted/stale outcome.
+  - id: interaction-31
+    criterion: Closing or timing out a waiting client does not cancel its claim or release an already-granted lock; subsequent authoritative inspection can determine its state without replaying acquisition.
+  - id: interaction-32
+    criterion: A caller can retain a serialized claim across independent raw API calls, inspect it and complete acquisition on the same PTY; a persistent native client uses the same capability lifecycle without per-input registration.
+prior_art:
+  - candidate: Existing amux OMP lifecycle reporter
+    source: integrations/omp/amux.ts
+    fit: extend
+    evidence: Reports supported root/subagent lifecycle events and identities, but currently contains no structured answer/control channel.
+  - candidate: OMP 18.8.7 public extension API
+    source: https://github.com/can1357/oh-my-pi/blob/v18.8.7/packages/coding-agent/src/extensibility/extensions/types.ts
+    fit: investigate
+    evidence: Exposes prompt submission, abort and approval notifications; inspected notification types do not carry response resolvers.
+  - candidate: OMP 18.8.7 RPC and rpc-ui
+    source: https://github.com/can1357/oh-my-pi/blob/v18.8.7/packages/coding-agent/src/modes/rpc/rpc-types.ts
+    fit: investigate
+    evidence: Request-ID-based UI responses exist; this alone does not establish ordinary native-TUI coexistence or application-time lock fencing.
+  - candidate: OMP 18.8.7 native collaboration
+    source: https://github.com/can1357/oh-my-pi/blob/v18.8.7/packages/coding-agent/src/collab/host.ts
+    fit: not-selected-under-local-only-scope
+    evidence: Native same-session UI mirroring exists, but the inspected path uses a relay; the local registry exposes metadata and links, not local answer/control commands.
+  - candidate: Codex CLI 0.160.0 native TUI and local app-server
+    source: https://developers.openai.com/codex/app-server
+    fit: compose-candidate-partially-proved-not-accepted
+    evidence: Private runtime proved same-thread native/API questions and approvals, single server resolution and stale-request isolation. A native answer-race transcript contradicted the accepted answer; ownership locking and application-time fencing remain unproved.
+  - candidate: Claude Code native attachment and hooks
+    source: https://code.claude.com/docs/en/agent-view
+    fit: investigate-if-needed
+    evidence: Native attachment and permission hooks are documented, but the inspected agent-view reply path does not answer permission dialogs. No complete local control/fencing route or installed-version runtime proof was established.
+feasibility_evidence: specs/verifications/agent-interaction-feasibility.md
+spike_evidence: specs/archive/spikes/SPIKE-native-agent-interaction.md
+ownership_spike_evidence: specs/archive/spikes/SPIKE-pty-control-fencing.md
+architecture_evidence: specs/tech-architecture/agent-interaction-deepening.md
+ownership_decision: specs/adr/0001-cooperative-pty-ownership.md
+interface_evidence: specs/tech-architecture/pty-control-interface-designs.md
+interface_decision: specs/adr/0002-capability-control-interface.md
+harness_decision: specs/adr/0003-codex-first-agent-target.md
+native_ux_contract: specs/tech-architecture/pty-control-native-ux.md
+first_harness:
+  name: codex
+  version: 0.160.0
+  transport: owned-local-unix-app-server
+  status: implementation-target-selected-not-production-accepted
+  defaults: Existing stock Zsh and OMP launch/reporting behavior is unchanged; the structured-agent target is explicit.
+wire_contract: specs/contracts/pty-control.md
+wire_schema: specs/contracts/pty-control.schema.yaml
+wire_examples: specs/contracts/pty-control.examples.yaml
+design_review_evidence: specs/verifications/agent-interaction-design-review.md
+implementation_plan: specs/epics/e03-agent-interaction/PLAN.md
+plan_review_evidence: specs/verifications/e03-plan-review.md
+interface_selection: typed-control-claim-offer-capabilities
+architecture_status: capability-wire-native-ux-and-first-target-reviewed
+runtime_feasibility: partially-proved-not-accepted
+deferred_validation:
+  - id: native-input-application-fence
+    status: deferred-by-user
+    evidence: specs/archive/spikes/SPIKE-pty-control-fencing.md
+    revisit: Final complete-broker validation; revisit earlier only if ordinary-path integration is actually blocked.
+    requirement: Account for forwarded native input before safe grant; unknown settlement remains unknown and explicit force remains separate.
+next_skill: orchestrate-project
+open_gates:
+  - "Before Build: the implementation plan and dual Plan quality gate passed; obtain explicit phase confirmation. Neither implementation nor new live model probes are authorized by the Plan verdict."
+  - "Implementation/Verify: exercise authoritative native/API interaction presentation and all existing PTY ownership acceptance scenarios; target selection and specification are not runtime PASS evidence."
+  - "Implementation/Verify: prove the capability wire, controller recovery, actual native control UI, non-cancelling force, conditional reacquisition and multi-attachment behavior; CLI porcelain remains deferred."
+  - "Final complete-broker validation: revisit native-buffer/application settlement if unresolved, as requested. Keep the negative control as an acceptance check without stalling the remaining design."
+  - Existing release/execution cockpit shapes do not satisfy the installed generic YAML validator schema; no unrelated schema migration is implied.

@@ -1,0 +1,40 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s03
+title: Native ownership UX across attached clients
+spec: e03s03-story.md
+status: passing
+bcps: 5
+tasks:
+  - id: 1
+    description: "Create src/tui/control.rs and wire src/tui.rs/src/tui/view.rs ownership chrome plus original-connection view serials; extend tests/pty_control.rs with actual controlling-PTY attachments asserting lock icon/text/chrome, unknown initial views, sanitized labels and no private capability exposure."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, ownership, attachment-provenance]
+  - id: 2
+    description: "Unify src/tui.rs application keys/repeats/literal-prefix/paste/mouse gating through src/tui/control.rs, preserve local picker/selection/scrollback, and exercise real terminal event encodings with non-forwarded observer markers and no replay of opening/confirmation/gesture-tail events after grant."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, input-routing, no-replay]
+  - id: 3
+    description: "Implement configured-prefix Ctrl-L/Ctrl-F request/owner response/progress/cancel/force in src/tui/control.rs and src/tui/view.rs; actual attachments prove notice-during-typing cannot yield, captured target survives selection changes, three-second blockers remain responsive, hide/reopen retains claim and stale force requires renewed confirmation."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, deliberate-consent, transition-races]
+  - id: 4
+    description: "Complete src/tui.rs/src/client.rs typed stale-authority resync and multi-attachment lifecycle handling; add real two-attachment tests for first-acquire contention, disconnect without release/cancel, exit/replacement invalidation and same-process/geometry preservation, and update existing native help/shortcut documentation."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [native-surface, multi-attachment, lifecycle]

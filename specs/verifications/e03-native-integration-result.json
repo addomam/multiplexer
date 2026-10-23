@@ -1,0 +1,185 @@
+{
+  "task_id": "e03-native-integration",
+  "status": "corrections-implemented-unverified",
+  "worktree": "/Users/addomam/projects/amux-e03-native",
+  "integration_owner": "parent",
+  "input_evidence": {
+    "source": "Parent-reported integration run and existing parent native captures; failures were not rerun here.",
+    "command": "cargo test --lib --test pty_control --test agent_interaction --test codex_native_smoke -- --test-threads=4",
+    "reported_results": {
+      "library": "94 passed",
+      "pty_control": "22 passed, six failed",
+      "deterministic_codex_target": "completed without reported failures"
+    },
+    "capture_root": "/Users/addomam/projects/amux-e03-build/target/e03-native-captures"
+  },
+  "changed_files": [
+    {
+      "path": "src/control.rs",
+      "symbols": [
+        "Target::consent",
+        "tests::conditional_consent_requires_reported_known_owner_facts_without_revoking_control",
+        "tests::conditional_consent_distinguishes_changed_reports_from_current_readiness"
+      ],
+      "change": "Distinguish absent first-view facts from changed reported facts before conditional consent; add behavioral coverage without changing public APIs or relaxing acceptance."
+    },
+    {
+      "path": "src/tui/control.rs",
+      "symbols": [
+        "Work::Claim",
+        "PanelKind::Owner",
+        "NativeControl::register worker dispatch",
+        "NativeControl::received",
+        "NativeControl::open",
+        "NativeControl::request",
+        "NativeControl::panel_event",
+        "NativeControl::draw",
+        "NativeControl::draw_panel"
+      ],
+      "change": "Reconcile ordinary owner response panels at actual render, guard response actions against changed displayed observations, and observe current ownership on the original FIFO connection immediately before one deliberate cooperative claim."
+    },
+    {
+      "path": "tests/pty_control/native.rs",
+      "symbols": [
+        "Attachment::capture_native_body",
+        "ConsentGate::new",
+        "ConsentGate::pause_next",
+        "two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notice",
+        "actual_native_safe_offer_accepts_only_after_deliberate_yield_and_never_replays_prompt_input",
+        "actual_native_outer_output_drains_while_test_waits_only_on_daemon",
+        "competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_background_owner",
+        "actual_native_deliberate_request_observes_withdrawal_before_one_claim"
+      ],
+      "change": "Correct Darwin proxy framing, retain bounded continuous-drain cleanup, assert actual native viewport geometry, replace the incidental drain wording assertion with public request behavior, and add deterministic stale-observation and already-open owner-panel arrangements."
+    },
+    {
+      "path": "specs/verifications/e03-native-integration-result.json",
+      "change": "Record these native-only integration corrections, evidence limits and required parent verification."
+    }
+  ],
+  "intentionally_unchanged": {
+    "src/tui.rs": "Existing dedicated-prefix routing, warning consumption, and deferred focus/view reporting do not require changes for the observed failures.",
+    "tests/pty_control.rs": "The first failing denial helper is correctly reporting the wrong protocol error; changing its allowed errors would conceal the source defect. Parent-synchronized formatting and existing helper fixes are preserved.",
+    "shared_files": "No shared daemon/runtime/client/lib/manifest/integration/documentation/ledger edits. Shared files were read only where necessary to establish framing and projection contracts.",
+    "prior_result": "specs/verifications/e03-native-track-result.json remains the prior handoff; this file records the subsequent integration corrections."
+  },
+  "failure_corrections": [
+    {
+      "failure": 1,
+      "test": "background_owner_scope_rejects_unknown_and_stale_views_withdraws_consent_without_revoking_human",
+      "observed": "Consent before any native view report returned stale-view rather than not-ready/condition-unavailable.",
+      "cause": "Target::consent combined view.reported and serial equality in the stale-view prerequisite. Registration initializes reported:false with placeholder serial:0. The matching placeholder was therefore treated as a changed displayed view even though no report had ever established displayable facts.",
+      "contract": "specs/contracts/pty-control.md distinguishes changed displayed view serials from unavailable facts; unknown initial views block readiness and cannot authorize consent.",
+      "correction": "Require an actually reported view with condition-unavailable first, then retain exact serial comparison and stale-view for changed reported facts. Activity, connection, affirmative eligibility, readiness and acceptance checks remain unchanged.",
+      "coverage": [
+        "Unreported views and reported unknown focus for owner/all background and zero-idle conditions reject without revocation, consent, requester control or an offer.",
+        "Serial zero remains a valid first report; it is not evidence that a report exists.",
+        "An outdated reported serial remains stale-view even if the latest view is unknown or foreground; matching current facts distinguish unavailable, not-ready and successful consent.",
+        "Wrong-connection consent still rejects. Successful consent retains the human token until explicit acceptance."
+      ],
+      "verification_status": "Source correction and two deterministic unit tests added; not executed here."
+    },
+    {
+      "failure": 2,
+      "test": "actual_native_pending_consent_ack_keeps_before_paste_without_rotating_or_replaying_prefix",
+      "capture": "amux-ownership-03432e4b-0997-49bb-ab4f-baf771d4927b/pending-consent-ack/failure",
+      "observed": "All 28 parsed rows blank, zero raw ANSI bytes, attachment still running before its expected initial control presentation.",
+      "cause": "ConsentGate made its listener nonblocking but did not restore blocking mode on accepted client streams. Darwin accept inherits O_NONBLOCK. A request reader can consequently exit on WouldBlock between initial, fragmented or successive frames. The retained shutdown clones keep the abandoned stream open, which can leave pre-render startup waiting for a response rather than receiving EOF.",
+      "evidence_limit": "The missing blocking-mode normalization is a concrete source defect; the exact abandoned frame in this captured run was not logged. Attribution of the blank pre-render wait to that frame is [INFERENCE] from the platform behavior, source and zero-output evidence. The existing daemon framing boundary already explicitly clears inherited O_NONBLOCK for the same reason.",
+      "correction": "Normalize accepted proxy streams to blocking mode before framing, retain the existing bounded read/write deadlines, and shut down both owned ends when a framing worker terminates so retained clones cannot hide connection failure.",
+      "preserved_ordering": "The real daemon consent response is still withheld only after the daemon processes it. The TUI remains free to draw and enqueue consumed-prefix Keep followed by paste on its original connection; the proxy does not fabricate responses or authority.",
+      "verification_status": "Existing controlling-PTY pending-ack regression retained, with original-connection-only method accounting. Parent must execute it on macOS, including the later disconnect/unknown-input gate. No timeout was increased."
+    },
+    {
+      "failure": 3,
+      "test": "actual_native_safe_offer_accepts_only_after_deliberate_yield_and_never_replays_prompt_input",
+      "capture": "amux-ownership-d1020cea-6c91-49a0-8945-8d08698a84f4/safe-owner/failure",
+      "observed": "The header showed an ordinary control request while the already-open owner panel still offered Release/Keep/Return and no Yield action.",
+      "cause": "PanelKind::Owner captured the reservation only when opened. Ownership refresh updated the header but never reconciled that panel's captured ordinary claim. The ANSI evidence places the Release-only panel before the later request notice.",
+      "correction": "Reconcile the ordinary claim and observation when the owner response panel is actually rendered. Yield/Release require current local authority and the unchanged displayed observation. An intervening known owner/reservation change consumes the old action without targeting unseen replacement intent. Yield continues to name the exact displayed claim ID; Force/Cancel confirmation snapshots are not retargeted.",
+      "coverage": "Strengthened the existing real-PTY safe-offer fixture: deliberately open the owner panel before any ordinary request, create the observer request, require the same panel to display that exact claim ID, then deliberately yield and verify safe requester control, same application PID, fresh input admission and no intercepted paste replay.",
+      "verification_status": "Implemented, not executed. Parent must also exercise stale displayed Yield/Release intent across reservation/generation changes."
+    },
+    {
+      "failure": 4,
+      "test": "actual_native_outer_output_drains_while_test_waits_only_on_daemon",
+      "capture": "amux-ownership-454589f3-1086-4587-8f6d-719e2e3e839e/continuous-outer-output/failure",
+      "observed": "OUTER_DRAIN_DONE and the real shell prompt were visible. Prefix Ctrl-L correctly opened the request/wait surface with a waiting-owner reservation, not the incidental Locked terminal wording expected by the fixture.",
+      "cause": "The post-drain assertion confused the deliberate request shortcut with an application-input lock prompt. It tested incidental wording, not output drainage or responsiveness.",
+      "correction": "Delete the Locked terminal wording assertion rather than replace it with Waiting text. After the unchanged final-frame drain proof, require a public waiting-owner reservation for the exact native requester and verify the original external owner remains current.",
+      "verification_status": "The parent capture already proves the old final-frame output path reached completion. The corrected semantic assertions have not been executed here."
+    },
+    {
+      "failure": 5,
+      "test": "two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notice",
+      "capture": "amux-ownership-b4ce8923-6d6a-4bde-9ada-d8cda5e9abff/owner/owned",
+      "observed": "There were exactly three wrapper rows. Native body row zero contained a shell-command suffix; NATIVE_SURFACE appeared on the next native row.",
+      "cause": "The fixture assumed an arbitrary output marker must occupy native row zero. Native shell contents and their resize/reflow do not define the wrapper/body origin.",
+      "correction": "Remove marker-position assumptions without changing the target or shifting native output. Capture the daemon's full offset-zero native viewport and require both owner and observer PTYs to project it exactly at outer row three. Assert native dimensions 110 by 25 within the 110 by 28 outer PTY and compare every body row, including blank rows.",
+      "verification_status": "Implemented viewport-origin behavior assertions; not executed. The target, header geometry and production renderer were not special-cased."
+    },
+    {
+      "failure": 6,
+      "test": "competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_background_owner",
+      "captures": [
+        "amux-ownership-98d8a5a7-4201-4def-a8a4-6a4ec7c3c6eb/default-first/picker-still-foreground",
+        "amux-ownership-98d8a5a7-4201-4def-a8a4-6a4ec7c3c6eb/default-first/owner-background-consent-no-countdown",
+        "amux-ownership-98d8a5a7-4201-4def-a8a4-6a4ec7c3c6eb/default-first/all-background-consent-no-countdown"
+      ],
+      "observed": "Picker foreground retention and owner/all background consent reached their expected surfaces. After external conditional withdrawal, the observer's deliberate default-prefix request displayed Waiting but no native reservation appeared.",
+      "cause": "The deliberate request serialized the periodically cached ownership comparison receipt. Immediately after withdrawal, that receipt can still name the removed conditional reservation, so the sole claim is rejected as stale-observation while the local progress surface has already opened.",
+      "evidence_limit": "That exact rejection was not recorded by the existing captures; they contain terminal/geometry/chrome, not protocol responses. Its occurrence in this run is [INFERENCE] from the strict comparison contract and fixture order. The stale-cache request path is a concrete source race. warning_event cannot consume this observer's prefix because warning ownership requires its current control; dedicated ownership suffix routing precedes panel handling.",
+      "correction": "Work::Claim reads current authoritative state on the original native FIFO connection immediately before exactly one deliberate cooperative mutation. A later intervening race still rejects without replay. First-view automatic acquisition retains its original unowned comparison receipt and does not adopt a new owner to create an automatic request. No focus/picker workaround, sacrificial key, automatic retry or replacement policy was added.",
+      "coverage": [
+        "Existing competing-default-prefix fixture additionally requires manual purpose and the observer's exact native controller ID, then verifies reopen retains the same claim ID.",
+        "New actual_native_deliberate_request_observes_withdrawal_before_one_claim delivers and visibly captures a real conditional observation, holds a subsequent original-connection state response, withdraws externally, and then issues one deliberate native request. It requires an actual manual waiting-owner reservation, unchanged human capability, one claim mutation and its fresh preceding state observation.",
+        "The new protocol artifact records public held/withdrawn ownership, public manual reservation and original-connection method order, never private capability references. Force is opened only to expose the captured reservation and is never confirmed."
+      ],
+      "verification_status": "Implemented deterministic arrangement and assertions; not executed. Parent must run both the original scenario and the new fresh-observation regression."
+    }
+  ],
+  "new_tests": [
+    "control::tests::conditional_consent_requires_reported_known_owner_facts_without_revoking_control",
+    "control::tests::conditional_consent_distinguishes_changed_reports_from_current_readiness",
+    "native::actual_native_deliberate_request_observes_withdrawal_before_one_claim"
+  ],
+  "preserved_invariants": [
+    "Every application-bound input path remains authority-gated; intercepted input and stale mutations are never replayed.",
+    "Native activity, view, consent, Keep, deliberate claim and input remain ordered on the attachment's original persistent connection.",
+    "Conditional Keep/withdraw retain the same human token; ordinary cancellation grants nobody.",
+    "Unknown native settlement still blocks safe acceptance; no generic native-settlement certification or unsafe grant was added.",
+    "External policy alone owns reacquisition; no autonomous re-request or retry was added.",
+    "One native application surface and unchanged three-row geometry remain intact.",
+    "Every outer PTY still has an independent continuously draining nonblocking reader; capture-file writes remain outside its lock, with explicit bounded evidence retention.",
+    "Fixture-owned child reaping and proxy/drainer joins remain bounded; no timeout constants were inflated.",
+    "Parent-synchronized cargo formatting and macOS Processor/openpty/unused-argument fixes were retained."
+  ],
+  "verification_still_required": {
+    "executed_in_this_session": [],
+    "pass_claimed": false,
+    "build_or_lint_or_formatter_run": false,
+    "live_model_run": false,
+    "parent_consolidated_command_after_integration": "cargo test --lib --test pty_control --test agent_interaction --test codex_native_smoke -- --test-threads=4",
+    "required_observations": [
+      "All six reported native regressions and the three newly added tests pass in the parent's consolidated run.",
+      "Pending-consent attachment startup and fragmented/successive original-connection RPCs work on macOS; delayed consent still permits Keep-before-paste and later unknown/disconnect gating without token rotation or input replay.",
+      "An already-open owner response panel displays a new ordinary request before Yield; changed displayed response intent cannot yield/release a known replacement reservation or stale generation.",
+      "The complete native viewport starts immediately after three wrapper rows in both attachments, independent of shell content/reflow.",
+      "Outer output drains while foreground test code waits only on daemon completion, and the native UI subsequently creates the correct explicit request without changing the owner.",
+      "Default-prefix picker/background behavior preserves scope and focus provenance; an immediately subsequent deliberate claim observes withdrawal freshly and mutates only once.",
+      "Inspect new controlling-PTY captures, including fresh-request-protocol.json under fresh-deliberate-request, for actual public observations and original-connection ordering.",
+      "Parent's shared routing/Codex corrections and final complete-broker settlement/fence validation remain parent-owned. No native Force success should substitute for safe settlement proof.",
+      "Parent performs any remaining project build/lint/format gates after integrating all corrections; no such check was executed here."
+    ]
+  },
+  "handoff": {
+    "collect": [
+      "src/control.rs",
+      "src/tui/control.rs",
+      "tests/pty_control/native.rs",
+      "specs/verifications/e03-native-integration-result.json"
+    ],
+    "instructions": "Collect only these correction files into the parent's integrated tree; preserve current shared daemon/runtime/client/manifest changes and all other track edits. No public API or dependency migration is required. Keep ledgers unchanged/failing until parent supplies actual passing evidence.",
+    "worktree": "Existing session and unmerged worktree left intact; no reset, recreation, commit, merge, push, release or global changes."
+  }
+}

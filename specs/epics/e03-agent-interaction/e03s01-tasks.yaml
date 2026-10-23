@@ -1,0 +1,41 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s01
+title: Exclusive ordinary PTY control and cooperative handoff
+spec: e03s01-story.md
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: "Create src/control.rs and tests/pty_control.rs; wire src/daemon.rs registration, ordinary acquisition, role/lifetime validation, original attachment provenance and private recovery so only a current control admits real input."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [ownership, real-daemon, capability-lifetime]
+  - id: 2
+    description: "Implement reserved yield/settlement/offer acceptance in src/control.rs and public ownership snapshots/events in src/daemon.rs; test A retains input on request, B cannot input before accept, C cannot steal the gap, stale acceptance cannot affect newer ownership, and public facts reveal no private references."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [ownership, integration, reservation-races]
+  - id: 3
+    description: "Bind src/runtime.rs, src/runtime/compatibility.rs, src/integration.rs and integrations/zsh/adapter.zsh queued source/epoch/wake work to originating authority; register forwarding atomically, retain unresolved records, reject revoked queue consumption, and retire private automatic-launch authority only at authoritative settlement."
+    verify: "cargo test --test pty_control"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [dispatch, shell-continuations, revocation-races]
+  - id: 4
+    description: "Migrate src/client.rs, src/cli.rs required serialized --control, src/tui.rs keys/separate paste, automatic command/recipe/OMP startup and every tests/acceptance.rs/tests/shell_races.rs/terminal-showcase/tests/multiplexer.rs input/execute producer; update existing docs/examples and changed low-level signatures without weakening original readiness, busy, partial, latency or independent showcase assertions."
+    verify: "cargo test --test pty_control && cargo test --test acceptance --test shell_races --test integration --test readiness --test runtime"
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [consumer-cutover, native-input, compatibility]
+evidence: specs/verifications/e03-ownership-build.md

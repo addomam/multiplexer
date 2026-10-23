@@ -1,5 +1,5 @@
 type: bug_registry
-context: e01 native terminal; Herdr input-latency and empty-switcher revision
+context: amux native terminal; historical input revisions and terminal/substrate reliability defects
 bugs:
   - id: input-latency
     status: fixed
@@ -25,3 +25,150 @@ bugs:
     approach: prepared-native-cells-bounded-event-priority-immediate-interaction-frames
     risk_level: medium
     evidence: ../verifications/immediate-input.md
+  - id: showcase-origin-cpr
+    status: fixed
+    source: BUG-showcase-endpoint-compatibility.md
+    risk_level: medium
+    original_evidence: ../verifications/terminal-showcase.md
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/runtime.rs, src/runtime/compatibility.rs, tests/runtime.rs, terminal-showcase/tests/multiplexer.rs]
+    approach: parsed-handler-origin-relative-cpr-with-native-control-forwarding
+    acceptance: origin-relative-cpr-with-mode-transitions-and-margin-restoration
+  - id: showcase-zwj-cursor
+    status: fixed
+    source: BUG-showcase-endpoint-compatibility.md
+    risk_level: medium
+    original_evidence: ../verifications/terminal-showcase.md
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/runtime.rs, src/runtime/compatibility.rs, tests/runtime.rs, terminal-showcase/tests/multiplexer.rs, Cargo.toml, Cargo.lock]
+    approach: bounded-final-grapheme-composition-native-cell-layout-and-width-replay
+    acceptance: joined-grapheme-cursor-width-with-cjk-combining-and-overwrite-regressions
+  - id: substrate-config-lost-update
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: medium
+    acceptance: stale-or-concurrent-config-writers-cannot-silently-overwrite-newer-global-or-saved-project-state
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/projects.rs]
+    approach: canonical-stable-nonblocking-lock-and-exact-loaded-snapshot-conflict-check
+  - id: substrate-config-durability
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: low
+    acceptance: successful-atomic-config-save-syncs-file-and-containing-directory
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/projects.rs]
+    approach: private-temp-file-sync-atomic-rename-and-containing-directory-sync
+  - id: substrate-terminal-admission
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: medium
+    acceptance: live-retained-and-inflight-terminal-records-share-atomic-configurable-capacity-with-failure-refund
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/daemon.rs, src/projects.rs, src/runtime.rs, src/integration.rs, tests/acceptance.rs, tests/integration.rs]
+    approach: atomic-admission-reservations-with-failure-cleanup-and-retained-exit-accounting
+  - id: substrate-diagnostic-retention
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: medium
+    acceptance: every-diagnostic-producer-obeys-count-and-text-bounds-before-retention-or-event-publication
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/daemon.rs, src/projects.rs, tests/acceptance.rs]
+    approach: one-bounded-diagnostic-insertion-path-and-utf8-safe-command-output-limits
+  - id: substrate-startup-readiness
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: medium
+    acceptance: existing-or-new-daemon-readiness-requires-valid-initialized-api-response-with-bounded-failure
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/client.rs, src/daemon.rs, tests/readiness.rs]
+    approach: serialized-autostart-absolute-deadline-v1-snapshot-probe-and-startup-socket-cleanup
+  - id: substrate-hook-cancellation
+    status: fixed
+    source: BUG-substrate-reliability.md
+    risk_level: medium
+    acceptance: shutdown-cancels-and-reaps-active-hook-process-group-and-does-not-start-pending-hooks
+    evidence: ../verifications/substrate-reliability.md
+    files_changed: [src/projects.rs, src/daemon.rs]
+    approach: daemon-stop-token-active-process-group-kill-reap-and-pending-hook-skip
+  - id: time-rfc2822-dos
+    date: "2026-10-22"
+    status: fixed
+    severity: medium
+    source: BUG-time-rfc2822-dos.md
+    scope: dependency-resolution
+    risk_level: medium
+    advisory: GHSA-r6v5-fh4h-64xc
+    acceptance: no-vulnerable-time-resolution-with-honest-minimum-Rust-contract-and-preserved-terminal-behavior
+    resolution: user-approved-Rust-1.88-and-time-0.3.47
+  - id: e03-native-settlement
+    date: "2026-10-22"
+    status: accepted-deferred-to-future-ACP
+    severity: high
+    source: BUG-e03-native-settlement.md
+    scope: native-application-settlement-and-answer-presentation
+    risk_level: high
+    acceptance: generation-bound-native-input-cut-and-authoritative-winning-answer-presentation
+    blocker: pinned-unmodified-Codex-does-not-expose-the-required-native-interface
+    disposition: explicit-user-accepted-current-delivery-limitation-not-fixed
+    exception: ../security/EXCEPTIONS.md
+  - id: e03-focus-settlement
+    date: "2026-10-22"
+    status: fixed
+    severity: high
+    source: BUG-e03-focus-settlement.md
+    scope: application-focus-input-settlement
+    acceptance: forwarded-focus-retains-unknown-blocks-safe-offer-without-human-activity
+    evidence: ../verifications/e03-focus-runtime.json
+  - id: waitid-stop-resume
+    date: "2026-10-22"
+    status: fixed
+    severity: high
+    source: BUG-waitid-stop-resume.md
+    scope: PTY-root-reaping-and-shutdown
+    acceptance: true-exit-only-serialized-reaping-and-bounded-stop-resume-shutdown
+    evidence: ../verifications/e03-focus-runtime.json
+  - id: e03-target-retirement
+    date: "2026-10-22"
+    status: fixed
+    severity: medium
+    source: BUG-e03-target-retirement.md
+    scope: removed-PTY-registry-retention-and-view-events
+    acceptance: retired-targets-reclaim-empty-state-and-preserve-required-late-outcomes
+    evidence: ../verifications/e03-lifecycle-runtime.json
+  - id: e03-cleanup-completion
+    date: "2026-10-22"
+    status: fixed
+    severity: high
+    source: BUG-e03-cleanup-completion.md
+    scope: concurrent-managed-close-and-daemon-shutdown
+    acceptance: shutdown-waits-for-owned-teardown-before-returning
+    evidence: ../verifications/e03-lifecycle-runtime.json
+  - id: e03-late-launch-retirement
+    date: "2026-10-22"
+    status: fixed
+    severity: medium
+    source: BUG-e03-late-launch-retirement.md
+    scope: automatic-startup-control-late-settlement
+    evidence: ../verifications/e03-late-settlement-runtime.json
+  - id: e03-removed-shell-settlement
+    date: "2026-10-22"
+    status: fixed
+    severity: medium
+    source: BUG-e03-removed-shell-settlement.md
+    scope: removed-PTY-exact-shell-settlement-consumer
+    evidence: ../verifications/e03-late-settlement-runtime.json
+  - id: e03-force-presentation
+    date: "2026-10-22"
+    status: fixed
+    severity: medium
+    source: BUG-e03-force-presentation.md
+    scope: native-force-visible-confirmation
+    evidence: ../verifications/e03-force-presentation-runtime.json
+  - id: e03-smoke-cleanup-identity
+    date: "2026-10-22"
+    status: fixed
+    severity: high
+    source: BUG-e03-smoke-cleanup-identity.md
+    scope: opt-in-smoke-only-owned-signal-failure-path
+    evidence: ../verifications/e03-smoke-cleanup-runtime.json

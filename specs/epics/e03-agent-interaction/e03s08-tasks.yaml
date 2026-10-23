@@ -1,0 +1,82 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s08
+title: Complete-broker native and API handoff acceptance
+spec: e03s08-story.md
+status: failing
+acceptance_disposition: user-accepted-deferred-to-future-ACP-not-passed
+limitation_record: specs/security/EXCEPTIONS.md
+bcps: 8
+tasks:
+  - id: 1
+    description: >-
+      Complete actual native/API dispatch/application accounting in src/control.rs,
+      src/codex.rs, src/runtime.rs, src/runtime/compatibility.rs, src/integration.rs
+      and integrations/zsh/adapter.zsh. Use supported authoritative outcomes and
+      bounded batch/watermarks, not PTY write acknowledgements or per-key records.
+      Expand e03s01-created tests/pty_control.rs and e03s05-created
+      tests/agent_interaction.rs for revoked queue consumption, old epoch/wake
+      continuation rejection, launch-authority retirement, late outcomes across
+      force/cancel/recovery and unknown blocking safe grant. Final native-buffer
+      validation remains in the complete-broker smoke, not a new early spike.
+    verify: 'cargo test --test pty_control && cargo test --test agent_interaction'
+    risk: P0
+    status: failing
+    allure:
+      severity: critical
+      categories: [Application accounting, native input, interaction-10, authority races]
+  - id: 2
+    description: >-
+      Complete src/tui.rs and src/tui/control.rs authoritative request/ownership
+      presentation with src/daemon.rs, src/client.rs and src/cli.rs; migrate every
+      remaining affected consumer including terminal-showcase/tests/multiplexer.rs
+      without naked-input shims or amux imports in the independent oracle. Expand
+      tests/pty_control.rs and tests/agent_interaction.rs with actual controlling-PTY
+      attachments for key/paste/literal-prefix/mouse/modal routes, multiple views,
+      original native provenance, no replay, idle/background keep/consent races,
+      lost replies and losing-answer outcomes. Preserve existing native geometry,
+      protocol replies, shell busy/partial/readiness/latency and private handles.
+    verify: 'cargo test --test pty_control && cargo test --test agent_interaction'
+    risk: P0
+    status: failing
+    allure:
+      severity: critical
+      categories: [Native surface, authoritative presentation, conditional races, compatibility]
+  - id: 3
+    description: >-
+      Add ignored exact root real_complete_broker_handoff to existing
+      tests/codex_native_smoke.rs with all32 scenario assertions and separate native
+      captures: genuine questions, real permission allow/deny, same-thread prompt
+      and interrupt, API/native bidirectional safe transfer, retained calls through
+      force/cancel/recovery, multiple attachments, external idle/background keep,
+      detach and owned exit cleanup. Revisit stopped/buffered-native input and
+      losing-answer presentation here under the complete broker; unsupported
+      authoritative fence/presentation blocks acceptance, never force-only PASS.
+      Enforce exact opt-in/env/model/version/auth checks, <=1800s watchdog,
+      <=15/30/180s deadlines, <=6 meaningful turns, mode0700 private resources,
+      terminal restoration and only-owned process/socket/root/auth/schema/rollout
+      cleanup. Update specs/contracts/pty-control.md,
+      specs/tech-architecture/pty-control-native-ux.md and
+      specs/adr/0003-codex-first-agent-target.md with actual behavior and blockers.
+    verify: 'cargo test --test codex_native_smoke --no-run && cargo test --test pty_control && cargo test --test agent_interaction'
+    risk: P0
+    status: failing
+    allure:
+      severity: critical
+      categories: [All32 acceptance, native fence, smoke prerequisites, cleanup]
+  - id: 4
+    description: >-
+      After separate explicit live-run approval, execute exact complete-broker smoke,
+      map all interaction-01 through interaction-32 to redacted real observations,
+      deterministic assertions and actual native captures, then run workspace and
+      explicit independent showcase regressions. Missing prerequisites/interfaces,
+      contradictory presentation, unknown native settlement or exhausted run bounds
+      fail/block first acceptance; fixtures and force cannot replace real safe
+      transfer. Do not modify global Codex state or binary, run all ignored tests,
+      silently add model runs, or mark a task passing without its real evidence.
+    verify: 'test "${AMUX_RUN_REAL_CODEX:-}" = 1 && test -n "${AMUX_CODEX_MODEL:-}" && cargo test --test codex_native_smoke real_complete_broker_handoff -- --ignored --exact --nocapture --test-threads=1 && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture'
+    risk: P0
+    status: failing
+    allure:
+      severity: critical
+      categories: [Opt-in real Codex, all32, independent showcase, workspace regression]

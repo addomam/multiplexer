@@ -1,0 +1,64 @@
+type: feat
+context: specs/planning-context.yaml
+story_id: e03s06
+title: Structured questions and permission decisions
+spec: e03s06-story.md
+status: passing
+bcps: 8
+tasks:
+  - id: 1
+    description: >-
+      Extend src/codex.rs authoritative pending registry with complete terminal,
+      instance, session, turn, item and string-or-integer provider request identity,
+      keyed question semantics and live-instance tombstones. Expand e03s05-created
+      tests/agent_interaction.rs for resolved/cancelled/timed-out requests, old-session
+      ID reuse, late events and gaps without reopening or retargeting requests.
+    verify: 'cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Pending identities, tombstones, protocol fixtures]
+  - id: 2
+    description: >-
+      Implement agent-answer and request-only agent-permission allow/deny through
+      src/daemon.rs, src/client.rs, src/cli.rs and src/codex.rs with actual installed
+      response shapes and current-control dispatch admission. Expand
+      tests/agent_interaction.rs for native/API first-valid races, wrong question keys,
+      stale authority at queue consumption, unsupported kinds and unknown retained
+      outcomes; preserve tests/pty_control.rs authority behavior.
+    verify: 'cargo test --test agent_interaction && cargo test --test pty_control'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Structured answers, permission decisions, response races]
+  - id: 3
+    description: >-
+      Add ignored root real_questions_and_permissions to e03s05-created
+      tests/codex_native_smoke.rs, preserving explicit selection and env/model guards,
+      <=1800s watchdog, <=15/30/180s phase deadlines and <=6 meaningful turns.
+      Include genuine questions and both allow/deny, actual controlling-PTY captures,
+      authoritative outcome assertions and mode0700 private roots with terminal-mode
+      restoration and only-owned process/socket/credential/schema/rollout cleanup.
+      Update specs/adr/0003-codex-first-agent-target.md with actual semantics and limits.
+    verify: 'cargo test --test codex_native_smoke --no-run && cargo test --test agent_interaction'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Smoke prerequisites, native surface, cleanup]
+  - id: 4
+    description: >-
+      After separate explicit live-run approval, run real_questions_and_permissions
+      for genuine supported question semantics, real permission allow and deny,
+      same-request native/API resolution, losing-response rejection and continued
+      same-instance work. Missing prerequisites fail rather than skip; do not use
+      fixtures as live proof, exceed the turn budget or alter global Codex state.
+      Retain only redacted evidence; final complete-broker presentation remains s08.
+    verify: 'test "${AMUX_RUN_REAL_CODEX:-}" = 1 && test -n "${AMUX_CODEX_MODEL:-}" && cargo test --test codex_native_smoke real_questions_and_permissions -- --ignored --exact --nocapture --test-threads=1'
+    risk: P0
+    status: passing
+    allure:
+      severity: critical
+      categories: [Opt-in real Codex, interaction-03, interaction-04, interaction-05, interaction-06, interaction-15]

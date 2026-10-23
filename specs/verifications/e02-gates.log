@@ -1,0 +1,306 @@
+Command: GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo build --workspace && cargo test -p terminal-showcase --test multiplexer -- --ignored --nocapture && cargo run -p terminal-showcase -- --headless --json && cargo fmt --all -- --check
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (target/debug/deps/amux-c429c8e34ad73136)
+
+running 39 tests
+test integration::tests::mismatched_generation_or_retry_cannot_be_settled ... ok
+test integration::tests::heartbeat_loss_invalidates_settle_without_waiting_in_real_time ... ok
+test cli::tests::reparent_preserves_explicit_root_and_open_omits_missing_fields ... ok
+test cli::tests::bytes_are_validated_before_sending ... ok
+test client::tests::persistent_connection_exposes_errors_without_losing_next_frame ... ok
+test client::tests::connection_rejects_incomplete_and_unsupported_responses ... ok
+test client::tests::persistent_connection_preserves_buffered_response_frames ... ok
+test projects::tests::inherited_pipe_from_background_process_cannot_hang_hook ... ok
+test projects::tests::invalid_configuration_cannot_replace_working_configuration ... ok
+test projects::tests::invalid_initial_config_changes_neither_disk_store_nor_directory ... ok
+test projects::tests::initial_project_hooks_and_recipes_are_ready_on_first_open ... ok
+test projects::tests::project_creation_is_safe_and_uses_configured_directory ... ok
+test projects::tests::saved_identity_context_hooks_and_recipes_survive_without_runtime ... ok
+test projects::tests::daemon_and_project_hooks_are_independent_and_ordered ... ok
+test projects::tests::hooks_capture_stderr_bound_output_and_report_spawn_failures ... ok
+test projects::tests::missing_repository_and_new_repository_are_explicit ... ok
+test runtime::screen_update_tests::metadata_only_delta_preserves_modes_cursor_and_limited_view ... ok
+test runtime::screen_update_tests::palette_alternate_screen_and_resize_force_full_reconstruction ... ok
+test runtime::screen_update_tests::scrolling_invalidates_old_bases_and_history_never_returns_delta ... ok
+test runtime::screen_update_tests::skipped_generations_and_independent_clients_reconstruct_native_cells ... ok
+test projects::tests::git_summaries_separate_index_worktree_and_untracked ... ok
+test tui::tests::malformed_cycle_does_not_hide_terminals_or_loop ... ok
+test tui::tests::mouse_protocol_uses_surface_coordinates_and_sgr_release ... ok
+test tui::tests::native_input_preserves_control_alt_unicode_and_application_cursor ... ok
+test tui::tests::native_row_updates_preserve_untouched_styles_and_update_cursor_and_modes ... ok
+test tui::tests::picker_preserves_hierarchy_and_matches_workspace_metadata ... ok
+test tui::tests::selection_skips_wide_spacers_and_clipboard_encoding_is_padded ... ok
+test tui::tests::stale_or_out_of_viewport_updates_cannot_replace_displayed_native_rows ... ok
+test tui::tests::unicode_labels_are_cell_bounded_and_prefix_is_configurable ... ok
+test tui::tests::utf8_mouse_reports_non_ascii_and_large_coordinates ... ok
+test projects::tests::git_preserves_renames_binary_files_and_unusual_untracked_paths ... ok
+test projects::tests::timed_out_hook_kills_descendants_and_continues ... ok
+test projects::tests::large_worktrees_keep_complete_counts_and_bounded_file_details ... ok
+test projects::tests::equal_branches_do_not_alias_distinct_worktrees ... ok
+test runtime::process_cleanup_tests::stale_root_identity_never_signals_or_expands_reused_pid ... ok
+test runtime::screen_update_tests::synchronized_timeout_flush_publishes_previously_buffered_rows ... ok
+test projects::tests::git_reports_detached_commit_and_upstream_divergence ... ok
+test projects::tests::git_refresh_is_async_and_kills_a_hung_git_hook ... ok
+test projects::tests::workspace_traversal_bounds_missing_repo_history_and_retains_live_metadata ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.18s
+
+     Running unittests src/main.rs (target/debug/deps/amux-bd37740d5d7427bd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (target/debug/deps/acceptance-5ceb3728c5288886)
+
+running 11 tests
+test shutdown_disconnects_partial_clients_and_drains_concurrent_opens ... ok
+test interrupted_source_records_completion_without_replacing_user_hooks ... ok
+test project_save_immediately_after_confirmed_cd_uses_latest_workspace_root ... ok
+test inherited_git_common_dir_does_not_corrupt_workspace_metadata ... ok
+test unsupported_version_is_explicit_json_error ... ok
+test initial_hooks_continue_after_failure_and_concurrent_open_runs_once ... ok
+test agent_crash_is_published_without_a_final_extension_report ... ok
+test host_context_child_partial_busy_tree_detach_and_shutdown ... ok
+test screen_queries_slow_subscriber_and_noisy_terminal_do_not_block_input ... ok
+test maximum_supported_screen_is_readable_through_shared_client ... ok
+test sequenced_waits_replay_transitions_and_report_stream_gaps ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.08s
+
+     Running tests/integration.rs (target/debug/deps/integration-81b1dc0bbea8a6a4)
+
+running 4 tests
+test busy_partial_and_lost_are_distinct_and_capture_remains_timestamped ... ok
+test nested_agents_never_overwrite_root_activity_and_shutdown_is_not_settled ... ok
+test agent_lifetimes_are_bounded_without_losing_root_or_active_children ... ok
+test real_zsh_preserves_startup_exports_input_foreground_and_explicit_queue ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.52s
+
+     Running tests/runtime.rs (target/debug/deps/runtime-de897c87a9a20265)
+
+running 8 tests
+test raw_color_query_foreground_app ... ignored, raw foreground subprocess fixture
+test retained_natural_exit_cleanup_is_idempotent_and_keeps_original_status ... ok
+test captured_removed_exports_do_not_leak_from_daemon_environment ... ok
+test close_freezes_and_rescans_concurrent_fork_producers ... ok
+test close_terminates_term_ignoring_separate_session_descendant ... ok
+test close_terminates_foreground_job_and_retains_exit_status ... ok
+test native_pty_application_updated_palette_queries_match_displayed_colors ... ok
+test native_pty_unicode_alt_screen_modes_scrollback_resize_and_reply ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.59s
+
+     Running tests/shell_races.rs (target/debug/deps/shell_races-7514fad326b7c457)
+
+running 5 tests
+test captured_zdotdir_changes_and_removals_select_actual_child_startup ... ok
+test immediate_submission_cannot_deadlock_a_pending_queued_wake ... ok
+test queued_wake_cannot_follow_typeahead_into_foreground_application ... ok
+test concurrent_first_opens_publish_one_main_and_valid_default_parents ... ok
+test concurrent_ancestor_removal_keeps_every_surviving_parent_valid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.81s
+
+     Running unittests src/lib.rs (target/debug/deps/terminal_showcase-0eadaf6090288b5d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/terminal_showcase-cce1222a678ddb60)
+
+running 13 tests
+test app::tests::mouse_coordinates_cannot_invoke_clipboard_pause_or_exit_actions ... ok
+test app::reply_malformed_ss3_payloads_cannot_be_consent_keys ... ok
+test app::reply_wrappers_preserve_paste_and_partial_response_provenance ... ok
+test app::tests::sgr_mouse_receipt_does_not_prove_requested_pixel_units ... ok
+test app::tests::keyboard_batching_lock_bits_and_bad_utf8_do_not_hide_exit_or_consent_keys ... ok
+test app::tests::malformed_or_expired_reply_tails_cannot_be_consent_keys ... ok
+test app::traditional_control_keys_have_normalized_live_inspector_fields ... ok
+test app::tests::color_operands_do_not_invent_underline_color_eligibility ... ok
+test app::tests::sixel_advertisement_never_grants_legacy_image_consent ... ok
+test app::tests::clipping_before_the_color_run_does_not_grant_eligibility ... ok
+test app::tests::retained_typography_colors_accept_and_export_independent_visual_verdicts ... ok
+test app::tests::unanswered_queries_and_unexercised_input_resize_stay_unknown ... ok
+test app::tests::only_retained_typography_pages_and_cells_grant_color_eligibility ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/colors.rs (target/debug/deps/colors-2907a0082ca409bb)
+
+running 1 test
+test emitted_default_colors_accept_visual_failure_without_rewriting_query_evidence ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.77s
+
+     Running tests/evidence.rs (target/debug/deps/evidence-c51378ca905fc3d1)
+
+running 3 tests
+test fragmented_unicode_input_reaches_inspector_as_complete_scalars ... ok
+test all_explicit_mouse_mode_negatives_can_establish_non_support ... ok
+test unrecognized_mouse_mode_does_not_prove_unanswered_mouse_modes_unsupported ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/graphics.rs (target/debug/deps/graphics-3f9211f4f721aeb9)
+
+running 16 tests
+test integration_requires_exact_explicit_actions_and_uses_static_safe_values ... ok
+test malformed_input_and_terminal_replies_never_become_user_events ... ok
+test kitty_keys_preserve_alternates_text_modifiers_and_event_kind ... ok
+test kitty_probe_is_direct_non_storing_and_non_placing ... ok
+test control_frames_do_not_claim_keyboard_receipt ... ok
+test sgr_mouse_focus_and_paste_preserve_observed_fields ... ok
+test input_exports_explicit_typed_events_and_complete_unicode_text ... ok
+test traditional_and_modify_other_keys_are_distinguished ... ok
+test kitty_lifecycle_is_bounded_chunked_and_only_deletes_owned_images ... ok
+test sixel_has_a_bounded_declared_raster_and_palette ... ok
+test zero_canvas_suppresses_images_and_resize_rebuilds_owned_placements ... ok
+test iterm_sends_actual_bounded_png_inline_not_a_file_transfer ... ok
+test raster_evidence_resets_on_noop_clear_and_zero_canvas ... ok
+test populated_lifecycle_does_not_claim_placement_text_scroll_or_delete_as_raster ... ok
+test every_protocol_and_phase_remains_bounded_at_canvas_and_coordinate_extremes ... ok
+test fresh_lifecycle_entry_reports_only_actual_raster_transmission ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/late.rs (target/debug/deps/late-7efa9d14d4339991)
+
+running 1 test
+test timed_out_cursor_reply_cannot_verify_a_new_manual_suite ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.08s
+
+     Running tests/live.rs (target/debug/deps/live-e4c394e101bd4ac9)
+
+running 2 tests
+test headless_cli_fixtures_reject_invalid_cursor_reports_and_emit_valid_json ... ok
+test real_application_restores_termios_on_signal_and_exports_resized_visual_verdict ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+
+     Running tests/modes.rs (target/debug/deps/modes-10173c9c8f6e4e55)
+
+running 8 tests
+test terminal_mode_fixture ... ignored, isolated PTY fixture, invoked by the parent regressions
+test correlated_sgr_recognition_advertises_only_the_reporting_format ... ok
+test discovery_captures_displaced_groups_without_claiming_legacy_mouse_or_cursor_support ... ok
+test size_reports_physical_pty_dimensions_beyond_presentation_bounds ... ok
+test tracking_selects_only_one_recognized_settable_protocol ... ok
+test unknown_unrecognized_and_permanently_reset_sgr_never_enable_tracking ... ok
+test pixel_toggle_returns_actual_selection_and_reselects_sgr_after_reset ... ok
+test displaced_mouse_groups_restore_the_saved_selection_last ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/multiplexer.rs (target/debug/deps/multiplexer-de17a57a56644770)
+
+running 1 test
+test independent_showcase_runs_inside_amux_and_checks_real_cursor_replies ... ignored, requires built amux binary: cargo build --workspace && cargo test -p terminal-showcase --test multiplexer -- --ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/overflow.rs (target/debug/deps/overflow-bd567242cd28cf39)
+
+running 1 test
+test overflowing_each_deferred_phase_cannot_turn_paste_into_consent_or_exit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.84s
+
+     Running tests/paste.rs (target/debug/deps/paste-4e2df2eed4a64c20)
+
+running 7 tests
+test idle_paste_and_split_terminators_preserve_the_input_boundary ... ok
+test escape_like_paste_contents_do_not_swallow_the_terminator_or_become_replies ... ok
+test genuine_paste_boundaries_survive_unicode_literal_headers_and_escape_overlap ... ok
+test transport_paste_keeps_escape_overlap_and_partial_end_across_idle ... ok
+test bounded_literal_header_and_escape_corpus_has_only_genuine_paste_boundaries ... ok
+test unicode_and_closing_markers_survive_decoded_transport_fragment_boundaries ... ok
+test c1_continuations_remain_data_across_successive_decoded_wrappers ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+     Running tests/paste_boundary.rs (target/debug/deps/paste_boundary-cc411c7876e70705)
+
+running 1 test
+test real_integration_demo_keeps_paste_opaque_and_resumes_export_and_quit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.10s
+
+     Running tests/presentation.rs (target/debug/deps/presentation-84d4695e11d1d288)
+
+running 10 tests
+test clipping_drops_non_printing_side_effects_and_handles_unterminated_sequences ... ok
+test row_diff_only_writes_changed_rows_and_erases_removed_rows ... ok
+test clipping_preserves_graphemes_cells_and_closes_terminal_styles ... ok
+test compact_overview_keeps_all_categories_and_simultaneous_visuals ... ok
+test paused_details_pages_remain_navigable_and_keep_all_categories ... ok
+test screenshot_is_a_fixed_reproducible_frame_without_live_controls ... ok
+test typography_pages_emit_every_underline_style_and_selective_resets ... ok
+test raw_demo_canvas_is_blank_bounded_and_separate_from_matrix ... ok
+test color_laboratory_really_emits_all_256_foreground_and_background_entries ... ok
+test every_demo_remains_bounded_across_resize_boundaries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s
+
+     Running tests/protocol.rs (target/debug/deps/protocol-f5a831141186216f)
+
+running 23 tests
+test c1_frames_do_not_steal_utf8_continuations_in_text_or_strings ... ok
+test bel_only_terminates_osc_and_st_terminates_other_strings ... ok
+test discovery_is_read_only_and_correlation_leaves_unknown_input_available ... ok
+test compound_termcap_replies_are_validated_and_correlated_atomically ... ok
+test deadline_boundary_rejects_late_replies_and_unknown_parameters ... ok
+test fragmented_alt_utf8_is_one_escape_event_not_a_c1_reply ... ok
+test fragmented_replies_preserve_interleaved_utf8_and_keys ... ok
+test complete_query_batch_can_finish_without_waiting_for_deadline ... ok
+test explicit_negative_responses_are_not_timeout_negatives ... ok
+test graphics_errors_are_printable_protocol_messages_not_assumed_brand_support ... ok
+test malformed_semantics_do_not_consume_pending_requests ... ok
+test nested_tmux_wrappers_are_unquoted_but_unknown_strings_survive ... ok
+test mode_and_cursor_reports_preserve_states_not_rendering_claims ... ok
+test related_mode_queries_cannot_erase_an_existing_advertisement ... ok
+test evidence_verdicts_and_schema_survive_export_and_import ... ok
+test every_fragment_boundary_has_identical_framing ... ok
+test timeout_cancel_and_malformed_recover_without_inventing_replies ... ok
+test visual_failure_has_precedence_without_erasing_objective_evidence ... ok
+test weaker_evidence_and_visual_pass_do_not_erase_objective_observations ... ok
+test csi_overflow_discard_does_not_turn_tail_into_keystrokes ... ok
+test reports_have_bounded_sanitized_evidence ... ok
+test escape_overflow_uses_escape_final_range_and_resumes_input ... ok
+test exact_limit_and_overflow_discard_until_terminator ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/resize.rs (target/debug/deps/resize-ef26bc0e56e24f91)
+
+running 6 tests
+test exercise_subprocess ... ignored, isolated controlling-PTY fixture
+test physically_small_viewport_emits_no_request_despite_stale_report_dimensions ... ok
+test a_resize_round_trip_invalidates_coordinates_even_when_dimensions_match_again ... ok
+test shrinking_with_an_outstanding_cpr_preserves_pending_and_deferred_input ... ok
+test suite_uses_physical_size_and_distinguishes_consumed_from_timed_out_cpr ... ok
+test probe_check_widening_during_autowrap_cpr_never_fails_stale_geometry ... ok
+
+test result: ok. 5 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 1.04s
+
+     Running tests/stream.rs (target/debug/deps/stream-b7ed3f67fcda5e61)
+
+running 9 tests
+test decoded_mouse_protocol_distinguishes_legacy_input_from_sgr_evidence ... ok
+test query_timeout_preserves_partial_paste_terminator_without_expiring_the_session_parser ... ok
+test malformed_legacy_payload_controls_are_never_replayed_as_keys_or_framing ... ok
+test query_response_claims_one_cpr_and_preserves_mouse_keys_unknown_replies_and_partial_csi ... ok
+test legacy_mouse_decoding_preserves_release_motion_wheel_modifiers_and_byte_coordinates ... ok
+test utf8_scalars_survive_both_directions_of_query_parser_ownership ... ok
+test expired_legacy_mouse_quarantines_the_late_suffix_across_repeated_timeouts ... ok
+test utf8_legacy_mouse_coordinates_remain_opaque_to_hotkeys_and_survive_timeout ... ok
+test fragmented_legacy_mouse_coordinates_never_become_consent_or_exit_keys ... ok
+
+
+[Showing lines 1-300 of 894. Use :301 to continue]
+Exit: 0
+Wall time: 72.95 seconds

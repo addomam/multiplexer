@@ -21,6 +21,8 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 static SIGNAL_STOP: AtomicBool = AtomicBool::new(false);
+const DIAGNOSTIC_LIMIT: usize = 20;
+const DIAGNOSTIC_TEXT_LIMIT: usize = 16 * 1024;
 extern "C" fn signal_stop(_: libc::c_int) {
     SIGNAL_STOP.store(true, Ordering::Relaxed);
 }
@@ -41,10 +43,12 @@ struct Entry {
     project_id: String,
     parent_id: Option<String>,
     cwd: PathBuf,
+    agent_instance: Option<String>,
 }
 struct State {
     store: Store,
     terminals: BTreeMap<String, Entry>,
+    opening_terminals: usize,
     seq: u64,
     events: VecDeque<Value>,
     event_bytes: usize,
@@ -61,11 +65,32 @@ struct HookJob {
 }
 struct Daemon {
     state: Mutex<State>,
+    controls: Mutex<crate::control::Registry>,
+    pending_launches: Mutex<BTreeMap<String, LaunchControl>>,
+    codex: crate::codex::Broker,
     changed: Condvar,
     integration: Arc<Integration>,
     git: GitCache,
     stopping: AtomicBool,
     hook_jobs: std::sync::mpsc::SyncSender<Option<HookJob>>,
+}
+struct LaunchControl {
+    controller: Value,
+    grant: Value,
+    authority: Arc<crate::control::Authority>,
+    retire: bool,
+}
+struct Opened {
+    terminal: Value,
+    control: Option<Value>,
+}
+struct OpenContext {
+    admission: TerminalAdmission,
+    project_id: String,
+    cwd: PathBuf,
+    env: BTreeMap<String, String>,
+    freshness: Value,
+    command: Option<String>,
 }
 struct ProjectOpening {
     daemon: Arc<Daemon>,
@@ -75,6 +100,43 @@ impl Drop for ProjectOpening {
     fn drop(&mut self) {
         self.daemon.state.lock().opening_projects.remove(&self.id);
         self.daemon.changed.notify_all();
+    }
+}
+struct TerminalAdmission {
+    daemon: Arc<Daemon>,
+    active: bool,
+}
+impl Drop for TerminalAdmission {
+    fn drop(&mut self) {
+        if self.active {
+            self.daemon.state.lock().opening_terminals -= 1;
+            self.daemon.changed.notify_all();
+        }
+    }
+}
+struct SocketFile(PathBuf);
+impl Drop for SocketFile {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+fn diagnostic_text(text: &str) -> &str {
+    let mut end = text.len().min(DIAGNOSTIC_TEXT_LIMIT);
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
+}
+fn bound_diagnostic(value: &mut Value) {
+    match value {
+        Value::String(text) if text.len() > DIAGNOSTIC_TEXT_LIMIT => {
+            let end = diagnostic_text(text).len();
+            text.truncate(end);
+            text.shrink_to_fit();
+        }
+        Value::Array(values) => values.iter_mut().for_each(bound_diagnostic),
+        Value::Object(fields) => fields.values_mut().for_each(bound_diagnostic),
+        _ => {}
     }
 }
 struct ByteCount(usize);
@@ -105,6 +167,44 @@ impl Daemon {
             }
         }
     }
+    fn diagnostic(state: &mut State, kind: &str, terminal: Option<&str>, mut data: Value) {
+        bound_diagnostic(&mut data);
+        if state.diagnostics.len() == DIAGNOSTIC_LIMIT {
+            state.diagnostics.remove(0);
+        }
+        state.diagnostics.push(data.clone());
+        Self::emit(state, kind, terminal, data);
+    }
+    fn launch_failure(&self, id: &str, command: Option<&str>, error: &anyhow::Error) {
+        let message = error.to_string();
+        let mut state = self.state.lock();
+        Self::diagnostic(
+            &mut state,
+            "launch-failed",
+            Some(id),
+            json!({"terminal":id,"message":diagnostic_text(&message),
+                "command":command.map(diagnostic_text),
+                "command_truncated":command.is_some_and(|source| source.len() > DIAGNOSTIC_TEXT_LIMIT)}),
+        );
+        self.changed.notify_all();
+    }
+    fn reserve_terminal(self: &Arc<Self>) -> Result<TerminalAdmission> {
+        let mut state = self.state.lock();
+        if self.stopping.load(Ordering::Acquire) {
+            bail!("shutdown: daemon is stopping");
+        }
+        let limit = state.store.config.terminal_limit;
+        if state.terminals.len() + state.opening_terminals >= limit {
+            bail!(
+                "terminal-limit: retained terminals and pending opens reached limit {limit}; remove an exited terminal or raise terminal_limit"
+            );
+        }
+        state.opening_terminals += 1;
+        Ok(TerminalAdmission {
+            daemon: self.clone(),
+            active: true,
+        })
+    }
     fn resolve(state: &State, selector: &str) -> Result<String> {
         if state.terminals.contains_key(selector) {
             return Ok(selector.to_owned());
@@ -129,7 +229,7 @@ impl Daemon {
         let id = Self::resolve(&state, selector)?;
         Ok(state.terminals[&id].clone())
     }
-    fn terminal_snapshot(&self, entry: &Entry) -> Value {
+    fn terminal_snapshot(&self, entry: &Entry) -> Result<Value> {
         let mut snapshot = entry.terminal.status();
         snapshot["id"] = entry.terminal.id.clone().into();
         snapshot["name"] = entry.name.clone().into();
@@ -141,25 +241,49 @@ impl Daemon {
             .unwrap_or_else(|| entry.cwd.clone());
         snapshot["workspace"] = json!({"cwd":cwd,"git":self.git.get(&cwd)});
         snapshot["integration"] = self.integration.state(&entry.terminal.id);
-        snapshot
+        snapshot["ownership"] = self.controls.lock().snapshot(&entry.terminal.id);
+        if let Some(instance) = &entry.agent_instance {
+            snapshot["agent"] = self.codex.inspect(&json!({
+                "version":1,"op":"agent-inspect",
+                "terminal":entry.terminal.id,"instance_id":instance
+            }))?;
+        }
+        Ok(snapshot)
     }
-    fn snapshot(&self) -> Value {
+    fn snapshot(&self) -> Result<Value> {
         let state = self.state.lock();
         let terminals: Vec<_> = state
             .terminals
             .values()
             .map(|entry| self.terminal_snapshot(entry))
-            .collect();
-        json!({"seq":state.seq,"detach_generation":state.detach_generation,"config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),"terminals":terminals,"diagnostics":state.diagnostics})
+            .collect::<Result<_>>()?;
+        Ok(
+            json!({"seq":state.seq,"detach_generation":state.detach_generation,"config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),"terminals":terminals,"diagnostics":state.diagnostics}),
+        )
     }
-    fn execute_source(&self, entry: &Entry, source: &str, queue: bool) -> Result<Value> {
+    fn execute_source(
+        &self,
+        entry: &Entry,
+        source: &str,
+        queue: bool,
+        authority: Arc<crate::control::Authority>,
+    ) -> Result<Value> {
+        authority.check()?;
         self.integration.preflight(&entry.terminal.id, queue)?;
         if queue {
-            return self.integration.execute(&entry.terminal.id, source, true);
+            return self.integration.execute_authorized(
+                &entry.terminal.id,
+                source,
+                true,
+                authority,
+            );
         }
         let _input = entry.terminal.input_gate.lock();
-        entry.terminal.input_confirmed(Vec::new())?;
-        self.integration.execute(&entry.terminal.id, source, false)
+        entry
+            .terminal
+            .input_confirmed_authorized(Vec::new(), authority.clone())?;
+        self.integration
+            .execute_authorized(&entry.terminal.id, source, false, authority)
     }
     fn shell_control(&self, request: &Value) -> Result<Value> {
         let entry = self.entry(request)?;
@@ -167,6 +291,12 @@ impl Daemon {
         let execution = event["execution_id"]
             .as_str()
             .context("invalid-request: execution ID required")?;
+        let authority = self
+            .integration
+            .execution_authority(&entry.terminal.id, execution)?;
+        if authority.check().is_err() {
+            return Ok(json!({"revoked":true}));
+        }
         let generation = event["prompt_generation"]
             .as_u64()
             .context("invalid-request: prompt generation required")?;
@@ -180,6 +310,9 @@ impl Daemon {
         } else {
             None
         };
+        if authority.check().is_err() {
+            return Ok(json!({"revoked":true}));
+        }
         if event["pid"] != entry.terminal.pid
             || !self
                 .integration
@@ -187,11 +320,23 @@ impl Daemon {
         {
             return Ok(json!({"deferred":true}));
         }
+        let confirmed = |bytes| -> Result<bool> {
+            match entry
+                .terminal
+                .input_confirmed_authorized(bytes, authority.clone())
+            {
+                Ok(()) => Ok(true),
+                Err(_) if authority.check().is_err() => Ok(false),
+                Err(error) => Err(error),
+            }
+        };
         if event["kind"] == "shell-epoch" {
             if queued {
                 // All previously accepted bytes must reach the PTY before ZLE
                 // repeats its native buffer/typeahead check.
-                entry.terminal.input_confirmed(Vec::new())?;
+                if !confirmed(Vec::new())? {
+                    return Ok(json!({"revoked":true}));
+                }
             }
             return Ok(json!({"input_epoch":entry.terminal.input_epoch.load(Ordering::Acquire)}));
         }
@@ -201,9 +346,9 @@ impl Daemon {
         if expected != entry.terminal.input_epoch.load(Ordering::Acquire) {
             return Ok(json!({"deferred":true}));
         }
-        entry
-            .terminal
-            .input_confirmed(format!("\x1b[amux-{}~", entry.terminal.id).into_bytes())?;
+        if !confirmed(format!("\x1b[amux-{}~", entry.terminal.id).into_bytes())? {
+            return Ok(json!({"revoked":true}));
+        }
         Ok(json!({"woke":true}))
     }
     fn hooks(
@@ -222,18 +367,131 @@ impl Daemon {
             env,
             kind,
         })) {
+            let (message, job) = match error {
+                std::sync::mpsc::TrySendError::Full(job) => ("hook queue is full", job),
+                std::sync::mpsc::TrySendError::Disconnected(job) => ("hook worker stopped", job),
+            };
             let mut state = self.state.lock();
-            let diagnostic = json!({"kind":kind,"message":format!("hook-backpressure: {error}")});
-            state.diagnostics.push(diagnostic.clone());
-            Self::emit(&mut state, "hook", None, diagnostic);
+            if let Some(job) = job {
+                for (index, hook) in job.hooks.iter().enumerate() {
+                    Self::diagnostic(
+                        &mut state,
+                        "hook",
+                        None,
+                        json!({"kind":kind,"message":format!("hook-backpressure: {message}"),
+                            "index":index,"command":diagnostic_text(&hook.source),
+                            "command_truncated":hook.source.len() > DIAGNOSTIC_TEXT_LIMIT}),
+                    );
+                }
+            }
             self.changed.notify_all();
         }
     }
-    fn open(self: &Arc<Self>, request: &Value) -> Result<Value> {
-        if self.stopping.load(Ordering::Acquire) {
-            bail!("shutdown: daemon is stopping");
+    fn launch_control(&self, terminal: &str, caller: Option<&Value>) -> Result<LaunchControl> {
+        let mut controls = self.controls.lock();
+        let controller = if let Some(caller) = caller {
+            caller.clone()
+        } else {
+            controls.create(&json!({
+                "version":1,"op":"controller-create","role":"external","label":"automatic launch"
+            }), 0)?["controller"].clone()
+        };
+        let observed = controls.snapshot(terminal);
+        let grant = controls.claim(&json!({
+            "version":1,"op":"ownership-claim","controller":controller,"terminal":terminal,
+            "observed":observed["observed"],
+            "mode":"cooperative","when":{"kind":"now"}
+        }))?;
+        let authority = controls.authorize(terminal, &grant["control"], 0)?;
+        Ok(LaunchControl {
+            controller,
+            grant,
+            authority,
+            retire: caller.is_none(),
+        })
+    }
+
+    fn retire_settled_launch(&self, terminal: &str) {
+        let launch = {
+            let mut pending = self.pending_launches.lock();
+            if !pending
+                .get(terminal)
+                .is_some_and(|launch| launch.authority.settled_or_ended())
+            {
+                return;
+            }
+            pending.remove(terminal).expect("pending private launch")
+        };
+        let mut controls = self.controls.lock();
+        // Normal capability validation makes a late release harmless after
+        // force. Closing this private controller never closes the newer owner.
+        let _ = controls.handle(&json!({
+            "version":1,"op":"control-handle","handle":launch.grant["control"],"method":"release"
+        }), 0);
+        let _ = controls.handle(
+            &json!({
+                "version":1,"op":"control-handle","handle":launch.controller,"method":"close"
+            }),
+            0,
+        );
+    }
+
+    fn discard_unpublished(&self, terminal: &str, launch: Option<&LaunchControl>) {
+        {
+            let mut controls = self.controls.lock();
+            controls.remove_target(terminal);
+            if let Some(launch) = launch.filter(|launch| launch.retire) {
+                let _ = controls.handle(&json!({
+                    "version":1,"op":"control-handle","handle":launch.controller,"method":"close"
+                }), 0);
+            }
         }
-        let (project_id, cwd, mut env, freshness, command) = {
+        self.codex.end_terminal(terminal);
+        self.integration.remove(terminal);
+    }
+
+    fn agent_open(self: &Arc<Self>, request: &Value, connection: u64) -> Result<Value> {
+        let controller = &request["controller"];
+        let recovered = self.controls.lock().handle(
+            &json!({
+                "version":1,"op":"control-handle","handle":controller,"method":"read"
+            }),
+            connection,
+        )?;
+        if recovered["kind"] != "controller-state" {
+            bail!("wrong-handle-kind: agent-open requires a controller");
+        }
+        let context = self.open_context(request)?;
+        let mut launch_request = request.clone();
+        launch_request["cwd"] = json!(&context.cwd);
+        let prepared = self.codex.prepare(&launch_request)?;
+        let opened = self.open_inner(request, context, Some((controller, &prepared)))?;
+        self.flush_runtime_events();
+        let mut grant = opened
+            .control
+            .context("internal: managed launch control missing")?;
+        let seq = self.state.lock().seq;
+        grant["seq"] = seq.into();
+        let mut state = self.codex.inspect(&json!({
+            "version":1,"op":"agent-inspect",
+            "terminal":opened.terminal["id"],"instance_id":prepared.instance_id
+        }))?;
+        state["seq"] = seq.into();
+        Ok(
+            json!({"terminal":opened.terminal,"instance_id":prepared.instance_id,
+            "control":grant,"state":state,"seq":seq}),
+        )
+    }
+
+    fn open(self: &Arc<Self>, request: &Value) -> Result<Value> {
+        let context = self.open_context(request)?;
+        self.open_inner(request, context, None)
+            .map(|opened| opened.terminal)
+    }
+
+    fn open_context(self: &Arc<Self>, request: &Value) -> Result<OpenContext> {
+        let admission = self.reserve_terminal()?;
+        let (project_id, cwd, env, freshness, command) = {
             let state = self.state.lock();
             let source = if let Some(selector) = request["source"].as_str() {
                 Some(Self::resolve(&state, selector)?)
@@ -302,14 +560,79 @@ impl Daemon {
         if !cwd.is_dir() {
             bail!("invalid-directory: {}", cwd.display());
         }
+        Ok(OpenContext {
+            admission,
+            project_id,
+            cwd,
+            env,
+            freshness,
+            command,
+        })
+    }
+
+    fn open_inner(
+        self: &Arc<Self>,
+        request: &Value,
+        context: OpenContext,
+        managed: Option<(&Value, &crate::codex::Prepared)>,
+    ) -> Result<Opened> {
+        let OpenContext {
+            mut admission,
+            project_id,
+            cwd,
+            mut env,
+            freshness,
+            mut command,
+        } = context;
+        let agent_instance = managed.map(|(_, prepared)| prepared.instance_id.clone());
+        if let Some((_, prepared)) = managed {
+            command = Some(managed_frontend_source(prepared));
+        }
         let id = Uuid::new_v4().to_string();
-        let launch = self.integration.prepare(&id)?;
+        let launch = match self.integration.prepare(&id) {
+            Ok(launch) => launch,
+            Err(error) => {
+                self.integration.remove(&id);
+                self.launch_failure(
+                    &id,
+                    if managed.is_some() {
+                        Some("managed Codex frontend")
+                    } else {
+                        command.as_deref()
+                    },
+                    &error,
+                );
+                return Err(error);
+            }
+        };
         let original = env.get("ZDOTDIR").cloned();
         env.extend(launch);
         if let Some(zdotdir) = original {
             env.insert("AMUX_ORIGINAL_ZDOTDIR".into(), zdotdir);
         } else {
             env.remove("AMUX_ORIGINAL_ZDOTDIR");
+        }
+        self.controls.lock().add_target(&id);
+        let startup_control = if command.is_some() {
+            match self.launch_control(&id, managed.map(|(controller, _)| controller)) {
+                Ok(control) => Some(control),
+                Err(error) => {
+                    self.discard_unpublished(&id, None);
+                    return Err(error);
+                }
+            }
+        } else {
+            None
+        };
+        let initial_control = startup_control
+            .as_ref()
+            .filter(|control| !control.retire)
+            .map(|control| control.grant.clone());
+        if let Some(instance) = &agent_instance
+            && let Err(error) = self.codex.bind(instance, &id)
+        {
+            self.discard_unpublished(&id, startup_control.as_ref());
+            return Err(error);
         }
         let weak = Arc::downgrade(self);
         let exit_id = id.clone();
@@ -319,6 +642,10 @@ impl Daemon {
             &env,
             Arc::new(move |status| {
                 if let Some(daemon) = weak.upgrade() {
+                    daemon.controls.lock().end_target(&exit_id);
+                    daemon.retire_settled_launch(&exit_id);
+                    daemon.codex.end_terminal(&exit_id);
+                    daemon.flush_runtime_events();
                     let mut state = daemon.state.lock();
                     Self::emit(
                         &mut state,
@@ -332,7 +659,16 @@ impl Daemon {
         ) {
             Ok(terminal) => terminal,
             Err(error) => {
-                self.integration.remove(&id);
+                self.discard_unpublished(&id, startup_control.as_ref());
+                self.launch_failure(
+                    &id,
+                    if managed.is_some() {
+                        Some("managed Codex frontend")
+                    } else {
+                        command.as_deref()
+                    },
+                    &error,
+                );
                 return Err(error);
             }
         };
@@ -341,7 +677,7 @@ impl Daemon {
             if self.stopping.load(Ordering::Acquire) {
                 drop(state);
                 terminal.close();
-                self.integration.remove(&id);
+                self.discard_unpublished(&id, startup_control.as_ref());
                 bail!("shutdown: daemon is stopping");
             }
             let project = state.store.projects.get_mut(&project_id).unwrap();
@@ -364,11 +700,14 @@ impl Daemon {
                 project_id: project_id.clone(),
                 parent_id: parent,
                 cwd: cwd.clone(),
+                agent_instance,
             };
             if project.main_terminal.is_none() {
                 project.main_terminal = Some(id.clone());
             }
             state.terminals.insert(id.clone(), entry.clone());
+            state.opening_terminals -= 1;
+            admission.active = false;
             Self::emit(
                 &mut state,
                 "terminal-opened",
@@ -382,30 +721,64 @@ impl Daemon {
         if let Some(command) = command {
             let daemon = self.clone();
             let launch_id = id.clone();
+            let managed_launch = managed.is_some();
             thread::spawn(move || {
                 let deadline = Instant::now() + Duration::from_secs(15);
                 while daemon.integration.awaiting_initial_prompt(&launch_id)
+                    && startup_control
+                        .as_ref()
+                        .is_some_and(|launch| launch.authority.check().is_ok())
                     && Instant::now() < deadline
                     && !daemon.stopping.load(Ordering::Relaxed)
                 {
                     thread::sleep(Duration::from_millis(25));
                 }
-                let result = daemon
-                    .entry(&json!({"terminal":launch_id}))
-                    .and_then(|entry| daemon.execute_source(&entry, &command, false));
+                let result = if daemon.stopping.load(Ordering::Acquire) {
+                    Err(anyhow::anyhow!("shutdown: daemon is stopping"))
+                } else {
+                    daemon
+                        .entry(&json!({"terminal":launch_id}))
+                        .and_then(|entry| {
+                            daemon.execute_source(
+                                &entry,
+                                &command,
+                                false,
+                                startup_control
+                                    .as_ref()
+                                    .expect("launch authority")
+                                    .authority
+                                    .clone(),
+                            )
+                        })
+                };
+                if let Some(launch) = startup_control.filter(|launch| launch.retire) {
+                    daemon
+                        .pending_launches
+                        .lock()
+                        .insert(launch_id.clone(), launch);
+                    // Also covers settlement/end racing ahead of registration.
+                    daemon.retire_settled_launch(&launch_id);
+                }
+                if managed_launch && let Err(error) = &result {
+                    daemon.codex.launch_failed(&launch_id, &error.to_string());
+                }
+                daemon.flush_runtime_events();
                 let mut state = daemon.state.lock();
                 if let Err(error) = result {
-                    let data =
-                        json!({"terminal":launch_id,"message":error.to_string(),"command":command});
-                    state.diagnostics.push(data.clone());
-                    Self::emit(&mut state, "launch-failed", Some(&launch_id), data);
+                    let data = json!({"terminal":launch_id,"message":error.to_string(),
+                        "command":if managed_launch { "managed Codex frontend" } else { diagnostic_text(&command) },
+                        "command_truncated":!managed_launch && command.len() > DIAGNOSTIC_TEXT_LIMIT});
+                    Self::diagnostic(&mut state, "launch-failed", Some(&launch_id), data);
                 }
                 daemon.changed.notify_all();
             });
         }
-        let mut result = self.terminal_snapshot(&entry);
+        let mut result = self.terminal_snapshot(&entry)?;
         result["source_freshness"] = freshness;
-        Ok(result)
+        Ok(Opened {
+            terminal: result,
+            control: initial_control,
+        })
     }
     fn reparent(&self, entry: &Entry, parent: Option<&str>) -> Result<Value> {
         let id = &entry.terminal.id;
@@ -439,7 +812,7 @@ impl Daemon {
         self.changed.notify_all();
         Ok(json!({"id":id,"parent_id":parent}))
     }
-    fn events(&self, after: u64, timeout: Duration) -> Value {
+    fn events(&self, after: u64, timeout: Duration) -> Result<Value> {
         let mut state = self.state.lock();
         if state.seq <= after && !self.stopping.load(Ordering::Relaxed) {
             self.changed.wait_for(&mut state, timeout);
@@ -459,9 +832,9 @@ impl Daemon {
         drop(state);
         let mut result = json!({"seq":seq,"gap":gap,"events":events});
         if gap {
-            result["snapshot"] = self.snapshot();
+            result["snapshot"] = self.snapshot()?;
         }
-        result
+        Ok(result)
     }
     fn wait_state(&self, request: &Value) -> Result<Value> {
         let entry = self.entry(request)?;
@@ -488,7 +861,7 @@ impl Daemon {
                 .terminals
                 .get(&entry.terminal.id)
                 .context("not-found: terminal was removed")?;
-            let current = self.terminal_snapshot(current_entry);
+            let current = self.terminal_snapshot(current_entry)?;
             if let Some(cursor) = after {
                 if state.events.front().is_some_and(|event| {
                     cursor.saturating_add(1) < event["seq"].as_u64().unwrap_or(0)
@@ -568,7 +941,20 @@ impl Daemon {
             );
         }
     }
-    fn dispatch(self: &Arc<Self>, request: Value) -> Result<Value> {
+    fn flush_runtime_events(&self) {
+        // Never hold registry/PTY locks while taking topology/event ownership.
+        let mut events = self.controls.lock().take_events();
+        events.extend(self.codex.take_events());
+        if events.is_empty() {
+            return;
+        }
+        let mut state = self.state.lock();
+        for (kind, terminal, data) in events {
+            Self::emit(&mut state, &kind, Some(&terminal), data);
+        }
+        self.changed.notify_all();
+    }
+    fn dispatch(self: &Arc<Self>, request: Value, connection: u64) -> Result<Value> {
         if request["version"] != 1 {
             bail!("unsupported-version: API version 1 required");
         }
@@ -576,9 +962,102 @@ impl Daemon {
             .as_str()
             .context("invalid-request: op required")?;
         match op {
-            "snapshot" | "list" => Ok(self.snapshot()),
+            "controller-create" | "ownership-claim" | "control-handle" => {
+                let mut result = {
+                    let mut controls = self.controls.lock();
+                    // Only a validated original attachment view may produce
+                    // terminal focus reports. These are not human activity.
+                    let focus = if op == "control-handle" && request["method"] == "view" {
+                        request["view"]["terminal"].as_str().and_then(|terminal| {
+                            let read = controls
+                                .handle(
+                                    &json!({
+                                        "version":1,"op":"control-handle",
+                                        "handle":request["handle"],"method":"read"
+                                    }),
+                                    connection,
+                                )
+                                .ok()?;
+                            let snapshot = controls.snapshot(terminal);
+                            let previous = snapshot["views"]
+                                .as_array()?
+                                .iter()
+                                .find(|view| view["controller_id"] == read["controller_id"]);
+                            let focused = request["view"]["focused"].as_bool()?;
+                            if previous.is_some_and(|view| view["focused"] == focused) {
+                                return None;
+                            }
+                            let control = read["controls"]
+                                .as_array()?
+                                .iter()
+                                .find(|grant| grant["terminal"] == terminal)?;
+                            let authority =
+                                controls.authorize(terminal, &control["control"], 0).ok()?;
+                            Some((terminal.to_owned(), focused, authority))
+                        })
+                    } else {
+                        None
+                    };
+                    let result = match op {
+                        "controller-create" => controls.create(&request, connection),
+                        "ownership-claim" => controls.claim(&request),
+                        _ => controls.handle(&request, connection),
+                    };
+                    drop(controls);
+                    if result.is_ok()
+                        && let Some((terminal, focused, authority)) = focus
+                    {
+                        let entry = self.state.lock().terminals.get(&terminal).cloned();
+                        if let Some(entry) = entry
+                            && entry.terminal.screen(0, Some(0))["modes"]["focus_reporting"] == true
+                        {
+                            // A concurrent revocation must drop this report too.
+                            let _ = entry.terminal.input_authorized(
+                                if focused {
+                                    b"\x1b[I".to_vec()
+                                } else {
+                                    b"\x1b[O".to_vec()
+                                },
+                                authority,
+                            );
+                        }
+                    }
+                    result
+                }?;
+                self.flush_runtime_events();
+                result["seq"] = self.state.lock().seq.into();
+                if result["kind"] == "controller-state" {
+                    let seq = result["seq"].clone();
+                    if let Some(controls) = result["controls"].as_array_mut() {
+                        for control in controls {
+                            control["seq"] = seq.clone();
+                        }
+                    }
+                }
+                Ok(result)
+            }
+            "snapshot" | "list" => self.snapshot(),
             "open" => self.open(&request),
-            "state" => Ok(self.terminal_snapshot(&self.entry(&request)?)),
+            "agent-open" => self.agent_open(&request, connection),
+            "agent-inspect" => {
+                let mut result = self.codex.inspect(&request)?;
+                result["seq"] = self.state.lock().seq.into();
+                Ok(result)
+            }
+            "agent-prompt" | "agent-answer" | "agent-permission" | "agent-interrupt" => {
+                let terminal = request["target"]["terminal"]
+                    .as_str()
+                    .context("invalid-request: exact agent target terminal required")?;
+                let authority = self
+                    .controls
+                    .lock()
+                    .authorize(terminal, &request["control"], 0)?;
+                let mut result = self.codex.mutate(op, &request, authority)?;
+                self.flush_runtime_events();
+                result["seq"] = self.state.lock().seq.into();
+                Ok(result)
+            }
+            "state" => self.terminal_snapshot(&self.entry(&request)?),
             "screen" => {
                 let entry = self.entry(&request)?;
                 Ok(entry.terminal.screen_update(
@@ -601,16 +1080,39 @@ impl Daemon {
                 Ok(entry.terminal.status())
             }
             "input" => {
+                validate_mutation_fields(
+                    &request,
+                    &[
+                        "version",
+                        "op",
+                        "persistent",
+                        "terminal",
+                        "control",
+                        "text",
+                        "paste",
+                        "bytes",
+                        "key",
+                    ],
+                )?;
+                let terminal = request["terminal"]
+                    .as_str()
+                    .context("invalid-request: exact terminal lifetime ID required")?;
+                let authority =
+                    self.controls
+                        .lock()
+                        .authorize(terminal, &request["control"], connection)?;
                 let entry = self.entry(&request)?;
                 let _input = entry.terminal.input_gate.lock();
                 if let Some(text) = request["text"].as_str() {
                     if request["paste"] == true {
-                        entry.terminal.paste(text)?;
+                        entry.terminal.paste_authorized(text, authority.clone())?;
                     } else {
-                        entry.terminal.input(text.as_bytes().to_vec())?;
+                        entry
+                            .terminal
+                            .input_authorized(text.as_bytes().to_vec(), authority.clone())?;
                     }
                 } else if let Some(bytes) = request["bytes"].as_array() {
-                    entry.terminal.input(
+                    entry.terminal.input_authorized(
                         bytes
                             .iter()
                             .map(|byte| {
@@ -620,12 +1122,14 @@ impl Daemon {
                                     .context("invalid-input: bytes must be 0..255")
                             })
                             .collect::<Result<_>>()?,
+                        authority.clone(),
                     )?;
                 } else if let Some(key) = request["key"].as_str() {
                     let mode = entry.terminal.screen(0, Some(0))["modes"].clone();
-                    entry
-                        .terminal
-                        .input(key_bytes(key, mode["application_cursor"] == true)?)?;
+                    entry.terminal.input_authorized(
+                        key_bytes(key, mode["application_cursor"] == true)?,
+                        authority.clone(),
+                    )?;
                 } else {
                     bail!("invalid-input: text, bytes or key required");
                 }
@@ -638,10 +1142,32 @@ impl Daemon {
                     || request["key"].is_string()
                 {
                     entry.terminal.input_epoch.fetch_add(1, Ordering::Release);
+                    // Rejected/backpressured payloads never count as activity.
+                    // A concurrent revocation may win; input is never replayed.
+                    let _ = authority.activity(connection);
                 }
                 Ok(json!({"accepted":true}))
             }
             "execute" => {
+                validate_mutation_fields(
+                    &request,
+                    &[
+                        "version",
+                        "op",
+                        "persistent",
+                        "terminal",
+                        "control",
+                        "source",
+                        "queue",
+                    ],
+                )?;
+                let terminal = request["terminal"]
+                    .as_str()
+                    .context("invalid-request: exact terminal lifetime ID required")?;
+                let authority = self
+                    .controls
+                    .lock()
+                    .authorize(terminal, &request["control"], 0)?;
                 let entry = self.entry(&request)?;
                 self.execute_source(
                     &entry,
@@ -649,6 +1175,7 @@ impl Daemon {
                         .as_str()
                         .context("invalid-request: source required")?,
                     request["queue"] == true,
+                    authority,
                 )
             }
             "report" => {
@@ -661,13 +1188,24 @@ impl Daemon {
                 let selector = request["terminal"]
                     .as_str()
                     .context("invalid-request: terminal required")?;
-                let mut state = self.state.lock();
-                let id = if state.terminals.contains_key(selector) {
+                let state = self.state.lock();
+                let id = if state.terminals.contains_key(selector)
+                    || Uuid::parse_str(selector).is_ok()
+                {
                     selector.to_owned()
                 } else {
                     Self::resolve(&state, selector).unwrap_or_else(|_| selector.to_owned())
                 };
-                let result = self.integration.report(&id, request["event"].clone())?;
+                drop(state);
+                let result = self.integration.report(&id, request["event"].clone());
+                if matches!(
+                    request["event"]["kind"].as_str(),
+                    Some("execution-accepted" | "execution-rejected")
+                ) {
+                    self.retire_settled_launch(&id);
+                }
+                let result = result?;
+                let mut state = self.state.lock();
                 Self::emit(
                     &mut state,
                     "integration",
@@ -717,6 +1255,8 @@ impl Daemon {
             }
             "close" => {
                 let entry = self.entry(&request)?;
+                self.controls.lock().end_target(&entry.terminal.id);
+                self.retire_settled_launch(&entry.terminal.id);
                 entry.terminal.close();
                 Ok(entry.terminal.status())
             }
@@ -725,6 +1265,7 @@ impl Daemon {
                 if entry.terminal.alive() {
                     bail!("alive: close terminal before removing it");
                 }
+                self.controls.lock().end_target(&entry.terminal.id);
                 entry.terminal.close();
                 let mut state = self.state.lock();
                 // Cleanup ran without the tree lock; ancestry may have changed meanwhile.
@@ -745,12 +1286,11 @@ impl Daemon {
                     .values()
                     .find(|terminal| terminal.project_id == entry.project_id)
                     .map(|terminal| terminal.terminal.id.clone());
-                if let Some(project) = state.store.projects.get_mut(&entry.project_id) {
-                    if project.main_terminal.as_deref() == Some(&entry.terminal.id) {
-                        project.main_terminal = next;
-                    }
+                if let Some(project) = state.store.projects.get_mut(&entry.project_id)
+                    && project.main_terminal.as_deref() == Some(&entry.terminal.id)
+                {
+                    project.main_terminal = next;
                 }
-                self.integration.remove(&entry.terminal.id);
                 Self::emit(
                     &mut state,
                     "terminal-removed",
@@ -758,12 +1298,16 @@ impl Daemon {
                     Value::Null,
                 );
                 self.changed.notify_all();
+                drop(state);
+                self.controls.lock().remove_target(&entry.terminal.id);
+                self.retire_settled_launch(&entry.terminal.id);
+                self.integration.remove(&entry.terminal.id);
                 Ok(json!({"removed":entry.terminal.id}))
             }
-            "events" => Ok(self.events(
+            "events" => self.events(
                 request["after"].as_u64().unwrap_or(0),
                 Duration::from_millis(request["timeout_ms"].as_u64().unwrap_or(30000).min(300000)),
-            )),
+            ),
             "wait" => self.wait_state(&request),
             "project-save" => {
                 let (id, cwd) = {
@@ -921,6 +1465,64 @@ impl Daemon {
         }
     }
 }
+fn managed_frontend_source(prepared: &crate::codex::Prepared) -> String {
+    let mut source = String::with_capacity(
+        prepared.command.len()
+            + 9
+            + prepared
+                .env
+                .iter()
+                .map(|(key, value)| key.len() + value.len() + 4)
+                .sum::<usize>(),
+    );
+    source.push_str("exec env");
+    for (key, value) in &prepared.env {
+        source.push_str(" '");
+        for part in [key.as_str(), "=", value.as_str()] {
+            for character in part.chars() {
+                if character == '\'' {
+                    source.push_str("'\\''");
+                } else {
+                    source.push(character);
+                }
+            }
+        }
+        source.push('\'');
+    }
+    source.push(' ');
+    source.push_str(&prepared.command);
+    source
+}
+
+fn validate_mutation_fields(request: &Value, allowed: &[&str]) -> Result<()> {
+    let fields = request
+        .as_object()
+        .context("invalid-request: object required")?;
+    if let Some(field) = fields
+        .keys()
+        .find(|field| !allowed.contains(&field.as_str()))
+    {
+        bail!("invalid-request: unknown mutation field {field}");
+    }
+    for field in ["persistent", "paste", "queue"] {
+        if let Some(value) = fields.get(field)
+            && !value.is_boolean()
+        {
+            bail!("invalid-request: {field} must be boolean");
+        }
+    }
+    for field in ["terminal", "text", "key", "source"] {
+        if let Some(value) = fields.get(field)
+            && !value.is_string()
+        {
+            bail!("invalid-request: {field} must be a string");
+        }
+    }
+    if fields.get("bytes").is_some_and(|value| !value.is_array()) {
+        bail!("invalid-request: bytes must be an array");
+    }
+    Ok(())
+}
 fn key_bytes(key: &str, app_cursor: bool) -> Result<Vec<u8>> {
     let prefix = if app_cursor { "\x1bO" } else { "\x1b[" };
     let bytes = match key.to_ascii_lowercase().as_str() {
@@ -944,7 +1546,15 @@ fn key_bytes(key: &str, app_cursor: bool) -> Result<Vec<u8>> {
     };
     Ok(bytes)
 }
-fn serve(daemon: Arc<Daemon>, stream: UnixStream) -> Result<()> {
+fn serve(daemon: Arc<Daemon>, stream: UnixStream, connection: u64) -> Result<()> {
+    struct Departure(Arc<Daemon>, u64);
+    impl Drop for Departure {
+        fn drop(&mut self) {
+            self.0.controls.lock().depart(self.1);
+            self.0.flush_runtime_events();
+        }
+    }
+    let _departure = Departure(daemon.clone(), connection);
     // Socket timeouts alone reset on each syscall; bound the whole frame even
     // when a client trickles bytes instead of completing a request.
     struct DeadlineIo {
@@ -1010,7 +1620,9 @@ fn serve(daemon: Arc<Daemon>, stream: UnixStream) -> Result<()> {
                 .map_err(anyhow::Error::from)
                 .and_then(|request| {
                     persistent = request["persistent"] == true;
-                    daemon.dispatch(request)
+                    let result = daemon.dispatch(request, connection);
+                    daemon.flush_runtime_events();
+                    result
                 })
         };
         let response = match result {
@@ -1065,6 +1677,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         fs::remove_file(socket)?;
     }
     let listener = UnixListener::bind(socket)?;
+    let _socket_file = SocketFile(socket.to_owned());
     fs::set_permissions(socket, fs::Permissions::from_mode(0o600))?;
     listener.set_nonblocking(true)?;
     let integration = Integration::new(runtime, socket, &std::env::current_exe()?)?;
@@ -1076,6 +1689,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         state: Mutex::new(State {
             store,
             terminals: BTreeMap::new(),
+            opening_terminals: 0,
             seq: 0,
             detach_generation: 0,
             events: VecDeque::new(),
@@ -1085,6 +1699,9 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
             opening_projects: std::collections::BTreeSet::new(),
         }),
         changed: Condvar::new(),
+        controls: Mutex::new(crate::control::Registry::new()),
+        pending_launches: Mutex::new(BTreeMap::new()),
+        codex: crate::codex::Broker::new(runtime)?,
         integration,
         git: GitCache::new(),
         stopping: AtomicBool::new(false),
@@ -1100,35 +1717,25 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 if daemon.stopping.load(Ordering::Acquire) {
                     break;
                 }
-                drop(daemon);
-                let mut diagnostics =
-                    projects::run_hooks(std::slice::from_ref(hook), &job.cwd, &job.env);
-                let Some(daemon) = weak.upgrade() else {
-                    return;
-                };
+                let mut diagnostics = projects::run_hooks(
+                    std::slice::from_ref(hook),
+                    &job.cwd,
+                    &job.env,
+                    &daemon.stopping,
+                );
                 let mut state = daemon.state.lock();
                 for diagnostic in &mut diagnostics {
                     diagnostic["index"] = index.into();
-                    for field in ["stdout", "stderr"] {
-                        if let Some(output) = diagnostic[field]
-                            .as_str()
-                            .filter(|output| output.len() > 65536)
-                        {
-                            let mut end = 65536;
-                            while !output.is_char_boundary(end) {
-                                end -= 1;
-                            }
-                            diagnostic[field] = output[..end].into();
-                            diagnostic["output_truncated"] = true.into();
-                        }
-                    }
+                    diagnostic["output_truncated"] = (diagnostic["output_truncated"] == true
+                        || ["stdout", "stderr"].iter().any(|field| {
+                            diagnostic[*field]
+                                .as_str()
+                                .is_some_and(|text| text.len() > DIAGNOSTIC_TEXT_LIMIT)
+                        }))
+                    .into();
+                    bound_diagnostic(diagnostic);
                     let data = json!({"kind":job.kind,"cwd":job.cwd,"diagnostic":diagnostic});
-                    Daemon::emit(&mut state, "hook", None, data.clone());
-                    state.diagnostics.push(data);
-                }
-                if state.diagnostics.len() > 20 {
-                    let excess = state.diagnostics.len() - 20;
-                    state.diagnostics.drain(..excess);
+                    Daemon::diagnostic(&mut state, "hook", None, data);
                 }
                 daemon.changed.notify_all();
             }
@@ -1170,7 +1777,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 let daemon = daemon.clone();
                 if let Err(error) = thread::Builder::new().spawn(move || {
                     let _slot = slot;
-                    let _ = serve(daemon, stream);
+                    let _ = serve(daemon, stream, next_client);
                 }) {
                     eprintln!("amux client worker: {error}");
                 }
@@ -1185,6 +1792,8 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         }
         if refresh.elapsed() >= Duration::from_millis(250) {
             refresh = Instant::now();
+            daemon.controls.lock().tick(refresh);
+            daemon.flush_runtime_events();
             let entries: Vec<_> = daemon.state.lock().terminals.values().cloned().collect();
             let workspaces: Vec<_> = entries
                 .iter()
@@ -1228,20 +1837,19 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 if let Some(current) = state.terminals.get_mut(&entry.terminal.id) {
                     current.cwd = cwd;
                 }
-                if let Some(project) = state.store.projects.get_mut(&entry.project_id) {
-                    if !project.saved
-                        && project.main_terminal.as_deref() == Some(&entry.terminal.id)
-                        && project.context != context
-                    {
-                        project.context = context.clone();
-                        Daemon::emit(
-                            &mut state,
-                            "project-context",
-                            None,
-                            json!({"project_id":entry.project_id,"context":context}),
-                        );
-                        daemon.changed.notify_all();
-                    }
+                if let Some(project) = state.store.projects.get_mut(&entry.project_id)
+                    && !project.saved
+                    && project.main_terminal.as_deref() == Some(&entry.terminal.id)
+                    && project.context != context
+                {
+                    project.context = context.clone();
+                    Daemon::emit(
+                        &mut state,
+                        "project-context",
+                        None,
+                        json!({"project_id":entry.project_id,"context":context}),
+                    );
+                    daemon.changed.notify_all();
                 }
             }
         }
@@ -1253,6 +1861,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     }
     let entries: Vec<_> = daemon.state.lock().terminals.values().cloned().collect();
     for entry in entries {
+        daemon.controls.lock().end_target(&entry.terminal.id);
         entry.terminal.close();
         daemon.integration.remove(&entry.terminal.id);
     }
@@ -1261,10 +1870,9 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     while !connections.lock().is_empty() {
         thread::sleep(Duration::from_millis(5));
     }
+    daemon.codex.shutdown();
     let _ = daemon.hook_jobs.send(None);
     let _ = hook_worker.join();
     drop(listener);
-    fs::remove_file(socket)?;
-    drop(lock);
     Ok(())
 }

@@ -1,0 +1,107 @@
+{
+  "scope": "e03-build-current-delivery",
+  "round": 1,
+  "verdict": "FAIL",
+  "general_scores": [
+    96.875,
+    96.875
+  ],
+  "unique_must_fix": 1,
+  "must_fix": "application-focus-input-bypassed-retained-settlement",
+  "security_specialist_unwaived_high": 0,
+  "historical_counters_reset": false,
+  "reports": {
+    "E03BuildReviewA": {
+      "overall_correctness": "incorrect",
+      "explanation": "FAIL for the authorized current-delivery scope: 32 checklist items, 1 must-fix, 0 should-fix, score 96.875%; the zero-must-fix gate is not met because focus reports can receive a false-safe transfer without retained native settlement. Reviewed integrated authority, dispatch, agent identity/lifecycle, native routing, shell integration, privacy/cleanup, affected regression design and amended delivery evidence; Fowler Primitive Obsession (src/control.rs:159) and Long Function (src/codex.rs:1294, src/tui.rs:663) are consider-only, while accepted Codex fence/history limitations and deferred e03s08/all32 are not counted as new blockers. Verification was static/read-only with no edits or builds/tests/lints/formatters/model calls: parent-observed evidence reports 301 Rust tests passed/10 ignored, workspace mechanical gates and native/showcase/OMP/Zsh checks passing, but complete-broker acceptance failed with zero meaningful turns; Rust 1.88 execution and coverage remain unmeasured.",
+      "confidence": 0.96,
+      "findings": [
+        {
+          "title": "Retain forwarded focus reports in native settlement accounting",
+          "body": "Must-fix \u2014 HIGH correctness/authority: validated original-attachment view changes in src/daemon.rs:950-1003 forward CSI I/O through `protocol_input_authorized`, whose enqueue sets `native: false`; consequently `Input::write_to` checks authority but does not call `forward_native` or retain an unknown native batch. Start an application through accounted shell execution that enables focus reporting, pause it before input consumption, acquire native control without other raw input, and send an outer focus transition: the daemon can write the focus event while `ownership.unsettled` remains empty, then yield/offer/accept can issue `mode: safe`, after which the resumed application consumes old-generation focus input. Route focus through `input_authorized` or enable native accounting in this helper without recording human activity, retaining original-connection and dispatch-time checks, and add a paused-consumer focus/yield regression that rejects a safe offer. This false-safe-grant path is outside the exception allowing genuinely unknown Codex work to block transfer indefinitely.",
+          "priority": 1,
+          "confidence": 0.96,
+          "file_path": "/Users/addomam/projects/amux-e03-build/src/runtime.rs",
+          "line_start": 452,
+          "line_end": 459
+        }
+      ]
+    },
+    "E03BuildReviewB": {
+      "overall_correctness": "incorrect",
+      "explanation": "FAIL for current authorized delivery, scoped Build review round 1: 32 checklist items reviewed, 1 must-fix, 0 should-fix, 1 consider-only maintainability observation, score 100\u00d7(32\u22121\u22120)/32 = 96.875%; the numerical threshold is met but the zero-must-fix gate is not, because application focus reports bypass retained native-input accounting and can therefore precede a falsely safe transfer, independently of the expressly accepted Codex limitations.\n\nChecklist coverage: authority/admission 7\u2713/1\u2717 (capability kind, exact PTY, lifetime, generation, queue consumption, dispatch ordering, retained settlement, application-input accounting); handoff 8\u2713 (yield, reservation, acceptance, stale/consumed offers, private recovery, explicit force observations/warnings, ordinary cancellation, no replay); conditional control 6\u2713 (original connection, known view facts, consent revisions, observation-only clocks, same-token keep, withdrawal); Codex contracts 5\u2713 (same instance, exact turn, complete request identity, request-scoped permission decisions, acknowledgement/completion separation); security/regressions 5\u2713 (bounded queues/accounting, private data handling, owned cleanup, preserved compatibility paths, patched dependency resolution), where \u2713 means no additional actionable defect established by this review rather than a new runtime verification; Fowler smell noted only for consideration is Primitive Obsession in string-tagged states at src/control.rs:159 and src/codex.rs:123\u2013126, with no demonstrated additional defect or requested refactor.\n\nInspection covered the integrated runtime diff against 6318845 plus current remediation, authority and provider consumers, daemon/PTY/shell/native-UI routing, CLI/client framing, configuration-lock changes, representative behavioral/race/cleanup tests and native helpers, package manifests/lockfile, normative contracts, Plan/epic, threat model/exceptions, bug records, execution status and retained evidence; all builds, tests, Clippy, formatting, showcase, OMP/Zsh and actual-binary smoke results are parent-observed only (artifact://352 and specs/verifications/e03-fix-runtime.json), not run by me, Rust 1.88 execution and coverage remain unmeasured, the failed complete-broker/all32 evidence remains failed and accepted-deferred rather than a new blocker, no independent cross-user exploit was established, and historical review caps were not changed.",
+      "confidence": 0.9
+    },
+    "E03SecurityReview": {
+      "coverage_summary": "Verdict: PASS for the explicitly amended CURRENT delivery security scope. No unaddressed security findings survived source-to-sink tracing; no unwaived HIGH blocks current landing. This is the fresh e03 current-delivery security round 1 only, not a reset of historical review caps or a complete-broker acceptance PASS.\n\nChecklist: 24 applicable static-review checks; must-fix 0, should-fix 0; score = 100 \u00d7 (24\u22120\u22120)/24 = 100%. Checks covered: capability minting/kind binding; PTY lifetime/generation; exclusive authority/revocation; private recovery; raw CLI input; execute/epoch/wake continuations; automatic/managed startup; native keys/repeats/literal prefix; paste/mouse and intercepted gesture tails; focus/protocol replies; cooperative reservation/offer/accept; explicit force; ordinary cancellation; conditional keep/withdraw; original-connection view/activity; atomic consent/eligibility; unknown native settlement; same-instance discovery; exact typed request identities; closed structured operations/outcomes; privacy; owned cleanup; bounded queues/accounting; patched dependencies and preserved regression consumers. This score is review-checklist scoring, not measured code coverage.\n\nKey evidence: src/control.rs:824\u2013840 binds each opaque reference to its daemon-minted kind; :1078\u20131087 checks current reference/controller/generation and target lifetime. src/runtime.rs:52\u201368 revalidates queued input and records native forwarding before I/O; daemon input/execute admission is at src/daemon.rs:1058\u20131158. Shell continuations recover their originating authority at daemon.rs:287\u2013350, while integrations/zsh/adapter.zsh:134\u2013147 clears BUFFER when final acceptance fails. Native input routes converge on src/tui/control.rs:601\u2013623, with FIFO original-connection work and no transport-error replay at :137\u2013229; mouse tails are consumed at :967\u20131003. Automatic terminal replies are internally classified, not a public protocol-label bypass.\n\nSafe-grant controls remain fail-closed: src/control.rs:1181\u20131208 refuses to clear native-input unknown, :700\u2013722 requires an empty retained-call ledger for offer acceptance, and :1573\u20131607 revalidates conditional authority, consent revisions, eligibility, warning completion and settlement. Revocation retains old calls, force exposes unresolved-call warnings, and ordinary cancellation grants nobody. Original attachment provenance is checked independently of borrowed input capabilities. Corresponding real-daemon/native tests inspect actual target effects and retained calls rather than only successful receipts.\n\nStructured operations require the exact bound terminal/instance/session and applicable turn/item/typed request ID (src/codex.rs:757\u2013881), then revalidate at queue consumption before Authority::forward (:1218\u20131253). Unknown/reused response attribution stays unknown (:1694\u20131733); request closure and whole-turn completion do not drain unrelated native work. Permission encoding is request-only accept/decline, never a session grant. Auxiliary title threads do not replace the established root. Local provider transport is a generated private Unix socket, not a caller-selected remote WebSocket endpoint (:321\u2013385, :1834\u20131897).\n\nPrivacy/cleanup inspection covered private 0700 roots, 0600 no-follow credential copies, redacted public facts/evidence, unbound-launch RAII cleanup, terminal/backend failure paths and birth-qualified process cleanup. Cargo.lock:1309\u20131327 resolves time 0.3.47/time-core 0.1.8; no second time entry was found. Cargo.toml:5 honestly declares Rust 1.88; the independent showcase remains 1.86.\n\nFowler-smell assessment: Long Method is visible in daemon::dispatch (src/daemon.rs:936\u20131432) and codex::handle_message (src/codex.rs:1294\u20131753); string/JSON-driven state also warrants care. These are maintainability observations, not demonstrated security defects or current must/should-fix findings. Existing authority and provider boundaries avoid duplicating authorization policy in each input consumer.\n\nVerification provenance: I performed read-only source, test and evidence inspection; I ran no builds, tests, linters, formatters, daemons, payloads, network requests or model calls, and made no repository edits or contact with other reviewers. Reported runtime results are parent-observed evidence, not verification run by me. The recorded full Codex acceptance remains FAILED with zero meaningful turns at its first safe offer, and e03s08 remains failing.",
+      "findings": [],
+      "reviewed_paths": [
+        "CONVENTIONS.md",
+        "Cargo.toml",
+        "Cargo.lock",
+        "src/control.rs",
+        "src/daemon.rs",
+        "src/runtime.rs",
+        "src/runtime/compatibility.rs",
+        "src/integration.rs",
+        "src/codex.rs",
+        "src/client.rs",
+        "src/cli.rs",
+        "src/tui.rs",
+        "src/tui/control.rs",
+        "integrations/zsh/adapter.zsh",
+        "integrations/omp/amux.ts",
+        "integrations/omp/lifecycle.ts",
+        "integrations/omp/lifecycle.test.ts",
+        "tests/pty_control.rs",
+        "tests/pty_control/native.rs",
+        "tests/agent_interaction.rs",
+        "tests/codex_native_smoke.rs",
+        "tests/codex_native_smoke/capture.rs",
+        "tests/codex_native_smoke/complete.rs",
+        "tests/runtime.rs",
+        "tests/integration.rs",
+        "tests/shell_races.rs",
+        "tests/readiness.rs",
+        "terminal-showcase/Cargo.toml",
+        "terminal-showcase/tests/multiplexer.rs",
+        "specs/epics/e03-agent-interaction/PLAN.md",
+        "specs/epics/e03-agent-interaction/epic.yaml",
+        "specs/epics/e03-agent-interaction/build-integration-contract.md",
+        "specs/epics/e03-agent-interaction/e03s08-tasks.yaml",
+        "specs/contracts/pty-control.md",
+        "specs/contracts/pty-control.schema.yaml",
+        "specs/contracts/pty-control.examples.yaml",
+        "specs/tech-architecture/pty-control-native-ux.md",
+        "specs/adr/0003-codex-first-agent-target.md",
+        "specs/security/epics/e03/THREAT_MODEL.md",
+        "specs/security/EXCEPTIONS.md",
+        "specs/bugs/BUG-e03-native-settlement.md",
+        "specs/bugs/BUG-time-rfc2822-dos.md",
+        "specs/verifications/AUDIT-e03-current-delivery.md",
+        "specs/verifications/e03-integration-build.md",
+        "specs/verifications/e03-fix-runtime.json",
+        "specs/verifications/e03-complete-broker-acceptance.json",
+        "specs/state.yaml",
+        "specs/execution-status.yaml"
+      ],
+      "deferred": [
+        {
+          "reason": "Explicit user-accepted obligations, not newly actionable security blockers: stock Codex lacks a generation-bound native application fence and authoritative losing-answer-history reconciliation. Unknown work must continue blocking safe grant indefinitely; future ACP must prove the original native-cut/winner contracts before closing e03s08/all32. The implementation and failed evidence inspected retain these restrictions.",
+          "paths": [
+            "specs/security/EXCEPTIONS.md",
+            "specs/bugs/BUG-e03-native-settlement.md",
+            "specs/verifications/e03-complete-broker-acceptance.json"
+          ]
+        },
+        {
+          "reason": "Runtime execution and minimum-toolchain verification belong to the parent. Existing evidence reports Rust 1.95.0, not execution on the newly declared Rust 1.88 minimum; code coverage was not measured. No independent runtime or minimum-toolchain PASS is asserted here.",
+          "paths": [
+            "specs/verifications/e03-fix-runtime.json",
+            "specs/verifications/e03-integration-build.md"
+          ]
+        }
+      ]
+    }
+  }
+}

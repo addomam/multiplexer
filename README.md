@@ -2,9 +2,11 @@
 
 A project-oriented native terminal wrapper: a Rust daemon owns Zsh terminals and emulator state; a detachable TUI shows one terminal; the CLI controls the same local API. Shell editing and OMP remain their native interfaces.
 
+amux is the execution substrate, not an autonomous orchestrator. It provides terminal/project control and observable agent state through the same local API used by the CLI and TUI. Task planning, scheduling, automatic replies, agent delegation and merge policy belong outside amux.
+
 ## Install and start
 
-Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. Ratatui 0.30.0 uses the existing Crossterm 0.29 backend; the crate now declares Rust 1.86, matching Ratatui's minimum. That minimum toolchain is not independently verified. Requires stock `/bin/zsh`. OMP is optional until launched.
+Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. amux now declares Rust **1.88** so its locked `time 0.3.47` dependency includes the RFC2822 stack-exhaustion fix. That minimum toolchain is not independently verified. Ratatui 0.30.0 still uses the existing Crossterm 0.29 backend; the independent terminal-showcase package retains its own Rust 1.86 declaration. Requires stock `/bin/zsh`. OMP is optional until launched.
 
 ```sh
 cargo install --path . --locked
@@ -36,13 +38,29 @@ To update this checkout's installed binary:
 cargo install --path . --locked --force
 ```
 
-Reattach the new client afterward. The latest input optimization needs no restart of a daemon already supporting row updates; older runtime/API changes do. Installing a binary alone does not replace a running daemon.
+Installing a binary alone does not replace a running daemon. The earlier client-only input optimization can reattach to a compatible daemon, but the terminal/configuration/admission/hook fixes require a fresh daemon. Finish valuable work before deliberately shutting down an old daemon; its managed processes and unsaved runtime state will end.
 
-For startup failures, inspect `daemon.log` next to the selected socket. Default runtime directory: `$AMUX_RUNTIME_DIR`, otherwise `$XDG_RUNTIME_DIR/amux`, otherwise the OS temporary directory's `amux-<uid>`.
+Startup requires an initialized version-1 API snapshot, not just a listening socket. Concurrent automatic starts are serialized; an existing unresponsive or incompatible listener returns a bounded readiness error and is not replaced. For startup failures, inspect `daemon.log` next to the selected socket. Default runtime directory: `$AMUX_RUNTIME_DIR`, otherwise `$XDG_RUNTIME_DIR/amux`, otherwise the OS temporary directory's `amux-<uid>`.
 
 `AMUX_SOCKET` or `--socket PATH` chooses another socket. Configuration remains under `$XDG_CONFIG_HOME/amux/config.json` or `~/.config/amux/config.json`. Hook failures appear in `amux snapshot` diagnostics and do not disable the shell.
 
 The [daily-use checkpoint](specs/verifications/daily-use-checkpoint.md) records the frozen source baseline, final checks, cleanup and remaining release limitations.
+
+## Terminal capability showcase
+
+`terminal-showcase` is a separate Rust workspace package. It queries and exercises the terminal endpoint through ordinary stdin/stdout, with no dependency on amux's implementation.
+
+```sh
+cargo run -p terminal-showcase
+cargo run -p terminal-showcase -- --screenshot --demo colors
+cargo run -p terminal-showcase -- --probe --json
+cargo run -p terminal-showcase -- --headless --json
+cargo install --path terminal-showcase --locked
+```
+
+Run the same binary in any attached amux shell. Space pauses; arrows select demonstrations; Tab expands evidence; D shows diagnostics; S freezes screenshot mode; Q/Escape exits. P/F record visual verdicts; E exports JSON. Clipboard, title, notifications and working-directory actions require an explicit key in the integration demo.
+
+Build and test all packages with `cargo build --workspace` and `cargo test --workspace`; plain `cargo run` and the root default build still select amux. See [showcase usage, report semantics and limitations](specs/terminal-showcase.md). The explorer has already exposed [origin-mode CPR and ZWJ cursor incompatibilities](specs/bugs/BUG-showcase-endpoint-compatibility.md); a passing explorer regression suite is not a claim that amux supports every feature.
 
 ## Picker and native interaction
 
@@ -65,6 +83,19 @@ Native Ratatui surface/action evidence: [UI verification](specs/verifications/UI
 
 Mouse wheel and Shift-PageUp/PageDown scroll locally; typing returns to the live surface. Shift-drag selects text even when the foreground application requests mouse reporting; selection copies through the host terminal's OSC 52 support. Managed-application clipboard requests are not forwarded; client selection is the supported clipboard path. Focus, scrolling, selection and picker state belong to this client. Background terminals retain their last size, initially 80×24; opening a picker does not resize them. Only the visible surface follows client resize. If multiple local TUIs show the same terminal, the last attachment/resize determines its PTY geometry.
 
+Each TUI registers its attachment on the original persistent connection and reports selected-terminal and outer-focus views; focus starts unknown. An unowned, unreserved, settled target may be acquired normally.
+
+All application keys, repeats, literal prefixes, paste and application mouse input require current control. Observers keep local navigation, scrolling and selection. Rejected or intercepted input is never replayed after acquisition.
+
+**Prefix Ctrl-L** opens ownership request, owner-response and handoff progress actions. Hiding the panel preserves its claim. An incoming notice does not turn ordinary typing into consent; yield and cancellation are deliberate actions.
+
+**Prefix Ctrl-F** opens explicit force confirmation against fresh ownership facts. Force does not interrupt a turn or kill a process. Stale authority requires resynchronization, never implicit force, reconnect or replay.
+
+Conditional idle/background requests come from external orchestration. Native warnings require current draw-bound consent; human activity aborts the attempt without automatic retry. Keep/withdraw preserves the human's current control.
+
+Detaching marks the attachment departed but does not release ownership or cancel its claim. Use explicit release/handoff actions. Unknown or departed attachment facts cannot establish safe conditional eligibility.
+
+
 ```sh
 amux config '{"prefix":"ctrl-a","projects_dir":"/home/me/projects"}'
 amux detach       # request all currently attached TUIs to detach; processes remain running
@@ -83,15 +114,33 @@ The first runtime/API optimization requires restarting an older pre-change daemo
 
 ## Shell execution versus typing
 
-```sh
-amux input agent 'a message for OMP'
-amux input agent --key enter
-amux input agent --key ctrl-c
-amux input agent --paste 'multiline text'
-amux input main --bytes '[27,91,65]'
+The `input` and `execute` commands require `--control` containing serialized **current ControlHandle JSON**. A controller registration credential, claim, offer or copied public ownership receipt cannot authorize input. Mutation targets use the terminal ID returned by `state`, not a name that may later resolve differently.
 
-amux execute main 'export MODE=debug; cd src; print $PWD'
-amux execute main 'print later' --queue
+Register an external controller once and explicitly acquire an unowned target; this example uses `jq` to preserve JSON types:
+
+```sh
+controller=$(amux api '{"op":"controller-create","role":"external","label":"my script"}' |
+  jq -ec '.result.controller')
+state=$(amux state main)
+terminal=$(printf '%s' "$state" | jq -er '.result.id')
+observed=$(printf '%s' "$state" | jq -ec '.result.ownership.observed')
+grant=$(amux api "$(jq -cn --argjson controller "$controller" --arg terminal "$terminal" \
+  --argjson observed "$observed" \
+  '{op:"ownership-claim",controller:$controller,terminal:$terminal,observed:$observed,mode:"cooperative",when:{kind:"now"}}')")
+control=$(printf '%s' "$grant" | jq -ec 'select(.ok and .result.kind=="control") | .result.control')
+```
+
+Proceed only if a current control was returned. If the result is a pending claim, inspect that same claim and arrange explicit owner yield and offer acceptance; do not send input, repeat the claim or force automatically. Choose an OMP terminal instead of `main` before acquisition when sending application messages.
+
+```sh
+amux input "$terminal" --control "$control" 'a message for the foreground application'
+amux input "$terminal" --control "$control" --key enter
+amux input "$terminal" --control "$control" --key ctrl-c
+amux input "$terminal" --control "$control" --paste 'multiline text'
+amux input "$terminal" --control "$control" --bytes '27,91,65'
+
+amux execute "$terminal" --control "$control" 'export MODE=debug; cd src; print $PWD'
+amux execute "$terminal" --control "$control" 'print later' --queue
 ```
 
 Input goes to the current foreground application. `execute` is shell **source**, not typed text: only an empty confirmed primary Zsh prompt can accept it. Busy applications, earlier pending submissions and partially entered lines are rejected; queueing is explicit. The adapter rechecks native prompt, buffer, generation and typeahead, with an input-epoch handshake that prevents a queued wake key from following user input into a foreground application. Ctrl-C records interrupted source completion without replacing native hooks. Exited/backpressured input and oversized paste display an error without closing the TUI.
@@ -113,13 +162,59 @@ amux config '{"daemon_start_hooks":[{"source":"printf daemon-started","timeout_m
 
 New directories default to `<projects_dir>/<name>`; use `project-new NAME --directory PATH` to choose a location. Initial `--config` accepts hooks and recipes and is validated before project creation. Saved projects keep stable IDs. Save resolves the latest confirmed main-shell cwd/repository root before persistence; explicit re-save updates that location. Configuration patches replace the supplied hooks array or recipes map; they do not merge individual entries.
 
-Hooks run as noninteractive `/bin/sh -c` workers, in a single queue: daemon-start hooks first, then project-open jobs, each hook in configuration order. Daemon hooks use daemon startup cwd; project hooks use project context. Both inherit daemon exports, not mutable interpreter internals. Default timeout is 30 seconds, configurable from 1 ms to 300 seconds. Stdout/stderr and failures are visible in snapshot diagnostics/events; a failed hook leaves a usable shell and later hooks continue. Reattachment runs neither hook category. Opening an already represented project is reattachment; close and remove its terminal records before a fresh project-open, or reopen after daemon restart. Shutdown skips pending hooks and waits for the active hook's bounded timeout.
+Hooks run as noninteractive `/bin/sh -c` workers, in a single queue: daemon-start hooks first, then project-open jobs, each hook in configuration order. Daemon hooks use daemon startup cwd; project hooks use project context. Both inherit daemon exports, not mutable interpreter internals. Default timeout is 30 seconds, configurable from 1 ms to 300 seconds. Stdout/stderr and failures are visible in snapshot diagnostics/events; a failed hook leaves a usable shell and later hooks continue. Reattachment runs neither hook category. Opening an already represented project is reattachment; close and remove its terminal records before a fresh project-open, or reopen after daemon restart. Shutdown cancels the active hook's owned process group and skips pending hooks instead of waiting for its configured timeout.
 
 Disk contains only global/project configuration and hooks under `$XDG_CONFIG_HOME/amux/config.json` (or `~/.config/amux/config.json`). No PTYs, tree, processes, screen, shell state or conversations are restored.
+
+Configuration saves use a stable sibling lock and compare the exact configuration loaded by the daemon before replacing it. `config-busy` means another cooperating writer currently holds the lock; retry after it finishes. `config-conflict` means disk changed since this daemon loaded/saved it; the mutation is rejected rather than overwriting other projects or settings. There is no live full-config reload: finish valuable work before deliberately restarting the affected daemon to load the current file. Starting another daemon against that file also loads the current configuration, without stopping the existing daemon. File and containing directory are synced before success; a directory-sync failure after replacement reports an uncertain save and requires reload before another save. External editors that ignore the lock are not serialized.
+
+`amux config '{"terminal_limit":64}'` sets daemon-wide admission (default 64, valid 1–256). Live terminals, retained exited records and pending opens all count. To free capacity, close a terminal, wait for `exited`, then remove its record; a failed open refunds its reservation. Lowering the limit never destroys existing terminals. This is a terminal-count bound, not an aggregate byte quota.
 
 ## Automation
 
 API commands print versioned JSON envelopes and return nonzero on errors. UUIDs are stable within daemon lifetime; saved project UUIDs persist. Names are selectors, and ambiguity is an error.
+
+Raw `amux api` exit status zero means **request success**, not an ownership grant, offer acceptance, shell completion or task success. Check `result.kind` and the current private state. Ordinary cooperative requests preserve the current owner's authority until an explicit yield/release; a ready offer is reserved but still requires explicit acceptance. Public `ownership.observed` is a compare receipt, never authority; public snapshots/events deliberately omit private handles.
+
+Keep controller/claim capabilities in the caller's private memory and reuse them across independent one-shot calls. After a timeout, broken socket or lost accept response, inspect rather than replay:
+
+```sh
+amux api "$(jq -cn --argjson handle "$controller" \
+  '{op:"control-handle",handle:$handle,method:"read"}')"
+# If a control was granted, recover it from result.controls.
+# To give up that current control explicitly (without stopping running work):
+amux api "$(jq -cn --argjson handle "$control" \
+  '{op:"control-handle",handle:$handle,method:"release"}')"
+```
+
+Reading a claim/controller never accepts an offer or reacquires ownership. Do not repeat an uncertain accept: an already-consumed offer rejects duplicates.
+
+Cancelling an ordinary pending claim invalidates old control, leaves the target unowned, grants nobody and retains outstanding calls. A grant completed before cancellation remains valid; release it explicitly.
+
+Force compares fresh ownership/reservation facts and warns `prior-calls-may-apply`, even with no listed calls. Force, cancellation and release never implicitly interrupt a turn, kill a process or erase prior work.
+
+A PTY write acknowledgement is not application settlement. Unknown application input can block safe handoff. Conditional keep/withdraw retains human control; reacquisition policy stays external.
+
+See the [wire contract](specs/contracts/pty-control.md) for exact capabilities, public clock, eligibility, consent, request/result shapes and errors.
+
+### Codex broker acceptance boundary
+
+The concrete broker is pinned to Codex 0.160.0. Its closed operations are `agent-open`, `agent-inspect`, `agent-prompt`, `agent-answer`, `agent-permission` and `agent-interrupt`; this is not a generic provider RPC relay.
+
+The native frontend creates the conversation on the owned backend. The observer binds its live identity without an API-created conversation or setup model turn, then explicitly subscribes when the first requested turn materializes history. Native title auxiliaries are not replacement conversations.
+
+Mutations require current PTY control and exact instance/session identities; answers, permission decisions and interrupts also bind their applicable turn/item/request identities. Receipts report admission and retained outcomes, not task completion.
+
+Separate real-account checks passed native/API start and same-turn steer, a genuine native-originated question answered structurally, permission allow/deny with actual filesystem effects, and exact-turn interruption with process survival. Deny uses request-only `decline`, never `cancel` or a session grant.
+
+Complete-broker acceptance remains unpassed. Unknown winning answers or native/application settlement must block safe grant; force-only results cannot substitute. Actual checks and limits live in [Build evidence](specs/verifications/e03-integration-build.md).
+
+#### Accepted upstream Codex limitations
+
+Raw PTY input has no generic application-consumption acknowledgement. With unmodified Codex 0.160.0, even the startup trust confirmation can leave native input unknown and cooperative handoff blocked indefinitely. amux keeps that blocker: PTY delivery, redraw, request resolution or turn completion never manufactures a safe grant. Explicit force remains a separate warned operation, without implicit interruption or process termination.
+
+Codex can also display a losing locally submitted question answer as accepted. Its resolved notification does not identify the winner; do not treat native question history or a response-write receipt as authoritative winner proof. The user explicitly accepted these temporary upstream limitations and deferred complete-broker/all32 acceptance to future ACP integration. The recorded failed check remains failed, not waived into a PASS. ACP adoption must actually prove the native input cut and truthful answer presentation before closing the issue. No Codex patch, replacement UI or ACP connector is included here. See [accepted limitations](specs/security/EXCEPTIONS.md).
+
 
 ```sh
 amux state agent
@@ -161,8 +256,10 @@ zsh -n integrations/zsh/adapter.zsh
 
 [Architecture and API ownership](specs/tech-architecture/DESIGN_PLAN_LATEST.md), [implementation plan](specs/epics/e01-native-terminal/epic.yaml), and [verification evidence](specs/verifications/) record the installed bigpowers workflow and observations.
 
-Final integrated verification: **66 Rust tests and 8 OMP tests pass**, plus Clippy, release build and Zsh syntax. [Latest latency/UI evidence](specs/verifications/immediate-input.md) includes 1,000 actual TUI single-key samples, native input modes, cached-cell invariants, noisy scrollback, actual Herdr selection/navigation/empty-page recovery and clean shutdown. [First-pass evidence](specs/verifications/input-latency-final.md) records the daemon row-delta/connection optimization; original OMP/manual/action and lifecycle evidence remains in [MVP evidence](specs/verifications/MVP-e01.md). **Independent review cap exhausted (5/5); the user explicitly authorized main integration and GitHub publication after daily-use validation.** The final tree-removal finding was reproduced and fixed; no independent post-fix review PASS is claimed.
+Latest [substrate verification](specs/verifications/substrate-reliability.md): **210 Rust tests and 8 OMP tests pass**, plus the explicit strict independent-showcase check, workspace Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle smokes. The report retains an earlier queued-execution timeout whose cause was not established; the instrumented acceptance suite, final workspace suite and 24 cancellation probes passed without weakening tests. [Earlier latency/UI measurements](specs/verifications/immediate-input.md) and [MVP evidence](specs/verifications/MVP-e01.md) remain historical baselines, not fresh performance results. **The e01 independent-review cap remains exhausted (5/5); no new independent PASS or landing authorization is claimed for this fix branch.**
 
-Bounded MVP resources: 50,000 scrollback rows per terminal; 64 KiB per raw input request with 128 queued writes; API request 1 MiB / response 64 MiB; PTY geometry 2–500 columns and 2–300 rows; event history 2,048 entries / 4 MiB; Git cache 256 workspaces with 100 file details per change category (full counts retained); 128 active agent identities per terminal; 256 managed execution records, pruning completed/rejected records first and exposing `executions_discarded`. Git overflow and pending-execution capacity produce explicit unavailable/busy results. Diagnostics retain the latest 20 hooks, with 64 KiB visible per output channel and truncation marked.
+Bounded resources: daemon-wide terminal admission defaults to 64 (configurable 1–256, counting retained exits and in-flight opens); 50,000 scrollback rows per terminal; 64 KiB per raw input request with 128 queued writes; API request 1 MiB / response 64 MiB; PTY geometry 2–500 columns and 2–300 rows; event history 2,048 entries / 4 MiB; Git cache 256 workspaces with 100 file details per change category (full counts retained); 128 active agent identities per terminal; 256 managed execution records, pruning completed/rejected records first and exposing `executions_discarded`. Git overflow and pending-execution capacity produce explicit unavailable/busy results. All hook, launch and enqueue diagnostics share the latest-20 retention window. Diagnostic strings, including command/source and each visible output channel, are limited to 16 KiB at UTF-8 boundaries; source/command/output truncation is marked.
+
+Grapheme composition uses the native narrow/wide cell model, with up to 4 KiB of final-cluster working text. Crossing that bound starts a new native scalar segment without discarding text; joining across the oversized boundary is not preserved. Upstream cell combining storage remains variable-sized.
 
 No crash recovery, interpreter cloning, tiling, remote protocol or nonterminal clients. Synchronized updates, native mouse/paste, Unicode, alternate screens, scrolling and resize were exercised on macOS; no Linux runtime claim. Host fonts and terminal clipboard facilities affect presentation. Process cleanup uses kernel birth identities and freeze/rescan of known descendants, including foreground and separate-session jobs. Shutdown disconnects slow control clients and drains in-flight creation/cleanup before exit. Processes already orphaned outside observed ancestry/session cannot be guaranteed captured. OS permission changes or uninterruptible kernel I/O can prevent termination; freeze waits are bounded and emit diagnostics to the daemon log before best-effort signals. This is a same-user control environment, not a sandbox.

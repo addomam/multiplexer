@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-22",
+  "toolchain_tested": "1.95.0",
+  "minimum_toolchain_executed": false,
+  "locked_time": "0.3.47",
+  "regression_run": "artifact://352",
+  "rust_tests_passed": 301,
+  "rust_tests_ignored": 10,
+  "independent_showcase_passed": 1,
+  "omp_tests_passed": 8,
+  "actual_binary_smoke": {
+    "kind": "isolated-real-binary-PTY-smoke",
+    "model_calls": 0,
+    "global_configuration_changes": false,
+    "driver_waited_for_drawn_client_authority": true,
+    "verdict": "PASS",
+    "private_startup": true,
+    "actual_native_prompt_rendered": true,
+    "native_control_drawn": true,
+    "stock_zsh_received_native_input": true,
+    "resize_exercised": true,
+    "native_detach_exited_zero": true,
+    "detach_preserved_shell_and_daemon": true,
+    "shutdown_reaped_owned_shell": true,
+    "private_root_removed": true,
+    "elapsed_seconds": 0.586
+  },
+  "driver_note": "First throwaway attempt sent input before client authority was drawn; that input was intercepted without replay. Corrected driver waited for drawn Controlled here before the successful native-input effect.",
+  "full_Codex_acceptance": "unchanged-failing-user-accepted-deferred-to-future-ACP"
+}

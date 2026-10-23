@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-22",
+  "scope": "e03-round5-opt-in-smoke-owned-cleanup-repair",
+  "status": "passing-local-repair-human-review-pending",
+  "authorization": "User selected Repair, then human review; isolated local processes only, no new live-model checks.",
+  "source": {
+    "path": "tests/codex_native_smoke.rs",
+    "sha256": "9d944123a0ed5d65a20b66d9510128a9892b076b1633ab574f9d102928b10e5c"
+  },
+  "correction": {
+    "failed_discovery_authorizes_signals": false,
+    "group_wide_fallback_signals": false,
+    "descendant_signal_authority": "Existing discover() must freshly validate PID birth and ancestry before each fallback delivery.",
+    "direct_child_authority": "Only try_wait() == Ok(None); all direct-child IDs, including reaped handles, are excluded from numeric fallback.",
+    "state_errors_authorize_signals": false,
+    "per_signal_phase_validation_allowance_seconds": 10,
+    "existing_discovery_deadline_seconds": 1,
+    "survivor_diagnostics": "Tracked identities are not current ownership or manual signal authority.",
+    "limits": "No atomic OS PID-handle guarantee or new guarantee for already-unobserved orphan descendants is claimed."
+  },
+  "regression": {
+    "name": "owned_cleanup_discovery_failure_preserves_unowned_pid_and_group",
+    "permanent": true,
+    "ignored": false,
+    "failure_injection": "A directory at the private process-table output path makes actual discovery fail before ps; two test-owned children are deliberately stale, unowned candidates.",
+    "red": {
+      "artifact": "artifact://611",
+      "checkpoint": "ec6add1",
+      "status": "FAIL",
+      "tests_failed": 1,
+      "sentinel_exit_signals": [
+        15,
+        15
+      ],
+      "seconds": 7.11
+    },
+    "intermediate_exact_green": {
+      "status": "PASS",
+      "tests_passed": 1,
+      "seconds": 7.19,
+      "raw_artifact": null,
+      "note": "Short bg_131 tool result returned no artifact URI; followed by diagnostic-label-only edits."
+    },
+    "final_source_green": {
+      "status": "PASS",
+      "included_in_workspace_preflight": "artifact://635",
+      "tests_passed_workspace": 308
+    },
+    "real_os_pid_reuse_forced": false,
+    "unrelated_user_processes_targeted": false
+  },
+  "actual_executable_smoke": {
+    "artifact": "artifact://630",
+    "status": "PASS",
+    "seconds": 13.5,
+    "source_snapshot_sha256": "ec3b8a24236c47ba4a4354a15e55af51180ab8afb7a5cb0ffee7a3af2dba7ba1",
+    "source_transform": "Copy the actual test source through exact structured line ranges, omit three module docs, adjust only the two relative module paths, append a local-only main; normalize chunk boundary newlines.",
+    "implementation_rewritten_or_stubbed": false,
+    "cases": [
+      {
+        "cleanup_errors": [],
+        "discovery_failure": false,
+        "fixture_fallback_used": false,
+        "models_called": 0,
+        "owned_descendant_terminated": true,
+        "owned_direct_terminated": true,
+        "private_root_removed": true,
+        "scope": "actual-source-snapshot-local-owned-cleanup",
+        "unrelated_sentinels_preserved": 2
+      },
+      {
+        "cleanup_errors": [
+          "final owned-tree enumeration failed",
+          "owned identity refresh before signal failed",
+          "owned identity refresh before signal failed",
+          "tracked process group still present after teardown",
+          "tracked process identity still present after teardown"
+        ],
+        "discovery_failure": true,
+        "fixture_fallback_used": false,
+        "models_called": 0,
+        "owned_descendant_terminated": null,
+        "owned_direct_terminated": true,
+        "private_root_removed": true,
+        "scope": "actual-source-snapshot-local-owned-cleanup",
+        "unrelated_sentinels_preserved": 2
+      }
+    ],
+    "healthy_tree": "Owned shell and descendant inherit ignored TERM, exercising KILL escalation; both are gone before fixture Drop.",
+    "failed_discovery_tree": "Only a direct owned child is created; no unknown owned descendant is deliberately stranded. Separately owned sentinel children must survive until fixture cleanup.",
+    "completion_observed": "all local probe children reaped; no auth, model or global mutation",
+    "earlier_passing_smoke": {
+      "artifact": "artifact://621",
+      "seconds": 13.75,
+      "source_snapshot_sha256": "a004278f6c937388ba855049f139972c999c47a4652b8c545c16001cbd975be9",
+      "note": "Before comment/diagnostic-label clarification; not a failed product attempt."
+    },
+    "temporary_dead_code_warnings": "Expected from copied unused live helpers; no suppression added. Temporary source/executable/object files removed before strict final all-target Clippy.",
+    "source_copy_tool_issue": "An initial rendered read copy included truncation/footer text, detected before compilation or execution; replaced using exact structured payloads. Tool issue reported."
+  },
+  "final_preflight": {
+    "artifact": "artifact://635",
+    "status": "PASS",
+    "seconds": 106.18,
+    "workspace_rust_tests": 308,
+    "workspace_suites": 29,
+    "ignored": 10,
+    "strict_workspace_all_targets_clippy": "PASS",
+    "workspace_all_targets_check": "PASS",
+    "workspace_build": "PASS",
+    "format_check": "PASS",
+    "independent_showcase": {
+      "package": "terminal-showcase",
+      "test": "independent_showcase_runs_inside_amux_and_checks_real_cursor_replies",
+      "passed": 1,
+      "seconds": 3.71
+    },
+    "omp_lifecycle": {
+      "passed": 8,
+      "assertions": 49
+    },
+    "zsh_syntax": "PASS",
+    "actual_cli_help": "PASS",
+    "earlier_preflight": "artifact://625",
+    "no_source_edits_after_final_preflight": true
+  },
+  "privacy_and_resources": {
+    "models_called": 0,
+    "auth_accessed": false,
+    "global_daemon_or_config_mutated": false,
+    "published_process_diagnostics": "Only aggregate outcomes; no PID/birth/command-line/auth snapshot copied into this record.",
+    "private_roots_removed": true,
+    "fixture_children_reaped": true,
+    "fixture_fallback_used": false,
+    "temporary_example_source_and_named_executables_objects_removed": true,
+    "new_herdr_sessions_or_worktrees": 0
+  },
+  "review_and_delivery_gate": {
+    "round": 5,
+    "max_rounds": 5,
+    "verdict": "FAIL-cap-exhausted",
+    "general_scores": [
+      97.5,
+      100
+    ],
+    "historical_general_must_fix": 1,
+    "historical_unwaived_high_security": 0,
+    "additional_automated_rounds": 0,
+    "human_review": "pending",
+    "independent_post_repair_pass": false,
+    "final_landing_commit_merge_push": "held-for-explicit-human-review",
+    "review_evidence": "specs/verifications/e03-build-review-round5.json",
+    "review_evidence_sha256": "c5f0cd72f950d61239bbb5f501a4213d53f403ada2013bc33e1483569e3c71df",
+    "historical_caps_reset": false
+  },
+  "complete_broker": {
+    "status": "FAILING",
+    "story": "e03s08",
+    "tasks_failing": 4,
+    "evidence": "specs/verifications/e03-complete-broker-acceptance.json",
+    "evidence_sha256": "cb71f0d2ba4b9d7f3f18b90548e9909f652c02326e3aaff4474c6fa0e894f70e",
+    "accepted_native_fence_and_optimistic_history_limitations": "unchanged; deferred to future ACP proof, not fixed by this cleanup repair",
+    "force_only_substitute": false
+  }
+}

@@ -8,3 +8,100 @@ gate_trace:
   verdict: WAIVED
   rationale: "Structured matrix/blind-spot inputs and project scanner scripts unavailable; manual ownership and verification evidence retained."
   downgrade_applied: false
+e02s01: passing
+e02s02: passing
+e02s03: passing
+e02s04: passing
+e02_quality_gate:
+  verdict: PASS
+  evidence: specs/verifications/terminal-showcase.md
+  independent_review: specs/verifications/REVIEW-e02.md
+  gate_trace: manual-acceptance-evidence-map
+  helper_execution: not-claimed
+e03s01: passing
+e03s02: passing
+e03s03: passing
+e03s04: passing
+e03s05: passing
+e03s06: passing
+e03s07: passing
+e03s08: failing
+stories:
+  e03s01:
+    status: passing
+    phase: verified-late-settlement-correction
+    started_at: "2026-10-21T20:46:55Z"
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-ownership-build.md
+  e03s02:
+    status: passing
+    phase: verified-build-slice
+    started_at: "2026-10-21T20:46:55Z"
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-ownership-build.md
+  e03s03:
+    status: passing
+    phase: verified-visible-force-correction
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-native, session: "w16:p1", retired: true}
+    evidence: specs/verifications/e03-integration-build.md
+  e03s04:
+    status: passing
+    phase: verified-native-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-native, session: "w16:p1", retired: true}
+    evidence: specs/verifications/e03-integration-build.md
+  e03s05:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_native_first_start
+    evidence: specs/verifications/e03-integration-build.md
+  e03s06:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_questions_and_permissions
+    evidence: specs/verifications/e03-integration-build.md
+  e03s07:
+    status: passing
+    phase: verified-codex-build-slice
+    worktree: /Users/addomam/projects/amux-e03-build
+    worker_origin: {worktree: /Users/addomam/projects/amux-e03-codex, session: "w17:p1", retired: true}
+    live_check: real_explicit_interrupt
+    evidence: specs/verifications/e03-integration-build.md
+  e03s08:
+    status: failing
+    phase: user-accepted-deferred-to-future-ACP-not-passed
+    worktree: /Users/addomam/projects/amux-e03-build
+    evidence: specs/verifications/e03-integration-build.md
+    acceptance_evidence: specs/verifications/e03-complete-broker-acceptance.json
+    meaningful_turns_submitted: 0
+    owned_cleanup_verified: true
+    blocking_bug: specs/bugs/BUG-e03-native-settlement.md
+    acceptance_disposition: user-accepted-current-delivery-exception
+    exception: specs/security/EXCEPTIONS.md
+e03_fix_cycle:
+  status: verified-post-cap-repair-human-delivery-approved
+  native_bug: specs/bugs/BUG-e03-native-settlement.md
+  dependency_bug: specs/bugs/BUG-time-rfc2822-dos.md
+  runtime_acceptance: failing
+  historical_review_cap: preserved
+  native_disposition: accepted-deferred-to-future-ACP-not-fixed
+  dependency_disposition: fixed-time-0.3.47-user-approved-Rust-1.88
+  current_runtime_smoke: passing-no-model-calls
+  evidence: specs/verifications/e03-smoke-cleanup-runtime.json
+  remaining_must_fix: null
+  review_gate: exhausted-5-of-5-user-approved-delivery-no-independent-pass
+  final_review_evidence: specs/verifications/e03-build-review-round5.json
+  repaired_finding: specs/bugs/BUG-e03-smoke-cleanup-identity.md
+  independent_post_repair_approval: false
+  human_delivery_approval: true
+gate_trace:
+  verdict: WAIVED
+  generated_at: "2026-10-22"
+  rationale: "No traceability-matrix.json, blind-spots.json or bundled generating scripts exist. This is missing-input waiver, not runtime coverage or full e03 acceptance."
+  heuristic_ratio: null
+  downgrade_applied: false
