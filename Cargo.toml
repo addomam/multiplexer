@@ -31,3 +31,7 @@ tungstenite = { version = "=0.30.0", default-features = false, features = ["hand
 [[bin]]
 name = "amux"
 path = "src/main.rs"
+
+[[example]]
+name = "acp_fixture"
+path = "tests/fixtures/acp_peer.rs"
