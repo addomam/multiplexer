@@ -1,0 +1,120 @@
+{
+  "scope": "approved-private-adapter-setup-only-not-live-ACP-acceptance",
+  "status": "PASS-private-lock-install-static-checks",
+  "recorded_at": "2026-10-24T18:30:08.913269+00:00",
+  "authorization": {
+    "user": "Private setup only; refresh pins before starting if moved",
+    "allowed": [
+      "public registry/source metadata",
+      "private exact installation",
+      "lifecycle scripts disabled",
+      "installed closure capture",
+      "static configuration/artifact checks"
+    ],
+    "not_allowed": [
+      "credential/auth reads",
+      "adapter/provider/model execution",
+      "global/default-daemon/config changes",
+      "ACP merge/push/release"
+    ]
+  },
+  "pins": [
+    {
+      "package": "@agentclientprotocol/codex-acp",
+      "previous": "2.2.2",
+      "selected": "2.2.2",
+      "registry": "https://registry.npmjs.org/@agentclientprotocol%2fcodex-acp/latest",
+      "gitHead": "202e66e63343ec4f5a5e35ab590251d813d129ca",
+      "installed_ACP_SDK": "1.9.0",
+      "installed_Codex": "0.160.1",
+      "native_platform_package": "@openai/codex@0.160.1-darwin-arm64",
+      "installed_packages": 25,
+      "locked_omitted_other_platform_optional": 5
+    },
+    {
+      "package": "@agentclientprotocol/claude-agent-acp",
+      "previous": "0.94.0",
+      "selected": "0.95.0",
+      "registry": "https://registry.npmjs.org/@agentclientprotocol%2fclaude-agent-acp/latest",
+      "gitHead": "ebfbfbdaa9c2a6a8bd9eb0a4965b521009152350",
+      "source_lock": "https://raw.githubusercontent.com/agentclientprotocol/claude-agent-acp/ebfbfbdaa9c2a6a8bd9eb0a4965b521009152350/package-lock.json",
+      "installed_ACP_SDK": "2.0.1",
+      "installed_Claude_Agent_SDK": "0.3.309",
+      "native_platform_package": "@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.309",
+      "installed_packages": 108,
+      "locked_omitted_other_platform_optional": 7
+    }
+  ],
+  "installation": {
+    "isolation": "Private0700 temporary root; distinct harness projects; cleared environment and private HOME/XDG/cache/TMP/user+global npmrc; no global PATH/default changes",
+    "runtime": {
+      "node": "26.12.1",
+      "npm": "11.20.0",
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    "method": "exact top-level dependency manifests; npm install --package-lock-only --ignore-scripts --no-audit --no-fund --omit=dev --include=optional, then npm ci with same script/audit/fund/production/optional flags",
+    "lock_provenance": "Fresh exact production closures resolved for published pinned packages, not asserted identical to upstream development lock. Codex declared SDK^1.5.0 resolved1.9.0; do not confuse installed external SDK with versions bundled into adapter JS. Both captured lock bytes match actual private lock SHA256.",
+    "jobs": [
+      {
+        "job": "bg_226",
+        "exit_code": 0,
+        "wall_seconds": 5.39
+      },
+      {
+        "job": "bg_227",
+        "exit_code": 0,
+        "wall_seconds": 9.29
+      }
+    ],
+    "lifecycle_scripts_executed": 0,
+    "global_toolchain_update": "none; npm major-update notice not followed"
+  },
+  "proof": {
+    "actual_static_verifier_exit": 0,
+    "checks": [
+      "all nonoptional locked package manifests present",
+      "actual installed versions match lock",
+      "all resolved archives HTTPS npm registry with SHA512 SRI metadata",
+      "bin symlinks resolve to declared installed JS entrypoints",
+      "native files present/executable; SHA256 captured",
+      "both JS entrypoints pass node --check without execution",
+      "both native executables identified by file as Mach-O64-bit arm64",
+      "npm ls --all --omit=dev --ignore-scripts --json exits0 for each"
+    ],
+    "installed_closure": "specs/verifications/e04s04-private-installed-closure.json",
+    "lock_snapshots": [
+      "specs/verifications/e04s04-private-codex-package-lock.json",
+      "specs/verifications/e04s04-private-claude-package-lock.json"
+    ],
+    "raw_private_closure_sha256": "6ea2c4102d89815f37d53a3c15f5c2cfa253ea8a3022fa4d81159eabc8790baa",
+    "limits": [
+      "No adapter --version/help/initialize was invoked: Codex default CLI path starts app-server even for unrecognized arguments.",
+      "No auth/store/syscall audit or provider/model compatibility/executable handshake claim.",
+      "Archive integrity checking is npm ci behavior; metadata verifier does not independently rehash every unpacked file. Critical launcher/native/lock byte hashes are captured.",
+      "No runtime budget enforcement, actual model availability or cheapest-price verification."
+    ]
+  },
+  "static_configuration": {
+    "Codex": "Installed JS supports CODEX_PATH/CODEX_CONFIG JSON/INITIAL_AGENT_MODE and genuine item/tool/requestUserInput\u2192elicitation/create; no invented spend flag.",
+    "Claude": "Installed stable-v1 SDK methods use elicitation/create. Pin CLAUDE_AGENT_ACP_PROTOCOL=v1 for future approved run; AskUserQuestion routes to ACP forms when advertised. Model preference may fall back, so actual model evidence required.",
+    "budget": "Installed Claude SDK declares maxBudgetUsd/maxTurns; adapter reads _meta.claudeCode.options and forwards userProvidedOptions. This is a programmatic session option, not proof of a CLI/env fuse or a hard no-overshoot dollar cap; current amux open path has not been changed to pass it. Approved enforceable spend/quota still missing."
+  },
+  "cleanup": {
+    "all_finite_setup_commands_exited": true,
+    "adapter_processes_started": 0,
+    "daemon_or_herdr_sessions_started": 0,
+    "temporary_verifier_removed": true,
+    "installed_private_artifacts_retained_for_next_approved_step": true,
+    "private_binding": "local://e04s04-private-setup-binding.json",
+    "revalidation": "Temporary root can be OS-pruned; revalidate installed lock/entry/native hashes before any later approved launch."
+  },
+  "real_auth_reads": 0,
+  "adapter_executions": 0,
+  "provider_calls": 0,
+  "live_driver_implemented": false,
+  "live_task_and_whole_story": "failing",
+  "local_tasks1_3": "passing at source6a5d9af/artifact1515/independent round3",
+  "next_required_approval": "Exact selected existing auth/account/billing source, actual supported cheapest models, private runtime root/prompt ceiling/enforceable spend and actual provider checks. No credentials in chat.",
+  "review_counters": "No amux source change during setup; next changed-source review4/5; historical caps/native fence unchanged."
+}

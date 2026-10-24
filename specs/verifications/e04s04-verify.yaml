@@ -102,6 +102,8 @@ live_task:
   required_test: e04s04_live_adapters
   prerequisites: specs/verifications/e04s04-live-prerequisites.json
   zero_case_command: never-counts-as-PASS
+  private_setup: specs/verifications/e04s04-private-setup.json
+  installed_closure_captured: true
 all_task_ledgers: tasks1-3-passing-actual-runtime-and-independent-round3;task4-failing-unapproved-unimplemented
 whole_story: failing
 historical_e03_and_review_caps: unchanged

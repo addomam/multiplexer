@@ -1,0 +1,1433 @@
+{
+  "scope": "private-installation-static-verification-not-adapter-runtime",
+  "runtime": {
+    "node": "v26.12.1",
+    "platform": "darwin",
+    "arch": "arm64",
+    "node_sha256": "9af7e24478e538455cf4af53a2607f1b79304bd5e25458b041fb855c3c167991"
+  },
+  "adapters": [
+    {
+      "id": "codex",
+      "package": "@agentclientprotocol/codex-acp",
+      "version": "2.2.2",
+      "installed_sdk": "1.9.0",
+      "lockfileVersion": 3,
+      "lock_sha256": "803e1655689f0e6972209c5ec3ce79241f17bb479032d9e584b7bcdce852b7d4",
+      "root_manifest_sha256": "a742c85c5916af37af8b44b2067baf3a77d4c18b093a8715355c9637589680d1",
+      "entrypoint": "node_modules/@agentclientprotocol/codex-acp/dist/index.js",
+      "entrypoint_sha256": "6b1bb4e7e9caaf4aeca1042ae4aec2dc2433b0b0e4b1614b38a4d41699902aaa",
+      "native": "node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/bin/codex",
+      "native_sha256": "09fa44fdc37a5fc70dc1ace31235f90468a2e193d0e85f7552eab068ea2582be",
+      "native_bytes": 241556032,
+      "installed_count": 25,
+      "omitted_optional_count": 5,
+      "installed": [
+        {
+          "location": "node_modules/@agentclientprotocol/codex-acp",
+          "version": "2.2.2",
+          "resolved": "https://registry.npmjs.org/@agentclientprotocol/codex-acp/-/codex-acp-2.2.2.tgz",
+          "integrity": "sha512-vNdeNV3jxbqaH7MYvVWzyB6cMOz+YGIV9W1xyBDsQfoii92DulZLM+ahCL2T2G6uohlaB1Yma347p2kLfAab2w==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@agentclientprotocol/codex-acp"
+        },
+        {
+          "location": "node_modules/@agentclientprotocol/sdk",
+          "version": "1.9.0",
+          "resolved": "https://registry.npmjs.org/@agentclientprotocol/sdk/-/sdk-1.9.0.tgz",
+          "integrity": "sha512-saCOTPYBK1iqWqJFAYHXbg3+zCoFXyZZFoqQAwdTWkbrZZPpAETr80QOnYr2l+dzPwL0jpNhn3eDY8MoEIDbUA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@agentclientprotocol/sdk"
+        },
+        {
+          "location": "node_modules/@openai/codex",
+          "version": "0.160.1",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1.tgz",
+          "integrity": "sha512-f1yrJhwgimKQI1kYQlxdPJcFwkNZxZrbz7Hf89EAcnLqkQ7TiESzr2FgSZn13Ga5RuHjlVUfurzwq10wk9zw2g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@openai/codex"
+        },
+        {
+          "location": "node_modules/@openai/codex-darwin-arm64",
+          "version": "0.160.1-darwin-arm64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-darwin-arm64.tgz",
+          "integrity": "sha512-6Znu97O7+Ie/cnUpsWLx6NlcPc7DNuj6sAs58xpt0/tKRgx4+xgE9zca1YrwqQUBjUQO1HexudyimmhpZjdWlA==",
+          "optional": true,
+          "os": [
+            "darwin"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false,
+          "name": "@openai/codex"
+        },
+        {
+          "location": "node_modules/bundle-name",
+          "version": "4.1.1",
+          "resolved": "https://registry.npmjs.org/bundle-name/-/bundle-name-4.1.1.tgz",
+          "integrity": "sha512-DdH81/zPLVS11EUgWq3tEu/xn+EzljlMYooDNdzWEnFha3R3NBMpMV1UqYIpjYHV/SgpFKMIX1Oh7o06SjM/oA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "bundle-name"
+        },
+        {
+          "location": "node_modules/cross-spawn",
+          "version": "7.0.6",
+          "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+          "integrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "cross-spawn"
+        },
+        {
+          "location": "node_modules/default-browser",
+          "version": "5.5.1",
+          "resolved": "https://registry.npmjs.org/default-browser/-/default-browser-5.5.1.tgz",
+          "integrity": "sha512-m1pAzaJgZ/gssEqlOhJkPJp8Xly7QyW6xcrkUa2KKcDeDSEMP7X8xipU3snUcfisTQx0w1AGae+9UtJSfVnXGw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "default-browser"
+        },
+        {
+          "location": "node_modules/default-browser-id",
+          "version": "5.0.1",
+          "resolved": "https://registry.npmjs.org/default-browser-id/-/default-browser-id-5.0.1.tgz",
+          "integrity": "sha512-x1VCxdX4t+8wVfd1so/9w+vQ4vx7lKd2Qp5tDRutErwmR85OgmfX7RlLRMWafRMY7hbEiXIbudNrjOAPa/hL8Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "default-browser-id"
+        },
+        {
+          "location": "node_modules/define-lazy-prop",
+          "version": "3.0.0",
+          "resolved": "https://registry.npmjs.org/define-lazy-prop/-/define-lazy-prop-3.0.0.tgz",
+          "integrity": "sha512-N+MeXYoqr3pOgn8xfyRPREN7gHakLYjhsHhWGT3fWAiL4IkAt0iDw14QiiEm2bE30c5XX5q0FtAA3CK5f9/BUg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "define-lazy-prop"
+        },
+        {
+          "location": "node_modules/diff",
+          "version": "9.0.0",
+          "resolved": "https://registry.npmjs.org/diff/-/diff-9.0.0.tgz",
+          "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "diff"
+        },
+        {
+          "location": "node_modules/is-docker",
+          "version": "3.0.0",
+          "resolved": "https://registry.npmjs.org/is-docker/-/is-docker-3.0.0.tgz",
+          "integrity": "sha512-eljcgEDlEns/7AXFosB5K/2nCM4P7FQPkGc/DWLy5rmFEWvZayGrik1d9/QIY5nJ4f9YsVvBkA6kJpHn9rISdQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "is-docker"
+        },
+        {
+          "location": "node_modules/is-in-ssh",
+          "version": "1.0.0",
+          "resolved": "https://registry.npmjs.org/is-in-ssh/-/is-in-ssh-1.0.0.tgz",
+          "integrity": "sha512-jYa6Q9rH90kR1vKB6NM7qqd1mge3Fx4Dhw5TVlK1MUBqhEOuCagrEHMevNuCcbECmXZ0ThXkRm+Ymr51HwEPAw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "is-in-ssh"
+        },
+        {
+          "location": "node_modules/is-inside-container",
+          "version": "1.0.0",
+          "resolved": "https://registry.npmjs.org/is-inside-container/-/is-inside-container-1.0.0.tgz",
+          "integrity": "sha512-KIYLCCJghfHZxqjYBE7rEy0OBuTd5xCHS7tHVgvCLkx7StIoaxwNW3hCALgEUjFfeRk+MG/Qxmp/vtETEF3tRA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "is-inside-container"
+        },
+        {
+          "location": "node_modules/is-wsl",
+          "version": "3.1.1",
+          "resolved": "https://registry.npmjs.org/is-wsl/-/is-wsl-3.1.1.tgz",
+          "integrity": "sha512-e6rvdUCiQCAuumZslxRJWR/Doq4VpPR82kqclvcS0efgt430SlGIk05vdCN58+VrzgtIcfNODjozVielycD4Sw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "is-wsl"
+        },
+        {
+          "location": "node_modules/isexe",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz",
+          "integrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "isexe"
+        },
+        {
+          "location": "node_modules/open",
+          "version": "11.0.4",
+          "resolved": "https://registry.npmjs.org/open/-/open-11.0.4.tgz",
+          "integrity": "sha512-++Zlftm0kVLPmzC06t6epuWmcRMDbI4z5P3NNX979WA/k23+NtSOynEGzsVfZwguKw2mi5umVgnBlJQMwRz4Pg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "open"
+        },
+        {
+          "location": "node_modules/path-key",
+          "version": "3.1.1",
+          "resolved": "https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz",
+          "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "path-key"
+        },
+        {
+          "location": "node_modules/powershell-utils",
+          "version": "0.2.1",
+          "resolved": "https://registry.npmjs.org/powershell-utils/-/powershell-utils-0.2.1.tgz",
+          "integrity": "sha512-C+y9x90UElAddDZmV4qOx9W53B61PO7cIqWz2dQsWlwswuq4mr8NEwytdGKboYbQlGZ3awrkTeNvcZiZNHnQ8A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "powershell-utils"
+        },
+        {
+          "location": "node_modules/run-applescript",
+          "version": "7.1.0",
+          "resolved": "https://registry.npmjs.org/run-applescript/-/run-applescript-7.1.0.tgz",
+          "integrity": "sha512-DPe5pVFaAsinSaV6QjQ6gdiedWDcRCbUuiQfQa2wmWV7+xC9bGulGI8+TdRmoFkAPaBXk8CrAbnlY2ISniJ47Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "run-applescript"
+        },
+        {
+          "location": "node_modules/shebang-command",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz",
+          "integrity": "sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "shebang-command"
+        },
+        {
+          "location": "node_modules/shebang-regex",
+          "version": "3.0.0",
+          "resolved": "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz",
+          "integrity": "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "shebang-regex"
+        },
+        {
+          "location": "node_modules/vscode-jsonrpc",
+          "version": "9.0.3",
+          "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-9.0.3.tgz",
+          "integrity": "sha512-qETYf9PCl1lVfwR+oBmMfc4vP2nqLNA35ABxorw3j06+xlKRgDVxbLgKm4Y/xPL0YWdeDjLoI4ImICIT3nB0zQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "vscode-jsonrpc"
+        },
+        {
+          "location": "node_modules/which",
+          "version": "2.0.2",
+          "resolved": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+          "integrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "which"
+        },
+        {
+          "location": "node_modules/wsl-utils",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/wsl-utils/-/wsl-utils-1.0.1.tgz",
+          "integrity": "sha512-c16PKLIRxBYpR3jSWsdS7SFp0COm5SOQdiFjY818dYFHJbMGuLBszpF07LBWmOS1uzrHa9VGdynsEgoeKy0oOQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "wsl-utils"
+        },
+        {
+          "location": "node_modules/zod",
+          "version": "4.6.7",
+          "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+          "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "zod"
+        }
+      ],
+      "omitted_optional": [
+        {
+          "location": "node_modules/@openai/codex-darwin-x64",
+          "version": "0.160.1-darwin-x64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-darwin-x64.tgz",
+          "integrity": "sha512-Q33hmY6BxhoQRgCo4f/xS20yMxORnilQMNdr5w1bXSkXGYAty8/z9odcHbsNYUM6m0fNle12DHLQ5F0Dpfji3A==",
+          "optional": true,
+          "os": [
+            "darwin"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@openai/codex-linux-arm64",
+          "version": "0.160.1-linux-arm64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-linux-arm64.tgz",
+          "integrity": "sha512-JLyjBlmjPvwTaicHemw+y5xQSz3Uja2r7F/xkvS8gFufTA2g132Ak+0fo35xnJ/k2uc9fTtjm0LrsEGI78L6Ng==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@openai/codex-linux-x64",
+          "version": "0.160.1-linux-x64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-linux-x64.tgz",
+          "integrity": "sha512-sIDhqV+bsZKKVaVFVY5iB+pAzyOz2XRm3H1KXCsSJwGj5p98qnrT0Fweo1Hfe7WnyTp8mfBNdbVzUeO+mHYugA==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@openai/codex-win32-arm64",
+          "version": "0.160.1-win32-arm64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-win32-arm64.tgz",
+          "integrity": "sha512-PCGz2kVUBKKzyKv/cqo/1WqWN8GVUyk9sk0LyWIyXftdU0t+SSsGp45c2I6iOitm88ftGB3LxFHpTMnaiIKU7w==",
+          "optional": true,
+          "os": [
+            "win32"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@openai/codex-win32-x64",
+          "version": "0.160.1-win32-x64",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.160.1-win32-x64.tgz",
+          "integrity": "sha512-yyqykHtHNhm0ZViofGozz9a4ffUyXDsiyRu9Q2hPNg/cu4uzSsovNr5kDmzBXPFWAilmlZuNkwpw1W7uae2nlg==",
+          "optional": true,
+          "os": [
+            "win32"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "package": "@agentclientprotocol/claude-agent-acp",
+      "version": "0.95.0",
+      "installed_sdk": "2.0.1",
+      "lockfileVersion": 3,
+      "lock_sha256": "7454c24685117f6d7e1a2437c8840e7aa2aef5038e3f41d6ea76661c3eb9e28f",
+      "root_manifest_sha256": "14885166a34fe79b31bec14804f4c35acff639a0e399f8ffd31558b35512d5df",
+      "entrypoint": "node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js",
+      "entrypoint_sha256": "dac87af861bedf6ee1444e99832274d6f517f5e83006f3905094cfc4479b3b00",
+      "native": "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+      "native_sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "native_bytes": 275923296,
+      "installed_count": 108,
+      "omitted_optional_count": 7,
+      "installed": [
+        {
+          "location": "node_modules/@agentclientprotocol/claude-agent-acp",
+          "version": "0.95.0",
+          "resolved": "https://registry.npmjs.org/@agentclientprotocol/claude-agent-acp/-/claude-agent-acp-0.95.0.tgz",
+          "integrity": "sha512-9ocOKHfeGrSwXshLdaweYvRSdzy5fltbk+WiG2t7bQXW+882hiyrvZzUOhZ9k8ItwdLfpXcnytVlyDbjMdHDIA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@agentclientprotocol/claude-agent-acp"
+        },
+        {
+          "location": "node_modules/@agentclientprotocol/sdk",
+          "version": "2.0.1",
+          "resolved": "https://registry.npmjs.org/@agentclientprotocol/sdk/-/sdk-2.0.1.tgz",
+          "integrity": "sha512-v4E/NcBTGFEKmorGso8ysAjJTkNh5UMJPP4aDznyMNmnP9t10g/aCCo/Djy7RYaYZy5ZROFK3G5cEj9tDgGOTQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@agentclientprotocol/sdk"
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk/-/claude-agent-sdk-0.3.309.tgz",
+          "integrity": "sha512-Tou0fXBkxKJDcgT09v3Iv/Jd7bNgapgfAiHxGPctAADPFQhidfhZbcv7at1cVL0Lon5sbs+OzP/pEOigw2TI0A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@anthropic-ai/claude-agent-sdk"
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-darwin-arm64/-/claude-agent-sdk-darwin-arm64-0.3.309.tgz",
+          "integrity": "sha512-qC93iDGEioaXqWsYazcZzNv3hd8d4VHkCFgb+AzvbkCWOzZHnRu1EqF4Iz5kCTLDs4VdMvCa1NkzlUwtTedBVw==",
+          "optional": true,
+          "os": [
+            "darwin"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false,
+          "name": "@anthropic-ai/claude-agent-sdk-darwin-arm64"
+        },
+        {
+          "location": "node_modules/@anthropic-ai/sdk",
+          "version": "1.3.0",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/sdk/-/sdk-1.3.0.tgz",
+          "integrity": "sha512-k7z9BlLLPxfZH+ov7dS6EnaN/wiZeV8YNT1LZfrpAHIy7oY7pHr4UzirF9f2OlHtFEnRBOX+AZQ91Y5fK+TPTw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@anthropic-ai/sdk"
+        },
+        {
+          "location": "node_modules/@babel/runtime",
+          "version": "7.29.10",
+          "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.10.tgz",
+          "integrity": "sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@babel/runtime"
+        },
+        {
+          "location": "node_modules/@hono/node-server",
+          "version": "2.1.5",
+          "resolved": "https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.5.tgz",
+          "integrity": "sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@hono/node-server"
+        },
+        {
+          "location": "node_modules/@modelcontextprotocol/sdk",
+          "version": "1.32.2",
+          "resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.32.2.tgz",
+          "integrity": "sha512-SWsVtH/0vULSQStoZ6xxH2K09Li8fXYTMC64ZeogCdpZ3XSi1eCPOByV1OpuJxuI3OcmHhosDWYyii07tpPsLw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@modelcontextprotocol/sdk"
+        },
+        {
+          "location": "node_modules/@opentelemetry/api",
+          "version": "1.10.0",
+          "resolved": "https://registry.npmjs.org/@opentelemetry/api/-/api-1.10.0.tgz",
+          "integrity": "sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@opentelemetry/api"
+        },
+        {
+          "location": "node_modules/@stablelib/base64",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/@stablelib/base64/-/base64-1.0.1.tgz",
+          "integrity": "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "@stablelib/base64"
+        },
+        {
+          "location": "node_modules/accepts",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz",
+          "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "accepts"
+        },
+        {
+          "location": "node_modules/ajv",
+          "version": "8.20.0",
+          "resolved": "https://registry.npmjs.org/ajv/-/ajv-8.20.0.tgz",
+          "integrity": "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ajv"
+        },
+        {
+          "location": "node_modules/ajv-formats",
+          "version": "3.0.1",
+          "resolved": "https://registry.npmjs.org/ajv-formats/-/ajv-formats-3.0.1.tgz",
+          "integrity": "sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ajv-formats"
+        },
+        {
+          "location": "node_modules/body-parser",
+          "version": "2.4.0",
+          "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.4.0.tgz",
+          "integrity": "sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "body-parser"
+        },
+        {
+          "location": "node_modules/body-parser/node_modules/content-type",
+          "version": "2.1.0",
+          "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz",
+          "integrity": "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-type"
+        },
+        {
+          "location": "node_modules/bytes",
+          "version": "3.1.2",
+          "resolved": "https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz",
+          "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "bytes"
+        },
+        {
+          "location": "node_modules/call-bind-apply-helpers",
+          "version": "1.0.2",
+          "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
+          "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "call-bind-apply-helpers"
+        },
+        {
+          "location": "node_modules/call-bound",
+          "version": "1.0.4",
+          "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
+          "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "call-bound"
+        },
+        {
+          "location": "node_modules/content-disposition",
+          "version": "2.0.1",
+          "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-2.0.1.tgz",
+          "integrity": "sha512-e+H0ZXHSWYrENhQzw1LPuP4oF5MzVKmDU6d3hxlvaPEYLLg62MxtQNPRx4SYSuYJSBUgnQIG4HIN2tEtNv7Dog==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-disposition"
+        },
+        {
+          "location": "node_modules/content-type",
+          "version": "1.0.5",
+          "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+          "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-type"
+        },
+        {
+          "location": "node_modules/cookie",
+          "version": "0.7.2",
+          "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz",
+          "integrity": "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "cookie"
+        },
+        {
+          "location": "node_modules/cookie-signature",
+          "version": "1.2.2",
+          "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.2.tgz",
+          "integrity": "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "cookie-signature"
+        },
+        {
+          "location": "node_modules/cors",
+          "version": "2.8.6",
+          "resolved": "https://registry.npmjs.org/cors/-/cors-2.8.6.tgz",
+          "integrity": "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "cors"
+        },
+        {
+          "location": "node_modules/cross-spawn",
+          "version": "7.0.6",
+          "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+          "integrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "cross-spawn"
+        },
+        {
+          "location": "node_modules/debug",
+          "version": "4.4.3",
+          "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+          "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "debug"
+        },
+        {
+          "location": "node_modules/depd",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/depd/-/depd-2.0.0.tgz",
+          "integrity": "sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "depd"
+        },
+        {
+          "location": "node_modules/diff",
+          "version": "9.0.0",
+          "resolved": "https://registry.npmjs.org/diff/-/diff-9.0.0.tgz",
+          "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "diff"
+        },
+        {
+          "location": "node_modules/dunder-proto",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+          "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "dunder-proto"
+        },
+        {
+          "location": "node_modules/ee-first",
+          "version": "1.1.1",
+          "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+          "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ee-first"
+        },
+        {
+          "location": "node_modules/encodeurl",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
+          "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "encodeurl"
+        },
+        {
+          "location": "node_modules/es-define-property",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
+          "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "es-define-property"
+        },
+        {
+          "location": "node_modules/es-errors",
+          "version": "1.3.0",
+          "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
+          "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "es-errors"
+        },
+        {
+          "location": "node_modules/es-object-atoms",
+          "version": "1.1.2",
+          "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.2.tgz",
+          "integrity": "sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "es-object-atoms"
+        },
+        {
+          "location": "node_modules/escape-html",
+          "version": "1.0.3",
+          "resolved": "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz",
+          "integrity": "sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "escape-html"
+        },
+        {
+          "location": "node_modules/etag",
+          "version": "1.8.1",
+          "resolved": "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz",
+          "integrity": "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "etag"
+        },
+        {
+          "location": "node_modules/eventsource",
+          "version": "3.0.7",
+          "resolved": "https://registry.npmjs.org/eventsource/-/eventsource-3.0.7.tgz",
+          "integrity": "sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "eventsource"
+        },
+        {
+          "location": "node_modules/eventsource-parser",
+          "version": "3.1.1",
+          "resolved": "https://registry.npmjs.org/eventsource-parser/-/eventsource-parser-3.1.1.tgz",
+          "integrity": "sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "eventsource-parser"
+        },
+        {
+          "location": "node_modules/express",
+          "version": "5.3.0",
+          "resolved": "https://registry.npmjs.org/express/-/express-5.3.0.tgz",
+          "integrity": "sha512-qCqy1xSoaugxOD4IVHb1ZWdkvCF2W3aE2okKouWj8VwJ+ztskSiXoBnCSJqfKT+cVPJhuJqe9YLbY425+Zh00g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "express"
+        },
+        {
+          "location": "node_modules/express-rate-limit",
+          "version": "8.7.1",
+          "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-8.7.1.tgz",
+          "integrity": "sha512-2FXbqkygil3mZiXzEtM0IjE/UBmBNot0J1GEVrJT4JbrvwOSoEtqtO+wHbiMQELWe1eNvHoYRg2dkjOid+6JkA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "express-rate-limit"
+        },
+        {
+          "location": "node_modules/express/node_modules/content-type",
+          "version": "2.1.0",
+          "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz",
+          "integrity": "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-type"
+        },
+        {
+          "location": "node_modules/fast-deep-equal",
+          "version": "3.1.3",
+          "resolved": "https://registry.npmjs.org/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz",
+          "integrity": "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "fast-deep-equal"
+        },
+        {
+          "location": "node_modules/fast-sha256",
+          "version": "1.3.0",
+          "resolved": "https://registry.npmjs.org/fast-sha256/-/fast-sha256-1.3.0.tgz",
+          "integrity": "sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "fast-sha256"
+        },
+        {
+          "location": "node_modules/fast-uri",
+          "version": "3.1.9",
+          "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.9.tgz",
+          "integrity": "sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "fast-uri"
+        },
+        {
+          "location": "node_modules/finalhandler",
+          "version": "2.1.1",
+          "resolved": "https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz",
+          "integrity": "sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "finalhandler"
+        },
+        {
+          "location": "node_modules/forwarded",
+          "version": "0.2.0",
+          "resolved": "https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz",
+          "integrity": "sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "forwarded"
+        },
+        {
+          "location": "node_modules/fresh",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz",
+          "integrity": "sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "fresh"
+        },
+        {
+          "location": "node_modules/function-bind",
+          "version": "1.1.2",
+          "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
+          "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "function-bind"
+        },
+        {
+          "location": "node_modules/get-intrinsic",
+          "version": "1.3.0",
+          "resolved": "https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz",
+          "integrity": "sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "get-intrinsic"
+        },
+        {
+          "location": "node_modules/get-proto",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz",
+          "integrity": "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "get-proto"
+        },
+        {
+          "location": "node_modules/gopd",
+          "version": "1.2.0",
+          "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
+          "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "gopd"
+        },
+        {
+          "location": "node_modules/has-symbols",
+          "version": "1.1.0",
+          "resolved": "https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz",
+          "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "has-symbols"
+        },
+        {
+          "location": "node_modules/hasown",
+          "version": "2.0.4",
+          "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
+          "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "hasown"
+        },
+        {
+          "location": "node_modules/hono",
+          "version": "4.13.13",
+          "resolved": "https://registry.npmjs.org/hono/-/hono-4.13.13.tgz",
+          "integrity": "sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "hono"
+        },
+        {
+          "location": "node_modules/http-errors",
+          "version": "2.0.1",
+          "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz",
+          "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "http-errors"
+        },
+        {
+          "location": "node_modules/iconv-lite",
+          "version": "0.7.3",
+          "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.3.tgz",
+          "integrity": "sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "iconv-lite"
+        },
+        {
+          "location": "node_modules/inherits",
+          "version": "2.0.4",
+          "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+          "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "inherits"
+        },
+        {
+          "location": "node_modules/ip-address",
+          "version": "10.7.4",
+          "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.7.4.tgz",
+          "integrity": "sha512-DWBMKyeM25D70nrIiTkgQth59/G+naKOTep6huF9j+GmeK3DMD60Zvxg5d5qQnz+38AHgou6ean2LECX+lrKDg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ip-address"
+        },
+        {
+          "location": "node_modules/ipaddr.js",
+          "version": "1.9.1",
+          "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz",
+          "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ipaddr.js"
+        },
+        {
+          "location": "node_modules/is-promise",
+          "version": "4.0.0",
+          "resolved": "https://registry.npmjs.org/is-promise/-/is-promise-4.0.0.tgz",
+          "integrity": "sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "is-promise"
+        },
+        {
+          "location": "node_modules/isexe",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz",
+          "integrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "isexe"
+        },
+        {
+          "location": "node_modules/jose",
+          "version": "6.2.13",
+          "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.13.tgz",
+          "integrity": "sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "jose"
+        },
+        {
+          "location": "node_modules/json-schema-to-ts",
+          "version": "3.1.1",
+          "resolved": "https://registry.npmjs.org/json-schema-to-ts/-/json-schema-to-ts-3.1.1.tgz",
+          "integrity": "sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "json-schema-to-ts"
+        },
+        {
+          "location": "node_modules/json-schema-traverse",
+          "version": "1.0.0",
+          "resolved": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz",
+          "integrity": "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "json-schema-traverse"
+        },
+        {
+          "location": "node_modules/json-schema-typed",
+          "version": "8.0.2",
+          "resolved": "https://registry.npmjs.org/json-schema-typed/-/json-schema-typed-8.0.2.tgz",
+          "integrity": "sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "json-schema-typed"
+        },
+        {
+          "location": "node_modules/math-intrinsics",
+          "version": "1.1.0",
+          "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
+          "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "math-intrinsics"
+        },
+        {
+          "location": "node_modules/media-typer",
+          "version": "1.1.1",
+          "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-1.1.1.tgz",
+          "integrity": "sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "media-typer"
+        },
+        {
+          "location": "node_modules/merge-descriptors",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+          "integrity": "sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "merge-descriptors"
+        },
+        {
+          "location": "node_modules/mime-db",
+          "version": "1.54.0",
+          "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz",
+          "integrity": "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "mime-db"
+        },
+        {
+          "location": "node_modules/mime-types",
+          "version": "3.0.2",
+          "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz",
+          "integrity": "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "mime-types"
+        },
+        {
+          "location": "node_modules/ms",
+          "version": "2.1.3",
+          "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+          "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ms"
+        },
+        {
+          "location": "node_modules/negotiator",
+          "version": "1.1.0",
+          "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-1.1.0.tgz",
+          "integrity": "sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "negotiator"
+        },
+        {
+          "location": "node_modules/negotiator/node_modules/content-type",
+          "version": "2.1.0",
+          "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz",
+          "integrity": "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-type"
+        },
+        {
+          "location": "node_modules/object-assign",
+          "version": "4.1.1",
+          "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
+          "integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "object-assign"
+        },
+        {
+          "location": "node_modules/object-inspect",
+          "version": "1.13.4",
+          "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
+          "integrity": "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "object-inspect"
+        },
+        {
+          "location": "node_modules/on-finished",
+          "version": "2.4.2",
+          "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.2.tgz",
+          "integrity": "sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "on-finished"
+        },
+        {
+          "location": "node_modules/once",
+          "version": "1.4.0",
+          "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+          "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "once"
+        },
+        {
+          "location": "node_modules/parseurl",
+          "version": "1.3.3",
+          "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+          "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "parseurl"
+        },
+        {
+          "location": "node_modules/path-key",
+          "version": "3.1.1",
+          "resolved": "https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz",
+          "integrity": "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "path-key"
+        },
+        {
+          "location": "node_modules/path-to-regexp",
+          "version": "8.4.2",
+          "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-8.4.2.tgz",
+          "integrity": "sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "path-to-regexp"
+        },
+        {
+          "location": "node_modules/pkce-challenge",
+          "version": "5.0.1",
+          "resolved": "https://registry.npmjs.org/pkce-challenge/-/pkce-challenge-5.0.1.tgz",
+          "integrity": "sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "pkce-challenge"
+        },
+        {
+          "location": "node_modules/proxy-addr",
+          "version": "2.0.8",
+          "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz",
+          "integrity": "sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "proxy-addr"
+        },
+        {
+          "location": "node_modules/qs",
+          "version": "6.16.1",
+          "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.1.tgz",
+          "integrity": "sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "qs"
+        },
+        {
+          "location": "node_modules/range-parser",
+          "version": "1.3.0",
+          "resolved": "https://registry.npmjs.org/range-parser/-/range-parser-1.3.0.tgz",
+          "integrity": "sha512-hek2mFQpPuI4E1BBKrSto+BU3e3x4xuarsbiwr3+lf7p44juvFMV0XFWQAP3xUyqXA4RrXLIoaSUGbSt056ZMw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "range-parser"
+        },
+        {
+          "location": "node_modules/raw-body",
+          "version": "3.0.2",
+          "resolved": "https://registry.npmjs.org/raw-body/-/raw-body-3.0.2.tgz",
+          "integrity": "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "raw-body"
+        },
+        {
+          "location": "node_modules/require-from-string",
+          "version": "2.0.2",
+          "resolved": "https://registry.npmjs.org/require-from-string/-/require-from-string-2.0.2.tgz",
+          "integrity": "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "require-from-string"
+        },
+        {
+          "location": "node_modules/router",
+          "version": "2.2.0",
+          "resolved": "https://registry.npmjs.org/router/-/router-2.2.0.tgz",
+          "integrity": "sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "router"
+        },
+        {
+          "location": "node_modules/safer-buffer",
+          "version": "2.1.2",
+          "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+          "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "safer-buffer"
+        },
+        {
+          "location": "node_modules/send",
+          "version": "1.2.1",
+          "resolved": "https://registry.npmjs.org/send/-/send-1.2.1.tgz",
+          "integrity": "sha512-1gnZf7DFcoIcajTjTwjwuDjzuz4PPcY2StKPlsGAQ1+YH20IRVrBaXSWmdjowTJ6u8Rc01PoYOGHXfP1mYcZNQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "send"
+        },
+        {
+          "location": "node_modules/serve-static",
+          "version": "2.2.1",
+          "resolved": "https://registry.npmjs.org/serve-static/-/serve-static-2.2.1.tgz",
+          "integrity": "sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "serve-static"
+        },
+        {
+          "location": "node_modules/setprototypeof",
+          "version": "1.2.0",
+          "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+          "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "setprototypeof"
+        },
+        {
+          "location": "node_modules/shebang-command",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz",
+          "integrity": "sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "shebang-command"
+        },
+        {
+          "location": "node_modules/shebang-regex",
+          "version": "3.0.0",
+          "resolved": "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz",
+          "integrity": "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "shebang-regex"
+        },
+        {
+          "location": "node_modules/side-channel",
+          "version": "1.1.1",
+          "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.1.1.tgz",
+          "integrity": "sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "side-channel"
+        },
+        {
+          "location": "node_modules/side-channel-list",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz",
+          "integrity": "sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "side-channel-list"
+        },
+        {
+          "location": "node_modules/side-channel-map",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz",
+          "integrity": "sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "side-channel-map"
+        },
+        {
+          "location": "node_modules/side-channel-weakmap",
+          "version": "1.0.2",
+          "resolved": "https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz",
+          "integrity": "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "side-channel-weakmap"
+        },
+        {
+          "location": "node_modules/standardwebhooks",
+          "version": "1.1.1",
+          "resolved": "https://registry.npmjs.org/standardwebhooks/-/standardwebhooks-1.1.1.tgz",
+          "integrity": "sha512-bCbX9ZEyFkWPsRz7Bl3NuQUJohmwGSev/yhr7vhaGPlc4AfIrspIRa6cPTBuI1ItmrTDJ4d/S2hCsfe4+vQGnQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "standardwebhooks"
+        },
+        {
+          "location": "node_modules/statuses",
+          "version": "2.0.2",
+          "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+          "integrity": "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "statuses"
+        },
+        {
+          "location": "node_modules/toidentifier",
+          "version": "1.0.1",
+          "resolved": "https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz",
+          "integrity": "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "toidentifier"
+        },
+        {
+          "location": "node_modules/ts-algebra",
+          "version": "2.0.0",
+          "resolved": "https://registry.npmjs.org/ts-algebra/-/ts-algebra-2.0.0.tgz",
+          "integrity": "sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "ts-algebra"
+        },
+        {
+          "location": "node_modules/type-is",
+          "version": "2.1.0",
+          "resolved": "https://registry.npmjs.org/type-is/-/type-is-2.1.0.tgz",
+          "integrity": "sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "type-is"
+        },
+        {
+          "location": "node_modules/type-is/node_modules/content-type",
+          "version": "2.1.0",
+          "resolved": "https://registry.npmjs.org/content-type/-/content-type-2.1.0.tgz",
+          "integrity": "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "content-type"
+        },
+        {
+          "location": "node_modules/unpipe",
+          "version": "1.0.0",
+          "resolved": "https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz",
+          "integrity": "sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "unpipe"
+        },
+        {
+          "location": "node_modules/vary",
+          "version": "1.1.2",
+          "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+          "integrity": "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "vary"
+        },
+        {
+          "location": "node_modules/which",
+          "version": "2.0.2",
+          "resolved": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+          "integrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "which"
+        },
+        {
+          "location": "node_modules/wrappy",
+          "version": "1.0.2",
+          "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+          "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "wrappy"
+        },
+        {
+          "location": "node_modules/zod",
+          "version": "4.6.7",
+          "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+          "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "zod"
+        },
+        {
+          "location": "node_modules/zod-to-json-schema",
+          "version": "3.25.2",
+          "resolved": "https://registry.npmjs.org/zod-to-json-schema/-/zod-to-json-schema-3.25.2.tgz",
+          "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==",
+          "optional": false,
+          "hasInstallScript": false,
+          "name": "zod-to-json-schema"
+        }
+      ],
+      "omitted_optional": [
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-darwin-x64/-/claude-agent-sdk-darwin-x64-0.3.309.tgz",
+          "integrity": "sha512-RvP0UOcYxn42c1lgByoMufHaMOH86U2ThGGFupOxBKATY4Q6WJd6M1CukQ/qygfgJ8lcxvK8GOOd3SIny4kQ8Q==",
+          "optional": true,
+          "os": [
+            "darwin"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-arm64/-/claude-agent-sdk-linux-arm64-0.3.309.tgz",
+          "integrity": "sha512-+8rQwzycuXTW2e/C+yotvP/SDiEDHxItdPvIriGAf2ixh7nPRjVuzHOj1tamgVO0J8nmpPvIAO4edzJ7VZCcAg==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64-musl",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-arm64-musl/-/claude-agent-sdk-linux-arm64-musl-0.3.309.tgz",
+          "integrity": "sha512-14ZD9hdUeobw+jr166YvCZyZwSYG3hDWi5S4yQxpSCrRuY/1z4Kl1AfymUlugiN3UT4Q1rif32K6GnjRJBvQdA==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-linux-x64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-x64/-/claude-agent-sdk-linux-x64-0.3.309.tgz",
+          "integrity": "sha512-96G8/uTArlvTTg0qGtiP36W76Ug/YT0gMBh8KX7J2RigdOTrk6QkHtUeCzrw6yff5hEIzecN7EWNw6uh9USo4A==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-linux-x64-musl",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-linux-x64-musl/-/claude-agent-sdk-linux-x64-musl-0.3.309.tgz",
+          "integrity": "sha512-9ViOt4MGMiE2h8V+JUPR5l9F0ZTFuhKC3jawIL/MrMfYY1m2Gt3gcMuP7h7YK914a4tmpXrmITWrpTOu1WOZQQ==",
+          "optional": true,
+          "os": [
+            "linux"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-win32-arm64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-win32-arm64/-/claude-agent-sdk-win32-arm64-0.3.309.tgz",
+          "integrity": "sha512-lDsmw5hguDF7KNMG2OvvKlG0Zgs9bKlrX9Gs2Rv/NjLVl0PIy1TUsh7byOsUR4pXwoMU1toyU1CKqBc/Au8hHw==",
+          "optional": true,
+          "os": [
+            "win32"
+          ],
+          "cpu": [
+            "arm64"
+          ],
+          "hasInstallScript": false
+        },
+        {
+          "location": "node_modules/@anthropic-ai/claude-agent-sdk-win32-x64",
+          "version": "0.3.309",
+          "resolved": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk-win32-x64/-/claude-agent-sdk-win32-x64-0.3.309.tgz",
+          "integrity": "sha512-otGHQimz6F++6SajGqSAKBclRPGTn60cx+8u3dnhMa5yovKZ5SgChFgstFsiDIWr/ZBqpJysvFemSgHX61mlmQ==",
+          "optional": true,
+          "os": [
+            "win32"
+          ],
+          "cpu": [
+            "x64"
+          ],
+          "hasInstallScript": false
+        }
+      ]
+    }
+  ],
+  "auth_reads": 0,
+  "adapter_executions": 0,
+  "provider_calls": 0,
+  "lifecycle_scripts": "disabled",
+  "global_changes": false
+}

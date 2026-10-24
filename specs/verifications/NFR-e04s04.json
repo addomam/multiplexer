@@ -104,7 +104,9 @@
     "status": "failing-separately-unapproved-and-unimplemented",
     "required_test": "e04s04_live_adapters",
     "command_available_or_executed": false,
-    "prerequisites": "specs/verifications/e04s04-live-prerequisites.json"
+    "prerequisites": "specs/verifications/e04s04-live-prerequisites.json",
+    "private_setup": "specs/verifications/e04s04-private-setup.json",
+    "installed_closure_captured": true
   },
   "historical_caps": "unchanged",
   "new_live_provider_runs": 0,
@@ -125,5 +127,6 @@
     "4": "failing"
   },
   "independent_clearance_round": 3,
-  "next_changed_source_round": 4
+  "next_changed_source_round": 4,
+  "private_setup_scope": "User-approved exact installation/static verification only; no amux dependency/source changes or auth/provider execution."
 }

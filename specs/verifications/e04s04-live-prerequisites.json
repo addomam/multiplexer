@@ -1,14 +1,58 @@
 {
   "scope": "e04s04-live-task-prerequisites-not-approval-or-acceptance",
-  "status": "blocked-separate-exact-private-setup-and-live-approval-required",
+  "status": "blocked-separate-exact-auth-model-spend-live-approval-required-private-setup-complete",
   "local_broker_verification": "specs/verifications/e04s04-verify.yaml",
   "required_exact_test": "e04s04_live_adapters",
   "required_command": "cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture",
   "driver_implemented": false,
   "command_available_or_executed": false,
   "zero_case_result_is_failure": true,
-  "missing_implementation_information": "Approved concrete installed launcher/closure, model/auth/private-root bindings and enforceable spend mechanism. No fake ignored test, fixture replacement, external prewritten success receipt or no-op was added.",
+  "missing_implementation_information": "Installed exact private launcher/platform closures are now captured. Selected existing auth/account/billing source, actual model selection/evidence, approved runtime roots/prompt ceiling/enforceable spend and exact live approval still missing. Root live driver remains absent; no stub or zero-case PASS.",
   "pinned_public_source_candidates": [
+    {
+      "package": "@agentclientprotocol/codex-acp",
+      "version": "2.2.2",
+      "source_commit": "202e66e63343ec4f5a5e35ab590251d813d129ca",
+      "source": "https://github.com/agentclientprotocol/codex-acp/tree/202e66e63343ec4f5a5e35ab590251d813d129ca",
+      "source_lock": "https://raw.githubusercontent.com/agentclientprotocol/codex-acp/202e66e63343ec4f5a5e35ab590251d813d129ca/package-lock.json",
+      "locked_ACP_SDK": "1.5.0",
+      "locked_Codex": "0.160.1",
+      "model_configuration": "CODEX_CONFIG JSON and INITIAL_AGENT_MODE exist in inspected public source; no invented --model/--budget flag.",
+      "model_candidate": "gpt-5.1-codex-mini",
+      "candidate_supported_available_or_cheapest_verified": false
+    },
+    {
+      "package": "@agentclientprotocol/claude-agent-acp",
+      "version": "0.95.0",
+      "source_commit": "ebfbfbdaa9c2a6a8bd9eb0a4965b521009152350",
+      "source": "https://github.com/agentclientprotocol/claude-agent-acp/tree/ebfbfbdaa9c2a6a8bd9eb0a4965b521009152350",
+      "source_lock": "https://raw.githubusercontent.com/agentclientprotocol/claude-agent-acp/ebfbfbdaa9c2a6a8bd9eb0a4965b521009152350/package-lock.json",
+      "locked_ACP_SDK": "2.0.1",
+      "locked_Claude_Agent_SDK": "0.3.309",
+      "node_minimum": "22",
+      "wire_protocol": "stable v1 explicitly bound by CLAUDE_AGENT_ACP_PROTOCOL=v1 for future approved launch",
+      "model_configuration": "ANTHROPIC_MODEL/private settings preference is inspected, but unsupported preference can fall back. Requested name is not proof of actual model. SDK option names maxBudgetUsd/maxTurns do not establish an exposed CLI/env spend fuse.",
+      "model_candidate": "claude-haiku-4-5-20251001",
+      "candidate_supported_available_or_cheapest_verified": false
+    }
+  ],
+  "observed_path_lookup": "Earlier command -v codex-acp claude-agent-acp returned no paths/exit1. This proves not on that PATH, not absence from all storage.",
+  "installation": "User-approved private setup and pin refresh completed; npm ci production locks/scripts disabled. Actual25/108 package manifests, platform bins/hashes and node syntax/npm ls checks pass. No adapter invocation/auth/provider/global mutation. See private setup receipt; earlier PATH absence is not installation absence.",
+  "auth": "No credential-store/provider-home/environment probe, auth read/copy, login or global mutation performed. Exact selected existing auth source and billing mode need approval; never request credentials in chat or commit auth paths/content/env.",
+  "spend": "Installed Claude SDK declares maxBudgetUsd/maxTurns; adapter reads _meta.claudeCode.options and forwards userProvidedOptions. This is a programmatic session option, not proof of a CLI/env fuse or a hard no-overshoot dollar cap; current amux open path has not been changed to pass it. Approved enforceable spend/quota still missing. No approved external provider quota or verified exposed per-run fuse; timeout is not spend ceiling.",
+  "proposed_live_shape_not_authorized": "At most4 deliberate prompts per harness: API genuine question answered natively; native genuine question answered through API with running handoff; separate exact safe allow-file tool request; separate exact deny-file request. Same original session/turn, stale authority rejected, exact allow effect and deny absence, actual model evidence and complete owned cleanup. Unsupported genuine question or permission remains a failing row; no substitute MCP question or synthetic peer.",
+  "evidence_privacy": "Public evidence only pins/model names/safe IDs/counts/dispositions/cleanup. No real prompt/answer/output/auth/env/provider-home paths/raw transport; any approved private runtime metadata is reduced to actual model names and removed with owned roots.",
+  "required_next_human_decision": "Separate exact auth/account/model/private runtime roots/prompt ceiling/enforceable-spend approval for real adapter checks; private setup approval explicitly did not grant auth/provider execution.",
+  "real_adapter_runs": 0,
+  "global_changes_or_ACP_publication": "none; not authorized",
+  "whole_story": "failing",
+  "historical_native_fence_and_review_caps": "unchanged",
+  "implemented_local_task1_3": "PASS actual1515/runtime and independent round3; not adapter compatibility",
+  "local_independent_review": "specs/verifications/e04s04-build-review-round3.json",
+  "private_setup": "specs/verifications/e04s04-private-setup.json",
+  "installed_closure": "specs/verifications/e04s04-private-installed-closure.json",
+  "private_bindings": "local://e04s04-private-setup-binding.json",
+  "previous_source_candidates": [
     {
       "package": "@agentclientprotocol/codex-acp",
       "version": "2.2.2",
@@ -35,18 +79,5 @@
       "model_candidate": "claude-haiku-4-5-20251001",
       "candidate_supported_available_or_cheapest_verified": false
     }
-  ],
-  "observed_path_lookup": "Earlier command -v codex-acp claude-agent-acp returned no paths/exit1. This proves not on that PATH, not absence from all storage.",
-  "installation": "Not authorized or performed. If approved, private exact-source-lock installation and actual installed full dependency/platform closure must be captured before any provider call; package manifest ranges alone are insufficient.",
-  "auth": "No credential-store/provider-home/environment probe, auth read/copy, login or global mutation performed. Exact selected existing auth source and billing mode need approval; never request credentials in chat or commit auth paths/content/env.",
-  "spend": "Missing approved enforceable provider quota/budget or verified supported per-run fuse. Timeout alone is not a spend ceiling; no invented budget flag/env or automatic retries/model fallback.",
-  "proposed_live_shape_not_authorized": "At most4 deliberate prompts per harness: API genuine question answered natively; native genuine question answered through API with running handoff; separate exact safe allow-file tool request; separate exact deny-file request. Same original session/turn, stale authority rejected, exact allow effect and deny absence, actual model evidence and complete owned cleanup. Unsupported genuine question or permission remains a failing row; no substitute MCP question or synthetic peer.",
-  "evidence_privacy": "Public evidence only pins/model names/safe IDs/counts/dispositions/cleanup. No real prompt/answer/output/auth/env/provider-home paths/raw transport; any approved private runtime metadata is reduced to actual model names and removed with owned roots.",
-  "required_next_human_decision": "Authorize private pinned adapter setup without auth/provider contact, or provide the separately required exact setup plus model/auth/root/prompt/enforceable-spend live approval. Local source review cannot supply that authority.",
-  "real_adapter_runs": 0,
-  "global_changes_or_ACP_publication": "none; not authorized",
-  "whole_story": "failing",
-  "historical_native_fence_and_review_caps": "unchanged",
-  "implemented_local_task1_3": "PASS actual1515/runtime and independent round3; not adapter compatibility",
-  "local_independent_review": "specs/verifications/e04s04-build-review-round3.json"
+  ]
 }
