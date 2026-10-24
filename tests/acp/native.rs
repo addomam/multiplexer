@@ -1,5 +1,8 @@
 //! Real native attachment boundaries. Parent registers this child module.
 use super::*;
+
+#[path = "native/acceptance.rs"]
+mod acceptance;
 use alacritty_terminal::Term;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Dimensions;
@@ -440,6 +443,9 @@ fn finish(mut host: Host, agent: &mut Agent, native: &mut Attachment, sentinel: 
     native.detach();
     force(&host, agent);
     host.close(agent); // observes peer absence and cleanup_complete before fallback
+    if agent.root.join("descendant.pid").exists() {
+        host.reaped(agent, "descendant.pid");
+    }
     assert!(!agent.root.join("fixture-fallback").exists());
     host.call(json!({"op":"shutdown"}));
     let deadline = Instant::now() + DEADLINE;

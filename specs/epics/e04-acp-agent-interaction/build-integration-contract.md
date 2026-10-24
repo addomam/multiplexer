@@ -119,3 +119,13 @@ S02 is safely integrated as f87ec7b with retirement receipt043cc0f. No new inter
 - Both substantial workers first write/commit meaningful boundary tests without running build/lint/tests/formatters. Parent integrates and runs the named cases; an already-correct boundary is recorded as existing behavior, never given a fabricated RED. A real failure receives a separate test-only RED checkpoint and minimal production repair before GREEN. All task statuses remain failing until complete actual command/smoke/security gates.
 
 
+## S04 execution ownership
+
+Verified S03 integration eb2d0b2 and completion5311409 are the common base. Reuse the approved Plan/impact/threat contracts; no new production interface.
+
+- Backend exclusively owns new `tests/acp/acceptance.rs` and `tests/fixtures/acp_peer.rs`. Native exclusively owns new `tests/acp/native/acceptance.rs`; both children reuse existing actual Host/Agent/Attachment helpers. Parent registers both modules and owns native-parent descendant cleanup, shared production/routing/manifests, live harness, actual outside-test proof and all ledgers.
+- Fixed peer mode `s04-complete` owns a descendant and retains the same session. Every add sends genuine session form `reusable-form`, consumes explicit `form_bonus`, then permission wire73 with existing offered opaque-α/β allow_once/always and opaque-γ/δ reject_once/always. Only allow changes arithmetic and writes `tool-effect-N`; rejection leaves value unchanged. Each original command completes/counts under its original RPC and the existing effect.json shape.
+- Fixed `s04-stalled-descendants` owns a descendant, initializes normally, then waits at `s04-reads` before reading prompts. Accepted64KiB work remains truthful during ownership/recovery/close/shutdown; no release before the observation under test.
+- Native complete sequence proves deliberate form7/API allow=>49/count1, API form11/native reject=>49/count2/no effect2, then fresh native add1 2/form5/allow=>57/count3. Include genuine conditional keep/withdraw, authority-only force, stale-control/raw-input rejection, fresh canonical responders despite reused wire IDs, privacy and actual cleanup before fallback.
+- Both workers commit test-only code without build/tests/lint/formatters/provider/auth/install/global changes. Parent integrates both before named execution, records any actual RED separately and sequences shared repairs. All tasks remain failing until their exact runtime/smoke/security gates pass. No real adapter/provider acceptance is inferred from a local peer.
+

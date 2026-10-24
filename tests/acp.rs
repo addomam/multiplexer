@@ -13,6 +13,9 @@ const DEADLINE: Duration = Duration::from_secs(12);
 #[path = "acp/native.rs"]
 mod native;
 
+#[path = "acp/acceptance.rs"]
+mod acceptance;
+
 fn exchange(socket: &Path, mut request: Value) -> std::io::Result<Value> {
     request["version"] = json!(1);
     let mut stream = UnixStream::connect(socket)?;
