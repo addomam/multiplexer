@@ -1,6 +1,6 @@
 # e04 test architecture
 
-Status: Build in progress. First-story local acceptance passes: deterministic peer, actual CLI/controlling-PTY surfaces, workspace343/strict gates, Bun8/Zsh. Round5 meets the approved AND threshold96.875/100 with zero must-fix; its sole P2 is repaired and verified, with raw reports retained and no independent post-repair PASS claimed. No sixth round or cap reset. S01 checkpoint precedes S02; later stories/live adapter compatibility remain unverified. ADR0004/PLAN/integration contract and threat model are normative. Existing e03s08/native-application fence remains failing.
+Status: Build in progress. S01–03 are locally complete; current S03 exact admission1/integration11, actual CLI/controlling-PTY proofs, workspace384/strict gates, native19/PTY34 and Bun8/Zsh pass. S02 and S03 fresh round1 reviews each pass100/100/security0. S01 round5 met96.875/100 with zero must-fix; its sole P2 was repaired/verified, with no independent post-repair PASS claimed and no sixth round/cap reset. S04 complete-broker and live adapter compatibility remain unverified. ADR0004/PLAN/integration contract and threat model remain normative. Existing e03s08/native-application fence remains failing.
 
 ## Levels and fixtures
 

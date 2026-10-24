@@ -3,8 +3,9 @@ context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s03
 verified_at: '2026-10-24T07:06:34.924749+00:00'
 verifier: parent-actual-CLI-controlling-PTY-and-project-commands
-status: passed-local-task-gates-safe-completion-pending
+status: passed-local-S03-safely-integrated-workers-retired
 source: specs/verifications/e04s03-round1-source.json
+integration: {commit: eb2d0b2, disposition: keep-feature-no-ACP-publication, worker_retirement: specs/verifications/e04s03-worker-retirement.json}
 terminal_verdict:
   command: cargo fmt && cargo build --example acp_fixture && cargo test --lib e04s03_ -- --nocapture && cargo test --test acp e04s03_ -- --nocapture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh
   exit_code: 0

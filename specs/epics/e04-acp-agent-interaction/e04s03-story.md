@@ -6,7 +6,7 @@ type: feat
 context: specs/epics/e04-acp-agent-interaction/context.yaml
 risk: P0
 bcps: 8
-status: failing
+status: done
 ---
 
 ## 1 Identity

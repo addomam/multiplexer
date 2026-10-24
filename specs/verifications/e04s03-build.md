@@ -1,6 +1,6 @@
 # e04s03 Build evidence
 
-Status: **PASS for all six local task gates — exact runtime, actual CLI/PTY, regressions, self-audit and fresh round1 A/B100/100/security0. Safe feature checkpoint and owned-worker retirement remain before story completion.** Fixture failures remain failed driver history, not a manufactured product RED. No post-review source change.
+Status: **DONE locally — all six task gates pass; safe feature integration eb2d0b2 and owned-worker retirement observed.** Exact runtime, actual CLI/PTY, regressions, self-audit and fresh round1 A/B100/100/security0 pass. Fixture failures remain failed driver history, not a manufactured product RED. No post-review source change.
 
 ## Verified predecessor and authorization
 
@@ -89,7 +89,9 @@ Both blind reviewers independently matched all14 frozen hashes. Each scored32ite
 
 Security independently traced admission, original provenance, exact responders, raw input, inert rendering, process identity and cleanup: zero supported and zero operational findings. Full report: specs/security/epics/e04/e04s03-review-round1.json. Its tools could not recompute hashes; both code reviewers did. Reviewers ran no checks/provider calls and did not read one another's reports.
 
-## Remaining gates
+## Safe local completion and next step
 
-Safely checkpoint current reviewed feature sources, then gracefully retire the two owned S03 sessions/worktrees without discarding work. S04 complete-broker/native-fence revisit and exact live-adapter approval remain separate. Historical e03s08/native-settlement failure and exhausted review caps are unchanged.
+Reviewed source safely integrated eb2d0b2; all worker deliveries/repair are ancestors and worker worktrees were clean. Ctrl-D gracefully returned both panes to their exact original Zsh; no-force removal followed. All six owned shell/OMP/MCP PIDs, both worktrees and both workspaces/tabs are absent; branches retained, no unmerged discard. Receipt: e04s03-worker-retirement.json. Conventional test commit implies no release bump; no production defensive-policy change or coauthor attribution. Keep the feature branch, no main publication.
+
+Proceed directly to approved S04 local complete-broker/native-fence validation. Real Codex/Claude adapter/auth/model checks remain separately gated. Historical e03s08/native-settlement failure and exhausted review caps are unchanged.
 
