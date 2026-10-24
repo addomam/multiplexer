@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — ACP conversation transport (Build)
+
+- Add explicit owned ACP views, CLI open/inspect/attach and current-control, generation-bound prompt/authenticate/interrupt/close admission using pinned official ACP v1 schema types. Keep native terminal/agent routes and stock Zsh/OMP distinct.
+- Retain exact work/RPC/session identities across caller loss and authority transfer. Force never interrupts; cancelled pending claims grant nobody; accepted work is not replayed or discarded by a later owner check.
+- Bound frames, reserved/in-flight queues, history, stderr and owned target admission. Keep unknown delivery and process-identity cleanup truthful; unknown cleanup is retained and continues consuming its reservation.
+- Render canonical same-instance history and identity-bound local drafts in the actual human TUI. Paste never submits, observers cannot send application input, and revocation clears draft authority and stale controlled status.
+- Verify the first transport slice with local deterministic stdio peers, real CLI and controlling-PTY interaction. Real adapter/provider/auth/model compatibility, later interaction stories and complete ACP acceptance are separate gates; historical native-fence failures and review caps remain unchanged.
+- Expose ACP ownership's approved `settlement_boundary: input-admission` field consistently in receipts and human control panels. Preserve completed force-warning eligibility across unchanged fully-visible repaints; changed facts, clipping, resize and scrolling still require a new safe presentation.
+- Accept the existing persistent transport flag on ACP open. Retain unqueued native-editor drafts under their original authority without replay, keep late process-identity cleanup uncertainty charged after close, and preserve observed authentication outcomes if follow-up setup cannot enqueue. Roll back empty failed-open views without discarding concurrent admitted-close history.
+- Preserve the last confirmed ACP draft/transcript across failed inspection reads, surface the failure separately and restart history only for a real target-identity change. Distinguish an unread target from a retained cache; clear superseded local rejection notices on deliberate requeue without claiming agent admission.
+- Sanitize remaining bidi/line-format marks in ACP metadata and native chrome; reject them in ACP names. Exercise actual queued-response lifetime ordering rather than claiming a late reply from an already-reaped peer.
+- Answer malformed or foreign-session cancel-time permissions with explicit protocol errors without dropping the original prompt or killing its ACP session; valid late permissions retain distinct Cancelled semantics.
+
 ## Unreleased — e03 ownership and agent interaction (Build)
 
 - Breaking API/CLI cutover: public `input` and `execute` require a current control capability; CLI callers must supply serialized `--control` JSON. Raw client requests never acquire ownership implicitly.

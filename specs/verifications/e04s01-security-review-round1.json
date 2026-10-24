@@ -1,0 +1,57 @@
+{
+  "coverage_summary": "Verdict: NO SECURITY BLOCKER IDENTIFIED in the assigned e04s01 current working tree. No candidate survived source-to-sink analysis at confidence >=8/10. This is a scoped static security verdict, not full story acceptance or a blanket safety claim. Inspected boundaries: (1) caller -> daemon -> authority -> broker: daemon.rs:433-461 obtains the controller from the authorized capability and passes server connection context; control.rs:1194-1214 rechecks authority while holding the target lock around broker commit; acp.rs:463-654 revalidates exact target/generation, duplicate IDs, lifecycle, foreground and capacity before publishing work. (2) Adapter -> transport/protocol/resources: acp.rs:1007-1414 bounds accumulation and queued/in-flight bytes/counts, processes one ordered consumer, retains exact outbound RPC identities and responds explicitly to unsupported delegation; stderr continues draining past retention. (3) Process lifecycle/PID: acp.rs:819-953 uses direct absolute executable/argv, setsid, captured owned-session identities, outside-authority cleanup and a pinned-unreaped-child fallback; uncertain capture remains charged. Reviewed the reused runtime.rs identity/discovery/signalling implementation without treating it as newly changed. (4) Human input -> same-session action: tui.rs:815-1026 consumes active-ACP application events; tui/agent.rs binds drafts/actions to the original complete target/control/generation and sanitizes bounded display data; tui/control.rs preserves captured envelopes instead of substituting fresh authority. (5) Privacy -> public projection/host: acp.rs:656-809 separates opt-in content from metadata and exposes typed outcomes rather than raw provider errors; daemon.rs:257-290,1177-1227 projects/drains outside ACP locks; editor rendering neutralizes terminal controls. Reviewed the six S01 scenario contracts and relevant real-peer test oracles, including cleanup-before-fallback assertions. Existing same-user launch/tool trust and e03 native-fence exclusions were respected. No source, documentation or Git mutations, payload execution, network requests, checks or live operations were performed.",
+  "findings": [],
+  "reviewed_paths": [
+    "/Users/addomam/projects/amux-acp-build/CONVENTIONS.md",
+    "/Users/addomam/projects/amux-acp-build/src/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/src/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/daemon.rs",
+    "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+    "/Users/addomam/projects/amux-acp-build/src/client.rs",
+    "/Users/addomam/projects/amux-acp-build/src/cli.rs",
+    "/Users/addomam/projects/amux-acp-build/src/lib.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/view.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/agent.rs",
+    "/Users/addomam/projects/amux-acp-build/Cargo.toml",
+    "/Users/addomam/projects/amux-acp-build/Cargo.lock",
+    "/Users/addomam/projects/amux-acp-build/tests/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/fixtures/acp_peer.rs",
+    "/Users/addomam/projects/amux-acp-build/README.md",
+    "/Users/addomam/projects/amux-acp-build/CHANGELOG.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-story.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-tasks.yaml",
+    "/Users/addomam/projects/amux-acp-build/specs/adr/0004-acp-authoritative-input.md",
+    "/Users/addomam/projects/amux-acp-build/specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "/Users/addomam/projects/amux-acp-build/specs/security/epics/e04/THREAT_MODEL.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/AUDIT-e04s01.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-build.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-cli-pty-smoke.json"
+  ],
+  "deferred": [
+    {
+      "reason": "Static review only: tests, builds, lint, formatting, race schedules, actual terminal effects and OS cleanup failures were not exercised independently. Existing audit/smoke records were read as recorded evidence, not treated as independently reproduced verification. The capture-failure invariant and pinned-group fallback tests do not establish that an actual OS metadata outage was induced.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/tests/acp.rs",
+        "/Users/addomam/projects/amux-acp-build/src/acp.rs",
+        "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-cli-pty-smoke.json"
+      ]
+    },
+    {
+      "reason": "Real adapter/provider/auth/model compatibility, later S02 forms/permissions and complete S03/S04 acceptance remain outside this S01 security verdict. No security score or full 32-item general-quality acceptance is inferred from the absence of reported vulnerabilities.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-story.md"
+      ]
+    },
+    {
+      "reason": "Same-user command launch and agent-owned tools are intentional trust boundaries, not a sandbox. Existing e03 native application-fence failures and unchanged historical process-helper limitations were not relabelled as newly introduced ACP findings. Current source was read directly; no Git mutation or independent Git-state/diff command was performed.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+        "/Users/addomam/projects/amux-acp-build/specs/adr/0004-acp-authoritative-input.md"
+      ]
+    }
+  ]
+}

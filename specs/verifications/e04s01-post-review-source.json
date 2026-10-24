@@ -1,0 +1,63 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "status": "verified-post-review-P2-repair",
+  "review_round": 5,
+  "max_rounds": 5,
+  "reviewed_manifest": "specs/verifications/e04s01-round5-source.json",
+  "review_evidence": "specs/verifications/e04s01-build-review-round5.json",
+  "numerical_and_gate": "PASS",
+  "scores": [
+    96.875,
+    100
+  ],
+  "must_fix": [
+    0,
+    0
+  ],
+  "should_fix": [
+    1,
+    0
+  ],
+  "sole_P2": "repaired-and-verified",
+  "independently_reviewed_after_repair": false,
+  "changed_since_review": [
+    "src/acp.rs",
+    "tests/acp.rs",
+    "tests/fixtures/acp_peer.rs"
+  ],
+  "verification": {
+    "artifact": "artifact://1171",
+    "workspace_passed": 343,
+    "suites": 30,
+    "ignored": 10,
+    "acp_library": 12,
+    "acp_s01": 23,
+    "legacy": 57,
+    "omp_passed": 8,
+    "clippy": "passed-strict-workspace-all-targets",
+    "check": "passed-workspace-all-targets",
+    "build": "passed-workspace",
+    "fmt": "passed",
+    "zsh_syntax": "passed"
+  },
+  "runtime_evidence": "specs/verifications/e04s01-cancel-invalid-permission-cli.json",
+  "sha256": {
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+    "src/acp.rs": "ae23fb79dfe95dc97be565012539844d6983e639d0123d7aea7673d4698b4e4a",
+    "src/cli.rs": "1571b0d3374636260f8a2755fe2b366be96b96689716d68c779aa6aa254930cb",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+    "src/lib.rs": "daf3c298192e2f829422bdc080dafb19e0e1690fb1c719be7eec88f9186bc0c7",
+    "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+    "src/tui/agent.rs": "7eeb009756002506df4fe488495f6d4ab07c993846e6a39e87d36bf0124894af",
+    "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+    "src/tui/view.rs": "573bc270580c93c257ec5c34aa9764475865103b5946f997b05003a8604ba08d",
+    "tests/acp.rs": "bfb30d8f01eddadd90304fdd707b5b8092b7efe764df5c61ddad4c701e8d0b0d",
+    "tests/fixtures/acp_peer.rs": "ed29d0ca2cce81c2781bbf1e31573af71b952a5b9ba3b9089c8029384787cb24",
+    "tests/pty_control.rs": "577e8fb6b9e38501dd04d7b42a0c370b79ae3415c072f41dbda597f9c9596b56",
+    "tests/pty_control/native.rs": "ce485d8fbf2e4031bb029a0677aff00d1f6c7e5a8f5dac17b4f6cdcd46cd1c4e"
+  },
+  "historical_caps": "unchanged",
+  "new_live_model_or_publication_authorization": false
+}

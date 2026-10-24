@@ -1777,6 +1777,9 @@ impl ShellReportGate {
                     }
                     Err(_) => break,
                 };
+                // Darwin inherits the listener's nonblocking mode. Wait for
+                // the real callback frame rather than losing it on WouldBlock.
+                stream.set_nonblocking(false).unwrap();
                 stream.set_read_timeout(Some(DEADLINE)).unwrap();
                 stream.set_write_timeout(Some(DEADLINE)).unwrap();
                 let mut text = String::new();

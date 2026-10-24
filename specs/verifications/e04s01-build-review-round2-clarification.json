@@ -1,0 +1,34 @@
+{
+  "overall_correctness": "incorrect",
+  "explanation": "Clarification only; original scored report unchanged. must_fix_count 1, should_fix_count 2, score 90.625. consider_count 3 names the items omitted from findings: C1 start() Err leaves the published agent_views row (src/daemon.rs:420-423); C2 decoded auth success is labeled unknown if the follow-up newSession enqueue fails (src/acp.rs:1339-1346); C3 acp-removed carries empty data so a dirty ended projection evicted in the same finish is not published (src/acp.rs:706-709). None of those three is scored. Native elapsed_ms force invalidation is not a consider defect.",
+  "confidence": 0.9,
+  "findings": [
+    {
+      "title": "Keep uncaptured cleanup charged after a prior close",
+      "body": "If close or end runs after the pre-spawn live check and capture_owned_session then returns None, reap_uncaptured still runs but close(Some(\"process-identity\")) returns immediately because the target is already not live (src/acp.rs:221-224). finish then sees lifecycle closing rather than failed, sets joined, and leaves failure unset. cleanup_complete therefore becomes true (src/acp.rs:184-187), so reserve and prune free the live slot and can evict the target. Inspect reports cleanup complete even though birth identity was never captured and the group signal result is ignored. Set the process-identity failure directly, as the later cleanup assignment does, so an already-closed target keeps the uncertain charge.",
+      "priority": 1,
+      "confidence": 0.92,
+      "file_path": "src/acp.rs",
+      "line_start": 871,
+      "line_end": 878
+    },
+    {
+      "title": "Accept persistent as a transport field on acp-open",
+      "body": "acp-open rejects the common keep-alive field that every other ACP operation accepts. validate_mutation_fields allows only version, op, project, name, cwd, controller, and command, so a request with persistent:true fails as invalid-request: unknown mutation field persistent before any reservation. serve() already treats that boolean as socket keep-alive and not authority, and Broker::prepare/inspect plus TUI call() rely on it. A persistent API client, which is the documented advanced client pattern and the only way to pipeline controller-create with later ACP mutations on one socket, cannot open. One-shot CLI open still works because it omits the field. Allow a boolean persistent on acp-open and ignore it for authority, matching the other mutation allowlists.",
+      "priority": 2,
+      "confidence": 0.93,
+      "file_path": "src/daemon.rs",
+      "line_start": 293,
+      "line_end": 303
+    },
+    {
+      "title": "Do not discard an ACP prompt before the control queue accepts it",
+      "body": "AgentView::submit takes the draft and sets a capture notice before NativeControl::acp_action knows whether the action was queued. submit returns false with no status change when the target is already in busy, and acp_action ignores that bool. Busy is set for the whole in-flight ACP or ownership RPC, while session readiness is refreshed on a different socket, so an Enter after authenticate-or-prompt dispatch has started but before that reply clears busy drops the new prompt. A full 128-slot control channel does the same after overwriting status with a backpressure message. The text is gone, canonical history never records it, and the notice still says the action was captured. Return the send result to the editor and restore the draft, or reject before clear_draft, and surface the busy drop explicitly.",
+      "priority": 2,
+      "confidence": 0.88,
+      "file_path": "src/tui/agent.rs",
+      "line_start": 516,
+      "line_end": 521
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # e04 ACP threat model
 
-Scope: proposed ACP session/view/API additions, not a vulnerability finding against unmodified code. Branch context observed: `/Users/addomam/projects/amux-acp-build`, `feat/acp-agent-interaction`, baseline `a46eaddeb79a9a42628d9cb39cd60945ece27fbb`. No production diff exists yet. Overall risk: HIGH / P0. Build authorization is conditional on new Plan review; provider/auth/model runs and main publication remain separately gated.
+Scope: ACP session/view/API additions in `/Users/addomam/projects/amux-acp-build`, `feat/acp-agent-interaction`, published baseline `a46eaddeb79a9a42628d9cb39cd60945ece27fbb`. Approved Plan round3 unlocked Build; first-story production code and local runtime evidence now exist. Overall risk: HIGH / P0. Threats below remain verification obligations, not findings or a blanket safety claim. Live provider/auth/model runs and main publication remain separately gated.
 
 ## Trust boundaries
 

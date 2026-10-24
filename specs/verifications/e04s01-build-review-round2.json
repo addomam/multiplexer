@@ -1,0 +1,105 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 2,
+  "max_rounds": 5,
+  "verdict": "FAIL",
+  "scores_recomputed": [
+    96.875,
+    90.625
+  ],
+  "counts": [
+    {
+      "reviewer": "E04S01ReviewA2",
+      "total_items": 32,
+      "must_fix": 1,
+      "should_fix": 0,
+      "consider": 2
+    },
+    {
+      "reviewer": "E04S01ReviewB2",
+      "total_items": 32,
+      "must_fix": 1,
+      "should_fix": 2,
+      "consider_count_reported": 3,
+      "consider_rows_provided": 0,
+      "clarification": "requested separately; original report preserved"
+    }
+  ],
+  "reports": {
+    "A": {
+      "overall_correctness": "incorrect",
+      "explanation": "FAIL for e04s01-local-conversation-transport round 2 on the current working tree, not HEAD. total_items 32, must_fix_count 1, should_fix_count 0, consider_count 2, score 96.875 = 100*(32-1-0)/32. The score meets 94, but PASS also requires zero must-fix, so the gate fails. This is static review of frozen source plus the parent's recorded runtime evidence. I did not rebuild, retest, lint, or contact another reviewer.\n\nMust-fix: src/daemon.rs:293-302. acp_open's allowlist omits persistent, so validate_mutation_fields rejects persistent:true as an unknown mutation field before reserve. The integration contract says persistent remains a transport boolean and is not authority. Broker prepare/inspect already allow it, and native input/execute allowlists include it. serve() keeps the socket only when persistent is true (daemon.rs:1919-1952). README documents that opt-in. amux api and any persistent client therefore cannot open on the live socket. One-shot amux acp open omits the field (cli.rs:213-214) and is not hit. Fix: add persistent to the open allowlist and do not treat it as authority; the existing boolean check then rejects a non-boolean.\n\nConsider, not scored: src/tui/control.rs:1486-1494 always prints ACP outcome objects as unknown because as_str fails on {kind,stop_reason|code}. The boundary sentence and state column still render. src/daemon.rs:420-423 does not unpublish agent_views when start returns Err after publication; no child is created on that path, and eviction waits until more than eight ended instances.\n\nScenarios, from code plus named tests and specs/verifications/e04s01-resume-cli-pty-smoke.json, not from a rerun: SC-01 holds for the specified CLI open plus API/human same-session stream (smoke api_total 42, human_total 57, same_session arithmetic-58724, prompt_effect_count 2, no fabricated terminal). Persistent-framed API open is the must-fix exception. SC-02 holds: stale/wrong-tuple/duplicate/busy are rejected inside admit_acp plus commit, and active ACP keys, paste, mouse, focus, resize, and double-prefix do not fall through to PTY input. SC-03 holds: initialize/newSession/prompt do not block the FIFO consumer; RPC identity is registered before enqueue; socket loss does not cancel; auth is explicit and agent-type only; forms stay unadvertised and answer/permission return unsupported. SC-04 holds: the 1 MiB cap is checked before extend, ingress/egress charges include in-flight frames, and hostile/stall tests are written against failed lifecycle plus a responsive daemon. SC-05 holds for explicit close, shutdown traversal of agent_views, native close/remove not ending ACP views, and birth-qualified reap; the start-Err unpublish gap is the consider above, not a child leak. SC-06 holds: projection and acp-updated metadata omit prompt text, raw errors, env, stderr bytes, and capability refs; include_content defaults false; gaps are explicit; stderr keeps draining after the cap.\n\nRepairs: settlement_boundary is the ownership field in control.rs and the three TUI consumers; no leftover boundary key in src. Force confirmation still requires a fully visible warning: first draw is Drawn not Confirmable, queued pre-draw Enter is blocked, and resize, scroll, clipping, and changed settlement_boundary/retained_work/unsettled/observed facts invalidate. An unchanged fully visible repaint keeps Confirmable. ShellReportGate clears inherited nonblocking mode before the framed read and does not weaken the original settlement assertions.\n\nSecurity: no reachable confidence-8 finding. Admission is authority-then-ACP and memory-only; force and ordinary cancel do not send session/cancel or signal the adapter; identities are exact; frames and queues are bounded; cleanup does not signal after reap; public metadata does not carry the synthetic prompt/error markers the privacy test asserts. Same-user launch remains the accepted trust boundary. The persistent rejection fails closed. Historical e03 fence defects are not claimed fixed and are not worsened.\n\nVerification reviewed, not rerun: parent artifact 1036 (workspace 335/30 suites/10 ignored, strict Clippy, check, build, fmt), Bun 8/49, zsh -n pass, and the resume CLI/PTY smoke (idle 6.2s survived, observer_created_work false, revoked_draft_replayed false, force true, native ids preserved, termios restored, peer reaped before fallback, exits 0). Limitations: no independent execution, no live adapter/auth/model, no other-reviewer reports, and isolated LSP references were not treated as absence of callers. S02-S04 remain out of scope and are not S01 stubs.",
+      "confidence": 0.91,
+      "findings": [
+        {
+          "title": "Accept persistent as a transport field on acp-open",
+          "body": "acp_open allowlists only version, op, project, name, cwd, controller, and command, so validate_mutation_fields rejects persistent before reserve with invalid-request: unknown mutation field persistent. The contract says persistent remains a transport boolean and is not authority; broker prepare and inspect already allow it, and input/execute allowlists include it. The daemon keeps a socket only when persistent is true, and README documents that opt-in, but amux api and any persistent client that sends the usual flag cannot open. One-shot amux acp open omits the field and is unaffected. Add persistent to the open allowlist and keep ignoring it for authority; the existing boolean check then rejects a non-boolean value.",
+          "priority": 1,
+          "confidence": 0.96,
+          "file_path": "src/daemon.rs",
+          "line_start": 293,
+          "line_end": 302
+        },
+        {
+          "title": "Show ACP outcome objects in the force warning",
+          "body": "The new ACP branch of call_lines prints call.outcome with as_str, but broker projection stores outcome as an object such as {kind:response, stop_reason} or {kind:error, code}. Every retained ACP row therefore renders outcome as unknown even when the canonical state is submitted, completed, or failed. The boundary sentence and state column still appear, so this does not bypass confirmation, but the warning the operator must read misstates the retained result. Format the outcome object, or omit the field, instead of treating it as a string.",
+          "priority": 3,
+          "confidence": 0.92,
+          "file_path": "src/tui/control.rs",
+          "line_start": 1486,
+          "line_end": 1494
+        },
+        {
+          "title": "Drop the published view when ACP start fails",
+          "body": "After agent_views insert and the acp-opened event, a start error only end_acp and cleanup, then returns the error. It does not remove the published descriptor or registry root. prune_ended emits acp-removed only after more than eight cleanup-complete instances, so a failed worker start leaves a snapshot-visible ended view the error response did not name. No child is spawned on that path, and live capacity is not freed incorrectly, but the contract's rollback of the published descriptor on start error is incomplete. Remove the view and registry root on that error, or return the id with an explicit failed lifecycle.",
+          "priority": 3,
+          "confidence": 0.84,
+          "file_path": "src/daemon.rs",
+          "line_start": 420,
+          "line_end": 423
+        }
+      ]
+    },
+    "B": {
+      "overall_correctness": "incorrect",
+      "explanation": "FAIL. Reviewer B, current working tree, 32-item denominator. must_fix_count 1, should_fix_count 2, consider_count 3, score 90.625 (100*(32-1-2)/32). Static review plus recorded parent evidence; no checks were run here. Lifecycle and transport traces confirm the must-fix and add no further scored defect. Must-fix: a close after the pre-spawn live check makes a later capture failure drop the process-identity charge, so cleanup_complete becomes true (src/acp.rs:871-878). Should-fix: acp-open rejects persistent:true (src/daemon.rs:293-303). Should-fix: the editor clears a prompt before the control queue accepts it (src/tui/agent.rs:516-521). SC-01 through SC-04 and SC-06 hold; SC-05 fails only the uncaptured-after-close cleanup charge. No other new HIGH finding at confidence >= 8.",
+      "confidence": 0.9,
+      "findings": [
+        {
+          "title": "Keep uncaptured cleanup charged after a prior close",
+          "body": "If close or end runs after the pre-spawn live check and capture_owned_session then returns None, reap_uncaptured still runs but close(Some(\"process-identity\")) returns immediately because the target is already not live (src/acp.rs:221-224). finish then sees lifecycle closing rather than failed, sets joined, and leaves failure unset. cleanup_complete therefore becomes true (src/acp.rs:184-187), so reserve and prune free the live slot and can evict the target. Inspect reports cleanup complete even though birth identity was never captured and the group signal result is ignored. Set the process-identity failure directly, as the later cleanup assignment does, so an already-closed target keeps the uncertain charge.",
+          "priority": 1,
+          "confidence": 0.92,
+          "file_path": "src/acp.rs",
+          "line_start": 871,
+          "line_end": 878
+        },
+        {
+          "title": "Accept persistent as a transport field on acp-open",
+          "body": "acp-open rejects the common keep-alive field that every other ACP operation accepts. validate_mutation_fields allows only version, op, project, name, cwd, controller, and command, so a request with persistent:true fails as invalid-request: unknown mutation field persistent before any reservation. serve() already treats that boolean as socket keep-alive and not authority, and Broker::prepare/inspect plus TUI call() rely on it. A persistent API client, which is the documented advanced client pattern and the only way to pipeline controller-create with later ACP mutations on one socket, cannot open. One-shot CLI open still works because it omits the field. Allow a boolean persistent on acp-open and ignore it for authority, matching the other mutation allowlists.",
+          "priority": 2,
+          "confidence": 0.93,
+          "file_path": "src/daemon.rs",
+          "line_start": 293,
+          "line_end": 303
+        },
+        {
+          "title": "Do not discard an ACP prompt before the control queue accepts it",
+          "body": "AgentView::submit takes the draft and sets a capture notice before NativeControl::acp_action knows whether the action was queued. submit returns false with no status change when the target is already in busy, and acp_action ignores that bool. Busy is set for the whole in-flight ACP or ownership RPC, while session readiness is refreshed on a different socket, so an Enter after authenticate-or-prompt dispatch has started but before that reply clears busy drops the new prompt. A full 128-slot control channel does the same after overwriting status with a backpressure message. The text is gone, canonical history never records it, and the notice still says the action was captured. Return the send result to the editor and restore the draft, or reject before clear_draft, and surface the busy drop explicitly.",
+          "priority": 2,
+          "confidence": 0.88,
+          "file_path": "src/tui/agent.rs",
+          "line_start": 516,
+          "line_end": 521
+        }
+      ]
+    }
+  },
+  "security": {
+    "status": "no-static-blocker",
+    "findings": 0,
+    "evidence": "specs/verifications/e04s01-security-review-round2.json"
+  },
+  "historical_e03_counters": "unchanged",
+  "publication_or_live_authorization": false
+}

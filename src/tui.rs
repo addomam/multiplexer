@@ -19,6 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod agent;
 mod control;
 mod view;
 use control::{Input, NativeControl};
@@ -454,6 +455,28 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
     for node in terminals {
         visit(node, 0, terminals, projects, query, &mut seen, &mut rows);
     }
+    if let Some(agents) = snapshot["agent_views"].as_array() {
+        for agent in agents {
+            let project = projects
+                .iter()
+                .find(|project| project["id"] == agent["project_id"]);
+            let label = format!(
+                "ACP · {} · {}\n{}",
+                text(agent, "name"),
+                text(agent, "lifecycle"),
+                project
+                    .map(|project| text(project, "name"))
+                    .unwrap_or("project")
+            );
+            if fuzzy(query, &label) {
+                rows.push(Row {
+                    id: text(agent, "id").to_owned(),
+                    label,
+                    depth: 0,
+                });
+            }
+        }
+    }
     rows
 }
 
@@ -462,7 +485,11 @@ fn clip_label(label: &str, cols: u16) -> String {
     let mut width = 0usize;
     label
         .chars()
-        .filter(|c| !c.is_control())
+        .filter(|c| {
+            !c.is_control()
+                && !matches!(*c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+                    | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        })
         .take_while(|c| {
             width += c.width().unwrap_or(0);
             width <= cols as usize
@@ -616,6 +643,64 @@ fn selected_text(screen: &Value, start: (u16, u16), end: (u16, u16)) -> String {
     result
 }
 
+fn agent_view<'a>(snapshot: &'a Value, id: &str) -> Option<&'a Value> {
+    snapshot["agent_views"]
+        .as_array()?
+        .iter()
+        .find(|view| view["id"] == id)
+}
+
+fn agent_target(view: &Value) -> Value {
+    json!({"kind":"acp","id":view["id"],"instance_id":view["instance_id"],
+        "connection_generation":view["connection_generation"],"session_id":view["session_id"]})
+}
+
+fn contains_view(snapshot: &Value, id: &str) -> bool {
+    agent_view(snapshot, id).is_some()
+        || snapshot["terminals"]
+            .as_array()
+            .is_some_and(|terminals| terminals.iter().any(|terminal| terminal["id"] == id))
+}
+
+fn resize_native(socket: &Session, snapshot: &Value, id: &str, size: (u16, u16)) -> Result<()> {
+    if agent_view(snapshot, id).is_none() && !id.is_empty() {
+        call(
+            socket,
+            json!({"op":"resize","terminal":id,"cols":size.0.clamp(2,500),
+            "rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+        )?;
+    }
+    Ok(())
+}
+
+fn open_from_view(snapshot: &Value, id: &str, omp: bool) -> Value {
+    if let Some(view) = agent_view(snapshot, id) {
+        json!({"op":"open","project":view["project_id"],"omp":omp})
+    } else {
+        open_window(id, omp)
+    }
+}
+
+fn close_agent(
+    authority: &mut NativeControl,
+    snapshot: &Value,
+    id: &str,
+    status: &mut String,
+) -> bool {
+    let Some(view) = agent_view(snapshot, id) else {
+        return false;
+    };
+    let Some(grant) = authority.acp_grant(id) else {
+        *status = "ACP observer: obtain control before explicitly closing this instance".into();
+        return true;
+    };
+    let request = json!({"op":"acp-close","target":agent_target(view),
+        "control":grant["control"],"owner_generation":grant["owner_generation"],
+        "call_id":uuid::Uuid::new_v4().to_string()});
+    let _ = authority.acp_action(request, status);
+    true
+}
+
 fn window_exited(snapshot: &Value, id: &str) -> bool {
     snapshot["terminals"].as_array().is_some_and(|ts| {
         ts.iter()
@@ -643,10 +728,7 @@ fn apply_window(
     *snapshot = call(socket, json!({"op":"snapshot"}))?;
     if opens {
         *active = text(&result, "id").to_owned();
-    } else if !snapshot["terminals"]
-        .as_array()
-        .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
-    {
+    } else if !contains_view(snapshot, active) {
         *active = snapshot["terminals"]
             .as_array()
             .and_then(|ts| {
@@ -664,26 +746,36 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut authority = NativeControl::register(socket)?;
     let socket = &Session::new(crate::client::Connection::connect(socket)?);
     let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
+    authority.sync_agent_targets(&snapshot);
     let detach_generation = snapshot["detach_generation"].as_u64().unwrap_or(0);
     let terminals = snapshot["terminals"]
         .as_array()
         .context("snapshot has no terminals")?;
     let mut active = if let Some(selector) = terminal {
-        let state = call(socket, json!({"op":"state","terminal":selector}))?;
-        state["id"]
-            .as_str()
-            .map(str::to_owned)
-            .or_else(|| {
-                terminals
-                    .iter()
-                    .find(|t| text(t, "id") == selector || text(t, "name") == selector)
-                    .map(|t| text(t, "id").to_owned())
-            })
-            .context("terminal state has no id")?
+        if agent_view(&snapshot, &selector).is_some() {
+            selector
+        } else {
+            let state = call(socket, json!({"op":"state","terminal":selector}))?;
+            state["id"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| {
+                    terminals
+                        .iter()
+                        .find(|t| text(t, "id") == selector || text(t, "name") == selector)
+                        .map(|t| text(t, "id").to_owned())
+                })
+                .context("terminal state has no id")?
+        }
     } else if let Some(first) = terminals
         .iter()
         .find(|t| t["alive"] == true)
         .or_else(|| terminals.first())
+    {
+        text(first, "id").to_owned()
+    } else if let Some(first) = snapshot["agent_views"]
+        .as_array()
+        .and_then(|views| views.first())
     {
         text(first, "id").to_owned()
     } else {
@@ -694,10 +786,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(io::stdout()))?;
     let mut size = terminal::size()?;
     let mut geometry = view::geometry(ratatui::layout::Rect::new(0, 0, size.0, size.1));
-    call(
-        socket,
-        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-    )?;
+    resize_native(socket, &snapshot, &active, size)?;
     let mut screen = Value::Null;
     let mut picker = false;
     let mut prefix_pending = false;
@@ -714,12 +803,71 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut dirty = true;
     let mut viewport = ScreenViewport::default();
     let mut surface = view::NativeSurface::default();
+    let mut agent = agent::AgentView::new();
+    let mut agent_projection = Value::Null;
+    let mut agent_error = String::new();
+    let mut agent_id = String::new();
+    let mut agent_after = 0;
+    let mut agent_at = Instant::now() - Duration::from_millis(100);
     let mut responsive_until = Instant::now();
     let mut urgent_frame = false;
     let mut queued_events = 0usize;
     let mut frame_at = Instant::now() - FRAME;
     loop {
-        dirty |= authority.poll(&active, &mut status);
+        authority.sync_agent_targets(&snapshot);
+        let authority_changed = authority.poll(&active, &mut status);
+        dirty |= authority_changed;
+        let is_agent = agent_view(&snapshot, &active).is_some();
+        if is_agent && agent_id != active {
+            agent_id.clone_from(&active);
+            agent_after = 0;
+            agent_projection = Value::Null;
+            agent_error.clear();
+            agent_at = Instant::now() - Duration::from_millis(100);
+            agent.sync(&Value::Null, None);
+        } else if !is_agent && !agent_id.is_empty() {
+            agent_id.clear();
+            agent_projection = Value::Null;
+            agent_after = 0;
+            agent_error.clear();
+            agent.sync(&Value::Null, None);
+        }
+        if is_agent && agent_at.elapsed() >= Duration::from_millis(100) {
+            if let Some(view) = agent_view(&snapshot, &active) {
+                let target = agent_target(view);
+                if agent_projection["target"] != target {
+                    // A real identity reset must fetch its complete projection.
+                    // Failed reads retain the previous cache and captured draft.
+                    agent_after = 0;
+                }
+                match call(
+                    socket,
+                    json!({"op":"acp-inspect","target":target,
+                    "include_content":true,"after":agent_after,"limit":128}),
+                ) {
+                    Ok(projection) => {
+                        agent_error.clear();
+                        agent_after = projection["content"]["through"]
+                            .as_u64()
+                            .unwrap_or(agent_after);
+                        agent_projection = projection;
+                    }
+                    Err(error) => {
+                        let cache_status = if agent_projection.is_null() {
+                            "no confirmed projection"
+                        } else {
+                            "showing last confirmed projection"
+                        };
+                        agent_error = format!("ACP inspect failed; {cache_status}: {error:#}");
+                    }
+                }
+            }
+            agent.sync(&agent_projection, authority.acp_grant(&active));
+            agent_at = Instant::now();
+            dirty = true;
+        } else if is_agent && authority_changed {
+            agent.sync(&agent_projection, authority.acp_grant(&active));
+        }
         // Consume already received human events before changing native view
         // facts. The picker never changes the selected-terminal provenance.
         if !event::poll(Duration::ZERO).context("draining input before native view")? {
@@ -741,10 +889,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     break;
                 }
                 snapshot_at = Instant::now();
-                if !snapshot["terminals"]
-                    .as_array()
-                    .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
-                {
+                if !contains_view(&snapshot, &active) {
                     active = snapshot["terminals"]
                         .as_array()
                         .and_then(|ts| ts.first())
@@ -758,6 +903,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 dirty = true;
             }
             if !picker
+                && !is_agent
                 && refresh_screen(
                     socket,
                     &mut screen,
@@ -773,14 +919,40 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
             if dirty {
                 let rows = tree_rows(&snapshot, &query);
                 selected = selected.min(rows.len().saturating_sub(1));
+                let shown_status = if is_agent && !agent_error.is_empty() {
+                    &agent_error
+                } else {
+                    &status
+                };
                 display
                     .draw(|frame| {
                         geometry = view::draw(
-                            frame, &screen, &surface, &snapshot, &active, picker, &rows, selected,
-                            &query, &status, offset, focused, selection,
+                            frame,
+                            &screen,
+                            &surface,
+                            &snapshot,
+                            &active,
+                            picker,
+                            &rows,
+                            selected,
+                            &query,
+                            shown_status,
+                            offset,
+                            focused,
+                            selection,
                         );
+                        if is_agent && !picker {
+                            agent.draw(frame, geometry.body);
+                        }
                         authority.draw(
-                            frame, geometry, &active, &snapshot, picker, &query, &status, offset,
+                            frame,
+                            geometry,
+                            &active,
+                            &snapshot,
+                            picker,
+                            &query,
+                            shown_status,
+                            offset,
                         );
                     })
                     .context("drawing terminal surface")?;
@@ -850,15 +1022,59 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
         if authority.panel_event(&event, &mut status) {
             continue;
         }
+        let prefix_event = matches!(&event, Event::Key(key)
+            if key.kind != KeyEventKind::Release && is_prefix(*key, prefix));
+        if is_agent && !picker && !prefix_event {
+            match &event {
+                Event::Resize(cols, rows) => size = (*cols, *rows),
+                Event::FocusGained => {
+                    focused = true;
+                    reported_focus = Some(true);
+                }
+                Event::FocusLost => {
+                    focused = false;
+                    reported_focus = Some(false);
+                }
+                Event::Mouse(mouse)
+                    if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
+                        && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) =>
+                {
+                    authority.activity(&active, &mut status);
+                    authority.suppress_mouse(mouse.kind);
+                    picker = true;
+                    query.clear();
+                    pending_parent = None;
+                    selected = rows.iter().position(|row| row.id == active).unwrap_or(0);
+                }
+                _ => {
+                    if matches!(
+                        &event,
+                        Event::Paste(_)
+                            | Event::Key(KeyEvent {
+                                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                                ..
+                            })
+                    ) || matches!(&event, Event::Mouse(mouse) if !matches!(mouse.kind, MouseEventKind::Moved))
+                    {
+                        authority.activity(&active, &mut status);
+                    }
+                    if let Some(request) = agent.event(&event)
+                        && let Err(rejected) = authority.acp_action(request, &mut status)
+                    {
+                        agent.sync(&agent_projection, authority.acp_grant(&active));
+                        agent.restore_unqueued(rejected);
+                    }
+                }
+            }
+            // None means consumed/local navigation, never raw PTY fallback.
+            continue;
+        }
         match event {
             Event::Resize(cols, rows) => {
                 size = (cols, rows);
                 // A picker is an overlay: even foreground resize is deferred until it closes.
                 if !picker {
-                    call(
-                        socket,
-                        json!({"op":"resize","terminal":active,"cols":cols.clamp(2,500),"rows":rows.saturating_sub(HEADER).clamp(2,300)}),
-                    )?;
+                    resize_native(socket, &snapshot, &active, size)?;
                 }
             }
             Event::FocusGained => {
@@ -883,15 +1099,17 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                 if is_prefix(key, prefix) {
                     if picker && previous_prefix && !active.is_empty() {
                         picker = false;
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
-                        authority.input(
-                            &active,
-                            Input::Bytes(key_bytes(prefix, mode(&screen, "application_cursor"))),
-                            &mut status,
-                        );
+                        resize_native(socket, &snapshot, &active, size)?;
+                        if !is_agent {
+                            authority.input(
+                                &active,
+                                Input::Bytes(key_bytes(
+                                    prefix,
+                                    mode(&screen, "application_cursor"),
+                                )),
+                                &mut status,
+                            );
+                        }
                     } else {
                         authority.activity(&active, &mut status);
                         picker = true;
@@ -935,9 +1153,13 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                         KeyCode::Enter => {
                             if let Some(id) = chosen {
                                 if let Some((child, demote)) = pending_parent.take() {
-                                    Some(
-                                        json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":id}),
-                                    )
+                                    if agent_view(&snapshot, &id).is_some() {
+                                        status = "ACP views are not PTY parents".into();
+                                        None
+                                    } else {
+                                        Some(json!({"op":if demote {"demote"} else {"reparent"},
+                                            "terminal":child,"parent":id}))
+                                    }
                                 } else {
                                     active = id;
                                     screen = Value::Null;
@@ -951,20 +1173,32 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                 None
                             }
                         }
-                        KeyCode::Char('n') if control || empty => {
-                            Some(open_window(chosen.as_deref().unwrap_or(&active), false))
-                        }
-                        KeyCode::Char('o') if control => {
-                            Some(open_window(chosen.as_deref().unwrap_or(&active), true))
-                        }
-                        KeyCode::Char('p') if control => {
-                            chosen.map(|id| json!({"op":"promote","terminal":id}))
-                        }
-                        KeyCode::Char('x') if control => {
-                            chosen.map(|id| close_window(&snapshot, &id))
-                        }
+                        KeyCode::Char('n') if control || empty => Some(open_from_view(
+                            &snapshot,
+                            chosen.as_deref().unwrap_or(&active),
+                            false,
+                        )),
+                        KeyCode::Char('o') if control => Some(open_from_view(
+                            &snapshot,
+                            chosen.as_deref().unwrap_or(&active),
+                            true,
+                        )),
+                        KeyCode::Char('p') if control => chosen
+                            .filter(|id| agent_view(&snapshot, id).is_none())
+                            .map(|id| json!({"op":"promote","terminal":id})),
+                        KeyCode::Char('x') if control => chosen.and_then(|id| {
+                            if close_agent(&mut authority, &snapshot, &id, &mut status) {
+                                None
+                            } else {
+                                Some(close_window(&snapshot, &id))
+                            }
+                        }),
                         KeyCode::Char('r' | 'd') if control => {
                             if let Some(id) = chosen {
+                                if agent_view(&snapshot, &id).is_some() {
+                                    status = "ACP views are not PTY parents or children".into();
+                                    continue;
+                                }
                                 pending_parent = Some((id, key.code == KeyCode::Char('d')));
                                 status = "Select new parent and press Enter; Esc cancels".into();
                             }
@@ -998,10 +1232,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                         }
                     }
                     if !picker {
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
+                        resize_native(socket, &snapshot, &active, size)?;
                     }
                 } else if window_exited(&snapshot, &active) {
                     let request = match key.code {
@@ -1024,10 +1255,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                 selection = None;
                                 status.clear();
                                 if !picker {
-                                    call(
-                                        socket,
-                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                    )?;
+                                    resize_native(socket, &snapshot, &active, size)?;
                                 }
                             }
                             Err(error) => status = format!("{error:#}"),
@@ -1080,10 +1308,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                     selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
                     status.clear();
                     if !picker {
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
+                        resize_native(socket, &snapshot, &active, size)?;
                     }
                 } else if picker {
                     let empty = active.is_empty()
@@ -1107,10 +1332,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                     offset = 0;
                                     selection = None;
                                     status.clear();
-                                    call(
-                                        socket,
-                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                    )?;
+                                    resize_native(socket, &snapshot, &active, size)?;
                                 }
                                 Err(error) => status = format!("{error:#}"),
                             }
@@ -1133,6 +1355,10 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                     as usize,
                         ) {
                             if let Some((child, demote)) = pending_parent.take() {
+                                if agent_view(&snapshot, &row.id).is_some() {
+                                    status = "ACP views are not PTY parents".into();
+                                    continue;
+                                }
                                 match call(
                                     socket,
                                     json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":row.id}),
@@ -1149,10 +1375,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                 screen = Value::Null;
                                 selection = None;
                                 status.clear();
-                                call(
-                                    socket,
-                                    json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                )?;
+                                resize_native(socket, &snapshot, &active, size)?;
                             }
                         }
                     }
@@ -1175,10 +1398,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                     selection = None;
                                     status.clear();
                                     if !picker {
-                                        call(
-                                            socket,
-                                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                        )?;
+                                        resize_native(socket, &snapshot, &active, size)?;
                                     }
                                 }
                                 Err(error) => status = format!("{error:#}"),

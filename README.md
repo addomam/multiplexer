@@ -1,6 +1,6 @@
 # amux
 
-A project-oriented native terminal wrapper: a Rust daemon owns Zsh terminals and emulator state; a detachable TUI shows one terminal; the CLI controls the same local API. Shell editing and OMP remain their native interfaces.
+A project-oriented native terminal wrapper: a Rust daemon owns Zsh terminals, emulator state and explicit ACP conversations; a detachable TUI shows the selected terminal or conversation; the CLI controls the same local API. Shell editing and OMP remain their native interfaces.
 
 amux is the execution substrate, not an autonomous orchestrator. It provides terminal/project control and observable agent state through the same local API used by the CLI and TUI. Task planning, scheduling, automatic replies, agent delegation and merge policy belong outside amux.
 
@@ -61,6 +61,29 @@ cargo install --path terminal-showcase --locked
 Run the same binary in any attached amux shell. Space pauses; arrows select demonstrations; Tab expands evidence; D shows diagnostics; S freezes screenshot mode; Q/Escape exits. P/F record visual verdicts; E exports JSON. Clipboard, title, notifications and working-directory actions require an explicit key in the integration demo.
 
 Build and test all packages with `cargo build --workspace` and `cargo test --workspace`; plain `cargo run` and the root default build still select amux. See [showcase usage, report semantics and limitations](specs/terminal-showcase.md). The explorer has already exposed [origin-mode CPR and ZWJ cursor incompatibilities](specs/bugs/BUG-showcase-endpoint-compatibility.md); a passing explorer regression suite is not a claim that amux supports every feature.
+
+## Owned ACP conversations
+
+An ACP view is a separate live agent target, not a terminal or a replacement stock-agent TUI. amux owns one stdio adapter connection and its session; the human editor and structured API address that same instance. Native terminal interaction remains a separate best-effort path: ACP does not repair the unresolved native input/application fence.
+
+Register an external controller through `amux api '{"op":"controller-create","role":"external","label":"ACP operator"}'`. Use an exact project ID from `amux snapshot` and the returned private controller handle:
+
+```sh
+amux acp open --project "$PROJECT_ID" --controller "$CONTROLLER_JSON" --name agent -- /absolute/path/to/acp-adapter
+amux acp inspect "$TARGET_JSON"
+amux acp inspect "$TARGET_JSON" --content --after 0
+amux acp attach "$ACP_VIEW_ID"
+```
+
+The initial target has a null session while initialization runs. Inspect the live descriptor to obtain the exact `kind`, `id`, `instance_id`, `connection_generation` and `session_id` tuple; capture it together with current control/generation and a unique call ID for each deliberate mutation. `acp-prompt`, `acp-authenticate`, `acp-interrupt` and `acp-close` use that captured authority. Stale or duplicate actions are rejected, never rebound or replayed. Basic conversation transport does not advertise form capability; unsupported peer requests receive explicit errors.
+
+In the ACP view, **Enter** submits a local prompt, **Alt/Shift-Enter** inserts a newline, and bracketed paste only edits the draft. **F8** explicitly selects an advertised agent-type authentication method; no automatic login, URL or credential form is opened. **Ctrl-C** requests interruption of the exact foreground prompt, not a process signal. Page keys and the mouse wheel navigate history without acquiring control. Revocation clears the old draft. Prefix opens the shared picker; prefix twice never forwards raw bytes into an ACP session.
+
+Ownership is fenced at **amux input admission**, not at provider application. Already accepted work may continue under its original IDs after handoff. Force changes authority only; it never interrupts or kills the adapter. Ordinary pending cancellation invalidates the old control, grants nobody and retains accepted work. A second foreground prompt is busy, not steering or an implicit queue.
+
+Default inspection, global snapshots and events are metadata-only. Transcript content is an explicit bounded incremental read with gap indicators. Closing a native shell does not close a sibling ACP view; explicit `acp-close` and daemon shutdown end the owned ACP lifetime. Unknown process-identity cleanup stays incomplete, retained and charged rather than being advertised as successful cleanup.
+
+Local deterministic-peer CLI/controlling-PTY evidence is in [e04s01 Build verification](specs/verifications/e04s01-build.md). It is not proof of real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. The thin non-ACP integration API remains out of scope.
 
 ## Picker and native interaction
 
@@ -262,4 +285,4 @@ Bounded resources: daemon-wide terminal admission defaults to 64 (configurable 1
 
 Grapheme composition uses the native narrow/wide cell model, with up to 4 KiB of final-cluster working text. Crossing that bound starts a new native scalar segment without discarding text; joining across the oversized boundary is not preserved. Upstream cell combining storage remains variable-sized.
 
-No crash recovery, interpreter cloning, tiling, remote protocol or nonterminal clients. Synchronized updates, native mouse/paste, Unicode, alternate screens, scrolling and resize were exercised on macOS; no Linux runtime claim. Host fonts and terminal clipboard facilities affect presentation. Process cleanup uses kernel birth identities and freeze/rescan of known descendants, including foreground and separate-session jobs. Shutdown disconnects slow control clients and drains in-flight creation/cleanup before exit. Processes already orphaned outside observed ancestry/session cannot be guaranteed captured. OS permission changes or uninterruptible kernel I/O can prevent termination; freeze waits are bounded and emit diagnostics to the daemon log before best-effort signals. This is a same-user control environment, not a sandbox.
+No crash recovery, interpreter cloning, tiling, remote daemon protocol or graphical client. Synchronized updates, native mouse/paste, Unicode, alternate screens, scrolling and resize were exercised on macOS; no Linux runtime claim. Host fonts and terminal clipboard facilities affect presentation. Process cleanup uses kernel birth identities and freeze/rescan of known descendants, including foreground and separate-session jobs. Shutdown disconnects slow control clients and drains in-flight creation/cleanup before exit. Processes already orphaned outside observed ancestry/session cannot be guaranteed captured. OS permission changes or uninterruptible kernel I/O can prevent termination; freeze waits are bounded and emit diagnostics to the daemon log before best-effort signals. This is a same-user control environment, not a sandbox.

@@ -3,7 +3,7 @@ context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s01
 title: Shared ACP session and conversation view
 spec: e04s01-story.md
-status: failing
+status: passing
 bcps: 8
 risk: P0
 tasks:
@@ -12,7 +12,7 @@ tasks:
     initialize/newSession, basic human view and exact-session prompt stream; use standalone non-production acp_fixture stdio peer.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-01
   - SC-e04s01-P0-02
@@ -29,7 +29,7 @@ tasks:
     \ busy semantics and retained RPC mapping through caller loss; no initially unguarded route."
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-02
   - SC-e04s01-P0-03
@@ -46,7 +46,7 @@ tasks:
     failures and responsive concurrent daemon operations.
   verify: "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s01_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-04
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -62,7 +62,7 @@ tasks:
     snapshots and incremental content/history; continue draining capped stderr.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-03
   - SC-e04s01-P1-06
@@ -79,7 +79,7 @@ tasks:
     test failed capture, late publication and unrelated sentinels before fallback. Native shell close/remove must preserve ACP views; no project-close API.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-05
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -95,7 +95,7 @@ tasks:
     runtime smoke, preserve existing ownership/native broker regressions and write redacted evidence.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture && cargo test --test pty_control --test agent_interaction"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s01-P0-01
   - SC-e04s01-P0-02

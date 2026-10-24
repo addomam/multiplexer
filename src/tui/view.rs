@@ -314,11 +314,12 @@ pub(super) fn draw(
     let terminal = snapshot["terminals"]
         .as_array()
         .and_then(|ts| ts.iter().find(|t| text(t, "id") == active));
+    let agent = super::agent_view(snapshot, active);
     let empty = active.is_empty()
         && snapshot["terminals"]
             .as_array()
             .is_none_or(|terminals| terminals.is_empty());
-    let project = terminal.and_then(|t| {
+    let project = terminal.or(agent).and_then(|t| {
         snapshot["projects"]
             .as_array()
             .and_then(|ps| ps.iter().find(|p| text(p, "id") == text(t, "project_id")))
@@ -418,6 +419,16 @@ pub(super) fn draw(
             ])),
             inner,
         );
+    } else if let Some(agent) = agent {
+        frame.render_widget(
+            Paragraph::new(format!(
+                " ACP · {} · {}",
+                text(agent, "name"),
+                text(agent, "lifecycle")
+            ))
+            .style(Style::default().fg(ACCENT)),
+            inner,
+        );
     }
     button(
         frame,
@@ -474,7 +485,7 @@ pub(super) fn draw(
         }
     } else if let Some(terminal) = terminal.filter(|t| t["alive"] == false) {
         exited(frame, geometry, terminal);
-    } else {
+    } else if agent.is_none() {
         native_surface(
             frame,
             geometry.body,

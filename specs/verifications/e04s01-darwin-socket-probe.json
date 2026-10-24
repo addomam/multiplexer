@@ -1,0 +1,6 @@
+{
+  "timeout_seconds": 35,
+  "before_peer_close": "success",
+  "after_peer_close_errno": 22,
+  "after_peer_close_error": "[Errno 22] Invalid argument"
+}

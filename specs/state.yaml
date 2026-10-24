@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: develop-tdd
+  next_skill: commit-message
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -42,8 +42,21 @@ handoff:
     User confirmed architecture and selected Plan, then Build if reviews pass.
     Both e04 Plan round3 independent reviews passed 100/100 with zero findings; conditional Build authorization is active.
     Existing explicit ACP close and daemon shutdown only; broader lifecycle UX is user-deferred.
-  last_step_completed: e04-Plan-round3-dual-pass-Build-starting-e04s01
+    RED tracer c8808f3 failed as expected in isolation; both worker commits are merged into the implementation tree, pending a verified integration commit.
+    Last complete pre-suspend proof: 335 workspace tests/strict Clippy/build/fmt and real CLI/controlling-PTY smoke passed.
+    Round1 A/B code reviews were interrupted by api.x.ai DNS failure, with no verdict; retain the attempt and cap accounting.
+    Approved settlement_boundary and all consumers are migrated without an alias. Post-resume native callback and unchanged force-repaint failures are repaired.
+    Actual CLI/continuously-drained PTY smoke passes through same-session API/human effects, draft revocation, retained-work panel and deliberate human force.
+    Round2 A/B failed (96.875/90.625); all findings are repaired/dispositioned and original reports retained.
+    Current proof: workspace341/30suites/10ignored, strict Clippy/check/build/fmt, ACP12/21, Bun8/Zsh; actual inspect fault and queue-retry status proofs pass, no replay and owned cleanup observed.
+    Round3 A/B failed 96.875/90.625; full reports retained. Its findings are repaired/dispositioned after real before/after fault proof; security3 had no blocker.
+    Round4 A/B independently passed100/100, with one nonblocking no-cache banner consideration; security4 has no blocker. Full reports and source manifest retained.
+    First-read/no-cache banner corrected without retaining the wrong prior agent identity. Actual first-read and retained-cache CLI/PTY proofs, workspace341/strict gates and Bun8/Zsh pass on the final build.
+    Round5 meets the approved numerical AND gate at96.875/100, zero must-fix; raw A incorrect/P2 remains retained. The sole nonblocking cancellation-responder defect was reproduced twice, repaired and verified; no sixth round or post-repair independent PASS is claimed.
+    Current repaired proof: workspace343/30suites/10ignored and strict gates, Bun8/Zsh, plus actual CLI invalid-params/cancelled-original/same-session57 and owned cleanup. S01 local acceptance passes; integration checkpoint precedes S02. No live or publication approval.
+  last_step_completed: e04s01-review-gate-and-post-review-P2-repair-verified
   required_reading:
+    - specs/verifications/e04s01-build.md
     - specs/epics/e04-acp-agent-interaction/PLAN.md
     - specs/epics/e04-acp-agent-interaction/build-integration-contract.md
     - specs/epics/e04-acp-agent-interaction/epic.yaml
@@ -461,9 +474,38 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s01
   story_bcps: 8
-  step: 4
-  completed_steps: [0, 1, 2, 3]
+  step: 7
+  completed_steps: [0, 1, 2, 3, 4, 5, 6]
   started_at: "2026-10-23T14:46:59-05:00"
   baseline: {commit: a46eaddeb79a9a42628d9cb39cd60945ece27fbb, evidence: 'artifact://731', workspace_rust_passed: 308, omp_passed: 8}
-  audit_result: pending
-  runtime_acceptance: failing-not-exercised
+  audit_result: pass-with-verified-post-review-P2-repair
+  runtime_acceptance: passing-e04s01-local-only
+  red: {commit: c8808f3, status: failed-as-expected-in-isolation, error: 'unknown-operation: acp-open', evidence: specs/verifications/e04s01-build.md}
+  implementation_started: true
+  integration_owner: parent
+  integration_signing: {status: unsigned-fallback-user-authorized, signer_attempt: '1Password failed to fill whole buffer; commit object not written', global_config_changed: false}
+  owned_sessions:
+    - {agent: e04-s01-backend, workspace: w1R, tab: 'w1R:t1', pane: 'w1R:p1', branch: feat/acp-s01-backend, worktree: /Users/addomam/projects/amux-acp-s01-backend, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, status: merged-in-tree-pending-verified-commit, commit: 72e2aa0229ecc10eb4dd8dc4c89534a189a9c73f, worker_verification: intentionally-not-run}
+    - {agent: e04-s01-view, workspace: w1Q, tab: 'w1Q:t1', pane: 'w1Q:p1', branch: feat/acp-s01-view, worktree: /Users/addomam/projects/amux-acp-s01-view, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, status: merged-in-tree-pending-verified-commit, commit: 286694494abf5127680f89425389df21016f7158, worker_verification: intentionally-not-run}
+e04s01_build_review:
+  scope: e04s01-local-conversation-transport
+  round: 5
+  max_rounds: 5
+  status: PASS-approved-threshold-sole-P2-repaired-and-verified
+  reviewers: [E04S01ReviewA5, E04S01ReviewB5, E04S01Security5]
+  self_audit: specs/verifications/AUDIT-e04s01.md
+  security: {round: 5, status: no-static-blocker-identified, findings: 0, evidence: specs/verifications/e04s01-security-review-round5.json, reviewed_source: specs/verifications/e04s01-round5-source.json, post_repair_independent_review: false}
+  open_findings: []
+  local_proof: {workspace_tests: 343, ignored: 10, acp_library: 12, acp_s01: 23, ownership_native_agent: 57, omp_tests: 8, workspace_artifact: 'artifact://1171', evidence: [specs/verifications/e04s01-first-inspect-after.json, specs/verifications/e04s01-inspect-final.json, specs/verifications/e04s01-queue-status-after.json, specs/verifications/e04s01-cancel-invalid-permission-cli.json]}
+  historical_review_counters: unchanged
+  round_1: {status: incomplete-infrastructure-failure-not-a-pass, evidence: specs/verifications/e04s01-build-review-round1.json, scores: null}
+  post_resume: {acp_library_passed: 7, acp_s01_passed: 20, legacy_pty_passed: 32, legacy_pty_failed: 2, artifact: 'artifact://1014', tui_failure: specs/verifications/e04s01-resume-smoke-failure.json}
+  active_diagnosis: []
+  repaired_findings: [approved-settlement_boundary-wire-field, native-callback-inherited-nonblocking-accept, unchanged-force-warning-repaint-eligibility]
+  round_2: {status: FAIL, scores: [96.875, 90.625], must_fix: [1, 1], should_fix: [0, 2], evidence: specs/verifications/e04s01-build-review-round2.json, clarification: specs/verifications/e04s01-build-review-round2-clarification.json}
+  socket_probe_disposition: documented-idle-disconnect-reproduced-no-client-workaround-continuous-drain-smoke-passes
+  round_3: {status: FAIL, scores: [96.875, 90.625], must_fix: [1, 1], should_fix: [0, 2], evidence: specs/verifications/e04s01-build-review-round3.json}
+  native_resize_observation: {status: logged-cause-unestablished-subsequent-instrumented-and-full-pass, failed_artifact: 'artifact://1069', diagnostic_artifact: 'artifact://1074', current_full: 'artifact://1142', evidence: specs/bugs/BUG-e03-force-presentation.md}
+  round_4: {status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [1, 0], source: specs/verifications/e04s01-round4-source.json, evidence: specs/verifications/e04s01-build-review-round4.json}
+  round_5: {status: PASS-numerical-threshold, scores: [96.875, 100], must_fix: [0, 0], should_fix: [1, 0], source: specs/verifications/e04s01-round5-source.json, evidence: specs/verifications/e04s01-build-review-round5.json, reviewers: [E04S01ReviewA5, E04S01ReviewB5, E04S01Security5]}
+  post_review_P2: {status: repaired-and-verified-not-independently-rereviewed, red: 'artifact://1165', red_failed: 2, green_passed: 2, current_full: 'artifact://1171', source: specs/verifications/e04s01-post-review-source.json, no_round_6: true}

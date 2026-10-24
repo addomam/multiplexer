@@ -354,11 +354,23 @@ impl Attachment {
             unsafe { libc::ioctl(self.master.as_raw_fd(), libc::TIOCSWINSZ, &size) },
             0
         );
-        h.until("actual attachment resize reached native PTY", || {
+        let deadline = Instant::now() + DEADLINE;
+        loop {
             let screen =
                 h.call(json!({"op":"screen","terminal":terminal,"offset":0,"limit":rows - 3}));
-            (screen["cols"] == cols && screen["rows"] == rows - 3).then_some(())
-        });
+            if screen["cols"] == cols && screen["rows"] == rows - 3 {
+                break;
+            }
+            let exit = self.child.try_wait().unwrap();
+            if exit.is_some() || Instant::now() >= deadline {
+                self.capture("resize-failure");
+                panic!(
+                    "actual attachment resize {cols}x{rows} did not reach native PTY: {}x{}, attachment {exit:?}",
+                    screen["cols"], screen["rows"]
+                );
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
     fn action(&mut self, suffix: u8) {
         self.send(PREFIX);

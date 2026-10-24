@@ -1,0 +1,15 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 1,
+  "status": "incomplete-infrastructure-failure-not-a-pass",
+  "reviewers": [
+    {"name": "E04S01ReviewA1", "status": "failed", "error": "[xai-oauth/grok-4.7] getaddrinfo ENOTFOUND api.x.ai", "verdict": null, "score": null, "report": null},
+    {"name": "E04S01ReviewB1", "status": "failed", "error": "[xai-oauth/grok-4.7] getaddrinfo ENOTFOUND api.x.ai", "verdict": null, "score": null, "report": null}
+  ],
+  "source_review_complete": false,
+  "security_report": "specs/verifications/e04s01-security-review-round1.json",
+  "parent_finding": "Approved ownership settlement_boundary field was implemented as boundary; repairing implementation and consumers without changing the contract.",
+  "review_cap": {"rounds_used": 1, "max_rounds": 5, "historical_e03_counters": "unchanged"},
+  "acceptance": "failing",
+  "recovery": "DNS resolution restored after resume; fresh independent review required after repair verification. No source findings or verdicts were fabricated from partial progress."
+}

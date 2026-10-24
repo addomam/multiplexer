@@ -29,8 +29,10 @@ e03s08: failing
 stories:
   e04s01:
     status: failing
-    phase: implementation-red
+    phase: implementation-after-isolated-RED
     started_at: "2026-10-23T14:46:59-05:00"
+    red_commit: c8808f3
+    evidence: specs/verifications/e04s01-build.md
   e03s01:
     status: passing
     phase: verified-late-settlement-correction
@@ -131,15 +133,17 @@ e03_receipt_publication:
   source_branch: retained
 e04_cycle:
   phase: build
-  status: e04s01-starting-RED
+  status: e04s01-local-acceptance-passed-pending-feature-checkpoint
   branch: feat/acp-agent-interaction
   worktree: /Users/addomam/projects/amux-acp-build
   context: specs/epics/e04-acp-agent-interaction/context.yaml
   architecture: specs/adr/0004-acp-authoritative-input.md
-  implementation_started: false
-  runtime_acceptance: failing-not-exercised
+  implementation_started: true
+  runtime_acceptance: passing-e04s01-local-only
   live_model_approval: separately-required
   historical_e03s08_and_review_caps: unchanged
   architecture_review: {round: 2, scores: [96.875, 100], must_fix: 0, evidence: specs/verifications/e04-architecture-review-round2.json}
   plan_review: {scope: e04-acp-plan, round: 3, max_rounds: 5, status: PASS, scores: [100, 100], must_fix: 0, evidence: specs/verifications/e04-plan-review-round3.json, previous_failed_rounds: [1, 2]}
   lifecycle_scope: explicit-ACP-close-and-daemon-shutdown-only-user-selected
+  e04s01_review: {round: 5, max_rounds: 5, numerical_gate: PASS, scores: [96.875, 100], must_fix: [0, 0], should_fix: [1, 0], P2: repaired-and-verified-no-post-repair-independent-PASS, evidence: specs/verifications/e04s01-build-review-round5.json}
+  verification: {artifact: 'artifact://1171', workspace_passed: 343, suites: 30, ignored: 10, acp_library: 12, acp_s01: 23, omp_passed: 8}

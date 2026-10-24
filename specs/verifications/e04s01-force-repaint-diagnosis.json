@@ -1,0 +1,44 @@
+{
+  "root_cause": "An unchanged repaint revoked an already-completed force-warning presentation. draw_panel unconditionally changed Confirmable\u2192Hidden\u2192Drawn; if a fresh Enter arrived during that repaint, tui.rs:918 skipped after_draw because input was queued, so panel_event rejected that legitimate confirmation.",
+  "causal_evidence": [
+    "failure.ansi starts with the complete stale-force-needs-reconfirmation.ansi capture. Its subsequent recorded frame sequence is: fresh complete force warning for newest-owner, a completed zero-cell-diff redraw, then 'Force confirmation blocked'. Ratatui's installed backend/Terminal source establishes the reset/show-cursor/cursor-position sequence as a completed draw delimiter.",
+    "The test sends only the fresh prefix action and one Enter during this interval (native.rs:745-748). A queued Enter at the first warning's after_draw check would be consumed before another redraw; the intervening no-op frame identifies the later repaint demotion.",
+    "The final screen has the complete warning and unchanged newest-owner, excluding stale-observation rejection and clipped-warning presentation as this failure's cause."
+  ],
+  "changes": [
+    {
+      "path": "src/tui/control.rs",
+      "lines": "644-653",
+      "description": "Invalidate force eligibility when refreshed observed identity, settlement boundary, unsettled calls, or retained work changes."
+    },
+    {
+      "path": "src/tui/control.rs",
+      "lines": "1318-1327, 1412-1418",
+      "description": "Preserve an already-confirmable warning across an unchanged fully-visible repaint; first draw still requires successful-frame/drained-input after_draw. Existing immediate Hidden reset and fit check still reject undrawable/clipped warnings."
+    }
+  ],
+  "preserved_invariants": [
+    "Queued-before-first-draw Enter remains blocked and consumed.",
+    "New force panels, resize, call scrolling, changed warning facts, clipping, and stale observations retain their invalidation paths.",
+    "No action/input replay, cancellation, process signal, or force RPC semantics changed; src/tui.rs and all tests untouched."
+  ],
+  "status_change_relation": "The parent's controlled-status invalidation branch requires controlled_before=true followed by lost input authority. This attachment remains an observer through the failed final confirmation, so that branch is not causal.",
+  "docs_for_parent": [
+    {
+      "path": "specs/tech-architecture/pty-control-native-ux.md",
+      "line": 58,
+      "change": "Distinguish unchanged fully-visible repaint from changed warning facts, resize, call scrolling, or clipping; only the latter invalidate prior eligibility."
+    },
+    {
+      "path": "specs/bugs/BUG-e03-force-presentation.md",
+      "line": 16,
+      "change": "Replace unconditional redraw invalidation wording with the same distinction."
+    }
+  ],
+  "risks": [
+    "Metadata changes, including changing call elapsed fields, conservatively invalidate eligibility and require a new completed drained-input presentation.",
+    "No runtime verification performed; parent should verify the repaint race alongside existing first-draw, resize/clipping, scrolling, and stale-owner boundaries."
+  ],
+  "targeted_verification": "cargo test --test pty_control native::native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation -- --exact --nocapture",
+  "checks_run": []
+}

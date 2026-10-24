@@ -22,6 +22,11 @@ enum Command {
     Attach {
         terminal: Option<String>,
     },
+    /// Open, inspect or attach an amux-owned ACP conversation.
+    Acp {
+        #[command(subcommand)]
+        command: AcpCommand,
+    },
     /// Run the local daemon in the foreground.
     Daemon {
         #[arg(long)]
@@ -161,10 +166,64 @@ enum Command {
     },
 }
 
+#[derive(Subcommand)]
+enum AcpCommand {
+    /// Start one owned stdio adapter; command argv follows --.
+    Open {
+        #[arg(long)]
+        project: String,
+        #[arg(long)]
+        controller: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        cwd: Option<String>,
+        #[arg(last = true, required = true, num_args = 1.., allow_hyphen_values = true)]
+        command: Vec<String>,
+    },
+    /// Inspect an exact target tuple; content is explicit opt-in.
+    Inspect {
+        target: String,
+        #[arg(long)]
+        content: bool,
+        #[arg(long)]
+        after: Option<u64>,
+    },
+    /// Attach a human view to the same live ACP instance.
+    Attach { view: String },
+}
+
 fn request_for(command: Command) -> Result<Value> {
     let mut value = match command {
         Command::Api { request } => {
             serde_json::from_str::<Value>(&request).context("invalid API JSON")?
+        }
+        Command::Acp {
+            command:
+                AcpCommand::Open {
+                    project,
+                    controller,
+                    name,
+                    cwd,
+                    command,
+                },
+        } => {
+            let controller = serde_json::from_str::<Value>(&controller)
+                .context("invalid controller handle JSON")?;
+            json!({"op":"acp-open","project":project,"controller":controller,
+                "name":name,"cwd":cwd,"command":command})
+        }
+        Command::Acp {
+            command:
+                AcpCommand::Inspect {
+                    target,
+                    content,
+                    after,
+                },
+        } => {
+            let target =
+                serde_json::from_str::<Value>(&target).context("invalid ACP target JSON")?;
+            json!({"op":"acp-inspect","target":target,"include_content":content,"after":after})
         }
         Command::Snapshot => json!({"op":"snapshot"}),
         Command::Open {
@@ -280,6 +339,19 @@ pub fn run() -> Result<()> {
         Some(Command::Attach { terminal }) => {
             crate::client::ensure_daemon(&socket)?;
             crate::tui::run(&socket, terminal)
+        }
+        Some(Command::Acp {
+            command: AcpCommand::Attach { view },
+        }) => {
+            crate::client::ensure_daemon(&socket)?;
+            let snapshot = crate::client::request(&socket, json!({"version":1,"op":"snapshot"}))?;
+            anyhow::ensure!(
+                snapshot["agent_views"]
+                    .as_array()
+                    .is_some_and(|views| views.iter().any(|agent| agent["id"] == view)),
+                "wrong-target-kind: exact ACP view ID required"
+            );
+            crate::tui::run(&socket, Some(view))
         }
         Some(Command::Daemon { projects_dir }) => crate::daemon::run(&socket, projects_dir),
         Some(Command::Internal { args }) => crate::integration::helper(&args),

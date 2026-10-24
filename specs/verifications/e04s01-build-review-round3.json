@@ -1,0 +1,112 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 3,
+  "max_rounds": 5,
+  "verdict": "FAIL",
+  "scores_recomputed": [
+    96.875,
+    90.625
+  ],
+  "counts": [
+    {
+      "reviewer": "E04S01ReviewA3",
+      "total_items": 32,
+      "must_fix": 1,
+      "should_fix": 0,
+      "consider": 1
+    },
+    {
+      "reviewer": "E04S01ReviewB3",
+      "total_items": 32,
+      "must_fix": 1,
+      "should_fix": 2,
+      "consider": 2
+    }
+  ],
+  "reports": {
+    "A": {
+      "overall_correctness": "incorrect",
+      "explanation": "Reviewer A verdict is incorrect. total_items 32, must_fix_count 1, should_fix_count 0, consider_count 1, score 96.875 = 100*(32-1-0)/32. PASS needs zero must-fix, so the gate fails. No checks were run; this is static review of the current working tree plus recorded evidence only. The must-fix is false human chrome: frames.deliberate_second_effect shows canonical completed 57/count 2 while the header still says the action was not queued and the editor notice still says it was not admitted. Admission, force/cancel retention, failed-open discard, input gating, bounds, and unsupported-request errors otherwise match the s01 contract on the paths reviewed. Fowler: no separate smell finding; this is a missing reply reconciliation, not a second admission machine, and project conventions override generic length limits. Limitations: did not build, test, lint, format, or launch adapters/providers; did not read prior review reports; security review is independent; the logged e03 native resize timeout was not re-diagnosed.",
+      "confidence": 0.91,
+      "findings": [
+        {
+          "title": "Clear superseded ACP status after admission",
+          "body": "Must-fix. After a synchronous busy rejection sets the header to \"busy: pending control RPC; action not queued\" (src/tui/control.rs:316-320), a later deliberate Enter can queue and the daemon can complete that same prompt, but received() drops kind acp-admitted in the catch-all and never clears that header. submit() also leaves \"Prompt action captured, not yet admitted\" (src/tui/agent.rs:523-524), and the success arm (src/tui.rs:1019-1024) reconciles the draft only on Err, so sync never replaces the notice when canonical work is already submitted/completed. The recorded frames.deliberate_second_effect frame shows both strings beside completed total 57/count 2, stop_reason end_turn, and state=completed|delivery=submitted. Impact: the required human view asserts the opposite of admission, so an operator can resubmit a turn that already completed. Clear only a superseded local rejection when the captured call is successfully queued, and replace the capture notice with stable wording that points at canonical outcomes without claiming admitted or applied.",
+          "priority": 1,
+          "confidence": 0.94,
+          "file_path": "src/tui/control.rs",
+          "line_start": 609,
+          "line_end": 613
+        },
+        {
+          "title": "Fail when completed chrome still says not queued",
+          "body": "Consider. Daemon tests assert peer effects and inspect projections, and the recorded queue smoke is marked passed, but neither fails a rendered frame whose header or editor notice contradicts canonical completion. The after frame already contains that contradiction. A consumer check on the human status line and notice, not a copy of the editor source string, would have rejected this surface.",
+          "priority": 3,
+          "confidence": 0.86,
+          "file_path": "src/tui.rs",
+          "line_start": 1019,
+          "line_end": 1024
+        }
+      ]
+    },
+    "B": {
+      "overall_correctness": "incorrect",
+      "explanation": "Rubric verdict FAIL. total_items 32, must_fix_count 1, should_fix_count 2, consider_count 2, score 90.625 (100*(32-3)/32). PASS needs zero must-fix and score at least 94. Must-fix: failed acp-inspect is synced as Null, clearing the draft and transcript without rewinding agent_after. Should-fix: recorded deliberate_second_effect frame still says not queued and not admitted after canonical completion 57/count 2; and e04s01_async_bootstrap_close_and_late_session_cannot_resurrect reaps the peer before release, so no late initialize/session result is emitted and the ended/session_id assertions do not prove non-resurrection. Considers: residual LRM/RLM/ALM/line separators in ACP picker and header labels; the writer-budget unit test frees capacity by editing the counters capacity reads. Broker admission, capacity, outcomes, locks, and cleanup had no additional product defect. No checks were run. Fowler smells are not defects.",
+      "confidence": 0.87,
+      "findings": [
+        {
+          "title": "Keep the last ACP projection when inspect fails",
+          "body": "Any acp-inspect error assigns agent_projection to Null and then syncs it while the same ACP id stays active, and agent_after is updated only on success. sync treats a null target as an identity change, clears an unsent draft with a false authority-change notice, and reset_history drops the local transcript. The next successful inspect still requests after the old cursor, so earlier events are not refetched until the user leaves and re-enters the view. A stale snapshot tuple, transport error, or target-ended poll therefore discards local conversation state that the broker still holds. Keep the last good projection on inspect failure, and rewind agent_after to 0 if a reset does occur.",
+          "priority": 1,
+          "confidence": 0.91,
+          "file_path": "src/tui.rs",
+          "line_start": 848,
+          "line_end": 854
+        },
+        {
+          "title": "Reconcile ACP status after canonical admission",
+          "body": "A busy local control RPC sets the header to \"busy: pending control RPC; action not queued\" and returns the unqueued envelope, but a later successful Enter does not clear that string, and received() only updates status for kind control or claim-state, so kind acp-admitted is ignored. AgentView::submit also leaves \"Prompt action captured, not yet admitted\" and sync() refreshes canonical history without retiring that notice. The recorded deliberate_second_effect frame still shows both strings after the same view has completed the second prompt (add 10 5, Total=57, count 2, stop_reason end_turn, state completed). The transcript and empty draft are truthful, so this does not replay or double-admit, but the header and editor footer state the opposite of admission. Clear or replace the header when an ACP action is queued and when acp-admitted arrives, and retire the capture notice once canonical work for that call_id is visible.",
+          "priority": 2,
+          "confidence": 0.93,
+          "file_path": "src/tui/control.rs",
+          "line_start": 603,
+          "line_end": 610
+        },
+        {
+          "title": "Stimulate a late session before asserting non-resurrection",
+          "body": "e04s01_async_bootstrap_close_and_late_session_cannot_resurrect calls close, which admits acp-close and waits until the peer pid is gone, and only then calls release. The fixture emits the initialize or session/new result only after the hold barrier returns, so a reaped peer never writes that result. lifecycle ended, null session_id, and a missing effect.json would therefore pass even if a late session response resurrected the target, and the denied prompt is never read because the peer is still inside the barrier when it is killed. Release the barrier and let the peer emit the held result before close, or keep the peer alive until that frame is written, then assert the exact original ids stay ended and session_id stays null.",
+          "priority": 2,
+          "confidence": 0.9,
+          "file_path": "tests/acp.rs",
+          "line_start": 468,
+          "line_end": 473
+        },
+        {
+          "title": "Escape residual bidi marks in ACP chrome",
+          "body": "ACP open rejects controls and U+202A-U+202E/U+2066-U+2069 in names, but still accepts U+061C, U+200E, U+200F, U+2028, and U+2029. Picker labels pass that name through clip_label, which only drops controls, and the attachment header safe() helper omits the same format characters that push_inert escapes in the transcript. This cannot inject ESC/OSC into the host, so it is not a terminal-state breakout, but those marks can still spoof picker or header direction. Apply the transcript sanitizer to ACP name and project labels before picker and header drawing.",
+          "priority": 3,
+          "confidence": 0.8,
+          "file_path": "src/tui.rs",
+          "line_start": 462,
+          "line_end": 471
+        },
+        {
+          "title": "Assert writer release instead of editing counters",
+          "body": "acp_inflight_writer_budget_cannot_be_reused_until_release correctly shows that pop_front does not free the egress budget, then decrements output_count and output_bytes itself and asserts capacity succeeds. Those are the same fields capacity reads, so the second assertion passes even if writer never releases a frame. Drive the release through the writer return path, or drop the second assertion so the test does not claim a consumer release it does not perform.",
+          "priority": 3,
+          "confidence": 0.86,
+          "file_path": "src/acp.rs",
+          "line_start": 1614,
+          "line_end": 1616
+        }
+      ]
+    }
+  },
+  "security": {
+    "status": "no-static-blocker",
+    "findings": 0,
+    "evidence": "specs/verifications/e04s01-security-review-round3.json"
+  },
+  "historical_e03_counters": "unchanged",
+  "publication_or_live_authorization": false
+}

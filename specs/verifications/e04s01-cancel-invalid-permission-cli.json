@@ -1,0 +1,48 @@
+{
+  "kind": "actual-built-CLI-private-daemon-stdio-peer",
+  "root": "/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/acp-cancel-errors-iqby64ew",
+  "cases": [
+    {
+      "mode": "interrupt-malformed",
+      "session_id": "arithmetic-15254",
+      "peer_pid": 15254,
+      "protocol_error": "invalid_params/-32602",
+      "original_prompt_stop_reason": "cancelled",
+      "interrupt_admission": "accepted",
+      "same_session_followup": {
+        "session_id": "arithmetic-15254",
+        "value": 57,
+        "commands": 2,
+        "rpc_id": 3
+      },
+      "peer_absent_before_fallback": true,
+      "owned_workers_joined": true,
+      "unrelated_sentinel_alive": true
+    },
+    {
+      "mode": "interrupt-wrong-session",
+      "session_id": "arithmetic-15396",
+      "peer_pid": 15396,
+      "protocol_error": "invalid_params/-32602",
+      "original_prompt_stop_reason": "cancelled",
+      "interrupt_admission": "accepted",
+      "same_session_followup": {
+        "session_id": "arithmetic-15396",
+        "value": 57,
+        "commands": 2,
+        "rpc_id": 3
+      },
+      "peer_absent_before_fallback": true,
+      "owned_workers_joined": true,
+      "unrelated_sentinel_alive": true
+    }
+  ],
+  "live_provider_or_auth": false,
+  "fallback_signals": [],
+  "native_terminal_ids_preserved": true,
+  "daemon_exit": 0,
+  "status": "passed",
+  "owned_sentinel_exit": -15,
+  "root_no_holders": true,
+  "private_root_removed": true
+}

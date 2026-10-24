@@ -1,0 +1,72 @@
+{
+  "coverage_summary": "Independent, read-only round5 review of the actual uncommitted working tree at /Users/addomam/projects/amux-acp-build, using the frozen e04s01-round5-source.json scope rather than HEAD alone. Read the complete assignment, security-review skill, false-positive/confidence references, threat model and approved story/integration contracts. No independent reviewer report was opened.\n\nVerdict: no actionable correctness or security defect at confidence >=8/10 was identified in the reviewed e04s01 scope. Static-review confidence: 8/10. Findings: zero must-fix, zero should-fix, zero consider items meeting the reporting threshold. No actionable Fowler smell identified.\n\nCoverage of the fixed 32-item grid:\n1. Exact target tuple: traced target/instance/connection/session parsing and equality through inspect and mutation commit.\n2. Opaque control provenance: traced minted capability lookup, kind checks, target binding and server-derived controller identity.\n3. Atomic authority/admission: current control is rechecked under the target mutex enclosing broker commit.\n4. Captured generations: caller generation is retained and compared with the authorized generation; no current-token substitution.\n5. Immutable accepted work: transport consumes admitted frames without later-owner authorization checks.\n6. Duplicate calls: lifetime tombstones survive completed-work eviction; normal admission preserves a final close slot.\n7. Foreground semantics: one active prompt, explicit busy rejection, no steering or implicit queue.\n8. Async startup/FIFO: open reserves authority before worker launch; initialization/new-session responses share the ordered consumer.\n9. Negotiation: official pinned v1 schema, version validation and absent unsupported client capabilities.\n10. Explicit authentication: only advertised agent-type methods are admitted; unknown discriminators are not silently treated as supported agent auth.\n11. Response binding: exact outstanding RPC mapping and session validation; updates are not assigned to prompts by arrival time.\n12. Outcome truth: observed response/error, delivery evidence and unresolved-loss unknown remain separate.\n13. Explicit interrupt: exact foreground prompt validation; notification submission is not confirmed cancellation.\n14. Force/cancel: shared authority transitions retain ACP work; force does not send cancel or terminate the adapter.\n15. Publication/close races: startup and consumer publication use the lifetime ordering point; close prevents session resurrection.\n16. Owned cleanup: traced setsid, birth-qualified ProcessTree capture/signalling, pinned-child capture-failure cleanup and outside-lock reap/join; uncertain cleanup remains charged.\n17. Frame cap: accumulation is bounded before extension, including newline; partial EOF and malformed input fail explicitly.\n18. Queue budgets: ingress accumulation, consumer-owned frames and writer-owned frames remain charged; fallible reservations precede action publication.\n19. Stalled transport: dedicated writer and stderr drainer avoid pipe I/O under authority/application locks; transport failure remains explicit.\n20. History/cursors: bounded event retention, eviction gaps, pagination through-cursors and local cache reconciliation.\n21. Privacy: followed prompts, updates, provider errors and stderr into their projections; public metadata excludes conversation content/raw provider errors; content requires explicit inspect opt-in.\n22. Inert rendering: reviewed broker sanitization, bounded conversation rendering, label admission and native chrome filtering; no automatic URL/tool delegation sink.\n23. Draft identity/revocation: first-edit binding includes exact target/control/generation; changed authority or identity discards rather than rebinds.\n24. Input gating/no replay: traced keys, paste, mouse, focus, resize, picker and double-prefix paths; active ACP events do not fall through to PTY forwarding.\n25. Local rejection recovery: only synchronously unqueued owned envelopes can restore matching prompt drafts; queued transport uncertainty is not replayed.\n26. Canonical status: reviewed capture notices, superseded local errors and canonical work/outcome rendering independently of local queue admission.\n27. Native provenance: view/activity/keep/consent require the original live attachment connection; ACP selection carries target-kind facts.\n28. Locks: traced authority-to-broker ordering, released-topology projections and cleanup; no new reverse lock edge or blocking transport I/O under admission locks identified.\n29. Regression quality: inspected real-daemon/stdio fixture tests, effect counters, held-response barriers, cleanup-before-fallback/sentinel assertions and the production-consumer lifetime race. That race dequeues a charged response while the real target lock is held, then ends the lifetime before application; it is not a post-reap non-event.\n30. Legacy boundaries: reviewed native routing rejection, separate agent_views topology and shell-only close/remove; stock Zsh/OMP and legacy agent operations are not replaced.\n31. Scope/dependencies/design: schema-only dependency is exactly pinned; no added SDK runtime, generic provider framework, hidden retry policy or persistence path.\n32. Evidence/docs/gates: reviewed public usage/changelog, failing story/task status, frozen manifest and parent-produced CLI/PTY evidence. Decoded before/after frames distinguish an unavailable first-read cache from a retained same-view cache; final recovery preserves history/draft, with deliberate Enter alone producing the next recorded effect. Queue-rejection frames show retained text and truthful completed canonical status.\n\nThis is static review, not independently exercised runtime verification, complete-story/all-ACP acceptance, live-provider/auth/model approval or publication authorization. The parent-reported 341-test verification was not rerun or independently certified. Historical review caps and native-fence limitations are unchanged.",
+  "findings": [],
+  "reviewed_paths": [
+    "local://e04s01-review5.md",
+    "skill://security-review",
+    "skill://security-review/REFERENCE-false-positives.md",
+    "skill://security-review/REFERENCE-confidence-rubric.md",
+    "/Users/addomam/projects/amux-acp-build/CONVENTIONS.md",
+    "/Users/addomam/projects/amux-acp-build/Cargo.toml",
+    "/Users/addomam/projects/amux-acp-build/Cargo.lock",
+    "/Users/addomam/projects/amux-acp-build/src/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/src/cli.rs",
+    "/Users/addomam/projects/amux-acp-build/src/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/daemon.rs",
+    "/Users/addomam/projects/amux-acp-build/src/lib.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/agent.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/view.rs",
+    "/Users/addomam/projects/amux-acp-build/src/client.rs",
+    "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/fixtures/acp_peer.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/pty_control.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/pty_control/native.rs",
+    "/Users/addomam/projects/amux-acp-build/README.md",
+    "/Users/addomam/projects/amux-acp-build/CHANGELOG.md",
+    "/Users/addomam/projects/amux-acp-build/specs/adr/0004-acp-authoritative-input.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/epic.yaml",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-story.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-tasks.yaml",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "/Users/addomam/projects/amux-acp-build/specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "/Users/addomam/projects/amux-acp-build/specs/security/epics/e04/THREAT_MODEL.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-round5-source.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-build.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-resume-cli-pty-smoke.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-queue-status-after.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-label-boundary.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-first-inspect-before.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-first-inspect-after.json",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-inspect-final.json"
+  ],
+  "deferred": [
+    {
+      "reason": "All build, lint, test, formatter, runtime, model, authentication and network execution was deliberately skipped as required. Parent-produced evidence was inspected as recorded evidence only; no payloads were executed, credentials inspected, or source/report/index/session/global state changed."
+    },
+    {
+      "reason": "Forms, permission-choice UI, complete interaction-race acceptance and real Codex/Claude adapter/provider compatibility belong to later stories and separate approval gates. Unsupported s01 requests and the implemented late-permission cancellation path were reviewed; later functionality is not approved by this result.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/PLAN.md",
+        "/Users/addomam/projects/amux-acp-build/specs/tech-architecture/e04-TEST_PLAN_LATEST.md"
+      ]
+    },
+    {
+      "reason": "The review covers affected source and nearby shared controls, not the entire unchanged repository or dependency implementation closure. Frozen SHA256 values and reported toolchain/test results were read but not independently recomputed.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/Cargo.lock",
+        "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-round5-source.json"
+      ]
+    },
+    {
+      "reason": "Applied the same-user/non-sandbox threat boundary and supplied security exclusions. Resource correctness was reviewed, but DoS/resource-only behavior, theoretical PID/validation races, dependency age, secured on-disk secrets and documentation/test-only issues were not promoted into security findings. No claim repairs or waives the inherited native terminal application fence.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+        "/Users/addomam/projects/amux-acp-build/specs/security/epics/e04/THREAT_MODEL.md"
+      ]
+    }
+  ]
+}

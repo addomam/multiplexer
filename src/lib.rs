@@ -1,3 +1,4 @@
+mod acp;
 pub mod cli;
 pub mod client;
 mod codex;

@@ -1,0 +1,55 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 4,
+  "max_rounds": 5,
+  "verdict": "PASS",
+  "scores_recomputed": [
+    100.0,
+    100.0
+  ],
+  "counts": [
+    {
+      "must_fix": 0,
+      "should_fix": 0,
+      "consider": 1
+    },
+    {
+      "must_fix": 0,
+      "should_fix": 0,
+      "consider": 0
+    }
+  ],
+  "total_items_each": 32,
+  "reports": [
+    {
+      "overall_correctness": "correct",
+      "explanation": "No must-fix or should-fix defect: exact-tuple admission, interrupt-versus-close, birth-qualified cleanup, input gating, and same-view inspect/queue recovery match the s01 contract, and the captured frames retain the draft, show no replay, and show completed work rather than a stale busy header. One consider-level status lie remains when switching ACP views: the cache is nulled and synced as unavailable before inspect, so a failed first read claims a retained projection that was just discarded. No actionable Fowler smell and no HIGH security finding. This review did not rerun tests or CLI/PTY scenarios; those limits are the parent's recorded 341-test run and the frames read here. The production-consumer test blocks on the live target lock before apply, so it is not a post-reap non-event.",
+      "confidence": 0.84,
+      "findings": [
+        {
+          "title": "Do not claim a retained projection after an ACP view switch",
+          "body": "Classification: consider (P3). Selecting a different ACP id sets agent_projection to Null and syncs that Null before acp-inspect. AgentView::sync then sets lifecycle to unavailable and clears history and draft. If that first inspect fails, the error banner still says the last confirmed projection is showing, while the screen shows unavailable. A same-view inspect failure correctly keeps the previous cache; this path does not. Impact is a false identity/lifecycle display until a later inspect succeeds, not a submitted or replayed action. Fix: do not publish the Null projection; on inspect error after an id change, show a read-error banner that does not claim a retained projection, and sync only a successfully fetched cursor-0 projection.",
+          "priority": 3,
+          "confidence": 0.78,
+          "file_path": "src/tui.rs",
+          "line_start": 821,
+          "line_end": 830
+        }
+      ]
+    },
+    {
+      "overall_correctness": "correct",
+      "explanation": "No must-fix or should-fix defect in the frozen working tree. Exact tuple, captured generation, and call tombstones are rechecked inside the authority-then-broker commit; force and pending cancel change only registry ownership; explicit interrupt is the only session/cancel, and confirmation stays on the prompt stop reason. Transient inspect failure keeps the last projection and draft, while a real tuple change refetches from cursor 0; unqueued prompt restore uses the original envelope and already-queued uncertainty is not retried. The production consumer blocks on the live-target lock before apply, so the held-lock test is an in-flight ordering boundary rather than a post-reap non-event. Cleanup stays birth-qualified and outside those locks. No actionable Fowler smell: lifecycle strings and the protocol match are the contracted boundary, not a second model. Verification limit: read-only source and recorded frames only; parent 341/suite and CLI/PTY results were not rerun and are not independent proof.",
+      "confidence": 0.86,
+      "findings": []
+    }
+  ],
+  "security": {
+    "evidence": "specs/verifications/e04s01-security-review-round4.json",
+    "confidence_8_findings": 0
+  },
+  "source": "specs/verifications/e04s01-round4-source.json",
+  "consider_disposition": "Correct first-inspect/no-cache error banner before integration; retain mandatory old-identity reset. Changed candidate requires round5 rather than treating round4 as review of new source.",
+  "historical_e03_counters": "unchanged",
+  "publication_or_live_authorization": false
+}

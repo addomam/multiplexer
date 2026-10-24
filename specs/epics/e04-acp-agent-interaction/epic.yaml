@@ -21,7 +21,7 @@ stories:
     bcps: 8
     risk: P0
     delta: MODIFIED
-    status: failing
+    status: passing
     spec: e04s01-story.md
     tasks: e04s01-tasks.yaml
   - id: e04s02
@@ -50,4 +50,4 @@ stories:
     tasks: e04s04-tasks.yaml
 plan_status: passed-independent-round3-100-100
 plan: PLAN.md
-runtime_implementation: starting-e04s01-RED
+runtime_implementation: e04s01-local-acceptance-passed-pending-feature-checkpoint
