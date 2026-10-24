@@ -1,0 +1,19 @@
+{
+  "scope": "e04s04-native-Other-local-validation-repair",
+  "status": "PASS",
+  "actual_built_CLI_and_daemon": true,
+  "peer": "compiled deterministic Grok extension peer, not provider",
+  "provider_calls": 0,
+  "final_source_recheck": "PASS: repeated once against actual final is_none_or binary; same full identity/effect/explicit-cleanup assertions, no provider calls, all owned processes reaped and root absent.",
+  "retained_failed_attempt": "First script reached corrected completion then used absent rpc_id from admission receipt instead of retained work; KeyError, owned teardown executed, not production RED or cleanup PASS. Corrected script reads original retained work, no replay.",
+  "invalid_Other_no_notes": "invalid-request; no call/work/wire response consumed; original question retained",
+  "deliberate_corrected_same_grant": "exact original Grok accepted answer/notes; original prompt end_turn and arithmetic49 exactly once",
+  "exact_tuple_and_RPC": true,
+  "explicit_cleanup_before_fallback": {
+    "peer_absent_workers_complete": true,
+    "daemon_exit": 0,
+    "socket_and_root_absent": true,
+    "unrelated_sentinel_survived_until_owned_reap": true
+  },
+  "native_PTY_claim": "none for this independent CLI script; actual regression bg250/1712 supplies native proof"
+}

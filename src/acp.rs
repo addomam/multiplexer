@@ -2543,6 +2543,19 @@ pub(crate) fn validate_form_values(
             .and_then(|p| p.get(name))
             .ok_or("unknown form value")?;
         validate_field_value(field, value)?;
+        // Reject dependent notes before native capture, not only at wire encoding.
+        if let Some(notes_key) = field["_meta"]["grok_notes_key"].as_str()
+            && (value == "Other"
+                || value
+                    .as_array()
+                    .is_some_and(|choices| choices.iter().any(|choice| choice == "Other")))
+            && values
+                .get(notes_key)
+                .and_then(Value::as_str)
+                .is_none_or(|notes| notes.is_empty())
+        {
+            return Err("Other requires answer notes");
+        }
     }
     Ok(())
 }

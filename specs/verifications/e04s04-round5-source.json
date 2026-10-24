@@ -1,0 +1,80 @@
+{
+  "scope": "e04s04-complete-Codex-Grok-integration-final-native-Other-repair",
+  "branch": "feat/acp-agent-interaction",
+  "checkpoint": "8469377 test-only RED after reviewed2dad0df plus current repair",
+  "previous_source_manifest": "specs/verifications/e04s04-round4-source.json",
+  "frozen_at": "2026-10-24T20:11:40.677340+00:00",
+  "review_round": 5,
+  "max_rounds": 5,
+  "historical_caps": "unchanged",
+  "dependency_changes": false,
+  "sha256": {
+    "src/acp.rs": "4d364a20c565154c6357b8a30e12197dde68b5e4779f66b8c3f9bab300d657c8",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+    "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+    "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+    "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+    "src/tui/agent.rs": "7632648128dfc6960c55f894009d31a8c60580a615aba1c5732c38b9c080e796",
+    "src/runtime.rs": "89f9a66729954e9e4f4308a128018abde0662a66cf9d8761360b0141dd930ba1",
+    "tests/acp.rs": "1348b6fc4406e305cea14d2aee423c16436a3f4fd5aeac8f9a1b0a945a47bd47",
+    "tests/acp/native.rs": "e3a7042f3f9b38f0c2c1265cab6e9de334195f72d3dd6b9ec5aa1551ce77eac3",
+    "tests/acp/acceptance.rs": "2d968ad37a889704ba3b7ffc6e59a969bc715ec7c41c76d702d03f8fb2aa61c5",
+    "tests/acp/native/acceptance.rs": "1215923e0172feff8710128c522e3993db2bc98ad0fa334ac76dec8c928f1999",
+    "tests/fixtures/acp_peer.rs": "9cb5d2dc4554bcababbc1b4c62fe1f91b9a46695591ec536a23f27ff95ca09ee",
+    "README.md": "f8bdb7109dae67a02d5d41db39c1934095df59a424f561ff34e260b734573d1d",
+    "CHANGELOG.md": "f788cab2b70bbd2fa0d37daa2e1ccaff0fa12d56e47fb319bd0ebd56997428ef",
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+    "specs/bugs/BUG-e03-native-settlement.md": "7760fed1078fe739ca4a2a41f3adacbe48968931ea85ccc349aa1987000543c2",
+    "specs/bugs/BUG-e04-acp-retained-pipes.md": "29ebadc6f5892db9a70e9eaec4434282d378ca83c85ba3ba90f4fc325df218c5",
+    "src/acp/grok.rs": "29e834c3722164a350c0b3d0d7ee194694f1fc7fbe9cd538defa90e9b2613fea",
+    "tests/acp/native/live.rs": "245de76657a0b05b628da062102e69e6886c1ecaf2e42277367ce9e44dcf482f",
+    "tests/fixtures/acp_live_observer.mjs": "fb7dc53cf1f9d0360be353b795b7601236adc9b9456892cda427dc3dfd919ae7"
+  },
+  "repair_production_delta": [
+    "src/acp.rs",
+    "src/acp/grok.rs"
+  ],
+  "self_audit": "specs/verifications/AUDIT-e04s04.md",
+  "repair_evidence": "specs/verifications/e04s04-other-recovery.json",
+  "final_full_gate": {
+    "artifact": "artifact://1721",
+    "job": "bg_252",
+    "exit_code": 0,
+    "wall_seconds": 210.0,
+    "command": "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture",
+    "workspace_passed": 400,
+    "workspace_suites": 30,
+    "workspace_ignored": 11,
+    "default_passed": 289,
+    "default_suites": 12,
+    "default_ignored": 8,
+    "counts_overlap": true,
+    "strict_workspace_default_Rust_fmt": "PASS",
+    "OMP": "8/49 PASS",
+    "Zsh_Node_syntax": "PASS",
+    "actual_cursor_showcase": 1,
+    "final_native_unknown_guards": 2
+  },
+  "focused": {
+    "artifact": "artifact://1712",
+    "native": 1,
+    "Grok_library": 5,
+    "local_S04": 11
+  },
+  "actual_final_source_CLI": "specs/verifications/e04s04-other-recovery-cli.json",
+  "earlier_real_models": {
+    "artifact": "artifact://1659",
+    "source_manifest": "specs/verifications/e04s04-round4-source.json",
+    "adapters": [
+      "Codex ACP2.2.2/native0.160.1 Luna/low",
+      "Grok1.0.67 4.7/low/nonfast"
+    ],
+    "result": "both bootstrap/four genuine rows/explicit cleanup PASS",
+    "post_repair_provider_rerun": false,
+    "scope": "decoder/wire answer semantics, observer/live driver/model/auth policy unchanged; local pre-capture repair verified by current native+CLI+full proof"
+  },
+  "story_status": "failing-pending-final-independent-round5",
+  "publication": "not-authorized-not-performed"
+}

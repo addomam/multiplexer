@@ -1,0 +1,19 @@
+{
+  "scope": "S04-OTHER-01-native-Grok-Other-pre-capture-validation",
+  "status": "focused-full-and-exact-final-CLI-PASS-fresh-round5-pending",
+  "disposition": "Both independent round4 should-fix findings accepted and repaired; numeric threshold never substituted for consumer correctness.",
+  "reviewed_predecessor": "2dad0df; exact round4 manifest and original reports retained",
+  "RED": {"commit":"8469377","only_test_files":["tests/acp/native/acceptance.rs","tests/fixtures/acp_peer.rs"],"job":"bg_248","artifact":"artifact://1707","executed":1,"failed":1,"observed":"Actual controlling PTY accepts Other with omitted notes, enters captured/review state, receives invalid-request, original question remains pending/not-submitted. Required pre-capture local rejection is absent."},
+  "retained_followup_failure": {"job":"bg_249","artifact":"artifact://1710","classification":"fixture readiness, not a second product RED","observed":"Corrected first native Other answer really produces49, but second Enter arrives before consumer's rendered foreground completion and is safely retained busy, not replayed.","repair":"Observe actual Foreground: none before fresh prompt; no automatic submission/retry or sleep-as-proof."},
+  "repair": {"production_files":["src/acp.rs","src/acp/grok.rs"],"decision":"Move existing nonempty Other notes rule into shared flat validator used before native capture and at API admission; remove old encoder-only duplicate.","no_public_signature_or_dependency_change":true,"no_new_allocation_IO_or_async_retry":true,"standard_forms_without_extension_metadata":"unchanged"},
+  "focused_GREEN": {"job":"bg_250","artifact":"artifact://1712","actual_native_case_passed":1,"Grok_library_regressions_passed":5,"local_S04_cases_passed":11,"live_case_ignored_not_counted":1,"native_observations":"Omitted and explicitly empty notes reject before capture; same grant deliberately corrects with7/cumulative49 then cancels next retained question/cumulative32. Exact original responses/RPC/tuple and no interrupt; termios/host/drainer/peer/daemon/socket/root/sentinel cleanup before fallback."},
+  "independent_outside_test_smoke": "specs/verifications/e04s04-other-recovery-cli.json",
+  "provider_reexecution_for_this_local_validation_repair": false,
+  "earlier_real_model_matrix": {"artifact":"artifact://1659","source":"specs/verifications/e04s04-round4-source.json","result":"actual Codex/Grok complete matrix PASS; never relabelled a post-repair rerun","unchanged":"Grok decoder/wire answer encoding semantics, observer/model/auth policy and live driver"},
+  "full_gate_first_attempt": {"job":"bg_251","artifact":"artifact://1717","workspace_passed":400,"result":"FAIL-strict-Clippy-nonminimal-bool; remaining chain not executed","repair":"Apply compiler-equivalent is_none_or spelling after LSP offered no matching fix; no suppression or behavioral change."},
+  "final_full_gate": {"job":"bg_252","artifact":"artifact://1721","exit_code":0,"wall_seconds":210.00,"workspace_passed":400,"default_passed":289,"counts_overlap":true,"strict_workspace_default_Rust_fmt":"PASS","OMP":"8/49 PASS","Zsh_Node_syntax":"PASS","actual_cursor_showcase":1,"final_native_unknown_guards":2},
+  "required_fresh_review_round": 5,
+  "max_review_rounds": 5,
+  "historical_caps_and_native_fence": "unchanged",
+  "publication": "not-authorized-not-performed"
+}

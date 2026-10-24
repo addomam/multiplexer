@@ -123,6 +123,7 @@
   ],
   "current_complete_matrix": {
     "job": "bg_240",
+    "actual_source": "specs/verifications/e04s04-round4-source.json",
     "artifact": "artifact://1659",
     "executed_tests": 1,
     "passed_tests": 1,
@@ -187,22 +188,28 @@
     "denial_note": "Both adapters explicitly reject_once and finish the original RPC with cancelled; neither emits session/cancel. This is an explicit permission outcome, not ownership force or implicit interruption. Question/force rows still require end_turn."
   },
   "current_local_verification": {
-    "artifact": "artifact://1664",
-    "workspace_passed": 399,
-    "default_passed": 288,
+    "artifact": "artifact://1721",
+    "workspace_passed": 400,
+    "default_passed": 289,
     "suite_counts_overlap": true,
     "strict_workspace_and_default_Rust": "PASS",
     "fmt_OMP_Zsh_independent_cursor_showcase": "PASS",
-    "focused_Grok_and_S04": "artifact://1656:5+10 PASS",
-    "final_native_unknown_settlement_guards": "bg_242:2 PASS; no native settlement repair",
+    "focused_Grok_and_S04": "artifact://1712:5+11 and actual native Other1 PASS",
+    "final_native_unknown_settlement_guards": "bg_252/1721:2 PASS; no native settlement repair",
     "outside_test_synthetic_Grok_CLI": "specs/verifications/e04s04-grok-codec-cli.json",
+    "outside_test_actual_final_binary_Other_CLI": "specs/verifications/e04s04-other-recovery-cli.json",
     "full_command_and_counts": "specs/verifications/e04s04-verify.yaml",
-    "frozen_source": "specs/verifications/e04s04-round4-source.json"
+    "frozen_source": "specs/verifications/e04s04-round5-source.json"
+  },
+  "post_live_local_validation_repair": {
+    "evidence": "specs/verifications/e04s04-other-recovery.json",
+    "provider_model_rerun": false,
+    "scope": "Move existing Other notes check before native capture/API admission; decoder/wire response semantics, observer/live driver/model/auth policy unchanged. Current final source verified by actual native+CLI+full1721, not a relabelled live rerun."
   },
   "fresh_source_review": {
-    "required_round": 4,
+    "required_round": 5,
     "max_rounds": 5,
-    "status": "pending-after-current-proof-and-self-audit"
+    "status": "final-round5-running-after-actual-current-proof-and-self-audit"
   },
   "sources": [
     "https://raw.githubusercontent.com/agentclientprotocol/codex-acp/202e66e63343ec4f5a5e35ab590251d813d129ca/README.md",

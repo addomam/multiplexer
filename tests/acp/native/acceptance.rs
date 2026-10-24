@@ -573,6 +573,7 @@ fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() 
     let original_owner = ownership(&host, &agent)["owner"].clone();
     for (index, text, total) in [(1, "add 17 25", 49), (2, "add 1 2", 32)] {
         show_interaction(&host, &agent, &mut native, None);
+        native.wait("Foreground: none"); // Observe completion in the actual input consumer.
         let prompt = native_prompt(&host, &agent, &mut native, text);
         let form = pending(&host, &agent, "form");
         native.wait(form["interaction_id"].as_str().unwrap());

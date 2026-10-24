@@ -1,0 +1,387 @@
+{
+  "reviewer": "A",
+  "review_round": 5,
+  "max_rounds": 5,
+  "scope": "e04s04-complete-Codex-Grok-integration-final-native-Other-repair",
+  "source_root": "/Users/addomam/projects/amux-acp-build",
+  "branch": "feat/acp-agent-interaction",
+  "source_manifest": "specs/verifications/e04s04-round5-source.json",
+  "frozen_at": "2026-10-24T20:11:40.677340+00:00",
+  "checkpoint": "8469377 test-only RED plus uncommitted repair; HEAD 8469377964da5e541685d03a85c4edb44d6f4379",
+  "historical_caps": "unchanged",
+  "publication": "not-authorized-not-performed",
+  "story_acceptance": false,
+  "code_gate": "met",
+  "overall_correctness": "correct",
+  "confidence": 0.88,
+  "must_fix_count": 0,
+  "should_fix_count": 0,
+  "consider_count": 0,
+  "total_items": 32,
+  "individually_assessed": 32,
+  "denominator": 32,
+  "score": 100,
+  "formula": "100*(32-must_fix-should_fix)/32 = 100*(32-0-0)/32 = 100",
+  "verdict": "zero-must-zero-should-score-100-code-gate-met-not-publication-not-story-acceptance",
+  "fowler_smells": [],
+  "fowler_assessment": "No actionable Fowler smell in the repair. The previous divergent-change duplicate, Other-requires-notes only inside grok::response, is removed. The conditional now lives once in validate_form_values, which native review and API admission already share. A Grok-specific _meta.grok_notes_key branch is the accepted alternative to a provider trait, not a new abstraction. Long Method in src/acp.rs and the native acceptance trace is pre-existing, cohesive, and not expanded into a framework. No Feature Envy, Data Clump, Middle Man, or Shotgun Surgery was introduced. src/tui/agent.rs is byte-identical to the round4 freeze.",
+  "checks_run": false,
+  "verification_not_executed_by_child": [
+    "cargo test",
+    "cargo clippy",
+    "cargo build",
+    "cargo fmt",
+    "cargo check",
+    "bun test",
+    "zsh -n",
+    "node --check",
+    "live adapter/provider/auth/model",
+    "native fence runtime",
+    "CLI/PTY smoke"
+  ],
+  "hash_verification": {
+    "method": "python3 hashlib.sha256 of each manifest path, then independent shasum -a 256 of the same 22 paths, both compared to specs/verifications/e04s04-round5-source.json",
+    "matched": 22,
+    "total": 22,
+    "mismatched": [],
+    "implementations": ["python3 hashlib.sha256", "shasum -a 256"],
+    "limitation": "Two SHA-256 implementations agreed. No third algorithm. Files outside the frozen 22, including specs/state.yaml and specs/verifications/AUDIT-e04s04.md, were not part of the equality claim."
+  },
+  "repair_delta_versus_round4_manifest": {
+    "changed": [
+      "src/acp.rs",
+      "src/acp/grok.rs",
+      "tests/acp/native/acceptance.rs",
+      "tests/fixtures/acp_peer.rs",
+      "README.md",
+      "CHANGELOG.md"
+    ],
+    "unchanged_same_sha256": [
+      "src/control.rs",
+      "src/daemon.rs",
+      "src/client.rs",
+      "src/tui.rs",
+      "src/tui/control.rs",
+      "src/tui/agent.rs",
+      "src/runtime.rs",
+      "tests/acp.rs",
+      "tests/acp/native.rs",
+      "tests/acp/acceptance.rs",
+      "Cargo.toml",
+      "Cargo.lock",
+      "specs/bugs/BUG-e03-native-settlement.md",
+      "specs/bugs/BUG-e04-acp-retained-pipes.md",
+      "tests/acp/native/live.rs",
+      "tests/fixtures/acp_live_observer.mjs"
+    ]
+  },
+  "parent_evidence_cited_not_executed": {
+    "focused_1712": "PASS native 1 / Grok library 5 / local S04 11; live case ignored and not counted",
+    "full_gate_first_1717": "FAIL after workspace 400, strict Clippy nonminimal bool; remaining chain not executed; not a full PASS",
+    "final_full_gate_1721": "exit 0, 210s, workspace 400, default 289, counts overlap, strict workspace/default Rust and fmt PASS, OMP 8/49, Zsh/Node syntax PASS, actual cursor showcase 1, final native unknown guards 2",
+    "cli_smoke": "specs/verifications/e04s04-other-recovery-cli.json PASS on the final is_none_or binary; first admission-receipt oracle KeyError retained as not a production RED",
+    "live_1659": "actual Codex/Grok matrix PASS on round4 source specs/verifications/e04s04-round4-source.json; not a post-repair rerun; not relabelled"
+  },
+  "blind": {
+    "round5_review_b": "not read",
+    "round5_security": "not read",
+    "private_auth_bindings_global_settings": "not read",
+    "round4_reports": "schema shape only; round4 conclusions were not used as evidence for this repair"
+  },
+  "security_assessment": {
+    "role": "code-reviewer security checklist, not the separate specialist report",
+    "threshold": "supported security findings require confidence >= 8 with source-to-sink exploit evidence",
+    "supported_findings": [],
+    "operational_must_fixes": [],
+    "false_positive_exclusions_applied": [
+      "no proven exploit for agent-authored _meta.grok_notes_key on a standard form; it only adds a constraint the agent already controls",
+      "operator absolute argv remains privileged local config, not remote command injection",
+      "test-only shell effects stay in the deterministic peer and are not production interpolation",
+      "resource-exhaustion and theoretical races without a concrete failing interleaving were not reported"
+    ]
+  },
+  "findings": [],
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [],
+  "checklist": [
+    {
+      "item": 1,
+      "id": "grokMethodNotElicitation",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp.rs:2012-2016 still dispatches _x.ai/ask_user_question through grok::form then parse_form and sets actions to accept/cancel. elicitation/create remains a separate arm. The repair does not add a prose or MCP question parser. Unknown methods still return method-not-found before an interaction is published."
+    },
+    {
+      "item": 2,
+      "id": "closedDecoderBounds",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp/grok.rs:8-21 schema_keys rejects unknown request fields. Question and option key lists remain closed. Question count is capped at FIELDS/2 and total choices at OPTIONS before publication. Invented mode is rejected. The notes repair does not widen those bounds or add I/O."
+    },
+    {
+      "item": 3,
+      "id": "nullableMultiSelect",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp/grok.rs:48-62 treats null or absent multiSelect/multi_select as a single string oneOf. Both flags together are rejected. Explicit true becomes a minItems-1 array. The native Other fixture sends multiSelect null, so it exercises the scalar projection, not a second flag parser."
+    },
+    {
+      "item": 4,
+      "id": "choicesPreviewsOther",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp/grok.rs:86-122 preserves labels, descriptions, and non-null string previews, adds Other when absent, and stores grok_notes_key only on the choice field. src/acp/grok.rs:160-166 still emits a label array keyed by question text and omits empty annotations. Nonempty notes remain annotations. The removed encoder ensure is not required for that shape because admission now rejects Other without nonempty notes first."
+    },
+    {
+      "item": 5,
+      "id": "duplicateTextAndLabels",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp/grok.rs:36-37 and 78-81 still reject duplicate question text and per-question option labels before publication. Optional ids are shape-checked and are not answer keys. The repair does not change that selection key."
+    },
+    {
+      "item": 6,
+      "id": "exactSessionToolRpc",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "grok::form still requires a valid toolCallId and parse_form still requires the live session. The JSON-RPC id is stored as wire_id and returned on accept, cancel, and invalid-params. A mismatched session publishes no interaction. The Other repair uses the same interaction.detail schema and original wire id at src/acp.rs:893-897."
+    },
+    {
+      "item": 7,
+      "id": "wireResponseShape",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Accept still uses outcome accepted. Cancel and interrupt still use outcome cancelled. Decline still bails at src/acp/grok.rs:136-138 before encode. API admission wraps the shared category as invalid-request: Other requires answer notes at src/acp.rs:875-877, matching the previous encoder error text. Empty notes are omitted by the same filter at src/acp/grok.rs:160, but that path is no longer reachable for Other because validation fails first."
+    },
+    {
+      "item": 8,
+      "id": "planChatSkipNotFabricated",
+      "category": "correctness",
+      "result": "pass",
+      "score": 1,
+      "evidence": "mode plan remains a question, not decline or cancel. actions stay accept and cancel. No chat_about_this or skip_interview outcome is synthesized. README.md still states that limitation. The repair does not add those actions."
+    },
+    {
+      "item": 9,
+      "id": "firstValidSelection",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Grok answers still use pending_interaction and the existing prepare/commit winner. A losing call is stale-interaction, is absent from calls, and does not add a second output frame. The notes check runs inside commit before selections are published and before calls are inserted, so a rejected Other answer cannot become the winner."
+    },
+    {
+      "item": 10,
+      "id": "declineDoesNotConsume",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "API decline still reaches grok::response and bails unsupported before enqueue. selections is a local vector; the error returns before state.calls.insert. The unit case e04s04_grok_other_notes_and_unsupported_decline_preserve_pending_responder keeps output and work empty, state pending, and the decline call id unrecorded. Native F6 returns None when actions omit decline. The repair does not touch that arm."
+    },
+    {
+      "item": 11,
+      "id": "forceAuthorityOnly",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/control.rs is hash-identical to round4. Force at src/control.rs:743-746 compares the observed snapshot and calls grant with mode forced. It does not call interrupt, kill, or session/cancel. The Other repair delta does not enter that path. The native Other case asserts no acp-interrupt work after correction and cancellation."
+    },
+    {
+      "item": 12,
+      "id": "staleNoReplay",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Commit still checks the admitted generation. Native editable() at src/tui/agent.rs:1285-1304 refuses a captured action and a mismatched binding. Validation failure returns at src/tui/agent.rs:1674-1678 before capture at line 1690, so a rejected Other draft is not stored for replay. changed() clears reviewed on edit. The second prompt waits for rendered Foreground: none before fresh input; retained busy input is not replayed."
+    },
+    {
+      "item": 13,
+      "id": "originalPromptIdentity",
+      "category": "identity/authority",
+      "result": "pass",
+      "score": 1,
+      "evidence": "The native Other case requires the original prompt tuple, end_turn, and the original rpc_id for both the corrected accept and the explicit cancel. The fixture writes the original grok-other response id before applying arithmetic. Permission reject_once may still finish cancelled without a session/cancel notification; that path is unchanged and is not conflated with force."
+    },
+    {
+      "item": 14,
+      "id": "interruptCancelExact",
+      "category": "concurrency/cancel",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Interaction::cancel_frame still emits outcome cancelled for grok_question. The interrupt arm cancels pending session-scoped questions and sends session/cancel only for that explicit interrupt. The removed notes ensure is not on the cancel path. src/acp/grok.rs:134-135 still returns outcome cancelled for FormAnswer::Cancel without requiring notes."
+    },
+    {
+      "item": 15,
+      "id": "lateQuestionNoWindow",
+      "category": "concurrency/cancel",
+      "result": "pass",
+      "score": 1,
+      "evidence": "A question arriving while foreground is cancelling is still selected and responded before publication. The existing unit case checks both the pending and late RPC ids. The repair does not open a choice window or change that ordering."
+    },
+    {
+      "item": 16,
+      "id": "ordinaryCancelRetainsCalls",
+      "category": "concurrency/cancel",
+      "result": "pass",
+      "score": 1,
+      "evidence": "No new claim-cancel path was added. src/control.rs:756-770 revokes the current owner through revoke() at 1487-1489, clears the reservation, and marks the claim cancelled. It does not discard accepted ACP calls. Ordinary pending cancellation still grants nobody. This patch does not reopen that contract."
+    },
+    {
+      "item": 17,
+      "id": "admissionAtomic",
+      "category": "concurrency/cancel",
+      "result": "pass",
+      "score": 1,
+      "evidence": "daemon acp_action still authorizes, prepares, then admit_acp. commit checks the current generation under the target lock before publication. validate_form_values and grok::response perform no I/O and take no second lock. A notes rejection returns before enqueue, work publication, and call-id insertion."
+    },
+    {
+      "item": 18,
+      "id": "budgetsBeforePublish",
+      "category": "resources",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Invalid Grok requests still become invalid-params on the original RPC and do not push an interaction. Valid questions still pass retain_capacity before responder publication. The notes check adds no allocation, frame, or queue. Frame and queue caps are the existing ones. Cargo.toml and Cargo.lock hashes match the freeze, so no dependency or budget change landed."
+    },
+    {
+      "item": 19,
+      "id": "noIoUnderLock",
+      "category": "resources",
+      "result": "pass",
+      "score": 1,
+      "evidence": "The new check is pure JSON comparison inside the already-shared validator. Commit still does not spawn, join, or probe under the state lock. The test observer remains outside the daemon lock order. No async retry or grant rebind was added."
+    },
+    {
+      "item": 20,
+      "id": "responderCleanup",
+      "category": "resources",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Decline and Other-without-notes return before enqueue and do not record the call. Close, pipe ownership, and worker joins are outside this delta and were not rewritten. BUG-e04-acp-retained-pipes.md is hash-identical to round4. The native finish helper still observes cleanup_complete, daemon exit, socket and root absence, and sentinel survival before fallback."
+    },
+    {
+      "item": 21,
+      "id": "nativeRecoveryCleanup",
+      "category": "native UX",
+      "result": "pass",
+      "score": 1,
+      "evidence": "tests/acp/native/acceptance.rs:566 waits for Foreground: none, which src/tui/agent.rs:917-923 renders only when the foreground prompt id is absent. After local rejection the case corrects with notes 7 to effect 49, then cancels the next question to cumulative 32, with the original owner and no interrupt. finish() observes peer cleanup_complete, descendant reap, daemon exit 0, socket and root absence, and sentinel survival before fallback. This child did not re-execute that PTY. Parent artifact 1712 is cited as the executed proof, not inferred from the test text alone."
+    },
+    {
+      "item": 22,
+      "id": "declineNotOffered",
+      "category": "native UX",
+      "result": "pass",
+      "score": 1,
+      "evidence": "decline_offered is false when an actions array exists and lacks decline. Grok sets [accept, cancel]. Absent actions still offer decline for standard elicitation. F6 sends nothing for Grok. The repair does not add decline to Grok actions."
+    },
+    {
+      "item": 23,
+      "id": "acceptCancelOffered",
+      "category": "native UX",
+      "result": "pass",
+      "score": 1,
+      "evidence": "F5 still reviews then accepts only after values() returns Ok. F7 sends cancel, which grok::response encodes as outcome cancelled. The review line says decline is not offered. A notes failure clears reviewed and returns before capture, so F7 remains available on the same grant."
+    },
+    {
+      "item": 24,
+      "id": "otherNotesNativeRecovery",
+      "category": "native UX",
+      "result": "pass",
+      "score": 1,
+      "evidence": "The round4 capture hole is closed in source. src/acp.rs:2546-2558 rejects scalar Other and any array element equal to Other when the sibling named by _meta.grok_notes_key is missing, null, non-string, or empty. serde_json 1.0.152 PartialEq<str> compares as_str, so the array comparison is the same string test as the scalar one. Native values() at src/tui/agent.rs:1648 runs that check; the Err arm at 1674-1678 sets Validation: Other requires answer notes and returns before capture at 1690. Admission repeats the check at src/acp.rs:875-877 before grok::response. Traced rejects: omitted notes, explicit empty string, null notes, and non-string notes. Traced accepts: nonempty notes on scalar or array Other, including Other plus another offered choice. Standard fields without grok_notes_key are unchanged, including a required empty string. Whitespace-only notes remain accepted, matching the previous encoder filter at src/acp/grok.rs:160; that is continuity, not a new hole. The native case covers omitted and explicitly emptied scalar notes, then correction and F7. The array branch is source-traced and not a separate executed fixture; that is a coverage limit, not a second rule or a consumer drop."
+    },
+    {
+      "item": 25,
+      "id": "inertDisplay",
+      "category": "native UX",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Question text, descriptions, previews, and notes still reach the host through display_value/inert and ratatui Paragraph/Line cells, not a raw terminal write. The validation status is passed through inert(error, 256). Control and bidi handling is unchanged. The repair adds no terminal write."
+    },
+    {
+      "item": 26,
+      "id": "grokAndOtherTestsFirst",
+      "category": "test quality/F.I.R.S.T",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Existing Grok unit cases still assert wire and state, not source text: nullable single choice, single and multi answers, preview, decline retention, wrong session, duplicate text/labels, bad mode, count, first-valid, and explicit/late cancel. The Other unit case now fails commit when notes are omitted, which would succeed if the moved rule were absent, because the encoder duplicate was removed. The native case is fast, isolated, repeatable, self-validating, and timely: unique private daemon/peer/PTY, explicit Foreground: none and validation markers, no sleep-as-proof, exact responses and effects 49/32, and it was RED at 8469377/1707 before the shared-validator repair. It does not assert source text."
+    },
+    {
+      "item": 27,
+      "id": "liveMatrixHonesty",
+      "category": "test quality/F.I.R.S.T",
+      "result": "pass",
+      "score": 1,
+      "evidence": "tests/acp.rs:20-22 ignores e04s04_live_adapters unless explicitly selected. configuration() fail-closes without a private absolute approved config and requires Codex and Grok, four named rows, and zero unexpected session/cancel. tests/fixtures/acp_live_observer.mjs:147 forwards the original chunk, not reserialized JSON. Artifact 1659 remains attributed to the round4 manifest. This repair did not change live.rs or the observer, and no post-repair provider rerun is claimed."
+    },
+    {
+      "item": 28,
+      "id": "noFalseGateOrFenceReset",
+      "category": "test quality/F.I.R.S.T",
+      "result": "pass",
+      "score": 1,
+      "evidence": "The live test is not a zero-case pass. README still calls terminal settlement best-effort. BUG-e03-native-settlement.md is hash-identical and was not rewritten. tests/pty_control.rs:612 keeps native delivery as an unknown batch and does not turn a write into a safe grant. Parent 1717 is recorded as a partial Clippy failure, not substituted for final 1721. Historical caps are not reset here."
+    },
+    {
+      "item": 29,
+      "id": "privacyBoundaries",
+      "category": "privacy/security",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Default metadata still omits question text. The observer stores field types, model, effort, and counts, not prompts or answers, and refuses API-key environments. Production gained no shell interpolation. The live effect command remains test-only and confined. The notes rule does not log answer text. No private auth, global settings, or bindings were read or written by this review."
+    },
+    {
+      "item": 30,
+      "id": "offeredPermissionsExact",
+      "category": "privacy/security",
+      "result": "pass",
+      "score": 1,
+      "evidence": "Permission encoding is unchanged. Options are still matched by the exact offered option_id before a response is encoded. No allow option is fabricated. The Other repair is form-only and does not map decline, dismiss, or cancel onto a permission outcome."
+    },
+    {
+      "item": 31,
+      "id": "noProviderTrait",
+      "category": "maintainability/conventions",
+      "result": "pass",
+      "score": 1,
+      "evidence": "src/acp/grok.rs remains a private closed codec into the existing form ledger and responder. The notes rule is a conditional on canonical metadata inside the existing validator, not a provider trait, second agent, or compatibility proxy. Cargo.toml and Cargo.lock match the frozen manifest. No public signature changed."
+    },
+    {
+      "item": 32,
+      "id": "conventionsAndMaintainability",
+      "category": "maintainability/conventions",
+      "result": "pass",
+      "score": 1,
+      "evidence": "The actual 12-line CONVENTIONS.md is satisfied: runtime state stays in memory, IDs and errors stay explicit, PTY processing is unchanged, and evidence remains in specs/. README.md states nonempty Other notes are rejected before native capture. CHANGELOG.md records correction and cancellation on the original grant and does not relabel 1659 as a post-repair model run. The is_none_or spelling is the compiler-equivalent form, not a suppression. No new allocation or I/O was added."
+    }
+  ],
+  "notes_trace": {
+    "scalar_other_omitted": "reject before capture and before admission publication",
+    "scalar_other_empty_string": "reject; native paste-then-backspace submits the empty string and the shared is_empty check catches it",
+    "scalar_other_null_or_non_string": "reject; as_str is None, and a present notes field also fails typed validation if visited first",
+    "scalar_other_nonempty": "accept; encoder annotations include the notes",
+    "array_other_any_position_missing_or_empty": "reject by the any() branch; same notes lookup",
+    "array_other_with_nonempty_notes": "accept; encoder uses the array branch already used by multiselect answers",
+    "non_other_with_empty_optional_notes": "unchanged; check does not fire",
+    "standard_form_without_grok_notes_key": "unchanged, including required empty string",
+    "unsupported_decline": "still unsupported and does not consume the pending responder"
+  },
+  "limitations": [
+    "This child executed no build, test, clippy, formatter, provider, auth, install, network, or global action.",
+    "Correctness is from source tracing plus cited parent artifacts. Parent test passage was not treated as proof by itself.",
+    "Artifact 1659 is round4 source evidence only. No post-repair live OAuth run is claimed.",
+    "Artifact 1717 is a failed partial chain. Only artifact 1721 is the recorded final full gate, and this child did not re-run it.",
+    "The native Other fixture uses multiSelect null, so the array Other branch is source-traced rather than covered by that PTY case.",
+    "No hard USD or exact charged-subrequest guarantee is claimed for the earlier live matrix.",
+    "No publication authority. Story acceptance remains the parent's integration of independent reviews, not this score alone.",
+    "Filesystem write to specs/verifications/e04s04-review-a-round5.json was unavailable to this child. This file is the verbatim report."
+  ],
+  "explanation": "Zero must-fix and zero should-fix. Score 100*(32-0-0)/32=100. This meets the independent code gate and is not story acceptance, publication, or a cap reset. The Other-requires-notes rule now runs in validate_form_values before native capture and again at API admission; the encoder duplicate is gone. Scalar and array Other with missing, empty, null, or non-string notes are rejected without consuming the responder, and the same grant can correct or cancel. checks_run=false. Independent hashlib.sha256 and shasum -a 256 both matched 22/22 frozen files. Live matrix 1659 stays attributed to round4 source."
+}

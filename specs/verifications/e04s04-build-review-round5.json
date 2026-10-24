@@ -1,0 +1,26 @@
+{
+  "scope": "e04s04-complete-Codex-Grok-integration-native-Other-repair",
+  "review_round": 5,
+  "max_rounds": 5,
+  "source_manifest": "specs/verifications/e04s04-round5-source.json",
+  "code_review_AND": "PASS",
+  "security_operational_gate": "FAIL-operational-must-fix",
+  "AND_gate": "FAIL",
+  "reviewers": [
+    {"name":"A","report":"specs/verifications/e04s04-review-a-round5.json","total_items":32,"individually_assessed":32,"score":100,"must_fix":0,"should_fix":0,"consider":0,"hashes_matched":22,"hashes_total":22,"methods":["hashlib.sha256","shasum"]},
+    {"name":"B","report":"specs/verifications/e04s04-review-b-round5.json","total_items":32,"individually_assessed":32,"score":100,"must_fix":0,"should_fix":0,"consider":0,"hashes_matched":22,"hashes_total":22,"method":"hashlib.sha256"}
+  ],
+  "security": {"report":"specs/security/epics/e04/e04s04-review-round5.json","supported_security_findings":0,"operational_must_fix":1,"should_fix":0,"consider":0,"score":96.875,"total_items":32,"independent_hashes_computed":0,"hashes_total":22,"limit":"Read-only specialist has no hash/Git capability; no match fabricated. Parent and A/B bind all22."},
+  "dispositions": [
+    {"id":"S04-OTHER-01","status":"independently-cleared-round5","reason":"Shared pre-capture/API nonempty notes validation correctly retains deliberate edit/cancel on original grant."},
+    {"id":"E04S04-OPS-R5-01","category":"operational-must-fix","status":"accepted-pending-actual-reproduction-and-repair","security_vulnerability":false,"confidence":9,"basis":"Static trace only, not executed by specialist: in-budget600000-byte question becomes two answer/annotation keys above1MiB, rejected after native capture.","decision":"Reproduce with real broker/CLI and deterministic genuine Grok peer; reject unrepresentable question metadata before canonical publication using a conservative allocation-free serialized reply bound. Preserve original RPC, explicit protocol error and subsequent same-session work; no replay, grant substitution or provider calls."}
+  ],
+  "runtime_before_new_finding": {"final_full":"artifact://1721","workspace":400,"default":289,"actual_final_CLI":"specs/verifications/e04s04-other-recovery-cli.json","earlier_real_models":"artifact://1659 on round4 source; not post-repair rerun"},
+  "whole_story": "failing",
+  "task_ledgers": "all-four-failing",
+  "review_cap": "exhausted5-of5; iteration6 forbidden; after reachable repair/verification, human review/decision required",
+  "next_source_review_round": null,
+  "raw_report_delivery": "Full three original scratch reports persisted verbatim by parent; no re-review or extra iteration.",
+  "historical_native_failure_and_caps": "unchanged",
+  "publication": "not-authorized-not-performed"
+}

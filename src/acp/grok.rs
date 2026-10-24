@@ -158,10 +158,6 @@ pub(super) fn response(schema: &Value, answer: &FormAnswer) -> Result<Value> {
                 .collect()
         };
         let notes = values[notes_key].as_str().filter(|s| !s.is_empty());
-        ensure!(
-            !selected.contains(&"Other") || notes.is_some(),
-            "invalid-request: Other requires answer notes"
-        );
         answers.insert(text.to_owned(), json!(selected));
         let mut annotation = Map::new();
         if let Some(notes) = notes {
