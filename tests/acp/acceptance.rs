@@ -643,3 +643,166 @@ fn e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independ
     s04_joined(&host, &noisy);
     s04_finish(host, &[&error_peer, &noisy], &mut sentinel, false);
 }
+
+struct S04PipeRetainer {
+    root: PathBuf,
+    released: bool,
+}
+
+impl S04PipeRetainer {
+    fn release(&mut self, host: &Host, agent: &Agent) {
+        fs::write(
+            self.root.join("retainer.release"),
+            b"explicit fixture release",
+        )
+        .unwrap();
+        host.reaped(agent, "retainer.pid");
+        self.released = true;
+    }
+}
+
+impl Drop for S04PipeRetainer {
+    fn drop(&mut self) {
+        if self.released {
+            return;
+        }
+        // Failure-only owned fixture cleanup. No PID/group signals or success oracle.
+        let _ = fs::write(self.root.join("retainer.release"), b"failure cleanup");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            let running = fs::read_to_string(self.root.join("retainer.pid"))
+                .ok()
+                .and_then(|pid| pid.parse().ok())
+                .is_some_and(|pid| !pid_gone(pid));
+            if !running {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+}
+
+#[test]
+fn e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown() {
+    for close_first in [true, false] {
+        let mut host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open("s04-retained-pipes");
+        let mut retainer = S04PipeRetainer {
+            root: agent.root.clone(),
+            released: false,
+        };
+        host.ready(&mut agent);
+        let identity: Value = host.until("retainer reparented outside captured tree", || {
+            serde_json::from_slice(&fs::read(agent.root.join("retainer.ready")).ok()?).ok()
+        });
+        let peer: i32 = fs::read_to_string(agent.root.join("peer.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let held_pid: i32 = fs::read_to_string(agent.root.join("retainer.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert_ne!(identity["parent"], peer);
+        assert_ne!(identity["parent"], identity["intermediary"]);
+        assert_ne!(unsafe { libc::getsid(held_pid) }, peer);
+        assert_eq!(identity["session"], unsafe { libc::getsid(held_pid) });
+        assert!(!pid_gone(held_pid));
+        let original = s04_held_prompt(&host, &agent);
+        let mut siblings = Vec::new();
+        if close_first {
+            let closed = exchange(
+                &host.socket,
+                agent.action("acp-close", "retained-pipe-close"),
+            );
+            assert!(pid_gone(peer), "captured root still alive");
+            assert!(
+                !pid_gone(held_pid),
+                "retainer must not supply accidental EOF"
+            );
+            sentinel.alive();
+            let reply = match closed {
+                Ok(reply) => reply,
+                Err(error) => {
+                    let before = host.inspect(&agent);
+                    assert!(before["work"].as_array().unwrap().iter().any(|work| {
+                        work["call_id"] == "retained-pipe-close" && work["op"] == "acp-close"
+                    }));
+                    assert_eq!(before["resource"]["cleanup_complete"], false);
+                    retainer.release(&host, &agent);
+                    host.until("only endpoint release unblocks original cleanup", || {
+                        (host.inspect(&agent)["resource"]["cleanup_complete"] == true).then_some(())
+                    });
+                    eprintln!(
+                        "retained-pipe RCA: close admitted; captured root absent; escaped retainer alive; only explicit endpoint release completed cleanup"
+                    );
+                    panic!(
+                        "ACP close exceeded its client deadline with retained endpoints: {error}"
+                    );
+                }
+            };
+            assert_eq!(reply["ok"], true, "{reply}");
+            let closed = host.inspect(&agent);
+            assert_eq!(closed["lifecycle"], "failed");
+            assert_eq!(closed["resource"]["failure"], "cleanup");
+            assert_eq!(closed["resource"]["cleanup_complete"], false);
+            let unknown = host.work(&agent, &original["work_id"]);
+            s03_same_work(&unknown, &original);
+            assert_eq!(unknown["state"], "unknown");
+            assert_eq!(unknown["application"], "unknown");
+            assert!(unknown["outcome"].is_null());
+            let mut healthy = host.open("arithmetic");
+            host.ready(&mut healthy);
+            let prompt = host.prompt(&healthy, "after-retained-pipe-close", "add 19 23");
+            host.completed(&healthy, &prompt["work_id"]);
+            assert_eq!(healthy.effect()["value"], 42);
+            siblings.push(healthy);
+            for _ in 0..6 {
+                let waiting = host.open("hold-initialize");
+                host.barrier(&waiting, "initialize");
+                siblings.push(waiting);
+            }
+            let controller = host.call(json!({"op":"controller-create","role":"external",
+                "label":"Retained cleanup capacity"}));
+            let project = host.call(json!({"op":"snapshot"}))["projects"][0]["id"].clone();
+            let executable = Path::new(env!("CARGO_BIN_EXE_amux"))
+                .parent()
+                .unwrap()
+                .join("examples/acp_fixture");
+            host.deny(
+                json!({"op":"acp-open","project":project,"controller":controller["controller"],
+                "command":[executable,host.root,"arithmetic"]}),
+                &["capacity-exceeded"],
+            );
+            for sibling in &siblings {
+                host.close(sibling);
+            }
+        }
+        assert_eq!(host.call(json!({"op":"shutdown"}))["shutting_down"], true);
+        let deadline = Instant::now() + DEADLINE;
+        let status = loop {
+            if let Some(status) = host.daemon.try_wait().unwrap() {
+                break status;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "retained pipes pinned daemon shutdown"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        assert!(status.success(), "{status}");
+        assert!(pid_gone(peer));
+        assert!(
+            !pid_gone(held_pid),
+            "daemon exit must not depend on fixture EOF"
+        );
+        assert!(!agent.root.join("retainer.release").exists());
+        assert!(!agent.root.join("fixture-fallback").exists());
+        sentinel.alive();
+        retainer.release(&host, &agent);
+        let mut agents: Vec<_> = siblings.iter().collect();
+        agents.push(&agent);
+        s04_finish(host, &agents, &mut sentinel, true);
+    }
+}

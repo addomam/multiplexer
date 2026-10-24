@@ -2,6 +2,7 @@
 use serde_json::{Value, json};
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -312,6 +313,39 @@ fn s03_rendering(reader: &mut impl BufRead, root: &Path, session: &str) -> Resul
     Ok(())
 }
 
+// Called in a fresh, single-threaded executable, before any watchdog exists.
+// The intermediary is waited by the peer; only the reparented child retains I/O.
+fn retain_orphan_pipes(root: &Path) -> Result<()> {
+    let intermediary = unsafe { libc::getpid() };
+    let child = unsafe { libc::fork() };
+    if child < 0 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    if child > 0 {
+        return Ok(());
+    }
+    while unsafe { libc::getppid() } == intermediary {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    fs::write(root.join("retainer.pid"), std::process::id().to_string())?;
+    fs::write(
+        root.join("retainer.ready"),
+        serde_json::to_vec(&json!({
+            "parent":unsafe { libc::getppid() },
+            "session":unsafe { libc::getsid(0) },
+            "intermediary":intermediary
+        }))?,
+    )?;
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    while root.exists()
+        && !root.join("retainer.release").exists()
+        && std::time::Instant::now() < deadline
+    {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let root = PathBuf::from(
         std::env::args_os()
@@ -325,6 +359,29 @@ fn main() -> Result<()> {
         fs::write(root.join("descendant.pid"), std::process::id().to_string())?;
         loop {
             std::thread::park();
+        }
+    }
+    if mode == "s04-pipe-retainer" {
+        return retain_orphan_pipes(&root);
+    }
+    if mode == "s04-retained-pipes" {
+        let mut intermediary = Command::new(std::env::current_exe()?);
+        intermediary
+            .arg(&root)
+            .arg("s04-pipe-retainer")
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        unsafe {
+            intermediary.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        if !intermediary.status()?.success() {
+            return Err("retained-pipe intermediary failed".into());
         }
     }
     // Failure-only fixture fallback: if the daemon itself disappears, this
@@ -889,7 +946,11 @@ fn main() -> Result<()> {
         if mode == "s03-stalled-prompt" && request["method"] == "session/new" {
             // Publish the real session, then stop before any prompt bytes are read.
             barrier(&root, "s03-reads")?;
-        } else if mode == "s04-stalled-descendants" && request["method"] == "session/new" {
+        } else if matches!(
+            mode.as_str(),
+            "s04-stalled-descendants" | "s04-retained-pipes"
+        ) && request["method"] == "session/new"
+        {
             barrier(&root, "s04-reads")?;
         }
     }
