@@ -75,13 +75,14 @@ fn write_pty(master: &mut fs::File, mut bytes: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
-// Keep the actual controlling slave open to observe normal termios restoration.
-// The unreaped session leader pins the process group until fallback cleanup.
+// Zsh remains the actual session leader until termios is observed and explicitly
+// acknowledged. Darwin revokes the slave when that leader exits, even if open.
 struct Attachment {
     child: Child,
     master: fs::File,
     slave: fs::File,
     original: libc::termios,
+    tui_exit: PathBuf,
     output: Arc<parking_lot::Mutex<Output>>,
     effects: Arc<parking_lot::Mutex<Vec<String>>>,
     stop: Arc<AtomicBool>,
@@ -130,12 +131,21 @@ impl Attachment {
             unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) },
             0
         );
-        let mut command = Command::new(env!("CARGO_BIN_EXE_amux"));
+        let tui_exit = host.root.join(format!("native-{}.exit", uuid::Uuid::new_v4().simple()));
+        let mut command = Command::new("/bin/zsh");
         command
-            .arg("--socket")
+            .args(["-f", "-c"])
+            .arg(concat!(
+                "\"$1\" --socket \"$2\" acp attach \"$3\"; code=$?; ",
+                "printf '%s\\n' \"$code\" > \"$4\"; ",
+                "while IFS= read -r ack; do ",
+                "[[ \"$ack\" == finish ]] && exit \"$code\"; done; exit 125"
+            ))
+            .arg("native-ctty-host")
+            .arg(env!("CARGO_BIN_EXE_amux"))
             .arg(&host.socket)
-            .args(["acp", "attach"])
             .arg(agent.target["id"].as_str().unwrap())
+            .arg(&tui_exit)
             .env_clear()
             .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
             .env("HOME", host.root.join("home"))
@@ -176,6 +186,7 @@ impl Attachment {
             master,
             slave,
             original,
+            tui_exit,
             output,
             effects,
             stop,
@@ -270,18 +281,21 @@ impl Attachment {
     fn detach(&mut self) {
         self.action(17); // configured prefix + Ctrl-q, outside application input
         let deadline = Instant::now() + DEADLINE;
-        loop {
-            if let Some(status) = self.child.try_wait().unwrap() {
-                assert!(status.success(), "detach: {status}: {}", self.text());
-                break;
-            }
+        let code = loop {
             assert!(
-                Instant::now() < deadline,
-                "detach deadline: {}",
+                self.child.try_wait().unwrap().is_none(),
+                "controlling host exited before termios observation: {}",
                 self.text()
             );
+            if let Ok(code) = fs::read_to_string(&self.tui_exit)
+                && let Ok(code) = code.trim().parse::<i32>()
+            {
+                break code;
+            }
+            assert!(Instant::now() < deadline, "TUI detach deadline: {}", self.text());
             std::thread::sleep(Duration::from_millis(5));
-        }
+        };
+        assert_eq!(code, 0, "TUI detach failed: {}", self.text());
         let mut restored: libc::termios = unsafe { std::mem::zeroed() };
         assert_eq!(
             unsafe { libc::tcgetattr(self.slave.as_raw_fd(), &mut restored) },
@@ -295,23 +309,40 @@ impl Attachment {
             restored.c_cc, self.original.c_cc,
             "terminal control characters"
         );
+        assert!(self.child.try_wait().unwrap().is_none(), "host must pin the controlling PTY");
+        self.send(b"finish\n");
+        let deadline = Instant::now() + DEADLINE;
+        loop {
+            if let Some(status) = self.child.try_wait().unwrap() {
+                assert!(status.success(), "controlling host exit: {status}: {}", self.text());
+                break;
+            }
+            assert!(Instant::now() < deadline, "controlling host did not acknowledge finish");
+            std::thread::sleep(Duration::from_millis(5));
+        }
         self.join_reader();
     }
 
     fn join_reader(&mut self) {
         self.stop.store(true, Ordering::Release);
-        if let Some(reader) = self.reader.take() {
+        if let Some(reader) = self.reader.as_ref() {
             let deadline = Instant::now() + DEADLINE;
             while !reader.is_finished() {
                 assert!(Instant::now() < deadline, "PTY drainer did not stop");
                 std::thread::sleep(Duration::from_millis(2));
             }
+        }
+        if let Some(reader) = self.reader.take() {
             reader.join().unwrap();
         }
     }
 }
 impl Drop for Attachment {
     fn drop(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        unsafe {
+            libc::tcsetattr(self.slave.as_raw_fd(), libc::TCSANOW, &self.original);
+        }
         // Never signal a group after reaping its original leader.
         if self.child.try_wait().ok().flatten().is_none() {
             unsafe {
@@ -320,18 +351,12 @@ impl Drop for Attachment {
             let _ = self.child.kill();
             let _ = self.child.wait();
         }
-        self.stop.store(true, Ordering::Release);
-        if let Some(reader) = self.reader.take() {
-            let deadline = Instant::now() + DEADLINE;
-            while !reader.is_finished() && Instant::now() < deadline {
-                std::thread::sleep(Duration::from_millis(2));
-            }
-            if reader.is_finished() {
-                let _ = reader.join();
-            }
-        }
-        unsafe {
-            libc::tcsetattr(self.slave.as_raw_fd(), libc::TCSANOW, &self.original);
+        // Reads are nonblocking; cursor-reply writes have a deadline. Join even
+        // during unwinding, rather than detaching an owned worker on timeout.
+        if let Some(reader) = self.reader.take()
+            && reader.join().is_err()
+        {
+            eprintln!("native PTY drainer panicked during cleanup");
         }
     }
 }
@@ -374,12 +399,20 @@ fn native_prompt(host: &Host, agent: &Agent, native: &mut Attachment, text: &str
         .collect::<Vec<_>>();
     native.paste(text);
     native.send(b"\r");
-    host.until("deliberate native prompt admitted", || {
-        host.inspect(agent)["work"]
+    let deadline = Instant::now() + DEADLINE;
+    host.until(&format!("deliberate native prompt {text:?} admitted"), || {
+        let projection = host.inspect(agent);
+        let admitted = projection["work"]
             .as_array()?
             .iter()
             .find(|work| work["op"] == "acp-prompt" && !previous.contains(&work["work_id"]))
-            .cloned()
+            .cloned();
+        assert!(
+            admitted.is_some() || Instant::now() < deadline,
+            "native prompt {text:?} was not admitted; work: {}; ownership: {}; surface:\n{}",
+            projection["work"], ownership(host, agent), native.text()
+        );
+        admitted
     })
 }
 fn finish(mut host: Host, agent: &mut Agent, native: &mut Attachment, sentinel: &mut Sentinel) {
@@ -525,15 +558,29 @@ fn e04s03_native_cooperative_question_handoff_discards_old_form_draft_on_reacqui
     handle(&host, &grant["control"], "release");
     native.action(12); // fresh deliberate cooperative request, not auto-reacquire
     native.owner();
+    // A deliberate claim may leave its ownership panel open. Dismiss it before
+    // application input; the original-connection activity receipt fences Escape
+    // parsing so the following F9 cannot be interpreted as Alt-F9.
+    let activity = ownership(&host, &agent)["activity_revision"].as_u64().unwrap();
+    native.send(b"\x1b");
+    host.until("fresh owner dismisses ownership panel", || {
+        let text = native.text();
+        (ownership(&host, &agent)["activity_revision"].as_u64().unwrap() > activity
+            && !text.contains("Control owned here")
+            && !text.contains("Control requested"))
+            .then_some(())
+    });
     native.send(b"\x1b[20~"); // F9 leaves the selected old interaction for the prompt editor
     let second = native_prompt(&host, &agent, &mut native, "add 1 2");
     let next = pending(&host, &agent, "form");
     assert_ne!(next["interaction_id"], form["interaction_id"]);
     native.wait(next["interaction_id"].as_str().unwrap());
+    native.send(b"\x1b[14~"); // F4 explicitly clears the fresh field before editing
+    native.paste("7");
     native.send(ACCEPT_FORM); // validate/review the new interaction
-    native.send(ACCEPT_FORM); // deliberate accept uses fresh default, never old 99
+    native.send(ACCEPT_FORM); // deliberate fresh answer, never the stale 99
     host.completed(&agent, &second["work_id"]);
-    assert_eq!(agent.effect()["value"], 60);
+    assert_eq!(agent.effect()["value"], 67);
     assert_eq!(agent.effect()["commands"], 2);
     assert_eq!(host.inspect(&agent)["target"], exact);
     let projection = host.inspect(&agent);
@@ -550,7 +597,7 @@ fn e04s03_native_cooperative_question_handoff_discards_old_form_draft_on_reacqui
             .iter()
             .find(|item| item["interaction_id"] == next["interaction_id"])
             .unwrap()["selection"]["content"]["bonus"],
-        0
+        7
     );
     assert!(!agent.root.join("unexpected-cancel").exists());
     finish(host, &mut agent, &mut native, &mut sentinel);
@@ -657,7 +704,13 @@ fn e04s03_native_gap_resync_renders_hostile_retained_updates_inertly() {
         events.iter().all(|event| event["prompt_id"].is_null()),
         "unscoped agent updates were guessed into a foreground prompt"
     );
-    let hostile = "s03-hostile:\x1b]0;s03-title-owned\x07\x1b]52;c;czAzLWNsaXBib2FyZC1vd25lZA==\x07\x1b[2J\x1b[H\x1b[31ms03-csi-marker\x1b[0m\r\x08\x00\x7f\u{202e}s03-bidi\u{202c}";
+    // Inspect exposes canonical inert content, not the peer's raw transport.
+    let hostile = concat!(
+        "s03-hostile:\u{fffd}]0;s03-title-owned\u{fffd}",
+        "\u{fffd}]52;c;czAzLWNsaXBib2FyZC1vd25lZA==\u{fffd}",
+        "\u{fffd}[2J\u{fffd}[H\u{fffd}[31ms03-csi-marker\u{fffd}[0m",
+        "\u{fffd}\u{fffd}\u{fffd}\u{fffd}\u{fffd}s03-bidi\u{fffd}"
+    );
     assert!(events.iter().any(|event| event["text"] == hostile));
     let metadata = host.call(json!({"op":"acp-inspect","target":exact}));
     for public in [metadata, host.call(json!({"op":"snapshot"}))] {
