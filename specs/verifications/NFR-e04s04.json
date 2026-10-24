@@ -1,21 +1,27 @@
 {
-  "scope": "e04s04-current-implemented-local-broker-not-live-or-whole-story",
-  "status": "failing-S04-OPS-01-despite-covered-local-runtime-passes",
-  "source": "specs/verifications/e04s04-round1-source.json",
-  "current_contiguous_verification": "artifact://1399",
-  "independent_review": "specs/verifications/e04s04-build-review-round1.json",
-  "security_findings": 0,
-  "operational_must_fix": 1,
-  "production_or_dependency_changes": false,
+  "scope": "e04s04-current-implemented-local-tasks1-3-not-live-or-whole-story",
+  "status": "failing-round2-S04-OPS-02-idle-endpoint-cleanup-truth",
+  "source": "specs/verifications/e04s04-round2-source.json",
+  "source_commit": "6a94038",
+  "production_changes": [
+    "src/acp.rs"
+  ],
+  "dependency_changes": false,
+  "current_contiguous_verification": "artifact://1457",
+  "current_independent_review": "specs/verifications/e04s04-build-review-round2.json",
+  "current_operational_must_fix": 1,
+  "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
+  "wall_seconds": 218.86,
   "counts": {
-    "selected": 7,
-    "workspace": 391,
+    "selected": 8,
+    "workspace": 392,
     "workspace_suites": 30,
     "workspace_ignored": 10,
-    "default": 280,
+    "default": 281,
     "default_suites": 12,
     "default_ignored": 7,
     "showcase_exact": 1,
+    "native_exact_guards": 2,
     "omp": 8,
     "omp_assertions": 49
   },
@@ -26,44 +32,76 @@
     "acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects",
     "acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force",
     "native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs",
+    "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
     "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes"
   ],
-  "outside_test": "specs/verifications/e04s04-complete-native-attempt1.json",
-  "observed": {
-    "forms_permissions": "Actual same-session API/native form7/API allow49, API form11/native deny49 with no second tool effect, fresh native form5/allow57; exactly3 deliberate original prompts.",
-    "identity_ownership": "Fresh responder IDs despite reused wire IDs; same original RPC per turn and same target/process/descendant; keep/withdraw preserve human, force does not interrupt, explicit request reacquires and captured stale B choice is rejected.",
-    "resource": "Held64KiB admission does not block snapshot/force/private recovery/unrelated computation; close/shutdown leave unresponded original work unknown; five hostile variants fail only their own instance; stderr keeps draining.",
-    "privacy": "Actual snapshot/events/default inspection exclude synthetic question/answer/error/stderr markers; no real model content/auth/env/provider tracing captured.",
-    "cleanup": {
-      "fallback_signals": [],
-      "drainer_errors": [],
-      "drainer_joined": true,
-      "private_root_removed": true
-    },
-    "peer_descendant_workers_before_fallback": true,
-    "tui_host_daemon_exit": [
-      0,
+  "previous_review": {
+    "evidence": "specs/verifications/e04s04-build-review-round1.json",
+    "AND_gate": "FAIL",
+    "supported_security_findings": 0,
+    "operational_must_fix": 1,
+    "repair": "specs/verifications/e04s04-retained-pipe-before-after.json",
+    "independent_clearance": "pending-round2"
+  },
+  "actual_repair_runtime": "specs/verifications/e04s04-retained-pipe-runtime.json",
+  "observed_repair": {
+    "close_seconds": 0.224,
+    "shutdown_seconds": [
+      0.268,
+      0.258
+    ],
+    "no_EOF_dependency": true,
+    "daemon_exit_before_retainer_release": [
       0,
       0
     ],
-    "termios_restored": true,
-    "unrelated_sentinel_survived": true
+    "captured_peer_and_explicitly_released_retainer_absent": true,
+    "cleanup_incomplete_and_capacity_charge_preserved": true,
+    "independent_arithmetic": 42,
+    "root_socket_cleanup_without_fallback": true,
+    "sentinel_survived_until_owned_reap": true,
+    "native_tui_or_drainer_started": false,
+    "performance_guarantee_or_benchmark": false
   },
+  "earlier_complete_native": {
+    "evidence": "specs/verifications/e04s04-complete-native-attempt1.json",
+    "source_gate": "artifact://1399-before-pipe-repair",
+    "values": [
+      49,
+      49,
+      57
+    ],
+    "actual_CLI_controlling_PTY": true,
+    "current_repaired_source_native_acceptance_case": "passed-at1457"
+  },
+  "resource_boundaries": {
+    "frames_bytes": 1048576,
+    "queues_and_content_bytes": 4194304,
+    "charged_instance_limit": 8,
+    "additional_cancellation_descriptors_per_instance": 2,
+    "all_workers_joined_no_detach": true,
+    "uncaptured_retained_endpoint_cleanup": "failed-incomplete-retained-and-charged",
+    "known_ProcessTree_changed": false
+  },
+  "privacy": "No real provider/auth/env/content tracing or credential reads. New S04 JSON/security evidence credential/private-control-ref scan has no matches. Synthetic content remains separate from metadata.",
   "owned_herdr_cleanup": "specs/verifications/e04s04-worker-retirement.json",
-  "native_fence": "specs/verifications/e04s04-native-fence.json",
+  "native_fence": {
+    "evidence": "specs/verifications/e04s04-native-fence.json",
+    "current_exact_guards_passed": 2,
+    "settlement_repaired": false
+  },
   "unclaimed": [
     "real-adapter/provider/auth/model compatibility",
     "whole-story acceptance",
-    "new latency/RSS benchmark",
-    "native upstream application fence repair",
-    "CI/coverage-percentage/Linux/MSRV proof",
+    "Linux/MSRV/RSS/latency/CI/coverage-percentage proof",
+    "native upstream fence repair",
     "ACP publication"
   ],
   "live_task": {
     "status": "failing-separately-unapproved-and-unimplemented",
     "required_test": "e04s04_live_adapters",
     "command_available_or_executed": false,
-    "prerequisites": "exact approved private installed closures, executable/model/auth bindings, private roots, prompt ceiling and enforceable spend; no fake ignored body or receipt-only checker added"
+    "prerequisites": "specs/verifications/e04s04-live-prerequisites.json"
   },
   "historical_caps": "unchanged",
   "new_live_provider_runs": 0

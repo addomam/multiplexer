@@ -1,28 +1,34 @@
 type: verification
 context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
-verified_at: '2026-10-24T07:36:19.995696+00:00'
-status: failing-round1-operational-must-fix-covered-local-runtime-pass
-source: specs/verifications/e04s04-round1-source.json
+verified_at: '2026-10-24T08:04:17.516831+00:00'
+status: failing-round2-idle-endpoint-truth-covered1457-gates-pass
+source: specs/verifications/e04s04-round2-source.json
+source_commit: 6a94038
 terminal_verdict:
-  command: cargo fmt && cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture && cargo test --workspace
-    && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace
+  command: cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture && cargo test --workspace &&
+    cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace
     && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && cargo test && cargo clippy
-    --all-targets -- -D warnings && cargo build && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies
+    --all-targets -- -D warnings && cargo build && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement
+    -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity
+    -- --exact --nocapture && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies
     -- --ignored --exact --nocapture
   exit_code: 0
-  artifact: artifact://1399
-  note: Single contiguous actual command. No tests/results combined from failed attempts. Tool summary0.00s is not workspace/default
-    duration.
+  artifact: artifact://1457
+  job: bg_216
+  wall_seconds: 218.86
+  note: One actual contiguous command; all46 raw Rust result rows parsed. Overlapping suite counts are not distinct totals;
+    summary0.00s is not wall duration.
   counts:
-    selected: 7
-    workspace: 391
+    selected: 8
+    workspace: 392
     workspace_suites: 30
     workspace_ignored: 10
-    default: 280
+    default: 281
     default_suites: 12
     default_ignored: 7
     showcase_exact: 1
+    native_exact_guards: 2
     omp: 8
     omp_assertions: 49
   named_S04_cases:
@@ -32,63 +38,56 @@ terminal_verdict:
   - acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects
   - acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force
   - native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs
+  - acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown
   - acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes
 outside_test:
-  passed: true
-  evidence: specs/verifications/e04s04-complete-native-attempt1.json
-  same_live_target_process_descendant_original_RPC: true
-  three_prompt_values:
-  - 49
-  - 49
-  - 57
-  form_values:
-  - 7
-  - 11
-  - 5
-  tool_effects:
-  - true
-  - false
-  - true
-  owned_cleanup_before_fallback: complete-no-fallback
-  termios: restored
-  tui_host_daemon_exit:
-  - 0
-  - 0
-  - 0
-  unrelated_sentinel: survived-until-deliberate-reap
+  repair_actual_CLI:
+    passed: true
+    evidence: specs/verifications/e04s04-retained-pipe-runtime.json
+    close_returns_before_fixture_EOF: true
+    cleanup_stays_incomplete_charged: true
+    daemon0_before_retainer_release: true
+    owned_cleanup_without_fallback: true
+    PTY_drainer_started: false
+  earlier_complete_native:
+    passed_on_source_gate: artifact://1399
+    evidence: specs/verifications/e04s04-complete-native-attempt1.json
+    values:
+    - 49
+    - 49
+    - 57
+    same_target_original_RPC: true
+    termios_host_drainer_cleanup: true
+  current_permanent_native_full_case: PASS-at1457
+retained_pipe_RCA: specs/verifications/e04s04-retained-pipe-before-after.json
 final_native_revisit:
   passed_retained_fail_closed_guards: 2
-  evidence: specs/verifications/e04s04-native-fence.json
+  current_artifact: artifact://1457
+  earlier_detailed_evidence: specs/verifications/e04s04-native-fence.json
   native_application_settlement: still-unresolved-not-an-acceptance-PASS
 security:
   self_audit: specs/verifications/AUDIT-e04s04.md
-  independent: specs/security/epics/e04/e04s04-review-round1.json
-  supported_security_findings: 0
-  operational_must_fix: 1
+  previous_round1: specs/security/epics/e04/e04s04-review-round1.json
+  previous_operational_must_fix: 1
+  current_independent: specs/security/epics/e04/e04s04-review-round2.json
+  current_operational_must_fix: 1
   AND_gate: FAIL
+  actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
 nfr: specs/verifications/NFR-e04s04.json
 worker_retirement: specs/verifications/e04s04-worker-retirement.json
 historical_failures:
-- artifact: artifact://1387
-  selected_passed: 6
-  selected_failed: 1
-  cause: wrong incidental accepted state assertion;deleted-not-repinned
-- artifact: artifact://1390
-  selected_passed: 6
-  selected_failed: 1
-  cause: F9 rendered transition timeout;exact stage not captured;actual new-form arrival now fenced
-- artifact: artifact://1396
-  selected_passed: 7
-  workspace_passed: 391
-  default_ACP_passed: 59
-  default_ACP_failed: 1
-  cause: descendant PID file publication race;bounded actual predicate added
-  default_strict_and_showcase_after_failure: not-executed
+  fixture_attempts:
+  - 1387
+  - 1390
+  - 1396
+  production_RED: 1449
+  record: specs/verifications/e04s04-build.md
 live_task:
   status: failing-not-approved-not-implemented-or-executed
-  missing: exact executable/model/auth/root/enforceable-spend binding
+  required_test: e04s04_live_adapters
   prerequisites: specs/verifications/e04s04-live-prerequisites.json
   zero_case_command: never-counts-as-PASS
+all_task_ledgers: failing-until-independent-review-security-gates
 whole_story: failing
 historical_e03_and_review_caps: unchanged
 ACP_main_merge_push_release: not-authorized-not-run

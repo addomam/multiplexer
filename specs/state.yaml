@@ -73,11 +73,21 @@ handoff:
     S04 starts from5311409 with identical reviewed/runtime-verified S03 source eb2d0b2. Two new isolated Herdr worktrees/sessions own disjoint backend fixture/acceptance and native acceptance children; parent owns registrations, shared routing/source, live gate, outside-test CLI/PTY proof and all ledgers. Existing Plan/impact/threat contracts are reused. All four S04 tasks remain failing; no new provider/auth/install/publication authority.
     S04 deliveries c1f4694/f8aa007 are safely integrated5862083. Current complete outside-test CLI/PTY proof passes49/49deny/57 on one live synthetic session/descendant with no replay and complete cleanup. Fixture state/F9-arrival/PID-publication failures are preserved, not production REDs. Final contiguous1399 passes exact7/workspace391/default280, workspace+default strict Rust, OMP8/49/Zsh and independent showcase1. Final native unknown-settlement guards2 pass without repairing/relabeling e03. Both S04 workers are gracefully retired with all six PIDs/worktrees/tabs absent. Current17-source freeze and local self-audit are ready for fresh round1; Task4 remains explicitly unapproved/unimplemented/failing, not a zero-case PASS.
     Fresh S04 round1 A/B each100/100 independently match17/17 hashes, but specialist S04-OPS-01 reports one high-confidence operational cleanup must-fix: escaped retained pipe endpoints can leave blocking workers unjoinable. AND gate FAIL; all four tasks remain failing. Preserve reports, reproduce with real child/retained endpoints, then repair and consume round2 without resetting caps. No new live/install/auth/publication authority.
-  last_step_completed: e04s04-current-local-runtime-regressions-native-revisit-and-self-audit
+    Retained-pipe defect is now confirmed at1449: exact1 RED, admitted close/captured peer absent, only explicit escaped-endpoint release completes cleanup. Test-only9c46d0b precedes repair6a94038. Focused bg215 exact1 PASS; actual built-CLI close/direct-shutdown proof also passes while retainer remains alive, unknown cleanup stays charged, and owned processes/socket/root are cleaned without fallback. Full current source gates run as bg216, not PASS before completion; next fresh round2 remains required.
+    Current contiguous bg216/artifact1457 passes exact8/workspace392/default281, strict workspace/default Rust/fmt, OMP8/49/Zsh, final native guards2 and actual showcase1, wall218.86s. Actual repaired-source CLI close/shutdown finishes before retainer EOF with complete owned cleanup and truthful unknown capacity. Current self-audit PASS and19-source round2 freeze are ready; all task statuses remain failing until fresh independent clearance. Task4 remains separately unapproved/unimplemented, not a zero-case PASS.
+    Fresh round2 A96.875/B100 each match19/19 source hashes; B's original0-item denominator is preserved and corrected by that reviewer with full32-item coverage. A and specialist independently identify idle/early-exit endpoint observability; specialist S04-OPS-02 HIGH must-fix keeps AND FAIL. Actual CLI reproduces cleanup_complete=true/failure=null while idle stdin-only escaped retainer remains alive. Preserve exact19-source checkpoint, add failing endpoint-truth regressions, retain all pipe ownership until final classification, and consume round3; all tasks stay failing/no cap reset.
+  last_step_completed: e04s04-round2-failure-and-idle-endpoint-actual-counterexample
   required_reading:
+    - specs/verifications/e04s04-round2-source.json
+    - specs/verifications/e04s04-build-review-round2.json
+    - specs/security/epics/e04/e04s04-review-round2.json
+    - specs/verifications/e04s04-idle-pipe-before.json
     - specs/verifications/e04s04-round1-source.json
     - specs/verifications/e04s04-build-review-round1.json
     - specs/security/epics/e04/e04s04-review-round1.json
+    - specs/bugs/BUG-e04-acp-retained-pipes.md
+    - specs/verifications/e04s04-retained-pipe-before-after.json
+    - specs/verifications/e04s04-retained-pipe-runtime.json
     - specs/verifications/AUDIT-e04s04.md
     - specs/verifications/NFR-e04s04.json
     - specs/verifications/e04s04-verify.yaml
@@ -637,12 +647,12 @@ epic_cycle:
   integration_owner: parent
   implementation_started: true
   approved_plan_reopened: false
-  runtime_acceptance: failing-S04-live-task-local-current-runtime-pass
+  runtime_acceptance: failing-S04-live-task-local-repaired-source-runtime-pass-review-pending
   live_approval: separately-required-exact-two-adapters-closures-models-auth-roots-prompts-spend
   ACP_publication: not-authorized
   historical_native_failure_and_review_caps: unchanged
-  current_local_verification: {artifact: 'artifact://1399', source: specs/verifications/e04s04-round1-source.json, selected: 7, workspace: 391, default: 280, strict_Rust_OMP_Zsh: passed, showcase: 1, actual_cli_pty: passed, native_unknown_guards: 2, audit: specs/verifications/AUDIT-e04s04.md}
-  build_review: {scope: e04s04-build-current-local-source, round: 1, max_rounds: 5, status: FAIL-operational-must-fix, scores: [100, 100], security_findings: 0, operational_must_fix: 1, evidence: specs/verifications/e04s04-build-review-round1.json, whole_story: failing-live-task-unapproved-and-unimplemented, historical_caps: unchanged}
+  current_local_verification: {source_commit: 6a94038, artifact: 'artifact://1457', selected: 8, workspace: 392, default: 281, strict_Rust_OMP_Zsh: passed, showcase: 1, native_unknown_guards: 2, actual_CLI_lifecycle: specs/verifications/e04s04-retained-pipe-runtime.json, source: specs/verifications/e04s04-round2-source.json, audit: specs/verifications/AUDIT-e04s04.md}
+  build_review: {scope: e04s04-build-current-local-source, round: 2, max_rounds: 5, status: FAIL-operational-must-fix, scores: [96.875, 100], security_findings: 0, operational_must_fix: 1, evidence: specs/verifications/e04s04-build-review-round2.json, whole_story: failing-live-task-unapproved-and-unimplemented, historical_caps: unchanged}
   owned_sessions:
     - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}

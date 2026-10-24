@@ -1,0 +1,248 @@
+{
+  "total_items": 32,
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [],
+  "score": 100,
+  "recommendation": "pass-local-tasks-1-3",
+  "source_hashes_matched": 19,
+  "checks_run": false,
+  "scope_status": "local-tasks-1-3-source-review-pass; task4-e04s04_live_adapters-absent-unapproved-not-run; whole-story-failing; historical-e03-caps-unchanged",
+  "explanation": "All 32 rubric items were assessed. Score is 100*(32-0-0)/32 = 100. Independent SHA256 matched all 19 frozen files at HEAD 6a94038; no checks were run here. This local pass does not mark Task 4, the story, or the native fence done.",
+  "fowler_smells": [
+    "Long Method: the complete backend and native acceptance traces are long cohesive sequences; CONVENTIONS has no line cap, and splitting them would hide ordering, so no refactor is required.",
+    "Switch Statements: fixture mode dispatch is an if-ladder; a provider or plugin framework is forbidden, so no refactor is required."
+  ],
+  "denominator": 32,
+  "score_formula": "100*(32-0-0)/32",
+  "security_findings": 0,
+  "operational_findings": 0,
+  "live_driver_implemented": false,
+  "whole_story": "failing",
+  "rubric": [
+    {
+      "item": 1,
+      "id": "approvedlocalScope",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Diff 5311409..HEAD changes production only in src/acp.rs. Frozen hashes match for Authority, client, TUI, runtime ProcessTree, Cargo.toml, and Cargo.lock. No new dependency or public protocol."
+    },
+    {
+      "item": 2,
+      "id": "sameLiveTuple",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "tests/acp/acceptance.rs and tests/acp/native/acceptance.rs keep the captured target tuple after force, close, and handoff. src/acp.rs projection builds that tuple from instance id, generation, and session; force does not replace it."
+    },
+    {
+      "item": 3,
+      "id": "originalRPC",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "s03_same_work comparisons retain prompt rpc_id. tests/fixtures/acp_peer.rs writes effect.json rpc_id from the original prompt request, not a later owner."
+    },
+    {
+      "item": 4,
+      "id": "freshReusedWireResponders",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "form_bonus and permission_allows require wire ids reusable-form and 73. Acceptance tests assert new interaction_id, work_id, and call_id for each reuse."
+    },
+    {
+      "item": 5,
+      "id": "actualFormValues",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "tests/fixtures/acp_peer.rs form_bonus returns the submitted integer bonus, not the schema default. Cases use 7, 11, 5, and 99."
+    },
+    {
+      "item": 6,
+      "id": "fourDispositions",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Fixture offers opaque-α/β allow_once/always and opaque-γ/δ reject_once/always. Backend and native cases select each kind."
+    },
+    {
+      "item": 7,
+      "id": "allowEffect",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "tool-effect-N is written only when permission_allows is true. Allow cases observe 49 and 57 plus the effect file."
+    },
+    {
+      "item": 8,
+      "id": "denyAbsence",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Reject options do not add arithmetic or write tool-effect. Native deny stays at 49/count 2 with tool-effect-2 absent."
+    },
+    {
+      "item": 9,
+      "id": "authorityOnlyForce",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "src/control.rs force only grants. Fixture writes unexpected-cancel only for session/cancel. Tests assert that file absent and the descendant still alive."
+    },
+    {
+      "item": 10,
+      "id": "staleAPI",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Prepared form and permission envelopes are denied stale-control/stale-handle after a fresh generation. Stale interaction ids are denied stale-interaction."
+    },
+    {
+      "item": 11,
+      "id": "physicalNoReplay",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "src/tui.rs continues after active ACP handling and does not fall through to native input. Native paste, repeat, mouse, focus, and double-prefix do not create tool-effect-1 or the pasted prompt."
+    },
+    {
+      "item": 12,
+      "id": "freshReacquisition",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "After release, native action 12 is a new cooperative request. Returned generation differs, and the old envelopes are denied."
+    },
+    {
+      "item": 13,
+      "id": "conditionalOriginalProvenance",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Native test arms human-idle on the original attachment, records consent, and keep/withdraw leave that human controller in place."
+    },
+    {
+      "item": 14,
+      "id": "humanPreserved",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Conditional keep/withdraw does not grant the requester, does not answer the pending form, and does not change the human generation."
+    },
+    {
+      "item": 15,
+      "id": "exactCanonicalOwnerGeneration",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Admitted answer and permission work assert the admitting controller_id and owner_generation, including post-force and returned-human generations."
+    },
+    {
+      "item": 16,
+      "id": "heldAdmission",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "s04_held_prompt observes accepted, delivery not-submitted, null outcome, and no effect.json before the read barrier is released."
+    },
+    {
+      "item": 17,
+      "id": "independentProgress",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Held-stdin test runs snapshot, force, and unrelated add 19 23 concurrently. The sibling completes at 42 while s04-reads.release is absent."
+    },
+    {
+      "item": 18,
+      "id": "privateRecovery",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Successor control-handle read returns the original held work after the admitting socket is dropped. Identities match the pre-loss record."
+    },
+    {
+      "item": 19,
+      "id": "closeUnknownTruth",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "src/acp.rs close marks unfinished work unknown before pipe cancellation. Projection hardcodes application unknown. Close and retained-pipe tests observe unknown, not application."
+    },
+    {
+      "item": 20,
+      "id": "shutdownOrdering/noErrorMask",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Close admission is observed before shutdown. Only UnexpectedEof or ConnectionReset after that admission is classified; it is not turned into application or an authority success."
+    },
+    {
+      "item": 21,
+      "id": "hostileIsolation",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Five hostile modes fail only their instance and still join. The sibling completes the original RPC at 57 with tool-effect-1 and no unexpected-cancel."
+    },
+    {
+      "item": 22,
+      "id": "stderrDrain",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "drain_stderr keeps reading after the retention cap and sets stderr_truncated. The noisy child still accepts a later prompt after stderr-drained appears."
+    },
+    {
+      "item": 23,
+      "id": "privacy/errors",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Provider failure is outcome code -32603 only. Private error and question strings are absent from snapshot, events, and default inspect."
+    },
+    {
+      "item": 24,
+      "id": "realProcessIdentity",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "run setsid before spawn. ProcessTree capture requires session equal to pid. Tests compare getsid, getpgid, and unchanged peer.pid bytes."
+    },
+    {
+      "item": 25,
+      "id": "cleanup/workerJoins/retainedEndpoints/chargedUncertainty",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "src/acp.rs stores stopped, drops the sole wake sender, then joins every started handle. A still-held endpoint sets retained and failure cleanup. cleanup_complete false still counts in reserve. The retainer test sees the process alive after close and shutdown, capacity rejection at 8, and no release file. Rust 1.95 UnixStream::pair sets CLOEXEC before spawn."
+    },
+    {
+      "item": 26,
+      "id": "sentinel/noUnrelatedImpact",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Sentinel is an unrelated sleep and alive() fails if it was reaped. Fixture fallback signals only its own session group, and only if fixture-fallback exists. Tests assert that file absent. Retainer release is a file, not a PID signal."
+    },
+    {
+      "item": 27,
+      "id": "nativeTermiosHostDrainer",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "tests/acp/native.rs detach compares full termios, pins the host, and joins the PTY reader. finish reaps descendant.pid before fallback. Parent 1457 lists this native case; I did not run it."
+    },
+    {
+      "item": 28,
+      "id": "actualOutsideEvidence",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "e04s04-retained-pipe-runtime.json records close and shutdown before retainer release, unknown not application, and explicitly says drainer_joined means no PTY drainer was started. Consistent with the cancellation code. Not re-executed here and not a latency guarantee."
+    },
+    {
+      "item": 29,
+      "id": "regressionShowcaseCounts",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "e04s04-verify.yaml names the same 8 source tests, states suites overlap, and says summary 0.00s is not duration. It includes one showcase and two native guards. Artifact 1457 was not re-parsed here."
+    },
+    {
+      "item": 30,
+      "id": "historicalFenceCapsAndLiveHonesty",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "BUG-e03-native-settlement.md and e04s04-native-fence.json keep native settlement unresolved and caps unchanged. All four task ledgers remain failing. No live-adapter test exists."
+    },
+    {
+      "item": 31,
+      "id": "FIRST/types/maintainability",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "Tests use barriers and publication predicates, not sleep as success. PipeIo is private. No new public type, provider trait, or protocol. CONVENTIONS remains the 12-line file. Long traces are not a required split."
+    },
+    {
+      "item": 32,
+      "id": "noMissingReachableImplementationOrFalseGateClaim",
+      "assessed": true,
+      "result": "pass",
+      "evidence": "No fake live driver, receipt verifier, or counted zero-case command. Evidence keeps Task 4 and the story failing. The real driver is absent and not reachable without separate approval and missing bindings; that limit is not treated as story completion."
+    }
+  ]
+}

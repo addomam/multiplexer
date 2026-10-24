@@ -1,0 +1,59 @@
+{
+  "scope": "e04s04-build-current-local-tasks1-3",
+  "round": 2,
+  "max_rounds": 5,
+  "total_items": 32,
+  "A": {
+    "score": 96.875,
+    "must_fix": 0,
+    "should_fix": 1,
+    "consider": 1,
+    "source_hashes_matched": 19,
+    "evidence": "specs/verifications/e04s04-review-a-round2.json"
+  },
+  "B": {
+    "score": 100.0,
+    "must_fix": 0,
+    "should_fix": 0,
+    "consider": 0,
+    "source_hashes_matched": 19,
+    "evidence": "specs/verifications/e04s04-review-b-round2.json",
+    "original_invalid_denominator_report": "specs/verifications/e04s04-review-b-round2-original.json",
+    "correction": "Existing reviewer independently supplied full32-item coverage; parent did not silently renumber original0 or score division byzero."
+  },
+  "security": {
+    "supported_security_findings": 0,
+    "operational_findings": 1,
+    "must_fix": 1,
+    "should_fix": 0,
+    "score": 96.875,
+    "independent_hashing": "unavailable-not-claimed",
+    "evidence": "specs/security/epics/e04/e04s04-review-round2.json"
+  },
+  "AND_gate": "FAIL",
+  "reason": "S04-OPS-02 independently found by A (should-fix) and specialist (HIGH must-fix) and confirmed by actual CLI. Idle/early-exited workers can release endpoint observability and falsely report cleanup_complete/uncharged. Stronger must-fix controls disposition.",
+  "dispositions": [
+    {
+      "comments": [
+        "A-should-item25",
+        "security-S04-OPS-02"
+      ],
+      "category": "must-fix",
+      "decision": "confirmed actual CLI; preserve endpoint ownership/observability through final known-tree cleanup and classify every pipe; add idle stdin and early stdout real-child regression before repair",
+      "evidence": "specs/verifications/e04s04-idle-pipe-before.json"
+    },
+    {
+      "comments": [
+        "A-consider-item19"
+      ],
+      "category": "consider",
+      "decision": "apply narrow delivery-truth correction: cancellation checked before next I/O; return actual completed byte count rather than replace success after syscall. Preserve finite HUP drain and cancellation of continuous producers; no ownership revalidation or replay."
+    }
+  ],
+  "current_source": "specs/verifications/e04s04-round2-source.json",
+  "next_review_round": 3,
+  "all_tasks": "failing",
+  "live_task": "unapproved-unimplemented-not-run",
+  "whole_story": "failing",
+  "historical_caps": "unchanged"
+}

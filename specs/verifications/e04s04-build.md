@@ -1,6 +1,6 @@
 # e04s04 Build evidence
 
-Status: **FAILING overall — recorded local runtime/full regression gates pass at1399, but fresh round1 security review identifies S04-OPS-01 retained-pipe cleanup must-fix. A/B100/100 do not override that failed AND gate. All four tasks remain failing. Task4 is separately unapproved, unimplemented and failing.** No real-adapter compatibility or historical native-fence repair claimed.
+Status: **FAILING overall — blocked-pipe deadlock repair passes1457, but fresh round2 S04-OPS-02 finds false cleanup accounting for idle/early-return endpoints. Actual CLI confirms the idle-stdin counterexample. All four task gates remain failing; preserve and repair before round3. Task4 is separately unapproved, unimplemented and failing.** No real-adapter compatibility or historical native-fence repair claimed.
 
 ## Verified predecessor and isolation
 
@@ -41,7 +41,7 @@ The complete local result is not real-adapter acceptance. Task4 and the story re
 
 After whole CLI/PTY integration, two exact native guards pass: request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement and forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity. Real native marker/source completion does not settle the unknown batch; a stopped application actually consumes old focus after resume, yet the safe offer remains withheld with the same retained call. Explicit force keeps its warning/unknown calls and is not substituted for safety. Full observations: e04s04-native-fence.json. No new native provider call or early isolated fence spike; original e03 all32 acceptance and native presentation defect remain failing.
 
-## Current final local command and safe worker retirement
+## Earlier local command and safe worker retirement
 
 One contiguous actual command exits0 at **artifact://1399** after both fixture barriers:
 
@@ -66,3 +66,19 @@ Both worker commits are safely reachable in5862083; clean worktrees were verifie
 ## Fresh round1 — failed independent AND gate
 
 A/B independently match17/17 source hashes and each score100/100 with zero must/should; B's single Consider about stale attempt wording is corrected above. Specialist security reports0 supported security findings but1 high-confidence operational must-fix, S04-OPS-01: an escaped descendant retaining stdio may leave blocking ACP pipe workers unjoinable during close/shutdown. Its32-item score96.875 does not override zero-must-fix. Raw A/B, specialist and combined e04s04-build-review-round1.json are preserved. Reproduction/repair and the next fresh review round are required; no cap resets. Artifact1399 remains actual historical proof for covered paths, not proof against this new path.
+
+## Retained-pipe RED/GREEN and current source
+
+S04-OPS-01 is a confirmed production defect, unlike the earlier fixture failures. Artifact1449/bg214 exact1 fails after12.76s: close is admitted, captured peer absent, escaped different-session/reparented retainer alive; only explicit fixture endpoint release completes the original blocking cleanup. The test still fails, and its owned failure cleanup finishes. Separate test-only RED9c46d0b contains only backend acceptance/fixture changes; production repair6a94038 follows. No cap reset or unsafe orphan signal.
+
+Focused bg215 exact1 passes3.14s, covering close/direct shutdown before fixture EOF, incomplete cleanup/capacity charge, seven siblings occupying the remaining slots, rejected extra open and independent arithmetic42. Owned stdio is nonblocking and polls readiness plus a shared sticky cancellation EOF; the owner joins all workers. Finite confirmed hangup buffers may drain; a still-held endpoint aborts without write_all-retried Interrupted and keeps cleanup failed/charged. ProcessTree identity rules, ownership admission and all other production paths are unchanged.
+
+Actual outside-test built-CLI proof e04s04-retained-pipe-runtime.json passes on6a94038: close0.224s; shutdown0.268s/0.258s. Both daemon0 exits precede explicit retainer release; original work stays unknown, snapshot responds, captured peer and independently released retainer disappear, socket/root are removed and sentinel survives until its own reap. No fallback/error. This CLI-only smoke starts no PTY/drainer; earlier complete native49/49deny/57 proof remains explicitly scoped to1399, and its permanent native case passes on current source. These durations are observations, not performance guarantees.
+
+Current single contiguous bg216/artifact1457 exits0, wall218.86s: exact8, workspace392/30suites/10historicalignored, default281/12suites/7historicalignored, workspace/default strict Rust/fmt, OMP8/49/Zsh, exact final native guards2 and independent real cursor-reply showcase1. All46 raw Rust result rows were parsed; suites overlap. Exact command and names: e04s04-verify.yaml. Current source freeze e04s04-round2-source.json includes19files; no dependency change, only production src/acp.rs repair. Current self-audit PASS does not clear independent review or live acceptance. Fresh round2 is required; round1 reports/failure and every old cap remain intact.
+
+## Fresh round2 — endpoint observability still fails
+
+A96.875 (one should-fix plus one Consider), B100 after its independently completed32-item denominator correction; both match19/19 frozen hashes. Specialist0 supported security findings but1 HIGH operational must-fix, S04-OPS-02, the same endpoint-lifetime gap independently identified by A. Stronger must-fix controls: AND FAIL. Original B0-item report is retained, not silently renumbered; corrected full32-item report is separate. All reports/dispositions are in e04s04-build-review-round2.json.
+
+Actual built-CLI e04s04-idle-pipe-before.json confirms: no application prompt/held write, escaped different-session stdin-only retainer alive after close, captured peer absent, yet resource.failure=null/cleanup_complete=true/lifecycle=ended. Daemon then exits0, explicit fixture release/PID absence and root/socket cleanup finish without fallback. This is a failed cleanup-truth counterexample, not a new acceptance PASS. Keep endpoint ownership/observability through final tree cleanup for idle/early-return/partial-start paths; add real-child stdin-idle and stdout-early-error regressions before repair. Apply A's bounded delivery-truth Consider by checking cancellation before the next I/O, not replacing an already successful syscall's byte count; retain cancellation of continuous producers. Next independent round3, no cap reset or additional live authority.

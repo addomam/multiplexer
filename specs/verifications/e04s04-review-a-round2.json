@@ -1,0 +1,41 @@
+{
+  "total_items": 32,
+  "must_fix": [],
+  "should_fix": [
+    {
+      "title": "Probe retained stdio after tree termination",
+      "body": "retained is stored only in PipeIo::transfer when stopped is already set and hung_up is false (src/acp.rs:1288-1292). stopped is set only after tree.terminate and child.wait (src/acp.rs:1464-1465). Explicit close drains the output queue, marks the session not live, and wakes the writer (src/acp.rs:984-990); writer then returns at src/acp.rs:1522-1523 without a write, dropping stdin before that probe. reader can likewise return on !live or a frame error (src/acp.rs:1604-1606 and 1624-1638) and drop stdout first. An escaped process that still holds only stdin, or holds stdout after the reader has already exited, therefore never sets retained. cleanup_complete stays true, reserve does not count the lifetime against the eight-slot budget, and prune_ended can drop it. The tested all-three retainer is still detected because those readers remain in poll until the wake sender is dropped; this hole is the idle or already-exited endpoint. Keep the parent pipe fds until after known-tree termination, probe hangup then, and only then drop them. Do not probe before terminate, or the live child looks retained.",
+      "priority": 1,
+      "confidence": 0.86,
+      "file_path": "src/acp.rs",
+      "line_start": 1464,
+      "line_end": 1473,
+      "rubric_item": 25,
+      "category": "operational-lifecycle"
+    }
+  ],
+  "consider": [
+    {
+      "title": "Return successful pipe transfers before cancellation abort",
+      "body": "After stopped is set, transfer can already have completed a nonblocking read or write of Ok(n) and then replaces that success with ConnectionAborted when hung_up is false (src/acp.rs:1288-1292). Those bytes have already entered or left the kernel pipe. writer then records write-failed. Explicit close has already marked incomplete work unknown, and the state != unknown guards keep that settlement from becoming failed; retained is still set, so the slot stays charged. Delivery evidence can still say write-failed for a frame that was fully written. Keep ConnectionAborted for WouldBlock so write_all does not retry, but return Ok(count) for a completed transfer and record retention independently.",
+      "priority": 2,
+      "confidence": 0.82,
+      "file_path": "src/acp.rs",
+      "line_start": 1288,
+      "line_end": 1292,
+      "rubric_item": 19,
+      "category": "delivery-evidence"
+    }
+  ],
+  "score": 96.875,
+  "recommendation": "pass",
+  "source_hashes_matched": 19,
+  "checks_run": false,
+  "scope_status": "frozen-19-matched-local-tasks-1-3-reviewed; story-and-task4-still-failing; live-driver-absent-unapproved-not-claimed-passed",
+  "explanation": "All 19 frozen SHA-256 hashes match the working tree at 6a94038; no checks were run here. Parent evidence shows the blocked all-three retainer no longer pins close or shutdown and stays charged, and the absent e04s04_live_adapters driver is honestly still failing rather than a false gate. One should-fix remains: idle or already-exited pipe workers drop their fds before the post-termination hangup probe, so a still-held endpoint that is not inside transfer can be reported cleanup-complete. That does not fail the 94/zero-must-fix numeric gate, and it does not mark Task 4 or the story done.",
+  "fowler_smells": [
+    "Long Method"
+  ],
+  "security_findings": 0,
+  "operational_lifecycle_findings": 1
+}

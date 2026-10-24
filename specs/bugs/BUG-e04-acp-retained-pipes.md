@@ -1,6 +1,6 @@
 # ACP retained-pipe cleanup — S04-OPS-01
 
-Status: confirmed production defect; focused repair PASS, full runtime/regression/audit/review pending. All S04 tasks remain failing. Feature branch feat/acp-agent-interaction; checkpoint3f0780b, test-only RED9c46d0b. No live/provider/auth/install/global/publication authority.
+Status: repaired and runtime-verified at1457; independent acceptance is tracked in e04s04 Build review evidence. S04 live task/whole story remain failing. Feature branch feat/acp-agent-interaction; checkpoint3f0780b, test-only RED9c46d0b, repair6a94038. No live/provider/auth/install/global/publication authority.
 
 ## Reproduce
 
@@ -23,4 +23,4 @@ Focused GREEN: bg215 executes the same exact case1 PASS in3.14s after the minima
 
 Repair: nonblocking owned stdio waits on readiness plus one shared sticky cancellation socket. The owner drops the sole wake sender after known-tree cleanup, then joins every worker. Confirmed pipe hangup can drain finite already-buffered bytes to EOF; a still-held endpoint aborts with ConnectionAborted (not write_all-retried Interrupted), records cleanup uncertainty and retains the slot. No thread detaches, unknown PID kills, admitted-work replay, late ownership revalidation, provider runtime or new public protocol. Two cancellation FDs are bounded by the existing eight charged-instance limit.
 
-Full ACP/PTY/workspace/default/OMP/Zsh/showcase gates, actual outside-test CLI lifecycle, self-audit and fresh round2 A/B/security remain required. No focused pass is complete acceptance. Historical caps/native fence and the separate absent real-adapter task remain unchanged.
+Current contiguous bg216/artifact1457 passes exact8, workspace392/30suites/10ignored, default281/12suites/7ignored, strict Rust/fmt, OMP8/49/Zsh, final native guards2 and actual showcase1 (218.86s wall). Actual outside-test built-CLI close takes0.224s; shutdown0.268s/0.258s, with daemon0 before fixture release, PID absence and root/socket cleanup without fallback. These are observations, not latency guarantees. Evidence: e04s04-retained-pipe-runtime.json and e04s04-retained-pipe-before-after.json. Require current self-audit and fresh round2 A/B/security before local acceptance; no focused/full command alone is story acceptance. Historical caps/native fence and the separate absent real-adapter task remain unchanged.
