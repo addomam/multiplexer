@@ -349,7 +349,10 @@ fn main() -> Result<()> {
         }
     });
     fs::write(root.join("peer.pid"), std::process::id().to_string())?;
-    let _descendant = if mode == "descendants" {
+    let _descendant = if matches!(
+        mode.as_str(),
+        "descendants" | "s04-complete" | "s04-stalled-descendants"
+    ) {
         // The broker owns this process tree; Drop only covers fixture-local EOF.
         Some(Descendant(
             Command::new(std::env::current_exe()?)
@@ -640,7 +643,21 @@ fn main() -> Result<()> {
                     let response = receive(&mut reader)?.ok_or("live anchor response missing")?;
                     startup_bonus += form_bonus(&response, &json!("live-anchor"), false)?;
                 }
-                let bonus = if mode == "form-prompt" {
+                let bonus = if mode == "s04-complete" {
+                    send_form(
+                        json!("reusable-form"),
+                        json!({"sessionId":session}),
+                        form_schema(),
+                        "Synthetic private arithmetic question",
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("complete form response missing")?;
+                    let bonus = form_bonus(&response, &json!("reusable-form"), false)?;
+                    send_permission(json!(73), &session)?;
+                    let response =
+                        receive(&mut reader)?.ok_or("complete permission response missing")?;
+                    permitted = permission_allows(&response, &json!(73))?;
+                    bonus
+                } else if mode == "form-prompt" {
                     emit(
                         json!({"jsonrpc":"2.0","id":"bonus-form","method":"elicitation/create",
                         "params":{"mode":"form","sessionId":session,"message":"Choose arithmetic adjustment",
@@ -711,6 +728,12 @@ fn main() -> Result<()> {
                 };
                 if permitted {
                     total += parts[1].parse::<i64>()? + parts[2].parse::<i64>()? + bonus;
+                    if mode == "s04-complete" {
+                        fs::write(
+                            root.join(format!("tool-effect-{}", commands + 1)),
+                            b"authorized tool ran",
+                        )?;
+                    }
                 }
                 commands += 1;
                 fs::write(
@@ -866,6 +889,8 @@ fn main() -> Result<()> {
         if mode == "s03-stalled-prompt" && request["method"] == "session/new" {
             // Publish the real session, then stop before any prompt bytes are read.
             barrier(&root, "s03-reads")?;
+        } else if mode == "s04-stalled-descendants" && request["method"] == "session/new" {
+            barrier(&root, "s04-reads")?;
         }
     }
     Ok(())
