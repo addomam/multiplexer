@@ -56,7 +56,8 @@ handoff:
     Current repaired proof: workspace343/30suites/10ignored and strict gates, Bun8/Zsh, plus actual CLI invalid-params/cancelled-original/same-session57 and owned cleanup. S01 local acceptance passes; integration checkpoint precedes S02. No live or publication approval.
     Verified S01 integration committed locally as4d74d58 using the authorized unsigned fallback after1Password failed. Both owned S01 OMP sessions exited gracefully; Herdr removed their workspaces/tabs/worktrees without force and original shell PIDs are absent.
     S02 starts on the same isolated feature branch from8886c2b with the verified343-test S01 baseline. Concrete form/permission projection, shared validator, keybinding and exclusive file responsibilities are recorded; all S02 tasks remain failing.
-  last_step_completed: e04s02-approved-story-and-concrete-worker-contract-confirmed
+    S02 test-only RED1c8ba34 fails1/1 as expected in parent and exact isolated committed checkout. Herdr backend w1S and editor w1T are dispatched from that base with gpt6.1-sol/high and disjoint file ownership; parent retains all shared routing and verification.
+  last_step_completed: e04s02-isolated-red-proved-and-owned-workers-dispatched
   required_reading:
     - specs/verifications/e04s01-build.md
     - specs/epics/e04-acp-agent-interaction/PLAN.md
@@ -524,9 +525,12 @@ epic_cycle:
   completed_steps: [0, 1, 2, 3]
   started_at: "2026-10-23T23:14:27-05:00"
   baseline: {commit: 8886c2b, code_commit: 4d74d58, evidence: 'artifact://1171', workspace_rust_passed: 343, omp_passed: 8, source: specs/verifications/e04s01-post-review-source.json}
+  red: {commit: 1c8ba34, status: failed-as-expected-in-parent-and-isolated-committed-checkout, cases: 1, passed: 0, error: genuine-form-explicitly-rejected-by-S01, evidence: specs/verifications/e04s02-build.md}
   audit_result: not-started
   runtime_acceptance: failing-e04s02-not-implemented
-  implementation_started: false
+  implementation_started: true
   integration_owner: parent
-  owned_sessions: []
+  owned_sessions:
+    - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: dispatched-awaiting-native-completion, worker_verification: forbidden-parent-only}
+    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: dispatched-awaiting-native-completion, worker_verification: forbidden-parent-only}
   lsp_references: {status: unavailable-in-isolated-worktree-not-no-callers, attempted: [exact-declaration-references, scoped-rust-analyzer-reload, workspace-folder-notification-route], limitation: device-exposes-request-not-notification-and-empty-references, reported: true}

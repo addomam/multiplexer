@@ -50,4 +50,4 @@ stories:
     tasks: e04s04-tasks.yaml
 plan_status: passed-independent-round3-100-100
 plan: PLAN.md
-runtime_implementation: e04s01-complete-e04s02-red-tracer-preparation
+runtime_implementation: e04s01-complete-e04s02-red-proved-independent-workers-dispatched
