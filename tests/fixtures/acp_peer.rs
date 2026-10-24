@@ -266,6 +266,46 @@ fn cancel_interactions(
     Ok(())
 }
 
+fn s03_rendering(reader: &mut impl BufRead, root: &Path, session: &str) -> Result<()> {
+    // Exact protocol round trips pace each 16-event wave below ingress capacity.
+    // This tests transcript eviction, not accidental transport overflow.
+    for wave in 0..132 {
+        for index in 0..16 {
+            stream(
+                session,
+                "agent_message_chunk",
+                &format!("s03-seq-{:04}", wave * 16 + index),
+            )?;
+        }
+        let id = format!("s03-drain-{wave}");
+        emit(json!({"jsonrpc":"2.0","id":id,"method":"fixture/render-drain","params":{}}))?;
+        let response = receive(reader)?.ok_or("render pacing response missing")?;
+        if response["id"] != id || response["error"]["code"] != -32601 {
+            return Err("render pacing lost exact responder".into());
+        }
+    }
+    stream(session, "agent_thought_chunk", "s03-thought-retained")?;
+    emit(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":session,
+        "update":{"sessionUpdate":"tool_call","toolCallId":"s03-tool",
+        "title":"s03-tool-retained","kind":"other","status":"completed"}}}))?;
+    emit(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":session,
+        "update":{"sessionUpdate":"plan","entries":[{"content":"s03-plan-retained",
+        "priority":"medium","status":"completed"}]}}}))?;
+    stream(
+        session,
+        "agent_message_chunk",
+        "s03-hostile:\x1b]0;s03-title-owned\x07\x1b]52;c;czAzLWNsaXBib2FyZC1vd25lZA==\x07\x1b[2J\x1b[H\x1b[31ms03-csi-marker\x1b[0m\r\x08\x00\x7f\u{202e}s03-bidi\u{202c}",
+    )?;
+    stream(session, "agent_message_chunk", "s03-tail-retained-2112")?;
+    emit(json!({"jsonrpc":"2.0","id":"s03-drain-tail","method":"fixture/render-drain","params":{}}))?;
+    let response = receive(reader)?.ok_or("retained tail pacing response missing")?;
+    if response["id"] != "s03-drain-tail" || response["error"]["code"] != -32601 {
+        return Err("retained tail not consumed in FIFO order".into());
+    }
+    barrier(root, "s03-updates")?;
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let root = PathBuf::from(
         std::env::args_os()
@@ -679,6 +719,38 @@ fn main() -> Result<()> {
                     "agent_message_chunk",
                     &format!("Total={total}; commands={commands}"),
                 )?;
+                if mode == "s03-rendering" {
+                    s03_rendering(&mut reader, &root, &session)?;
+                }
+                if mode.starts_with("s03-interrupt-") && commands == 1 {
+                    fs::write(root.join("prompt.received"), b"pending")?;
+                    let cancel = receive(&mut reader)?.ok_or("cancel notification missing")?;
+                    if cancel.get("id").is_some()
+                        || cancel["method"] != "session/cancel"
+                        || cancel["params"]["sessionId"] != session
+                    {
+                        return Err("interrupt lost exact session notification".into());
+                    }
+                    barrier(&root, "s03-cancel")?;
+                    match mode.as_str() {
+                        "s03-interrupt-eof" => return Ok(()),
+                        "s03-interrupt-error" => {
+                            emit(json!({"jsonrpc":"2.0","id":id,"error":{
+                                "code":-32603,"message":"s03-private-interrupt-error"}}))?;
+                        }
+                        "s03-interrupt-end-turn" => {
+                            emit(json!({"jsonrpc":"2.0","id":id,"result":{"stopReason":"end_turn"}}))?;
+                        }
+                        "s03-interrupt-cancelled" => {
+                            emit(json!({"jsonrpc":"2.0","id":id,"result":{"stopReason":"cancelled"}}))?;
+                        }
+                        _ => return Err("unknown interrupt outcome mode".into()),
+                    }
+                    continue;
+                }
+                if mode.starts_with("s03-interrupt-") && commands > 1 {
+                    barrier(&root, "s03-next")?;
+                }
                 if matches!(
                     mode.as_str(),
                     "interrupt" | "interrupt-malformed" | "interrupt-wrong-session"
@@ -781,6 +853,10 @@ fn main() -> Result<()> {
             }
         };
         emit(json!({"jsonrpc":"2.0","id":id,"result":result}))?;
+        if mode == "s03-stalled-prompt" && request["method"] == "session/new" {
+            // Publish the real session, then stop before any prompt bytes are read.
+            barrier(&root, "s03-reads")?;
+        }
     }
     Ok(())
 }
