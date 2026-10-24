@@ -133,13 +133,13 @@ e03_receipt_publication:
   source_branch: retained
 e04_cycle:
   phase: build
-  status: e04s01-complete-feature-checkpointed-ready-for-e04s02
+  status: e04s02-red-tracer-preparation
   branch: feat/acp-agent-interaction
   worktree: /Users/addomam/projects/amux-acp-build
   context: specs/epics/e04-acp-agent-interaction/context.yaml
   architecture: specs/adr/0004-acp-authoritative-input.md
   implementation_started: true
-  runtime_acceptance: passing-e04s01-local-only
+  runtime_acceptance: failing-e04s02-not-implemented-S01-complete
   live_model_approval: separately-required
   historical_e03s08_and_review_caps: unchanged
   architecture_review: {round: 2, scores: [96.875, 100], must_fix: 0, evidence: specs/verifications/e04-architecture-review-round2.json}
@@ -152,3 +152,5 @@ stories:
   e04s01:
     started_at: "2026-10-23T14:46:59-05:00"
     completed_at: "2026-10-23T23:06:24-05:00"
+  e04s02:
+    started_at: "2026-10-23T23:14:27-05:00"

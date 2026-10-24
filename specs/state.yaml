@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: build-epic
+  next_skill: develop-tdd
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -55,7 +55,8 @@ handoff:
     Round5 meets the approved numerical AND gate at96.875/100, zero must-fix; raw A incorrect/P2 remains retained. The sole nonblocking cancellation-responder defect was reproduced twice, repaired and verified; no sixth round or post-repair independent PASS is claimed.
     Current repaired proof: workspace343/30suites/10ignored and strict gates, Bun8/Zsh, plus actual CLI invalid-params/cancelled-original/same-session57 and owned cleanup. S01 local acceptance passes; integration checkpoint precedes S02. No live or publication approval.
     Verified S01 integration committed locally as4d74d58 using the authorized unsigned fallback after1Password failed. Both owned S01 OMP sessions exited gracefully; Herdr removed their workspaces/tabs/worktrees without force and original shell PIDs are absent.
-  last_step_completed: e04s01-feature-checkpoint-and-owned-worker-retirement
+    S02 starts on the same isolated feature branch from8886c2b with the verified343-test S01 baseline. Concrete form/permission projection, shared validator, keybinding and exclusive file responsibilities are recorded; all S02 tasks remain failing.
+  last_step_completed: e04s02-approved-story-and-concrete-worker-contract-confirmed
   required_reading:
     - specs/verifications/e04s01-build.md
     - specs/epics/e04-acp-agent-interaction/PLAN.md
@@ -471,7 +472,7 @@ e04_plan_review:
   round_1: {verdict: FAIL, scores: [93.75, 100], must_fix: 0, should_fix: 2, evidence: specs/verifications/e04-plan-review-round1.json}
   round_2: {verdict: FAIL, scores: [96.875, 96.875], must_fix_each: 1, evidence: specs/verifications/e04-plan-review-round2.json}
   round_3: {verdict: PASS, scores: [100, 100], must_fix: 0, should_fix: 0, evidence: specs/verifications/e04-plan-review-round3.json}
-epic_cycle:
+e04s01_completed_cycle:
   scope: e04-acp-agent-interaction
   story: e04s01
   story_bcps: 8
@@ -515,3 +516,17 @@ e04s01_build_review:
   round_4: {status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [1, 0], source: specs/verifications/e04s01-round4-source.json, evidence: specs/verifications/e04s01-build-review-round4.json}
   round_5: {status: PASS-numerical-threshold, scores: [96.875, 100], must_fix: [0, 0], should_fix: [1, 0], source: specs/verifications/e04s01-round5-source.json, evidence: specs/verifications/e04s01-build-review-round5.json, reviewers: [E04S01ReviewA5, E04S01ReviewB5, E04S01Security5]}
   post_review_P2: {status: repaired-and-verified-not-independently-rereviewed, red: 'artifact://1165', red_failed: 2, green_passed: 2, current_full: 'artifact://1171', source: specs/verifications/e04s01-post-review-source.json, no_round_6: true}
+epic_cycle:
+  scope: e04-acp-agent-interaction
+  story: e04s02
+  story_bcps: 8
+  step: 4
+  completed_steps: [0, 1, 2, 3]
+  started_at: "2026-10-23T23:14:27-05:00"
+  baseline: {commit: 8886c2b, code_commit: 4d74d58, evidence: 'artifact://1171', workspace_rust_passed: 343, omp_passed: 8, source: specs/verifications/e04s01-post-review-source.json}
+  audit_result: not-started
+  runtime_acceptance: failing-e04s02-not-implemented
+  implementation_started: false
+  integration_owner: parent
+  owned_sessions: []
+  lsp_references: {status: unavailable-in-isolated-worktree-not-no-callers, attempted: [exact-declaration-references, scoped-rust-analyzer-reload, workspace-folder-notification-route], limitation: device-exposes-request-not-notification-and-empty-references, reported: true}

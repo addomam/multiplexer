@@ -3,7 +3,7 @@ context: Explicit ACP-only human-surface and admission-boundary decisions; histo
 feature: acp-agent-interaction
 epic: e04
 phase: build
-status: e04s01-complete-feature-checkpointed-ready-for-e04s02
+status: building-e04s02-all-S02-tasks-failing
 problem: Native terminal input cannot supply the proven application-consumption boundary required by complete-broker ownership acceptance.
 user_goal: Make ACP the solid interaction path, retain terminal-only tools as best-effort fallback, then separately design a thin non-ACP integration API.
 explicit_user_decisions:
