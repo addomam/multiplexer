@@ -30,40 +30,51 @@ fn show_interaction(host: &Host, agent: &Agent, native: &mut Attachment, wanted:
             return;
         }
         native.send(b"\x1b[20~");
-        host.until("F9 changes the rendered interaction/history selection", || {
-            (visible(&native.text()) != current).then_some(())
-        });
+        host.until(
+            "F9 changes the rendered interaction/history selection",
+            || (visible(&native.text()) != current).then_some(()),
+        );
     }
-    panic!("requested interaction {wanted:?} not reachable:\n{}", native.text());
+    panic!(
+        "requested interaction {wanted:?} not reachable:\n{}",
+        native.text()
+    );
 }
 
 fn dismiss_ownership(host: &Host, agent: &Agent, native: &mut Attachment) {
-    let activity = ownership(host, agent)["activity_revision"].as_u64().unwrap();
+    let activity = ownership(host, agent)["activity_revision"]
+        .as_u64()
+        .unwrap();
     native.send(b"\x1b");
-    host.until("original owner parses Escape and dismisses ownership UI", || {
-        let text = native.text();
-        (ownership(host, agent)["activity_revision"].as_u64().unwrap() > activity
-            && !text.contains("Control owned here")
-            && !text.contains("Control requested")
-            && !text.contains("Locked terminal"))
-        .then_some(())
-    });
+    host.until(
+        "original owner parses Escape and dismisses ownership UI",
+        || {
+            let text = native.text();
+            (ownership(host, agent)["activity_revision"]
+                .as_u64()
+                .unwrap()
+                > activity
+                && !text.contains("Control owned here")
+                && !text.contains("Control requested")
+                && !text.contains("Locked terminal"))
+            .then_some(())
+        },
+    );
 }
 
-fn native_form(
-    host: &Host,
-    agent: &Agent,
-    native: &mut Attachment,
-    form: &Value,
-    answer: &str,
-) {
-    show_interaction(host, agent, native, Some(form));
+fn native_form(host: &Host, agent: &Agent, native: &mut Attachment, form: &Value, answer: &str) {
+    // A fresh prompt can publish its question before the native projection
+    // selects it. Observe that arrival before F9 can toggle it back to history.
     native.wait(form["interaction_id"].as_str().unwrap());
+    show_interaction(host, agent, native, Some(form));
     native.send(b"\x1b[14~"); // F4: explicitly unset before deliberate typing.
     native.send(answer.as_bytes());
     native.send(ACCEPT_FORM);
     native.wait("REVIEW: F5 accepts");
-    assert_eq!(pending(host, agent, "form")["interaction_id"], form["interaction_id"]);
+    assert_eq!(
+        pending(host, agent, "form")["interaction_id"],
+        form["interaction_id"]
+    );
     native.send(ACCEPT_FORM); // Only the second, deliberate F5 accepts this review.
 }
 
@@ -96,16 +107,19 @@ fn completed_turn(host: &Host, agent: &Agent, original: &Value, value: i64, comm
     assert_eq!(effect["commands"], commands);
     assert_eq!(effect["rpc_id"], original["rpc_id"]);
     assert_eq!(effect["session_id"], agent.target["session_id"]);
-    host.until("same-session arithmetic stream reaches canonical history", || {
-        host.inspect(agent)["content"]["events"]
-            .as_array()?
-            .iter()
-            .any(|event| {
-                event["kind"] == "agent-message"
-                    && event["text"] == format!("Total={value}; commands={commands}")
-            })
-            .then_some(())
-    });
+    host.until(
+        "same-session arithmetic stream reaches canonical history",
+        || {
+            host.inspect(agent)["content"]["events"]
+                .as_array()?
+                .iter()
+                .any(|event| {
+                    event["kind"] == "agent-message"
+                        && event["text"] == format!("Total={value}; commands={commands}")
+                })
+                .then_some(())
+        },
+    );
 }
 
 #[test]
@@ -116,11 +130,16 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     host.ready(&mut agent);
     let exact = agent.target.clone();
     let pid = fs::read(agent.root.join("peer.pid")).unwrap();
-    let descendant: i32 = fs::read_to_string(agent.root.join("descendant.pid"))
-        .unwrap()
-        .parse()
-        .unwrap();
-    assert!(!pid_gone(descendant), "fixture must own a live descendant before cleanup");
+    let descendant: i32 = host.until("owned descendant identity published", || {
+        fs::read_to_string(agent.root.join("descendant.pid"))
+            .ok()?
+            .parse()
+            .ok()
+    });
+    assert!(
+        !pid_gone(descendant),
+        "fixture must own a live descendant before cleanup"
+    );
     let a_id = agent.controller_id.clone();
     let a_generation = agent.opened["generation"].clone();
     let b = external(&host);
@@ -165,13 +184,16 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
             json!({"kind":"human-idle","idle_ms":0,"warning_ms":60000}),
         );
         native.wait("Keep control: any key");
-        host.until("actual rendered warning receives original-connection consent", || {
-            let state = ownership(&host, &agent);
-            (state["reservation"]["claim_id"] == claim["claim_id"]
-                && state["reservation"]["conditional"]["consent"] == "recorded"
-                && state["reservation"]["conditional"]["clock"]["kind"] == "warning")
-                .then_some(())
-        });
+        host.until(
+            "actual rendered warning receives original-connection consent",
+            || {
+                let state = ownership(&host, &agent);
+                (state["reservation"]["claim_id"] == claim["claim_id"]
+                    && state["reservation"]["conditional"]["consent"] == "recorded"
+                    && state["reservation"]["conditional"]["clock"]["kind"] == "warning")
+                    .then_some(())
+            },
+        );
         if disposition == "aborted-by-owner" {
             native.send(ACCEPT_FORM);
         } else {
@@ -186,13 +208,16 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
             (state["reservation"].is_null()
                 && !text.contains("Keep control: any key")
                 && !text.contains("Keeping control; awaiting acknowledgement"))
-                .then_some(())
+            .then_some(())
         });
         let state = ownership(&host, &agent);
         assert_eq!(state["owner"]["controller_id"], human_id);
         assert_eq!(state["owner"]["role"], "attachment");
         assert_eq!(state["observed"]["generation"], human_generation);
-        assert_eq!(pending(&host, &agent, "form")["interaction_id"], first_form["interaction_id"]);
+        assert_eq!(
+            pending(&host, &agent, "form")["interaction_id"],
+            first_form["interaction_id"]
+        );
         s03_same_work(&host.work(&agent, &first["work_id"]), &first_original);
         assert!(host.work(&agent, &first["work_id"])["outcome"].is_null());
         assert!(!native.text().contains("REVIEW: F5 accepts"));
@@ -201,7 +226,10 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
 
     native_form(&host, &agent, &mut native, &first_form, "7");
     let first_permission = pending(&host, &agent, "permission");
-    assert_eq!(host.inspect(&agent)["foreground"]["prompt_id"], first_original["prompt_id"]);
+    assert_eq!(
+        host.inspect(&agent)["foreground"]["prompt_id"],
+        first_original["prompt_id"]
+    );
     assert!(host.work(&agent, &first["work_id"])["outcome"].is_null());
     let first_answer = selected_work(
         &host,
@@ -221,11 +249,20 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     agent.opened = grant.clone();
     agent.controller_id = b["controller_id"].clone();
     native.observer();
-    assert_eq!(ownership(&host, &agent)["owner"]["controller_id"], b["controller_id"]);
-    assert_eq!(pending(&host, &agent, "permission")["interaction_id"], first_permission["interaction_id"]);
+    assert_eq!(
+        ownership(&host, &agent)["owner"]["controller_id"],
+        b["controller_id"]
+    );
+    assert_eq!(
+        pending(&host, &agent, "permission")["interaction_id"],
+        first_permission["interaction_id"]
+    );
     s03_same_work(&host.work(&agent, &first["work_id"]), &first_original);
     assert!(!agent.root.join("tool-effect-1").exists());
-    assert!(!pid_gone(descendant), "force must not kill owned descendants");
+    assert!(
+        !pid_gone(descendant),
+        "force must not kill owned descendants"
+    );
     sentinel.alive();
 
     // Physical stale keys, repeat, paste, mouse tails, focus and double-prefix
@@ -255,15 +292,24 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
             .then_some(())
     });
     native.send(b"\x1b[I");
-    host.until("observer regains genuine focus without regaining authority", || {
-        ownership(&host, &agent)["views"]
-            .as_array()?
-            .iter()
-            .any(|view| view["controller_id"] == human_id && view["focused"] == true)
-            .then_some(())
-    });
-    assert_eq!(ownership(&host, &agent)["owner"]["controller_id"], b["controller_id"]);
-    assert_eq!(pending(&host, &agent, "permission")["interaction_id"], first_permission["interaction_id"]);
+    host.until(
+        "observer regains genuine focus without regaining authority",
+        || {
+            ownership(&host, &agent)["views"]
+                .as_array()?
+                .iter()
+                .any(|view| view["controller_id"] == human_id && view["focused"] == true)
+                .then_some(())
+        },
+    );
+    assert_eq!(
+        ownership(&host, &agent)["owner"]["controller_id"],
+        b["controller_id"]
+    );
+    assert_eq!(
+        pending(&host, &agent, "permission")["interaction_id"],
+        first_permission["interaction_id"]
+    );
     assert!(host.work(&agent, &first["work_id"])["outcome"].is_null());
     assert!(!agent.root.join("tool-effect-1").exists());
     let first_allow = host.call(permission_answer(
@@ -274,7 +320,12 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     ));
     completed_turn(&host, &agent, &first_original, 49, 1);
     assert!(agent.root.join("tool-effect-1").exists());
-    let first_choice = selected_work(&host, &agent, &first_permission, json!({"option_id":"opaque-α"}));
+    let first_choice = selected_work(
+        &host,
+        &agent,
+        &first_permission,
+        json!({"option_id":"opaque-α"}),
+    );
     assert_eq!(first_choice["work_id"], first_allow["work_id"]);
     assert_eq!(first_choice["controller_id"], b["controller_id"]);
     assert_eq!(first_choice["owner_generation"], grant["generation"]);
@@ -288,7 +339,13 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     let second_original = host.work(&agent, &second["work_id"]);
     assert_eq!(second_original["controller_id"], b["controller_id"]);
     assert_eq!(second_original["owner_generation"], grant["generation"]);
-    let stale_form = form_answer(&agent, &second_form, "s04-b-old-form", "accept", Some(json!({"bonus":97})));
+    let stale_form = form_answer(
+        &agent,
+        &second_form,
+        "s04-b-old-form",
+        "accept",
+        Some(json!({"bonus":97})),
+    );
     let second_answer_receipt = host.call(form_answer(
         &agent,
         &second_form,
@@ -297,11 +354,27 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
         Some(json!({"bonus":11})),
     ));
     let second_permission = pending(&host, &agent, "permission");
-    assert_ne!(second_permission["interaction_id"], first_permission["interaction_id"]);
-    let stale_permission = permission_answer(&agent, &second_permission, "s04-b-old-permission", "opaque-α");
-    assert_eq!(host.inspect(&agent)["foreground"]["prompt_id"], second_original["prompt_id"]);
+    assert_ne!(
+        second_permission["interaction_id"],
+        first_permission["interaction_id"]
+    );
+    let stale_permission = permission_answer(
+        &agent,
+        &second_permission,
+        "s04-b-old-permission",
+        "opaque-α",
+    );
+    assert_eq!(
+        host.inspect(&agent)["foreground"]["prompt_id"],
+        second_original["prompt_id"]
+    );
     assert!(host.work(&agent, &second["work_id"])["outcome"].is_null());
-    let second_answer = selected_work(&host, &agent, &second_form, json!({"action":"accept","content":{"bonus":11}}));
+    let second_answer = selected_work(
+        &host,
+        &agent,
+        &second_form,
+        json!({"action":"accept","content":{"bonus":11}}),
+    );
     assert_eq!(second_answer["work_id"], second_answer_receipt["work_id"]);
     assert_eq!(second_answer["controller_id"], b["controller_id"]);
     assert_eq!(second_answer["owner_generation"], grant["generation"]);
@@ -318,8 +391,15 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     host.deny(stale_form, &["stale-control", "stale-handle"]);
     host.deny(stale_permission, &["stale-control", "stale-handle"]);
     dismiss_ownership(&host, &agent, &mut native);
-    assert_eq!(pending(&host, &agent, "permission")["interaction_id"], second_permission["interaction_id"]);
-    assert_eq!(agent.effect()["commands"], 1, "observer choices must not replay on reacquisition");
+    assert_eq!(
+        pending(&host, &agent, "permission")["interaction_id"],
+        second_permission["interaction_id"]
+    );
+    assert_eq!(
+        agent.effect()["commands"],
+        1,
+        "observer choices must not replay on reacquisition"
+    );
     assert!(!agent.root.join("tool-effect-2").exists());
     show_interaction(&host, &agent, &mut native, Some(&second_permission));
     // Deliberately navigate to reject_once from either end, never accept a default.
@@ -328,11 +408,19 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     native.wait("opaque-γ");
     native.send(b"\r");
     completed_turn(&host, &agent, &second_original, 49, 2);
-    let second_choice = selected_work(&host, &agent, &second_permission, json!({"option_id":"opaque-γ"}));
+    let second_choice = selected_work(
+        &host,
+        &agent,
+        &second_permission,
+        json!({"option_id":"opaque-γ"}),
+    );
     assert_eq!(second_choice["controller_id"], human_id);
     assert_eq!(second_choice["owner_generation"], returned_generation);
     assert_eq!(second_choice["rpc_id"], 73);
-    assert!(!agent.root.join("tool-effect-2").exists(), "deny must run no tool arithmetic/effect");
+    assert!(
+        !agent.root.join("tool-effect-2").exists(),
+        "deny must run no tool arithmetic/effect"
+    );
     assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
     assert_eq!(host.inspect(&agent)["target"], exact);
 
@@ -349,7 +437,10 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     assert_eq!(third_original["owner_generation"], returned_generation);
     native_form(&host, &agent, &mut native, &third_form, "5");
     let third_permission = pending(&host, &agent, "permission");
-    assert_eq!(host.inspect(&agent)["foreground"]["prompt_id"], third_original["prompt_id"]);
+    assert_eq!(
+        host.inspect(&agent)["foreground"]["prompt_id"],
+        third_original["prompt_id"]
+    );
     assert!(host.work(&agent, &third["work_id"])["outcome"].is_null());
     show_interaction(&host, &agent, &mut native, Some(&third_permission));
     // Reset from either end, deliberately visit another option, then allow_once.
@@ -359,8 +450,18 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     native.send(b"\r");
     completed_turn(&host, &agent, &third_original, 57, 3);
     assert!(agent.root.join("tool-effect-3").exists());
-    let third_answer = selected_work(&host, &agent, &third_form, json!({"action":"accept","content":{"bonus":5}}));
-    let third_choice = selected_work(&host, &agent, &third_permission, json!({"option_id":"opaque-α"}));
+    let third_answer = selected_work(
+        &host,
+        &agent,
+        &third_form,
+        json!({"action":"accept","content":{"bonus":5}}),
+    );
+    let third_choice = selected_work(
+        &host,
+        &agent,
+        &third_permission,
+        json!({"option_id":"opaque-α"}),
+    );
     for work in [&third_answer, &third_choice] {
         assert_eq!(work["controller_id"], human_id);
         assert_eq!(work["owner_generation"], returned_generation);
@@ -371,8 +472,22 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     let projection = host.inspect(&agent);
     assert_eq!(projection["target"], exact);
     assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
-    let interactions = [&first_form, &first_permission, &second_form, &second_permission, &third_form, &third_permission];
-    let responses = [&first_answer, &first_choice, &second_answer, &second_choice, &third_answer, &third_choice];
+    let interactions = [
+        &first_form,
+        &first_permission,
+        &second_form,
+        &second_permission,
+        &third_form,
+        &third_permission,
+    ];
+    let responses = [
+        &first_answer,
+        &first_choice,
+        &second_answer,
+        &second_choice,
+        &third_answer,
+        &third_choice,
+    ];
     for (index, interaction) in interactions.iter().enumerate() {
         assert_eq!(interaction["scope"]["sessionId"], exact["session_id"]);
         for previous in &interactions[..index] {
@@ -390,14 +505,23 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
         .filter(|work| work["op"] == "acp-prompt")
         .collect::<Vec<_>>();
     assert_eq!(prompts.len(), 3, "no automatic stale draft submission");
-    for (index, original) in [&first_original, &second_original, &third_original].iter().enumerate() {
+    for (index, original) in [&first_original, &second_original, &third_original]
+        .iter()
+        .enumerate()
+    {
         s03_same_work(prompts[index], original);
         for previous in &prompts[..index] {
             assert_ne!(prompts[index]["rpc_id"], previous["rpc_id"]);
             assert_ne!(prompts[index]["prompt_id"], previous["prompt_id"]);
         }
     }
-    assert_eq!(projection["content"]["interactions"].as_array().unwrap().len(), 6);
+    assert_eq!(
+        projection["content"]["interactions"]
+            .as_array()
+            .unwrap()
+            .len(),
+        6
+    );
     let canonical = projection["content"].to_string();
     assert!(!canonical.contains("add 800 2"));
     assert!(!canonical.contains("\"bonus\":97"));
@@ -420,11 +544,17 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
             "add 1 2",
             "add 800 2",
         ] {
-            assert!(!public.contains(private), "private conversation data in metadata: {private}");
+            assert!(
+                !public.contains(private),
+                "private conversation data in metadata: {private}"
+            );
         }
     }
     assert!(!agent.root.join("unexpected-cancel").exists());
-    assert!(!pid_gone(descendant), "owned descendant must survive all authority changes");
+    assert!(
+        !pid_gone(descendant),
+        "owned descendant must survive all authority changes"
+    );
     sentinel.alive();
     // Parent extends this actual close helper to observe descendant.pid absent
     // before root deletion/fallback; it retains termios/host/drainer/daemon/socket

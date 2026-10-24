@@ -1,0 +1,50 @@
+{
+  "scope": "e04s04-live-task-prerequisites-not-approval-or-acceptance",
+  "status": "blocked-separate-exact-private-setup-and-live-approval-required",
+  "local_broker_verification": "specs/verifications/e04s04-verify.yaml",
+  "required_exact_test": "e04s04_live_adapters",
+  "required_command": "cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture",
+  "driver_implemented": false,
+  "command_available_or_executed": false,
+  "zero_case_result_is_failure": true,
+  "missing_implementation_information": "Approved concrete installed launcher/closure, model/auth/private-root bindings and enforceable spend mechanism. No fake ignored test, fixture replacement, external prewritten success receipt or no-op was added.",
+  "pinned_public_source_candidates": [
+    {
+      "package": "@agentclientprotocol/codex-acp",
+      "version": "2.2.2",
+      "source_commit": "202e66e63343ec4f5a5e35ab590251d813d129ca",
+      "source": "https://github.com/agentclientprotocol/codex-acp/tree/202e66e63343ec4f5a5e35ab590251d813d129ca",
+      "source_lock": "https://raw.githubusercontent.com/agentclientprotocol/codex-acp/202e66e63343ec4f5a5e35ab590251d813d129ca/package-lock.json",
+      "locked_ACP_SDK": "1.5.0",
+      "locked_Codex": "0.160.1",
+      "model_configuration": "CODEX_CONFIG JSON and INITIAL_AGENT_MODE exist in inspected public source; no invented --model/--budget flag.",
+      "model_candidate": "gpt-5.1-codex-mini",
+      "candidate_supported_available_or_cheapest_verified": false
+    },
+    {
+      "package": "@agentclientprotocol/claude-agent-acp",
+      "version": "0.94.0",
+      "source_commit": "7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1",
+      "source": "https://github.com/agentclientprotocol/claude-agent-acp/tree/7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1",
+      "source_lock": "https://raw.githubusercontent.com/agentclientprotocol/claude-agent-acp/7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1/package-lock.json",
+      "locked_ACP_SDK": "2.0.0",
+      "locked_Claude_Agent_SDK": "0.3.303",
+      "node_minimum": "22",
+      "wire_protocol": "stable v1; no experimental-v2 opt-in",
+      "model_configuration": "ANTHROPIC_MODEL/private settings preference is inspected, but unsupported preference can fall back. Requested name is not proof of actual model. SDK option names maxBudgetUsd/maxTurns do not establish an exposed CLI/env spend fuse.",
+      "model_candidate": "claude-haiku-4-5-20251001",
+      "candidate_supported_available_or_cheapest_verified": false
+    }
+  ],
+  "observed_path_lookup": "Earlier command -v codex-acp claude-agent-acp returned no paths/exit1. This proves not on that PATH, not absence from all storage.",
+  "installation": "Not authorized or performed. If approved, private exact-source-lock installation and actual installed full dependency/platform closure must be captured before any provider call; package manifest ranges alone are insufficient.",
+  "auth": "No credential-store/provider-home/environment probe, auth read/copy, login or global mutation performed. Exact selected existing auth source and billing mode need approval; never request credentials in chat or commit auth paths/content/env.",
+  "spend": "Missing approved enforceable provider quota/budget or verified supported per-run fuse. Timeout alone is not a spend ceiling; no invented budget flag/env or automatic retries/model fallback.",
+  "proposed_live_shape_not_authorized": "At most4 deliberate prompts per harness: API genuine question answered natively; native genuine question answered through API with running handoff; separate exact safe allow-file tool request; separate exact deny-file request. Same original session/turn, stale authority rejected, exact allow effect and deny absence, actual model evidence and complete owned cleanup. Unsupported genuine question or permission remains a failing row; no substitute MCP question or synthetic peer.",
+  "evidence_privacy": "Public evidence only pins/model names/safe IDs/counts/dispositions/cleanup. No real prompt/answer/output/auth/env/provider-home paths/raw transport; any approved private runtime metadata is reduced to actual model names and removed with owned roots.",
+  "required_next_human_decision": "Authorize private pinned adapter setup without auth/provider contact, or provide the separately required exact setup plus model/auth/root/prompt/enforceable-spend live approval. Local source review cannot supply that authority.",
+  "real_adapter_runs": 0,
+  "global_changes_or_ACP_publication": "none; not authorized",
+  "whole_story": "failing",
+  "historical_native_fence_and_review_caps": "unchanged"
+}

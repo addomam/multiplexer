@@ -18,6 +18,7 @@
 - Align native history with 64 live/responding plus 1024 retained completed records; account for bounded server metadata separately from the 4-MiB canonical content cap. Preserve supported large declared defaults and optional omission while keeping submitted answers within 64 KiB.
 - Exercise running-question reserved handoff, noncancelling force, pending cancellation/private recovery, original-attachment conditional consent and all native input/draft fences against the same live ACP peer. Preserve stale-answer rejection and independently observed fresh arithmetic effects after deliberate reacquisition.
 - Verify canonical gap/category retention and inert hostile rendering through a real controlling PTY. Keep actual cleanup observations separate from fixture fallback; pin the native test host until post-TUI termios observation and deliberately type fresh answers rather than asserting incidental defaults.
+- Exercise the complete local ACP broker with same-session API/native questions and allow/deny, exact reused-wire responders, owned descendants, stalled input, hostile frames and concurrent close/shutdown. Keep genuine real-adapter acceptance separate; terminal-only settlement remains best-effort and unknown blocks safe grants.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 

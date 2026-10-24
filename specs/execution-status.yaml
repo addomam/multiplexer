@@ -160,8 +160,10 @@ e04_cycle:
   e04s03_actual_runtime: {status: passed-local-S03, production_baseline: f87ec7b, conditional: specs/verifications/e04s03-conditional-native-attempt3.json, handoff_force_cancel_no_replay: specs/verifications/e04s03-handoff-native-attempt2.json, owned_cleanup_without_fallback: true, evidence: specs/verifications/e04s03-build.md}
   e04s03_build_review: {scope: e04s03-build, round: 1, max_rounds: 5, status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [0, 0], security_findings: 0, evidence: specs/verifications/e04s03-build-review-round1.json, source: specs/verifications/e04s03-round1-source.json, historical_caps: unchanged}
   e04s03_checkpoint: {commit: eb2d0b2, signing: unsigned-authorized-fallback, workers: retired-without-force, evidence: specs/verifications/e04s03-worker-retirement.json}
-  e04s04_workers: {backend: w1X, native: w1Y, base: 5311409, status: implementing-disjoint-test-only-slices, integration_owner: parent, worker_checks: prohibited-parent-only}
-  e04s04_acceptance: {local: failing-not-yet-exercised, live: failing-separate-exact-approval-required, publication: not-authorized, historical_caps: unchanged}
+  e04s04_workers: {backend: w1X, native: w1Y, base: 5311409, backend_commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, native_commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, status: safely-integrated-retired-without-force-branches-retained, integration_owner: parent, worker_checks: prohibited-parent-only, evidence: specs/verifications/e04s04-worker-retirement.json}
+  e04s04_acceptance: {covered_local_runtime: passing1399-and-actual-CLI-PTY, local_tasks: failing-S04-OPS-01-operational-must-fix, live: failing-separate-exact-prerequisites-unapproved-and-driver-unimplemented, whole_story: failing, publication: not-authorized, historical_caps: unchanged}
+  e04s04_current_checks: {artifact: 'artifact://1399', selected: 7, workspace: 391, workspace_suites: 30, ignored: 10, default: 280, default_suites: 12, default_ignored: 7, strict_workspace_and_default: passed, omp: 8, zsh: passed, showcase: 1, final_native_unknown_guards: 2}
+  e04s04_build_review: {scope: e04s04-build-current-local-source, round: 1, max_rounds: 5, status: FAIL-operational-must-fix, scores: [100, 100], security_findings: 0, operational_must_fix: 1, source: specs/verifications/e04s04-round1-source.json, evidence: specs/verifications/e04s04-build-review-round1.json, historical_caps: unchanged}
 stories:
   e04s01:
     started_at: "2026-10-23T14:46:59-05:00"

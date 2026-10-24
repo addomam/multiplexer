@@ -1,0 +1,51 @@
+{
+  "scope": "e04s04-build-local-tasks1-3",
+  "round": 1,
+  "max_rounds": 5,
+  "total_items": 32,
+  "A": {
+    "score": 100,
+    "must_fix": 0,
+    "should_fix": 0,
+    "consider": 0,
+    "source_hashes_matched": 17,
+    "evidence": "specs/verifications/e04s04-review-a-round1.json"
+  },
+  "B": {
+    "score": 100,
+    "must_fix": 0,
+    "should_fix": 0,
+    "consider": 1,
+    "source_hashes_matched": 17,
+    "evidence": "specs/verifications/e04s04-review-b-round1.json"
+  },
+  "security": {
+    "supported_security_findings": 0,
+    "operational_findings": 1,
+    "must_fix": 1,
+    "should_fix": 0,
+    "score": 96.875,
+    "independent_hashing": "unavailable-not-claimed",
+    "evidence": "specs/security/epics/e04/e04s04-review-round1.json"
+  },
+  "AND_gate": "FAIL",
+  "reason": "S04-OPS-01 surviving high-confidence operational must-fix blocks local acceptance despite both100-point source reviews. Reproduce retained-pipe close/shutdown, repair and use next review round without resetting any cap.",
+  "dispositions": [
+    {
+      "review": "B",
+      "category": "consider",
+      "item": "stale non-pass wording in historical attempt1396",
+      "decision": "apply bounded evidence correction; no code/design tradeoff"
+    },
+    {
+      "review": "security",
+      "category": "must-fix",
+      "item": "S04-OPS-01",
+      "decision": "accepted for reproduction and repair; not yet reproduced or fixed"
+    }
+  ],
+  "all_S04_tasks": "failing",
+  "live_task": "unapproved-unimplemented-not-run",
+  "whole_story": "failing",
+  "historical_caps": "unchanged"
+}

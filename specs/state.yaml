@@ -71,8 +71,20 @@ handoff:
     Fresh S03 blind round1 A/B each score100/100 on32items with zero must/should/consider and independently match all14 frozen source hashes; security0 supported/operational findings. Raw reports and AND gate are preserved. All six actual task gates now pass; safely commit unchanged reviewed source before graceful owned-worker retirement and S04. No historical cap reset, live run, install or ACP publication.
     S03 safely integrated locally as eb2d0b2; both deliveries and native repair are ancestors. Graceful Ctrl-D returned each pane to its original Zsh before no-force worktree removal; all six exact owned shell/OMP/MCP PIDs, both worktrees and both Herdr workspaces/tabs are absent. Branches retained, no unmerged discard. S03 is done locally; proceed directly to approved S04 local complete-broker proof, retaining its separate live gate.
     S04 starts from5311409 with identical reviewed/runtime-verified S03 source eb2d0b2. Two new isolated Herdr worktrees/sessions own disjoint backend fixture/acceptance and native acceptance children; parent owns registrations, shared routing/source, live gate, outside-test CLI/PTY proof and all ledgers. Existing Plan/impact/threat contracts are reused. All four S04 tasks remain failing; no new provider/auth/install/publication authority.
-  last_step_completed: e04s04-verified-predecessor-and-disjoint-worker-kickoff
+    S04 deliveries c1f4694/f8aa007 are safely integrated5862083. Current complete outside-test CLI/PTY proof passes49/49deny/57 on one live synthetic session/descendant with no replay and complete cleanup. Fixture state/F9-arrival/PID-publication failures are preserved, not production REDs. Final contiguous1399 passes exact7/workspace391/default280, workspace+default strict Rust, OMP8/49/Zsh and independent showcase1. Final native unknown-settlement guards2 pass without repairing/relabeling e03. Both S04 workers are gracefully retired with all six PIDs/worktrees/tabs absent. Current17-source freeze and local self-audit are ready for fresh round1; Task4 remains explicitly unapproved/unimplemented/failing, not a zero-case PASS.
+    Fresh S04 round1 A/B each100/100 independently match17/17 hashes, but specialist S04-OPS-01 reports one high-confidence operational cleanup must-fix: escaped retained pipe endpoints can leave blocking workers unjoinable. AND gate FAIL; all four tasks remain failing. Preserve reports, reproduce with real child/retained endpoints, then repair and consume round2 without resetting caps. No new live/install/auth/publication authority.
+  last_step_completed: e04s04-current-local-runtime-regressions-native-revisit-and-self-audit
   required_reading:
+    - specs/verifications/e04s04-round1-source.json
+    - specs/verifications/e04s04-build-review-round1.json
+    - specs/security/epics/e04/e04s04-review-round1.json
+    - specs/verifications/AUDIT-e04s04.md
+    - specs/verifications/NFR-e04s04.json
+    - specs/verifications/e04s04-verify.yaml
+    - specs/verifications/e04s04-complete-native-attempt1.json
+    - specs/verifications/e04s04-native-fence.json
+    - specs/verifications/e04s04-worker-retirement.json
+    - specs/verifications/e04s04-live-prerequisites.json
     - specs/verifications/e04s04-build.md
     - specs/verifications/e04s03-worker-retirement.json
     - specs/verifications/e04s03-build-review-round1.json
@@ -625,10 +637,12 @@ epic_cycle:
   integration_owner: parent
   implementation_started: true
   approved_plan_reopened: false
-  runtime_acceptance: failing-S04-not-yet-exercised
+  runtime_acceptance: failing-S04-live-task-local-current-runtime-pass
   live_approval: separately-required-exact-two-adapters-closures-models-auth-roots-prompts-spend
   ACP_publication: not-authorized
   historical_native_failure_and_review_caps: unchanged
+  current_local_verification: {artifact: 'artifact://1399', source: specs/verifications/e04s04-round1-source.json, selected: 7, workspace: 391, default: 280, strict_Rust_OMP_Zsh: passed, showcase: 1, actual_cli_pty: passed, native_unknown_guards: 2, audit: specs/verifications/AUDIT-e04s04.md}
+  build_review: {scope: e04s04-build-current-local-source, round: 1, max_rounds: 5, status: FAIL-operational-must-fix, scores: [100, 100], security_findings: 0, operational_must_fix: 1, evidence: specs/verifications/e04s04-build-review-round1.json, whole_story: failing-live-task-unapproved-and-unimplemented, historical_caps: unchanged}
   owned_sessions:
-    - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: implementing-test-only, completion_job: bg_206, worker_checks: prohibited-parent-only}
-    - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: implementing-test-only, completion_job: bg_207, worker_checks: prohibited-parent-only}
+    - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
+    - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}

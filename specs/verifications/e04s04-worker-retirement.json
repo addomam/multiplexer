@@ -1,0 +1,36 @@
+{
+  "scope": "e04s04-local-worker-deliveries-not-story-or-live-acceptance",
+  "retired_at": "2026-10-24T07:34:02.617614+00:00",
+  "safe_integration": "5862083",
+  "worker_commits": [
+    "c1f4694ef9e42ffb7866f901a574753d19ba505a",
+    "f8aa0073759f8ff4a55f9c77a5085412891ed80e"
+  ],
+  "ancestry_and_clean_worktrees_checked_before_removal": true,
+  "graceful_original_Zsh_foreground_observed_before_removal": true,
+  "owned_process_ids": [
+    15008,
+    15071,
+    15425,
+    15443,
+    15493,
+    15506
+  ],
+  "owned_process_ids_absent": true,
+  "worktrees_absent": true,
+  "workspaces_and_tabs": [
+    {
+      "workspace": "w1X",
+      "observed": "workspace_not_found"
+    },
+    {
+      "workspace": "w1Y",
+      "observed": "workspace_not_found"
+    }
+  ],
+  "forced": false,
+  "branches": "retained",
+  "unmerged_work_discarded": false,
+  "parent_worktree": "retained-with-current-gated-source",
+  "live_provider_runs": 0
+}

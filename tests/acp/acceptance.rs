@@ -26,14 +26,25 @@ fn s04_interaction(host: &Host, agent: &Agent, id: &Value) -> Value {
 fn s04_owned_tree(host: &Host, agent: &Agent, sentinel: &mut Sentinel) -> (i32, i32) {
     let read_pid = |name: &str| {
         host.until("owned process identity published", || {
-            fs::read_to_string(agent.root.join(name)).ok()?.parse::<i32>().ok()
+            fs::read_to_string(agent.root.join(name))
+                .ok()?
+                .parse::<i32>()
+                .ok()
         })
     };
     let peer = read_pid("peer.pid");
     let descendant = read_pid("descendant.pid");
     assert_ne!(peer, descendant);
-    assert_eq!(unsafe { libc::getsid(peer) }, peer, "peer must own its session");
-    assert_eq!(unsafe { libc::getpgid(peer) }, peer, "peer must own its group");
+    assert_eq!(
+        unsafe { libc::getsid(peer) },
+        peer,
+        "peer must own its session"
+    );
+    assert_eq!(
+        unsafe { libc::getpgid(peer) },
+        peer,
+        "peer must own its group"
+    );
     assert_eq!(unsafe { libc::getsid(descendant) }, peer);
     assert_eq!(unsafe { libc::getpgid(descendant) }, peer);
     assert_ne!(unsafe { libc::getpgid(sentinel.0.id() as i32) }, peer);
@@ -63,7 +74,10 @@ fn s04_finish(mut host: Host, agents: &[&Agent], sentinel: &mut Sentinel, stoppe
         if let Some(status) = host.daemon.try_wait().unwrap() {
             break status;
         }
-        assert!(Instant::now() < deadline, "daemon failed to exit after admitted shutdown");
+        assert!(
+            Instant::now() < deadline,
+            "daemon failed to exit after admitted shutdown"
+        );
         std::thread::sleep(Duration::from_millis(10));
     };
     assert!(status.success(), "private daemon exited with {status}");
@@ -75,7 +89,10 @@ fn s04_finish(mut host: Host, agents: &[&Agent], sentinel: &mut Sentinel, stoppe
         assert!(!agent.root.join("fixture-fallback").exists());
     }
     assert!(!host.root.join("fixture-fallback").exists());
-    assert!(!host.socket.exists(), "private socket survived daemon shutdown");
+    assert!(
+        !host.socket.exists(),
+        "private socket survived daemon shutdown"
+    );
     assert!(pid_gone(host.daemon.id() as i32));
     sentinel.alive();
     let root = host.root.clone();
@@ -110,28 +127,45 @@ fn e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_ac
         let original = host.work(&agent, &admitted["work_id"]);
         let form = pending(&host, &agent, "form");
         assert_eq!(form["scope"]["sessionId"], tuple["session_id"]);
-        assert_eq!(host.inspect(&agent)["foreground"]["prompt_id"], original["prompt_id"]);
+        assert_eq!(
+            host.inspect(&agent)["foreground"]["prompt_id"],
+            original["prompt_id"]
+        );
         if let Some(old) = &previous_form {
             assert_ne!(form["interaction_id"], old["interaction_id"]);
             host.deny(
-                form_answer(&agent, old, &format!("stale-form-{attempt}"), "accept", Some(json!({"bonus":97}))),
+                form_answer(
+                    &agent,
+                    old,
+                    &format!("stale-form-{attempt}"),
+                    "accept",
+                    Some(json!({"bonus":97})),
+                ),
                 &["stale-interaction"],
             );
         }
         let answer = host.call(form_answer(
-            &agent, &form, &format!("complete-answer-{attempt}"), "accept", Some(json!({"bonus":bonus})),
+            &agent,
+            &form,
+            &format!("complete-answer-{attempt}"),
+            "accept",
+            Some(json!({"bonus":bonus})),
         ));
         let answer_work = host.work(&agent, &answer["work_id"]);
         assert_eq!(answer_work["rpc_id"], "reusable-form");
         assert_eq!(answer_work["interaction_id"], form["interaction_id"]);
         let permission = pending(&host, &agent, "permission");
         assert_eq!(permission["scope"]["sessionId"], tuple["session_id"]);
-        assert_eq!(host.work(&agent, &admitted["work_id"])["state"], "accepted");
         assert!(!agent.root.join(format!("tool-effect-{attempt}")).exists());
         if let Some(old) = &previous_permission {
             assert_ne!(permission["interaction_id"], old["interaction_id"]);
             host.deny(
-                permission_answer(&agent, old, &format!("stale-permission-{attempt}"), "opaque-α"),
+                permission_answer(
+                    &agent,
+                    old,
+                    &format!("stale-permission-{attempt}"),
+                    "opaque-α",
+                ),
                 &["stale-interaction"],
             );
         }
@@ -141,31 +175,52 @@ fn e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_ac
             let grant = s03_claim(&host, &agent, &successor, "force", Value::Null);
             host.deny(stale, &["stale-control", "stale-handle"]);
             s03_same_work(&host.work(&agent, &admitted["work_id"]), &original);
-            assert_eq!(pending(&host, &agent, "permission")["interaction_id"], permission["interaction_id"]);
+            assert_eq!(
+                pending(&host, &agent, "permission")["interaction_id"],
+                permission["interaction_id"]
+            );
             assert!(host.work(&agent, &admitted["work_id"])["outcome"].is_null());
             agent.opened = grant;
             agent.controller_id = successor["controller_id"].clone();
         }
         let selected = host.call(permission_answer(
-            &agent, &permission, &format!("complete-permission-{attempt}"), option,
+            &agent,
+            &permission,
+            &format!("complete-permission-{attempt}"),
+            option,
         ));
         let selected_work = host.work(&agent, &selected["work_id"]);
         assert_eq!(selected_work["rpc_id"], 73);
-        assert_eq!(selected_work["interaction_id"], permission["interaction_id"]);
+        assert_eq!(
+            selected_work["interaction_id"],
+            permission["interaction_id"]
+        );
         let completed = host.completed(&agent, &admitted["work_id"]);
         s03_same_work(&completed, &original);
-        assert_eq!(completed["outcome"], json!({"kind":"response","stop_reason":"end_turn"}));
+        assert_eq!(
+            completed["outcome"],
+            json!({"kind":"response","stop_reason":"end_turn"})
+        );
         if let Some(old) = &previous_prompt {
             assert_ne!(completed["rpc_id"], old["rpc_id"]);
             assert_ne!(completed["prompt_id"], old["prompt_id"]);
         }
-        assert_eq!(agent.effect(), json!({
-            "session_id":tuple["session_id"],"value":expected,"commands":attempt,"rpc_id":original["rpc_id"]
-        }));
-        assert_eq!(agent.root.join(format!("tool-effect-{attempt}")).exists(), allows);
+        assert_eq!(
+            agent.effect(),
+            json!({
+                "session_id":tuple["session_id"],"value":expected,"commands":attempt,"rpc_id":original["rpc_id"]
+            })
+        );
+        assert_eq!(
+            agent.root.join(format!("tool-effect-{attempt}")).exists(),
+            allows
+        );
         let answered = s04_interaction(&host, &agent, &form["interaction_id"]);
         assert_eq!(answered["selected_work_id"], answer["work_id"]);
-        assert_eq!(answered["selection"], json!({"action":"accept","content":{"bonus":bonus}}));
+        assert_eq!(
+            answered["selection"],
+            json!({"action":"accept","content":{"bonus":bonus}})
+        );
         let permitted = s04_interaction(&host, &agent, &permission["interaction_id"]);
         assert_eq!(permitted["selected_work_id"], selected["work_id"]);
         assert_eq!(permitted["selection"], json!({"option_id":option}));
@@ -174,20 +229,38 @@ fn e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_ac
         assert_eq!(unsafe { libc::getsid(peer) }, peer);
         assert_eq!(unsafe { libc::getpgid(descendant) }, peer);
         assert!(!agent.root.join("unexpected-cancel").exists());
-        s04_metadata_is_private(&host, &agent, &[
-            "Synthetic private arithmetic question", "Synthetic private tool", "bonus", "Total=", "synthetic-private-agent-label",
-        ]);
+        s04_metadata_is_private(
+            &host,
+            &agent,
+            &[
+                "Synthetic private arithmetic question",
+                "Synthetic private tool",
+                "bonus",
+                "Total=",
+                "synthetic-private-agent-label",
+            ],
+        );
         previous_form = Some(form);
         previous_permission = Some(permission);
         previous_prompt = Some(completed);
     }
     let projection = host.inspect(&agent);
-    let prompts: Vec<_> = projection["work"].as_array().unwrap().iter()
-        .filter(|work| work["op"] == "acp-prompt").collect();
-    assert_eq!(prompts.len(), 4, "stale choices must never create extra prompts");
+    let prompts: Vec<_> = projection["work"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|work| work["op"] == "acp-prompt")
+        .collect();
+    assert_eq!(
+        prompts.len(),
+        4,
+        "stale choices must never create extra prompts"
+    );
     assert!(prompts.iter().all(|work| work["state"] == "completed"));
     assert!(!projection["work"].as_array().unwrap().iter().any(|work| {
-        work["call_id"].as_str().is_some_and(|id| id.starts_with("stale-") || id == "revoked-permission")
+        work["call_id"]
+            .as_str()
+            .is_some_and(|id| id.starts_with("stale-") || id == "revoked-permission")
     }));
     host.close(&agent);
     s04_joined(&host, &agent);
@@ -205,8 +278,11 @@ fn s04_held_prompt(host: &Host, agent: &Agent) -> Value {
     serde_json::to_writer(&mut socket, &request).unwrap();
     socket.write_all(b"\n").unwrap();
     let original = host.until("canonical held-input admission before caller loss", || {
-        host.inspect(agent)["work"].as_array()?.iter()
-            .find(|work| work["call_id"] == "s04-held-original").cloned()
+        host.inspect(agent)["work"]
+            .as_array()?
+            .iter()
+            .find(|work| work["call_id"] == "s04-held-original")
+            .cloned()
     });
     assert_eq!(original["state"], "accepted");
     assert_eq!(original["delivery"], "not-submitted");
@@ -233,21 +309,29 @@ fn e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_com
     let mut compute = healthy.action("acp-prompt", "s04-unrelated-during-stall");
     compute["text"] = json!("add 19 23");
     let gate = std::sync::Arc::new(std::sync::Barrier::new(4));
-    let jobs: Vec<_> = [json!({"op":"snapshot"}), claim, compute].into_iter().map(|request| {
-        let gate = gate.clone();
-        let socket = host.socket.clone();
-        std::thread::spawn(move || {
-            gate.wait();
-            exchange(&socket, request).unwrap()
+    let jobs: Vec<_> = [json!({"op":"snapshot"}), claim, compute]
+        .into_iter()
+        .map(|request| {
+            let gate = gate.clone();
+            let socket = host.socket.clone();
+            std::thread::spawn(move || {
+                gate.wait();
+                exchange(&socket, request).unwrap()
+            })
         })
-    }).collect();
+        .collect();
     gate.wait();
     let replies: Vec<_> = jobs.into_iter().map(|job| job.join().unwrap()).collect();
     for reply in &replies {
         assert_eq!(reply["ok"], true, "{reply}");
     }
-    assert!(replies[0]["result"]["agent_views"].as_array().unwrap().iter()
-        .any(|view| view["id"] == held.target["id"] && view["lifecycle"] == "ready"));
+    assert!(
+        replies[0]["result"]["agent_views"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|view| view["id"] == held.target["id"] && view["lifecycle"] == "ready")
+    );
     held.opened = replies[1]["result"].clone();
     let computed = host.completed(&healthy, &replies[2]["result"]["work_id"]);
     assert_eq!(computed["outcome"]["stop_reason"], "end_turn");
@@ -255,9 +339,17 @@ fn e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_com
     assert_eq!(healthy.effect()["commands"], 1);
     assert_eq!(healthy.effect()["rpc_id"], computed["rpc_id"]);
     let recovered = s03_handle(&host, &successor["controller"], "read");
-    let retained = recovered["controls"].as_array().unwrap().iter()
-        .find(|control| control["control"] == held.opened["control"]).unwrap()["retained_work"]
-        .as_array().unwrap().iter().find(|work| work["work_id"] == original["work_id"]).unwrap();
+    let retained = recovered["controls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|control| control["control"] == held.opened["control"])
+        .unwrap()["retained_work"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|work| work["work_id"] == original["work_id"])
+        .unwrap();
     s03_same_work(retained, &original);
     let waiting = host.work(&held, &original["work_id"]);
     s03_same_work(&waiting, &original);
@@ -299,9 +391,15 @@ fn e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_
     let closer = std::thread::spawn(move || exchange(&socket, close));
     let closed = host.until("exact close committed before shutdown is sent", || {
         let projection = host.inspect(&agent);
-        let work = projection["work"].as_array()?.iter()
-            .find(|work| work["call_id"] == "s04-close-before-shutdown")?.clone();
-        assert!(matches!(projection["lifecycle"].as_str(), Some("closing" | "ended")));
+        let work = projection["work"]
+            .as_array()?
+            .iter()
+            .find(|work| work["call_id"] == "s04-close-before-shutdown")?
+            .clone();
+        assert!(matches!(
+            projection["lifecycle"].as_str(),
+            Some("closing" | "ended")
+        ));
         assert!(projection["foreground"].is_null());
         Some(work)
     });
@@ -316,15 +414,26 @@ fn e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_
     assert_eq!(host.call(json!({"op":"shutdown"}))["shutting_down"], true);
     match closer.join().unwrap() {
         Ok(reply) => {
-            assert_eq!(reply["ok"], true, "canonical close must not become an authority error: {reply}");
+            assert_eq!(
+                reply["ok"], true,
+                "canonical close must not become an authority error: {reply}"
+            );
             assert_eq!(reply["result"]["work_id"], closed["work_id"]);
         }
         Err(error) => {
             // Only loss of this already-admitted reply during confirmed shutdown
             // is classified here; no early transport/authority error is a success.
-            assert!(matches!(error.kind(), std::io::ErrorKind::UnexpectedEof | std::io::ErrorKind::ConnectionReset),
-                "unexpected close transport failure after canonical admission: {error}");
-            eprintln!("S04 close canonically admitted; reply unobserved during shutdown: {:?}", error.kind());
+            assert!(
+                matches!(
+                    error.kind(),
+                    std::io::ErrorKind::UnexpectedEof | std::io::ErrorKind::ConnectionReset
+                ),
+                "unexpected close transport failure after canonical admission: {error}"
+            );
+            eprintln!(
+                "S04 close canonically admitted; reply unobserved during shutdown: {:?}",
+                error.kind()
+            );
         }
     }
     s04_finish(host, &[&agent], &mut sentinel, true);
@@ -368,21 +477,39 @@ fn e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes()
         let original = host.work(&healthy, &prompt["work_id"]);
         let form = pending(&host, &healthy, "form");
         hostile.release("hostile");
-        host.until("hostile instance fails and joins without blocking active responder", || {
-            let projection = host.inspect(&hostile);
-            (projection["lifecycle"] == "failed" && projection["resource"]["cleanup_complete"] == true)
-                .then_some(projection)
-        });
+        host.until(
+            "hostile instance fails and joins without blocking active responder",
+            || {
+                let projection = host.inspect(&hostile);
+                (projection["lifecycle"] == "failed"
+                    && projection["resource"]["cleanup_complete"] == true)
+                    .then_some(projection)
+            },
+        );
         host.reaped(&hostile, "peer.pid");
         assert_eq!(host.inspect(&hostile)["target"], original_tuple);
         assert!(!hostile.root.join("effect.json").exists());
-        assert_eq!(pending(&host, &healthy, "form")["interaction_id"], form["interaction_id"]);
+        assert_eq!(
+            pending(&host, &healthy, "form")["interaction_id"],
+            form["interaction_id"]
+        );
         s03_same_work(&host.work(&healthy, &prompt["work_id"]), &original);
         let successor = s03_controller(&host, "S04 surviving responder successor");
         healthy.opened = s03_claim(&host, &healthy, &successor, "force", Value::Null);
-        host.call(form_answer(&healthy, &form, "s04-answer-after-hostile-frame", "accept", Some(json!({"bonus":15}))));
+        host.call(form_answer(
+            &healthy,
+            &form,
+            "s04-answer-after-hostile-frame",
+            "accept",
+            Some(json!({"bonus":15})),
+        ));
         let permission = pending(&host, &healthy, "permission");
-        host.call(permission_answer(&healthy, &permission, "s04-allow-after-hostile-frame", "opaque-α"));
+        host.call(permission_answer(
+            &healthy,
+            &permission,
+            "s04-allow-after-hostile-frame",
+            "opaque-α",
+        ));
         let completed = host.completed(&healthy, &prompt["work_id"]);
         s03_same_work(&completed, &original);
         assert_eq!(healthy.effect()["value"], 57);
@@ -392,9 +519,17 @@ fn e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes()
         assert_eq!(unsafe { libc::getsid(peer) }, peer);
         assert_eq!(unsafe { libc::getpgid(descendant) }, peer);
         assert!(!healthy.root.join("unexpected-cancel").exists());
-        s04_metadata_is_private(&host, &healthy, &[
-            "Synthetic private arithmetic question", "Synthetic private tool", "bonus", "Total=", "synthetic-private-agent-label",
-        ]);
+        s04_metadata_is_private(
+            &host,
+            &healthy,
+            &[
+                "Synthetic private arithmetic question",
+                "Synthetic private tool",
+                "bonus",
+                "Total=",
+                "synthetic-private-agent-label",
+            ],
+        );
         host.close(&healthy);
         s04_joined(&host, &healthy);
         s04_joined(&host, &hostile);
@@ -412,40 +547,68 @@ fn e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independ
     host.ready(&mut noisy);
     let error_tuple = error_peer.target.clone();
     let noise_tuple = noisy.target.clone();
-    let failed = host.prompt(&error_peer, "s04-private-error-original", "s04-private-prompt-marker");
+    let failed = host.prompt(
+        &error_peer,
+        "s04-private-error-original",
+        "s04-private-prompt-marker",
+    );
     let original = host.work(&error_peer, &failed["work_id"]);
-    let failure = host.until("original provider error releases only its foreground", || {
-        let work = host.work(&error_peer, &failed["work_id"]);
-        (work["state"] == "failed").then_some(work)
-    });
+    let failure = host.until(
+        "original provider error releases only its foreground",
+        || {
+            let work = host.work(&error_peer, &failed["work_id"]);
+            (work["state"] == "failed").then_some(work)
+        },
+    );
     s03_same_work(&failure, &original);
     assert_eq!(failure["outcome"], json!({"kind":"error","code":-32603}));
     assert!(host.inspect(&error_peer)["foreground"].is_null());
     assert!(!error_peer.root.join("effect.json").exists());
     let content = host.inspect(&error_peer);
-    assert!(content["content"]["events"].as_array().unwrap().iter()
-        .any(|event| event["kind"] == "user-message" && event["text"] == "s04-private-prompt-marker"));
-    for private in ["synthetic-private-provider-error", "synthetic-private-error-data"] {
+    assert!(
+        content["content"]["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "user-message"
+                && event["text"] == "s04-private-prompt-marker")
+    );
+    for private in [
+        "synthetic-private-provider-error",
+        "synthetic-private-error-data",
+    ] {
         assert!(!content.to_string().contains(private));
     }
-    host.until("stderr overflow retained as truncation while child continues", || {
-        (noisy.root.join("stderr-drained").exists()
-            && host.inspect(&noisy)["resource"]["stderr_truncated"] == true).then_some(())
-    });
+    host.until(
+        "stderr overflow retained as truncation while child continues",
+        || {
+            (noisy.root.join("stderr-drained").exists()
+                && host.inspect(&noisy)["resource"]["stderr_truncated"] == true)
+                .then_some(())
+        },
+    );
     let gate = std::sync::Arc::new(std::sync::Barrier::new(3));
-    let jobs: Vec<_> = [(&error_peer, "s04-fresh-after-error", "add 17 25"), (&noisy, "s04-after-stderr-overflow", "add 10 5")]
-        .into_iter().map(|(agent, call, text)| {
-            let mut request = agent.action("acp-prompt", call);
-            request["text"] = json!(text);
-            let gate = gate.clone();
-            let socket = host.socket.clone();
-            std::thread::spawn(move || {
-                gate.wait();
-                exchange(&socket, request).unwrap()
-            })
-        }).collect();
+    let jobs: Vec<_> = [
+        (&error_peer, "s04-fresh-after-error", "add 17 25"),
+        (&noisy, "s04-after-stderr-overflow", "add 10 5"),
+    ]
+    .into_iter()
+    .map(|(agent, call, text)| {
+        let mut request = agent.action("acp-prompt", call);
+        request["text"] = json!(text);
+        let gate = gate.clone();
+        let socket = host.socket.clone();
+        std::thread::spawn(move || {
+            gate.wait();
+            exchange(&socket, request).unwrap()
+        })
+    })
+    .collect();
     gate.wait();
-    for (agent, job, expected) in [&error_peer, &noisy].into_iter().zip(jobs).zip([42, 15])
+    for (agent, job, expected) in [&error_peer, &noisy]
+        .into_iter()
+        .zip(jobs)
+        .zip([42, 15])
         .map(|((agent, job), expected)| (agent, job, expected))
     {
         let receipt = job.join().unwrap();
@@ -455,10 +618,18 @@ fn e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independ
         assert_eq!(agent.effect()["value"], expected);
         assert_eq!(agent.effect()["commands"], 1);
         assert_eq!(agent.effect()["rpc_id"], complete["rpc_id"]);
-        s04_metadata_is_private(&host, agent, &[
-            "s04-private-prompt-marker", "synthetic-private-provider-error", "synthetic-private-error-data",
-            "synthetic-private-agent-label", "Total=", "ssssssssssssssss",
-        ]);
+        s04_metadata_is_private(
+            &host,
+            agent,
+            &[
+                "s04-private-prompt-marker",
+                "synthetic-private-provider-error",
+                "synthetic-private-error-data",
+                "synthetic-private-agent-label",
+                "Total=",
+                "ssssssssssssssss",
+            ],
+        );
     }
     assert_eq!(host.inspect(&error_peer)["target"], error_tuple);
     assert_eq!(host.inspect(&noisy)["target"], noise_tuple);

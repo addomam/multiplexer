@@ -1,0 +1,28 @@
+{
+  "scope": "SC-e04s04-P0-03-final-integrated-native-fence-revisit",
+  "phase": "after both S04 slices integrated5862083 and actual whole CLI/PTY broker proof passed",
+  "product_live_model_runs": 0,
+  "commands": [
+    "cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture",
+    "cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture"
+  ],
+  "actual_exit_code": 0,
+  "actual_tests_passed": 2,
+  "ignored": 0,
+  "observed": [
+    "Actual native command marker and separately completed shell-source execution do not settle the original unknown native batch.",
+    "Cooperative yield leaves no owner, phase waiting-settlement and no safe offer; original unknown call identity remains retained.",
+    "Explicit force is separately warned prior-calls-may-apply and retains the unknown calls; it is not counted as safe settlement or complete acceptance.",
+    "Genuine original focus bytes reach a stopped application without counting as human activity; cooperative safe offer is withheld.",
+    "After real SIGCONT the old focus bytes are actually consumed; the same native call still remains unknown and no offer is fabricated.",
+    "Owned stop/resume daemon shutdown succeeds without stranding the reaper."
+  ],
+  "native_application_fence": "unresolved",
+  "e03s08_and_all32_acceptance": "unchanged-BLOCKED_OR_FAILED",
+  "historical_evidence": "specs/verifications/e03-complete-broker-acceptance.json",
+  "open_bug": "specs/bugs/BUG-e03-native-settlement.md",
+  "distinction": "ACP's amux-owned editor orders explicit actions at memory admission on one actual ACP session. It does not acknowledge or retire an upstream native TUI's already buffered application events, establish provider application or reconcile that native TUI's optimistic answer history.",
+  "fallback": "terminal-only integrations remain best-effort with unknown work blocking safe grants and first complete acceptance; no force-only substitution",
+  "thin_non_ACP_API": "deferred until solid ACP acceptance; not implemented or designed here",
+  "review_caps": "unchanged"
+}
