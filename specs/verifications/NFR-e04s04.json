@@ -1,25 +1,25 @@
 {
   "scope": "e04s04-complete-Codex-Grok-live-integration",
-  "status": "runtime-and-full-gates-PASS-story-pending-final-independent-round5",
-  "source": "specs/verifications/e04s04-round5-source.json",
-  "source_commit": "working-tree-after-8469377",
+  "status": "runtime-and-full-gates-PASS-story-blocked-human-review-cap5-exhausted",
+  "source": "specs/verifications/e04s04-reply-budget-source.json",
+  "source_commit": "working-tree-after-2891de4",
   "production_changes": [
     "src/acp.rs",
     "src/acp/grok.rs",
     "src/tui/agent.rs"
   ],
   "dependency_changes": false,
-  "current_contiguous_verification": "artifact://1721",
-  "current_independent_review": "final-round5-running-not-cleared",
-  "current_operational_must_fix": "pending-independent-report",
+  "current_contiguous_verification": "artifact://1760",
+  "current_independent_review": "final-round5-FAIL-operational-must-fix-locally-repaired-not-cleared",
+  "current_operational_must_fix": "E04S04-OPS-R5-01-locally-repaired-and-verified-not-independently-cleared",
   "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
-  "wall_seconds": 210.00,
+  "wall_seconds": 210.40,
   "counts": {
-    "selected": 11,
-    "workspace": 400,
+    "selected": 12,
+    "workspace": 401,
     "workspace_suites": 30,
     "workspace_ignored": 11,
-    "default": 289,
+    "default": 290,
     "default_suites": 12,
     "default_ignored": 8,
     "showcase_exact": 1,
@@ -37,9 +37,10 @@
     "acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure",
     "acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown",
     "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
-    "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes"
+    "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes",
+    "native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable",
+    "native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering"
   ],
-  "native_Other_recovery_case": "native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable",
   "previous_review": {
     "evidence": "specs/verifications/e04s04-build-review-round1.json",
     "AND_gate": "FAIL",
@@ -98,13 +99,13 @@
   },
   "unclaimed": [
     "unexercised adapter/provider/auth/model combinations beyond pinned Codex/Grok matrix",
-    "whole-story independent clearance before final-round5 reports",
+    "whole-story independent clearance; final cap5 exhausted, human review/decision required",
     "Linux/MSRV/RSS/latency/CI/coverage-percentage proof",
     "native upstream fence repair",
     "ACP publication"
   ],
   "live_task": {
-    "status": "complete-real-matrix-PASS-pending-final-source-review",
+    "status": "complete-real-matrix-PASS-story-review-blocked-cap5-exhausted",
     "required_test": "e04s04_live_adapters",
     "command_available_or_executed": true,
     "prerequisites": "specs/verifications/e04s04-live-prerequisites.json",
@@ -128,21 +129,23 @@
     "operational_must_fix": 1,
     "next_round": 3
   },
-  "current_supported_security_findings": "pending-independent-round5",
+  "current_supported_security_findings": 0,
   "local_tasks": {
     "1": "failing-pending-current-independent-clearance",
     "2": "failing-pending-current-independent-clearance",
     "3": "failing-pending-current-independent-clearance",
     "4": "failing"
   },
-  "independent_clearance_round": "pending5-of5",
-  "next_changed_source_round": "none-cap5",
+  "independent_clearance_round": "none-final5-of5-failed",
+  "next_changed_source_round": "none-cap5-exhausted-human-review-required",
   "private_setup_scope": "Historical setup-only evidence retained; later user explicitly authorized private Codex/Grok OAuth/cheap live execution, not global changes or publication.",
   "previous_local_baseline": {"source":"6a5d9af","artifact":"artifact://1515","review":"specs/verifications/e04s04-build-review-round3.json"},
   "current_CLI_smoke": "specs/verifications/e04s04-grok-codec-cli.json",
-  "final_native_guard_job": "bg_252",
+  "final_native_guard_job": "bg_257",
   "current_Other_recovery": "specs/verifications/e04s04-other-recovery.json",
-  "actual_final_binary_CLI": "specs/verifications/e04s04-other-recovery-cli.json",
+  "actual_final_binary_CLI": "specs/verifications/e04s04-reply-budget-recovery.json",
   "previous_round4": {"evidence":"specs/verifications/e04s04-build-review-round4.json","numeric_AND":"PASS","acceptance":"FAIL-pending-native-Other-repair","scores":[96.875,96.875],"disposition":"accepted same consumer defect from both reviewers; actual RED, pre-capture repair and current full/native/CLI proof; fresh final review required"},
-  "live_source_binding": "Real1659 ran on round4 source; no further model call for local validation-only repair. Current native/CLI/full proof is1721 and linked recovery evidence; never relabelled a provider rerun."
+  "live_source_binding": "Real1659 ran on round4 source; no further model call for local validation/reply-budget repairs. Current native/CLI/full proof is1754/1760 and linked recovery evidence; never relabelled a provider rerun.",
+  "reply_budget_repair": "specs/verifications/e04s04-reply-budget-recovery.json",
+  "final_review": "specs/verifications/e04s04-build-review-round5.json"
 }

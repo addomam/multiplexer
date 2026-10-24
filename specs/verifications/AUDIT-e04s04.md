@@ -2,9 +2,9 @@
 
 Historical local baseline: **Self-audit PASS on source6a5d9af/final1515; independent round3 A/B100/100 and specialist0 supported/operational findings cleared local tasks1–3 only.** The earlier absence/unapproved status of real Codex+Claude acceptance is historical; the subsequent user explicitly replaces Claude with Grok and authorizes existing OAuth/cheap live checks. No prior report or cap is reset.
 
-## Current Codex/Grok integration audit
+## Historical Codex/Grok integration audit before final reviews
 
-Result: **Self-audit PASS on current source; fresh round4/5 A/B/security required before story acceptance.** Real complete matrix1659 passes both adapters' bootstrap, four primary rows and explicit cleanup. Final full gates1664 pass; final native guards bg242 pass2 without repairing the old native fence.
+Historical result before round4/5: **Self-audit PASS, not independent story acceptance.** Real complete matrix1659 passes both adapters' bootstrap, four primary rows and explicit cleanup on round4 source. Earlier full1664 and native guards bg242 remain historical; current repair and exhausted review gate are recorded below.
 
 | Area | Verdict and exercised evidence |
 |---|---|
@@ -52,7 +52,7 @@ Actual12-line CONVENTIONS governs, not generic20-line/300-line examples. Cohesiv
 
 Caught rationalizations: all-three blocked-I/O proof did not establish idle/early-return endpoint truth; numeric A/B passes did not override specialist must-fix. Cancellation cannot infer process death or discard capacity. A successful syscall cannot be retroactively failed. Owner must retain endpoints until classification but release them before publishing charge release. Focused GREEN/1512 did not justify skipping exact final1515/full actual CLI proof/fresh round3. Local synthetic success cannot satisfy Task4, grant installation/auth/provider authority or repair upstream native settlement.
 
-## S04-OTHER-01 pre-capture validation repair
+## Historical S04-OTHER-01 repair through the round5 freeze
 
 Round4's two independent reviews each found the same should-fix despite numeric96.875/PASS; parent kept acceptance failing. Actual native RED1707/test-only8469377 shows pending/not-submitted, invalid-request and an already-captured native action. First follow-up1710 passes correction but exposes fixture input before rendered foreground completion; add an actual `Foreground: none` readiness predicate, never replay/retry the retained input. Final1712 passes exact native1, Grok5 and local S04 eleven. The native case checks omitted and explicitly empty Other notes, corrected7/cumulative49, explicit F7 cancellation/cumulative32, unchanged owner/tuple/original RPC, no interrupt and complete termios/host/drainer/daemon/socket/root/peer/sentinel cleanup before fallback.
 
@@ -66,3 +66,22 @@ The existing conditional notes rule moves from Grok wire encoding into the share
 | tests/acp/native/live.rs/observer unchanged by repair | PASS bounded explicit opt-in, excluded default suite | PASS private homes/usage roots, no global state | EXTERNAL provider/model behavior intentionally not deterministic; failed/unsupported rows remain failing | PASS actual model/rows/effects/tuple/cleanup, no zero-case or synthetic compatibility substitute | PASS real failures precede repair; no gratuitous subscription rerun |
 
 Final self-audit **PASS**: actual contiguous bg252/artifact1721 exits0/210.00s on final lint-correct source: workspace400/default289, strict workspace/default Clippy/check/build/fmt, OMP8/49, Zsh/Node syntax, actual cursor showcase1 and final exact native fail-closed guards2. Suite counts overlap. The first strict-lint1717 FAIL remains recorded; equivalent is_none_or spelling, no suppression. Independent actual CLI smoke is repeated on the exact final binary and passes original-RPC/correction/cleanup. No further provider calls or source edits after the22-file freeze. Fresh final round5/5 A/B/security clearance remains required; historical caps and unresolved native application settlement remain unchanged.
+
+## Current E04S04-OPS-R5-01 local repair; independent gate BLOCKED
+
+Full round5 A/B reports are100/100 with22/22 computed source hashes and no findings. The specialist correctly reports0 supported security vulnerabilities but1 operational must-fix: a600000-byte question repeats as answers/annotations keys, exceeding the1-MiB reply frame after capture. Parent read all complete reports before acting. Numeric scores do not clear this gate. All original reports remain verbatim; cap5/5 is exhausted and no round6 was opened.
+
+Actual outside-test CLI reproduces capacity-exceeded with tiny Other7, pending original responder and no selection/work admission. Test-only2891de4 contains only native/fixture tests; bg255 is actual native RED. The private codec now uses the existing allocation-free serialized byte counter before schema/responder publication: twice encoded params +64KiB total submitted values +4KiB bounded RPC/map syntax must fit the unchanged frame. This conservatively covers twice-used question keys, request-owned previews,32 questions and256-byte control-free RPC identity. It may reject a particular reply that would fit; README documents that tradeoff. No question truncation, control substitution, replay, new dependency/public signature, I/O or provider call.
+
+| Audit area | Observed result / limit |
+|---|---|
+| Correctness / native | PASS1754 exact native1: original-RPC explicit rejection/no published question/effect42, then deliberately typed same-owner/PID/session Other7/fresh original-RPC effect52 and exact wire response. Five Grok cases and12 local S04 cases pass; opt-in live is ignored, not counted. |
+| Independent actual CLI | PASS e04s04-reply-budget-recovery.json: original-RPC -32602, no interaction, original turn end_turn/effect42; owned peer/workers/daemon/socket/root absent, sentinel survives before fallback. This is deterministic peer proof, not a new provider run or physical-PTY claim. |
+| Final full gates | PASS bg257/artifact1760,210.40s: workspace401/30suites/11ignored; default290/12suites/8ignored; strict workspace/default Rust/fmt, OMP8/49, Zsh/Node syntax, actual cursor showcase1 and native unknown-settlement guards2. Counts overlap. |
+| Security / privacy / resources | Prior specialist0 supported vulnerabilities; new pure budget predicate adds no authority or side effects. Parent scans six new public reports/repair evidence/source files:0 API-key/JWT/private-key/bearer/raw-UUID matches. No auth/private bindings/provider excerpts published. Same frame/queue limits; no allocation for sizing, no I/O under locks. |
+| Supply chain / types / conventions | No dependency or public signature change. Existing typed closed codec/byte counter reused. Actual12-line conventions govern; stock Zsh/OMP and legacy unknown-settlement boundary retain exercised checks. |
+| F.I.R.S.T / provenance | Fast native1.30s/fixed12s deadlines; independent unique daemon/peer/controlling-PTY roots; repeatable readiness predicates; self-validating original IDs/effects/cleanup; timely committed failing tests before repair. Parent22-file hashlib/shasum snapshot agrees; this is not independent clearance. |
+| Fowler / scope | No new Duplicated Code, Feature Envy, Data Clumps, Message Chains or Middle Man. Named RESPONSE_OVERHEAD explains its bounded reserve. Existing causal native test length is intentional, not a reason to fragment lifecycle proof. No generic provider framework or unrelated cleanup. |
+| Acceptance / deferrals | BLOCKED: local PASS does not clear independent review. All four tasks stay failing, no review-cap reset, no ACP merge/push/release. No Linux/MSRV/RSS/latency/universal-provider or historical terminal-fence repair claimed. |
+
+Caught rationalizations: dual100/100 and live1659 do not override the specialist must-fix; a self-verified fix is not a new independent PASS. Local repair does not justify another subscription run or a sixth review. Latest source/proof are e04s04-reply-budget-source.json and e04s04-reply-budget-recovery.json; human review/decision is the only remaining gate.

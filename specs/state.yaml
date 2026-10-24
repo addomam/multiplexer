@@ -32,8 +32,8 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: develop-tdd
-  blocked: false
+  next_skill: respond-review
+  blocked: true
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -86,7 +86,8 @@ handoff:
     Round4 A/B each96.875 independently match22/22 but identify native Other-without-notes capture/recovery. Parent retains failing acceptance and checkpoints reviewed source2dad0df; test-only8469377/1707 reproduces actual controlling-PTY invalid-request/capture. Shared pre-capture validation repair passes focused1712 native1/Grok5/S04eleven; correction49 and cancellation32 keep the original grant/RPC and complete cleanup. Fixture foreground readiness failure1710 and strict-Clippy full1717 failure are preserved; equivalent is_none_or spelling is applied without suppression. Final full bg252 is running; require its actual PASS and fresh final round5/5. No additional model calls; real1659 remains explicitly bound to round4. Actual outside-test CLI correction/cleanup also passes, with its earlier script-oracle error retained.
     Final lint-correct full bg252/artifact1721 now PASS400workspace/289default, strict workspace/default Rust/fmt, OMP8/49/Zsh/Node, actual cursor showcase1 and final unknown-settlement guards2,210.00s. Exact final built-CLI Other correction/cleanup also passes. Self-audit PASS and22-file round5 freeze complete; fresh A5/B5/security5 dispatched for final5/5. Source is frozen; read all reports before any remediation, never start round6. All four task ledgers remain failing until current independent clearance; no further model use, global changes or publication.
     Final round5 A/B are100/100 with22/22 independent hashes and clear Other notes recovery, but specialist operational must-fix E04S04-OPS-R5-01 fails the combined gate: long genuine question text can expand past the outbound frame after native capture. Full original reports are read and preserved. Reproduce and repair the representation budget before publishing such questions, then verify locally without more provider use. Review cap5/5 is exhausted: no round6, no acceptance by numeric score; human review/decision is required after reachable repair.
-  last_step_completed: e04s04-final-round5-FAIL-operational-reply-budget-cap-exhausted-reproduction-next
+    E04S04-OPS-R5-01 is now actually reproduced by outside-test CLI capacity-exceeded with retained pending state and by test-only2891de4/native bg255 failure. Allocation-free conservative reply budget rejects oversized Grok metadata before responder publication. Actual native1754 preserves original RPC rejection/effect42 and subsequent same-owner/PID/session deliberate Other7/effect52 with cleanup; independent CLI passes. Final full bg257/artifact1760 passes401workspace/290default, strict Rust/fmt/OMP/Zsh/Node/showcase/native guards,210.40s. No model rerun. All reachable repair and verification complete; current source is not independently cleared. HARD BLOCK: review5/5 exhausted, no round6/reset; obtain human review/decision before accepting tasks or integrating. No ACP merge/push/release authorization.
+  last_step_completed: e04s04-reply-budget-native-CLI-full1760-PASS-human-review-blocked-cap5-exhausted
   required_reading:
     - specs/verifications/e04s04-live-codex-grok.json
     - specs/verifications/e04s04-grok-codec-cli.json
@@ -97,6 +98,8 @@ handoff:
     - specs/verifications/e04s04-round5-source.json
     - specs/verifications/e04s04-build-review-round5.json
     - specs/security/epics/e04/e04s04-review-round5.json
+    - specs/verifications/e04s04-reply-budget-recovery.json
+    - specs/verifications/e04s04-reply-budget-source.json
     - local://e04s04-codex-grok-live-binding.json
     - specs/IMPACT_LATEST.md
     - specs/verifications/e04s04-private-setup.json
@@ -676,15 +679,15 @@ epic_cycle:
   integration_owner: parent
   implementation_started: true
   approved_plan_reopened: false
-  audit_result: prior-local-gates-PASS-but-round5-operational-reply-budget-finding-accepted
-  runtime_acceptance: earlier-real-model-and-current-local-gates-PASS-story-failing-final-review-must-fix
+  audit_result: local-reply-budget-repair-and-final-full1760-PASS-independent-gate-not-cleared
+  runtime_acceptance: actual-model-matrix1659-and-final-local-native-CLI-full1760-PASS-story-failing-human-review-cap5
   live_approval: user-approved-Codex-Grok-existing-OAuth-cheap-supported-models-private-runtime-no-Claude
   ACP_publication: not-authorized
   historical_native_failure_and_review_caps: unchanged
-  current_local_verification: {source_commit: working-tree-after-8469377, artifact: 'artifact://1721', selected: 11, Grok_regressions: 5, workspace: 400, default: 289, strict_Rust_OMP_Zsh_Node: passed, showcase: 1, native_unknown_guards: 2, actual_final_CLI: specs/verifications/e04s04-other-recovery-cli.json, source: specs/verifications/e04s04-round5-source.json, audit: specs/verifications/AUDIT-e04s04.md, previous_reviewed_source: 2dad0df}
-  build_review: {scope: e04s04-complete-Codex-Grok-integration-native-Other-repair, round: 5, max_rounds: 5, status: FAIL-operational-must-fix, scores: [100, 100], must_fix: E04S04-OPS-R5-01, source: specs/verifications/e04s04-round5-source.json, evidence: specs/verifications/e04s04-build-review-round5.json, whole_story: failing, next_round: none-cap5-exhausted-human-review-required, historical_caps: unchanged}
+  current_local_verification: {source_commit: working-tree-after-2891de4, artifact: 'artifact://1760', selected: 12, Grok_regressions: 5, workspace: 401, default: 290, strict_Rust_OMP_Zsh_Node: passed, showcase: 1, native_unknown_guards: 2, actual_final_CLI: specs/verifications/e04s04-reply-budget-recovery.json, source: specs/verifications/e04s04-reply-budget-source.json, audit: specs/verifications/AUDIT-e04s04.md, previous_reviewed_source: 678e3a2}
+  build_review: {scope: e04s04-complete-Codex-Grok-integration-native-Other-repair, round: 5, max_rounds: 5, status: FAIL-operational-must-fix-locally-repaired-not-independently-cleared, scores: [100, 100], must_fix: E04S04-OPS-R5-01, source: specs/verifications/e04s04-round5-source.json, evidence: specs/verifications/e04s04-build-review-round5.json, latest_repair: specs/verifications/e04s04-reply-budget-recovery.json, whole_story: failing, next_round: none-cap5-exhausted-human-review-required, historical_caps: unchanged}
   private_setup: {status: PASS-installation-static-only, evidence: specs/verifications/e04s04-private-setup.json, installed_closure: specs/verifications/e04s04-private-installed-closure.json, private_binding: 'local://e04s04-private-setup-binding.json', environment: {node: 26.12.1, npm: 11.20.0, platform: darwin, arch: arm64}, adapters: [codex-acp2.2.2, claude-agent-acp0.95.0], auth_reads: 0, adapter_executions: 0, provider_calls: 0, global_changes: false}
-  current_live_verification: {artifact: 'artifact://1659', source: specs/verifications/e04s04-round4-source.json, post_local_repair_model_rerun: false, executed: 1, passed: 1, adapters: [codex-acp2.2.2-native0.160.1, grok1.0.67], models: [gpt-6-luna-low, grok-4.7-low-nonfast], genuine_primary_rows: 8, explicit_cleanup: both-PASS-before-fallback, private_OAuth_runtime: removed-after-owned-absence-proof, evidence: specs/verifications/e04s04-live-codex-grok.json, current_full: 'artifact://1721', workspace: 400, default: 289, native_guards: 2, final_CLI: specs/verifications/e04s04-other-recovery-cli.json}
+  current_live_verification: {artifact: 'artifact://1659', source: specs/verifications/e04s04-round4-source.json, post_local_repair_model_rerun: false, executed: 1, passed: 1, adapters: [codex-acp2.2.2-native0.160.1, grok1.0.67], models: [gpt-6-luna-low, grok-4.7-low-nonfast], genuine_primary_rows: 8, explicit_cleanup: both-PASS-before-fallback, private_OAuth_runtime: removed-after-owned-absence-proof, evidence: specs/verifications/e04s04-live-codex-grok.json, current_full: 'artifact://1760', workspace: 401, default: 290, native_guards: 2, final_CLI: specs/verifications/e04s04-reply-budget-recovery.json}
   owned_sessions:
     - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}

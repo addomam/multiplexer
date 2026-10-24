@@ -1,6 +1,6 @@
 {
   "scope": "S04-OTHER-01-native-Grok-Other-pre-capture-validation",
-  "status": "focused-full-and-exact-final-CLI-PASS-fresh-round5-pending",
+  "status": "native-full-CLI-PASS-independent-round5-cleared-this-defect-story-blocked-separate-reply-budget-finding",
   "disposition": "Both independent round4 should-fix findings accepted and repaired; numeric threshold never substituted for consumer correctness.",
   "reviewed_predecessor": "2dad0df; exact round4 manifest and original reports retained",
   "RED": {"commit":"8469377","only_test_files":["tests/acp/native/acceptance.rs","tests/fixtures/acp_peer.rs"],"job":"bg_248","artifact":"artifact://1707","executed":1,"failed":1,"observed":"Actual controlling PTY accepts Other with omitted notes, enters captured/review state, receives invalid-request, original question remains pending/not-submitted. Required pre-capture local rejection is absent."},
@@ -14,6 +14,8 @@
   "final_full_gate": {"job":"bg_252","artifact":"artifact://1721","exit_code":0,"wall_seconds":210.00,"workspace_passed":400,"default_passed":289,"counts_overlap":true,"strict_workspace_default_Rust_fmt":"PASS","OMP":"8/49 PASS","Zsh_Node_syntax":"PASS","actual_cursor_showcase":1,"final_native_unknown_guards":2},
   "required_fresh_review_round": 5,
   "max_review_rounds": 5,
+  "round5_disposition": "Both A/B100/100 and specialist clear Other notes validation. Separate E04S04-OPS-R5-01 fails final gate; locally repaired/verified, not independently cleared. Cap5 exhausted, no round6.",
+  "subsequent_reply_budget_repair": "specs/verifications/e04s04-reply-budget-recovery.json",
   "historical_caps_and_native_fence": "unchanged",
   "publication": "not-authorized-not-performed"
 }

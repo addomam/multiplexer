@@ -1,9 +1,14 @@
 //! The published Grok ACP question extension, projected into the existing flat
 //! form ledger. It does not create a second responder or reinterpret prose.
-use super::{FIELDS, FormAnswer, OPTIONS, schema_keys};
+use super::{FIELDS, FRAME, FormAnswer, LOCAL_CONTENT, OPTIONS, schema_keys, value_bytes};
 use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
+
+// At most 32 question entries plus a bounded JSON-RPC id/envelope fit this
+// reserve. Answers can repeat each question as an annotations key; previews
+// come from the request, and all submitted choices/notes share LOCAL_CONTENT.
+const RESPONSE_OVERHEAD: usize = 4096;
 
 pub(super) fn form(mut params: Value) -> Result<Value> {
     schema_keys(
@@ -25,6 +30,13 @@ pub(super) fn form(mut params: Value) -> Result<Value> {
     ensure!(
         !questions.is_empty() && questions.len() <= FIELDS / 2,
         "unsupported: Grok question count"
+    );
+    // Fail before publishing a responder, not after native capture. Twice the
+    // encoded metadata conservatively covers repeated keys and previews; reserve
+    // the full answer budget and framing separately. Count without another copy.
+    ensure!(
+        value_bytes(&params) <= (FRAME - LOCAL_CONTENT - RESPONSE_OVERHEAD) / 2,
+        "unsupported: Grok response budget"
     );
     let mut names = BTreeSet::new();
     let mut options = 0;

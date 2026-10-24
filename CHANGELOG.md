@@ -24,6 +24,7 @@
 - Project genuine Grok `_x.ai/ask_user_question` into the existing bounded form ledger, including nullable single-choice flags, multiselect and Other/preview/notes responses. Preserve exact wire IDs and mandatory cancel replies; reject unsupported decline without consuming the responder or inventing plan chat/skip actions.
 - Add opt-in real Codex/Grok OAuth acceptance through the actual daemon and controlling PTY, with a transparent private wire observer, bounded low-effort model use and explicit cleanup. Keep failed attempts and historical native-fence/review boundaries; compatibility is claimed only by the recorded exercised rows.
 - Validate Grok Other notes before native review/capture as well as API admission, retaining deliberate correction/cancellation on the original grant. Verify omitted/explicitly empty notes through real controlling-PTY arithmetic effects and exact original responses, without replay or additional model calls.
+- Reject Grok question metadata before publication when its conservatively bounded answers/annotations could exceed the existing wire-frame limit. Preserve the original RPC error and subsequent same-session native work instead of capturing an answer that cannot be represented; no truncation, replay or authority substitution.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 

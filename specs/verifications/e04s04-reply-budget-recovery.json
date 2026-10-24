@@ -1,0 +1,114 @@
+{
+  "scope": "E04S04-OPS-R5-01-Grok-reply-representability",
+  "status": "native-CLI-and-full1760-PASS-independent-acceptance-blocked-exhausted-cap",
+  "accepted_finding": "specs/security/epics/e04/e04s04-review-round5.json",
+  "review_gate": "specs/verifications/e04s04-build-review-round5.json",
+  "reviewed_checkpoint": "678e3a2; final round5 source; A/B100/100 but specialist must-fix",
+  "RED": {
+    "test_only_commit": "2891de4",
+    "only_test_files": [
+      "tests/acp/native/acceptance.rs",
+      "tests/fixtures/acp_peer.rs"
+    ],
+    "job": "bg_255",
+    "output": "proc://bg_255",
+    "exit_code": 101,
+    "executed": 1,
+    "failed": 1,
+    "test_seconds": 12.86,
+    "wall_seconds": 16.18,
+    "observed": "Actual controlling-PTY original prompt does not complete: long genuine Grok question is published rather than explicitly rejected. No success-path cleanup claimed for this failing fixture."
+  },
+  "actual_outside_test_RED_CLI": {
+    "phase": "RED-before-fix",
+    "actual_CLI": "PASS-reproduction",
+    "incoming_question_ASCII_bytes": 600000,
+    "minimum_expanded_key_bytes": 1200000,
+    "outgoing_limit_bytes": 1048576,
+    "actual_answer_error": "capacity-exceeded",
+    "canonical_pending_retained": true,
+    "no_work_or_selection_published": true,
+    "native_latch": "static specialist trace plus separately failing actual native regression; this CLI does not claim native physical input",
+    "cleanup": {
+      "peer_absent": true,
+      "workers_complete": true,
+      "daemon_exit": 0,
+      "socket_and_root_absent": true,
+      "sentinel_survived_before_own_reap": true,
+      "fallback": false
+    },
+    "provider_calls": 0
+  },
+  "repair": {
+    "production_file": "src/acp/grok.rs",
+    "decision": "Before schema/responder publication, require serialized request metadata <= (FRAME-LOCAL_CONTENT-4096)/2. Reuse allocation-free existing value_bytes counter; no public signature, dependency, frame-cap increase, truncation, answer fabrication, replay, authority substitution or automatic retry.",
+    "bound": {
+      "frame_bytes": 1048576,
+      "shared_submitted_values_bytes": 65536,
+      "reply_syntax_and_RPC_reserve": 4096,
+      "maximum_serialized_Grok_params_bytes": 489472,
+      "reason": "Question keys occur at most twice, previews originate in params, all selected values and notes share the existing64KiB total. At most32 questions and a <=256-byte control-free JSON-RPC string ID fit the4KiB reserve. Conservative bound can reject a request whose particular short reply would fit; documented."
+    }
+  },
+  "focused_GREEN": {
+    "job": "bg_256",
+    "artifact": "artifact://1754",
+    "native_exact": 1,
+    "native_seconds": 1.3,
+    "Grok_library_regressions": 5,
+    "S04_local_cases": 12,
+    "live_case_ignored_not_counted": 1,
+    "observations": "Original RPC gets explicit -32602 before any native interaction; original prompt end_turn/effect42. Subsequent deliberately typed same-process/session native Other7 completes original fresh RPC/effect52; exact wire response, owner/PID retained, no interrupt/replay. Real controlling PTY/host exits0, termios/drainer and owned peer/workers/daemon/socket/root/sentinel cleanup before fallback via existing finish assertions."
+  },
+  "actual_outside_test_GREEN_CLI": {
+    "phase": "GREEN-after-fix",
+    "actual_CLI": "PASS",
+    "original_RPC_explicit_error": -32602,
+    "no_interaction_published": true,
+    "original_prompt": "end_turn",
+    "effect": 42,
+    "commands": 1,
+    "exact_target_and_original_work_RPC": true,
+    "cleanup": {
+      "peer_absent": true,
+      "workers_complete": true,
+      "daemon_exit": 0,
+      "socket_and_root_absent": true,
+      "sentinel_survived_before_own_reap": true,
+      "fallback": false
+    },
+    "provider_calls": 0
+  },
+  "full_gate": {
+    "job": "bg_257",
+    "status": "PASS",
+    "artifact": "artifact://1760",
+    "exit_code": 0,
+    "wall_seconds": 210.40,
+    "workspace_passed": 401,
+    "workspace_suites": 30,
+    "workspace_ignored": 11,
+    "default_passed": 290,
+    "default_suites": 12,
+    "default_ignored": 8,
+    "counts_overlap": true,
+    "strict_workspace_default_Rust_fmt": "PASS",
+    "OMP": "8 tests/49 assertions PASS",
+    "Zsh_Node_syntax": "PASS",
+    "actual_cursor_showcase": 1,
+    "final_native_unknown_guards": 2,
+    "command": "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture"
+  },
+  "source": "specs/verifications/e04s04-reply-budget-source.json",
+  "post_repair_independent_clearance": false,
+  "review_round": 5,
+  "max_rounds": 5,
+  "next_round": null,
+  "acceptance": "FAIL-cap-exhausted-human-review-required; local repair cannot clear its own independent gate",
+  "all_task_ledgers": "failing",
+  "provider_calls_for_local_repair": 0,
+  "earlier_real_models": "artifact://1659 on round4; actual Codex/Grok complete matrix PASS; no gratuitous post-local-repair provider rerun",
+  "privacy": "Synthetic question and arithmetic only; no credentials/capabilities/private runtime paths or real conversation excerpt published.",
+  "historical_native_fence_and_caps": "unchanged",
+  "publication": "not-authorized-not-performed"
+}

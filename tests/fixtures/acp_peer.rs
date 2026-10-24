@@ -754,7 +754,9 @@ fn main() -> Result<()> {
                     )?;
                     let response = receive(&mut reader)?.ok_or("large Grok response missing")?;
                     if response["id"] != "grok-large" || response["error"]["code"] != -32602 {
-                        return Err("unrepresentable Grok question was not rejected explicitly".into());
+                        return Err(
+                            "unrepresentable Grok question was not rejected explicitly".into()
+                        );
                     }
                     fs::write(
                         root.join("grok-large-rejected.json"),

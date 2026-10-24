@@ -652,10 +652,9 @@ fn e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering() {
     let original_owner = ownership(&host, &agent)["owner"].clone();
     let original = native_prompt(&host, &agent, &mut native, "add 17 25");
     completed_turn(&host, &agent, &original, 42, 1);
-    let rejected: Value = serde_json::from_slice(
-        &fs::read(agent.root.join("grok-large-rejected.json")).unwrap(),
-    )
-    .unwrap();
+    let rejected: Value =
+        serde_json::from_slice(&fs::read(agent.root.join("grok-large-rejected.json")).unwrap())
+            .unwrap();
     assert_eq!(rejected["id"], "grok-large");
     assert_eq!(rejected["error"]["code"], -32602);
     assert!(
@@ -680,10 +679,9 @@ fn e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering() {
     completed_turn(&host, &agent, &fresh, 52, 2);
     assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
     assert_eq!(ownership(&host, &agent)["owner"], original_owner);
-    let reply: Value = serde_json::from_slice(
-        &fs::read(agent.root.join("grok-response-2.json")).unwrap(),
-    )
-    .unwrap();
+    let reply: Value =
+        serde_json::from_slice(&fs::read(agent.root.join("grok-response-2.json")).unwrap())
+            .unwrap();
     assert_eq!(
         reply,
         json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"accepted",

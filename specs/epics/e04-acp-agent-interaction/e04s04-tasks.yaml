@@ -73,4 +73,4 @@ tasks:
     - real-daemon
     - Security Review
 evidence: specs/verifications/e04s04-build.md
-revalidation: Prior source6a5d9af tasks1–3 passed independent round3; live-discovered source changes require fresh full/runtime/review gates before current tasks pass again. Historical evidence/caps are retained.
+revalidation: Earlier source6a5d9af tasks1–3 passed round3. Actual Codex/Grok OAuth1659 passes on round4 source; final repaired-source native/CLI1754 and full1760 pass401workspace/290default. Final round5 A/B100/100 clears Other notes but specialist E04S04-OPS-R5-01 fails the combined gate. That defect is reproduced and locally repaired/verified; changed source is NOT independently cleared. All tasks remain failing; cap5/5 exhausted, no round6/reset, human review/decision required. See specs/verifications/e04s04-reply-budget-recovery.json and e04s04-build-review-round5.json.

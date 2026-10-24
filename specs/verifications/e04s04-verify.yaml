@@ -1,32 +1,32 @@
 type: verification
 context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
-verified_at: final-full1721-and-actual-final-binary-CLI-observed
-status: runtime-and-full-gates-PASS-story-pending-final-independent-round5
-source: specs/verifications/e04s04-round5-source.json
-source_commit: working-tree-after-8469377
+verified_at: final-full1760-and-actual-native-CLI-reply-budget-proof-observed
+status: runtime-and-full-gates-PASS-story-blocked-human-review-cap5-exhausted
+source: specs/verifications/e04s04-reply-budget-source.json
+source_commit: working-tree-after-2891de4
 terminal_verdict:
   command: cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
   exit_code: 0
-  artifact: artifact://1721
-  job: bg_252
-  wall_seconds: 210.00
+  artifact: artifact://1760
+  job: bg_257
+  wall_seconds: 210.40
   note: Actual contiguous final gate includes Node syntax, showcase and final native guards. Focused/local runs and earlier real matrix separately below; overlapping counts are not distinct totals and0.00s is not wall duration.
   counts:
-    selected: 11
-    workspace: 400
+    selected: 12
+    workspace: 401
     workspace_suites: 30
     workspace_ignored: 11
-    default: 289
+    default: 290
     default_suites: 12
     default_ignored: 8
     showcase_exact: 1
     native_exact_guards: 2
     omp: 8
     omp_assertions: 49
-  separate_focused: {artifact: 'artifact://1712', native_Other: 1, local_S04: 11, Grok_regressions: 5}
+  separate_focused: {artifact: 'artifact://1754', native_reply_budget: 1, local_S04: 12, Grok_regressions: 5}
   separate_live: {artifact: 'artifact://1659', source: specs/verifications/e04s04-round4-source.json, actual_ignored_case_executed: 1, passed: 1, primary_real_rows: 8, post_repair_rerun: false}
-  final_native_guards: {job: bg_252, artifact: 'artifact://1721', executed: 2, passed: 2, included_in_chain: true}
+  final_native_guards: {job: bg_257, artifact: 'artifact://1760', executed: 2, passed: 2, included_in_chain: true}
   named_S04_cases:
   - acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application
   - acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree
@@ -39,6 +39,7 @@ terminal_verdict:
   - acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown
   - acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes
   - native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable
+  - native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering
 outside_test:
   repair_actual_CLI:
     passed: true
@@ -65,27 +66,28 @@ outside_test:
     daemon0_before_retainer_release: true
     owned_cleanup_without_fallback: true
     PTY_drainer_started: false
-  current_Grok_codec_CLI: {passed: true, evidence: specs/verifications/e04s04-grok-codec-cli.json, provider_calls: 0, owned_cleanup_without_fallback: true}
-  current_Other_recovery_CLI: {passed: true, evidence: specs/verifications/e04s04-other-recovery-cli.json, actual_final_binary: true, provider_calls: 0, owned_cleanup_without_fallback: true}
+  previous_Grok_codec_CLI: {passed: true, evidence: specs/verifications/e04s04-grok-codec-cli.json, provider_calls: 0, owned_cleanup_without_fallback: true}
+  previous_source_Other_CLI: {passed: true, evidence: specs/verifications/e04s04-other-recovery-cli.json, actual_source: specs/verifications/e04s04-round5-source.json, provider_calls: 0, owned_cleanup_without_fallback: true}
+  current_reply_budget_CLI: {passed: true, evidence: specs/verifications/e04s04-reply-budget-recovery.json, actual_final_binary: true, provider_calls: 0, owned_cleanup_without_fallback: true}
 retained_pipe_RCA: specs/verifications/e04s04-retained-pipe-before-after.json
 final_native_revisit:
   passed_retained_fail_closed_guards: 2
-  current_artifact: artifact://1721
+  current_artifact: artifact://1760
   earlier_detailed_evidence: specs/verifications/e04s04-native-fence.json
   native_application_settlement: still-unresolved-not-an-acceptance-PASS
 security:
   self_audit: specs/verifications/AUDIT-e04s04.md
   previous_round1: specs/security/epics/e04/e04s04-review-round1.json
   previous_operational_must_fix: 1
-  current_independent: final-round5-running-not-cleared
-  current_operational_must_fix: pending-report
-  AND_gate: pending-final-round5
+  current_independent: final-round5-FAIL-operational-must-fix-locally-repaired-not-independently-cleared
+  current_operational_must_fix: E04S04-OPS-R5-01
+  AND_gate: FAIL-cap5-exhausted-human-review-required
   actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
   previous_round2: specs/security/epics/e04/e04s04-review-round2.json
-  supported_security_findings: pending-report
-  build_review: final-round5-running
-  independent_clearance_round: pending5-of5
-  next_changed_source_round: none-cap5
+  supported_security_findings: 0
+  build_review: specs/verifications/e04s04-build-review-round5.json
+  independent_clearance_round: none-final5-of5-failed
+  next_changed_source_round: none-cap5-exhausted-human-review-required
 nfr: specs/verifications/NFR-e04s04.json
 worker_retirement: specs/verifications/e04s04-worker-retirement.json
 historical_failures:
@@ -97,7 +99,7 @@ historical_failures:
   record: specs/verifications/e04s04-build.md
   production_RED_endpoint_truth: 1498
 live_task:
-  status: actual-Codex-Grok-complete-matrix-PASS-final-source-review-pending
+  status: actual-Codex-Grok-complete-matrix-PASS-source-review-blocked-cap5-exhausted
   required_test: e04s04_live_adapters
   prerequisites: specs/verifications/e04s04-live-prerequisites.json
   zero_case_command: never-counts-as-PASS
@@ -107,8 +109,8 @@ live_task:
   actual_artifact: artifact://1659
   private_OAuth_runtime: removed-after-owned-absence-and-no-open-holder-proof
   Claude_execution: false
-all_task_ledgers: all-four-failing-pending-final-independent-round5-clearance
-whole_story: failing-pending-final-independent-clearance
+all_task_ledgers: all-four-failing-current-source-not-independently-cleared
+whole_story: failing-human-review-required-cap5-exhausted
 historical_e03_and_review_caps: unchanged
 ACP_main_merge_push_release: not-authorized-not-run
 endpoint_truth_RCA: specs/verifications/e04s04-endpoint-truth-before-after.json
@@ -120,3 +122,5 @@ local_tasks:
 previous_local_baseline: {source: 6a5d9af, artifact: 'artifact://1515', review: specs/verifications/e04s04-build-review-round3.json}
 Other_recovery: specs/verifications/e04s04-other-recovery.json
 previous_round4: specs/verifications/e04s04-build-review-round4.json
+reply_budget_repair: specs/verifications/e04s04-reply-budget-recovery.json
+review_disposition: Locally reproduced and repaired; actual native/CLI/full proof passes. Final independent review cap exhausted, no round6 or automatic waiver.
