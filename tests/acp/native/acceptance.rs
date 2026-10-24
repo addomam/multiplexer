@@ -561,3 +561,80 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     // and unrelated-sentinel observations. Do not duplicate its lifecycle here.
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
+
+#[test]
+fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("s04-grok-other");
+    host.ready(&mut agent);
+    let mut native = native_attachment(&host, &agent);
+    dismiss_ownership(&host, &agent, &mut native);
+    let original_owner = ownership(&host, &agent)["owner"].clone();
+    for (index, text, total) in [(1, "add 17 25", 49), (2, "add 1 2", 32)] {
+        show_interaction(&host, &agent, &mut native, None);
+        let prompt = native_prompt(&host, &agent, &mut native, text);
+        let form = pending(&host, &agent, "form");
+        native.wait(form["interaction_id"].as_str().unwrap());
+        show_interaction(&host, &agent, &mut native, Some(&form));
+        native.send(b"\x1b[B"); // Select Other, not the offered Zero adjustment.
+        if index == 2 {
+            native.send(b"\t");
+            native.paste("x");
+            native.send(b"\x7f"); // Explicitly empty notes, not merely omitted.
+        }
+        native.send(ACCEPT_FORM);
+        native.send(ACCEPT_FORM);
+        native.wait("Validation: Other requires answer notes");
+        let retained = pending(&host, &agent, "form");
+        assert_eq!(retained["interaction_id"], form["interaction_id"]);
+        assert!(retained["selected_work_id"].is_null());
+        assert!(
+            !agent
+                .root
+                .join(format!("grok-response-{index}.json"))
+                .exists()
+        );
+        assert_eq!(ownership(&host, &agent)["owner"], original_owner);
+        assert_ne!(host.work(&agent, &prompt["work_id"])["state"], "completed");
+        if index == 1 {
+            native.send(b"\t");
+            native.paste("7");
+            native.send(ACCEPT_FORM);
+            native.wait("REVIEW: F5 accepts");
+            native.send(ACCEPT_FORM);
+        } else {
+            native.send(b"\x1b[18~"); // F7 explicitly cancels the retained question.
+        }
+        let completed = host.completed(&agent, &prompt["work_id"]);
+        s03_same_work(&completed, &prompt);
+        assert_eq!(completed["outcome"]["stop_reason"], "end_turn");
+        assert_eq!(agent.effect()["value"], total);
+        assert_eq!(agent.effect()["commands"], index);
+        assert_eq!(agent.effect()["rpc_id"], prompt["rpc_id"]);
+        let wire: Value = serde_json::from_slice(
+            &fs::read(agent.root.join(format!("grok-response-{index}.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            wire,
+            if index == 1 {
+                json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"accepted",
+                "answers":{"Arithmetic adjustment":["Other"]},
+                "annotations":{"Arithmetic adjustment":{"notes":"7"}}}})
+            } else {
+                json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"cancelled"}})
+            }
+        );
+        assert_eq!(ownership(&host, &agent)["owner"], original_owner);
+    }
+    assert!(
+        !host.inspect(&agent)["work"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|work| work["op"] == "acp-interrupt")
+    );
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    finish(host, &mut agent, &mut native, &mut sentinel);
+}

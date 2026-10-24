@@ -745,6 +745,36 @@ fn main() -> Result<()> {
                         receive(&mut reader)?.ok_or("complete permission response missing")?;
                     permitted = permission_allows(&response, &json!(73))?;
                     bonus
+                } else if mode == "s04-grok-other" {
+                    emit(
+                        json!({"jsonrpc":"2.0","id":"grok-other","method":"_x.ai/ask_user_question","params":{
+                        "sessionId":session,"toolCallId":"grok-other-tool","mode":"default",
+                        "questions":[{"question":"Arithmetic adjustment","multiSelect":null,
+                            "options":[{"label":"Zero","description":"No adjustment"}]}]}}),
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("Grok original response missing")?;
+                    if response["id"] != "grok-other" || response.get("error").is_some() {
+                        return Err("Grok question lost original responder".into());
+                    }
+                    fs::write(
+                        root.join(format!("grok-response-{}.json", commands + 1)),
+                        serde_json::to_vec(&response)?,
+                    )?;
+                    match response["result"]["outcome"].as_str() {
+                        Some("accepted") => {
+                            if response["result"]["answers"]["Arithmetic adjustment"]
+                                != json!(["Other"])
+                            {
+                                return Err("Grok Other answer was not preserved".into());
+                            }
+                            response["result"]["annotations"]["Arithmetic adjustment"]["notes"]
+                                .as_str()
+                                .ok_or("Grok Other notes missing")?
+                                .parse::<i64>()?
+                        }
+                        Some("cancelled") => -20,
+                        _ => return Err("Grok question outcome invalid".into()),
+                    }
                 } else if mode == "form-prompt" {
                     emit(
                         json!({"jsonrpc":"2.0","id":"bonus-form","method":"elicitation/create",
