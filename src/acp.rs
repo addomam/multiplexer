@@ -2663,6 +2663,92 @@ mod tests {
         json!({"op":"acp-prompt","target":target,"control":{"kind":"control","ref":"unit"},
             "owner_generation":7,"call_id":call,"text":"add 17 25"})
     }
+    #[test]
+    fn e04s03_prepared_action_and_revocation_share_the_real_authority_ordering_point() {
+        for commit_first in [false, true] {
+            let (broker, instance, target) = ready_broker();
+            let mut registry = crate::control::Registry::new();
+            registry.add_acp_target(&instance.id).unwrap();
+            let a = registry
+                .create(
+                    &json!({"version":1,"op":"controller-create",
+                "role":"external","label":"prepared owner"}),
+                    1,
+                )
+                .unwrap();
+            let b = registry
+                .create(
+                    &json!({"version":1,"op":"controller-create",
+                "role":"external","label":"successor"}),
+                    2,
+                )
+                .unwrap();
+            let grant = registry
+                .claim(&json!({"version":1,"op":"ownership-claim",
+                "target":{"kind":"acp","id":instance.id},"controller":a["controller"],
+                "observed":registry.snapshot(&instance.id)["observed"],"mode":"force"}))
+                .unwrap();
+            let authority = registry
+                .authorize(&instance.id, &grant["control"], 1)
+                .unwrap();
+            let request = json!({"op":"acp-prompt","target":target,"control":grant["control"],
+                "owner_generation":grant["generation"],"call_id":"captured-before-revoke",
+                "text":"add 17 25"});
+            let prepared = broker
+                .prepare("acp-prompt", &request, authority.controller_id())
+                .unwrap();
+            let mut prepared = Some(prepared);
+            let admitted = commit_first.then(|| {
+                authority
+                    .admit_acp(false, 1, |generation| {
+                        broker.commit(prepared.take().unwrap(), generation)
+                    })
+                    .unwrap()
+            });
+            let successor = registry
+                .claim(&json!({"version":1,"op":"ownership-claim",
+                "target":{"kind":"acp","id":instance.id},"controller":b["controller"],
+                "observed":registry.snapshot(&instance.id)["observed"],"mode":"force"}))
+                .unwrap();
+            assert_ne!(successor["generation"], grant["generation"]);
+            if let Some(admitted) = admitted {
+                // The old immutable request remains ready for transport after
+                // revocation. The real-child case covers its eventual effect.
+                let projection = broker
+                    .inspect(&json!({"target":target,"include_content":true}))
+                    .unwrap();
+                assert_eq!(projection["work"][0]["work_id"], admitted["work_id"]);
+                assert_eq!(projection["work"][0]["controller_id"], a["controller_id"]);
+                assert_eq!(
+                    projection["work"][0]["owner_generation"],
+                    grant["generation"]
+                );
+                assert_eq!(projection["work"][0]["state"], "accepted");
+                let state = instance.state.lock();
+                let wire: Value =
+                    serde_json::from_slice(&state.output.front().unwrap().bytes).unwrap();
+                assert_eq!(wire["method"], "session/prompt");
+                assert_eq!(wire["params"]["prompt"][0]["text"], "add 17 25");
+                assert_eq!(wire["id"], projection["work"][0]["rpc_id"]);
+            } else {
+                let error = authority
+                    .admit_acp(false, 1, |generation| {
+                        broker.commit(prepared.take().unwrap(), generation)
+                    })
+                    .unwrap_err();
+                assert!(error.to_string().starts_with("stale-handle:"), "{error}");
+                let projection = broker
+                    .inspect(&json!({"target":target,"include_content":true}))
+                    .unwrap();
+                assert_eq!(projection["work"], json!([]));
+                assert_eq!(projection["content"]["events"], json!([]));
+                let state = instance.state.lock();
+                assert!(state.output.is_empty());
+                assert!(state.outstanding.is_empty());
+                assert!(state.calls.is_empty());
+            }
+        }
+    }
 
     #[test]
     fn acp_failed_open_rollback_requires_empty_complete_ended_lifetime() {

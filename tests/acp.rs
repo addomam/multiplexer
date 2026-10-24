@@ -10,6 +10,9 @@ use std::time::{Duration, Instant};
 
 const DEADLINE: Duration = Duration::from_secs(12);
 
+#[path = "acp/native.rs"]
+mod native;
+
 fn exchange(socket: &Path, mut request: Value) -> std::io::Result<Value> {
     request["version"] = json!(1);
     let mut stream = UnixStream::connect(socket)?;
@@ -2070,4 +2073,742 @@ fn e04s02_actual_response_pipe_failure_records_failed_delivery_not_agent_applica
     assert!(!agent.root.join("effect.json").exists());
     host.reaped(&agent, "peer.pid");
     sentinel.alive();
+}
+
+fn s03_controller(host: &Host, label: &str) -> Value {
+    host.call(json!({"op":"controller-create","role":"external","label":label}))
+}
+
+fn s03_ownership(host: &Host, agent: &Agent) -> Value {
+    host.view(agent.target["id"].as_str().unwrap()).unwrap()["ownership"].clone()
+}
+
+fn s03_claim(host: &Host, agent: &Agent, controller: &Value, mode: &str, when: Value) -> Value {
+    let mut request = json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+        "controller":controller["controller"],"mode":mode,
+        "observed":s03_ownership(host, agent)["observed"]});
+    if mode == "cooperative" {
+        request["when"] = when;
+    }
+    host.call(request)
+}
+
+fn s03_handle(host: &Host, handle: &Value, method: &str) -> Value {
+    host.call(json!({"op":"control-handle","handle":handle,"method":method}))
+}
+
+fn s03_same_work(actual: &Value, original: &Value) {
+    for key in [
+        "work_id",
+        "call_id",
+        "controller_id",
+        "owner_generation",
+        "rpc_id",
+        "prompt_id",
+    ] {
+        assert_eq!(actual[key], original[key], "{key}");
+    }
+}
+
+#[test]
+fn e04s03_nonfatal_stalled_writer_keeps_admitted_work_across_force_and_socket_loss() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("s03-stalled-prompt");
+    host.ready(&mut agent);
+    host.barrier(&agent, "s03-reads");
+    let tuple = agent.target.clone();
+    let pid = fs::read(agent.root.join("peer.pid")).unwrap();
+    // Larger than the pipe capacity, still within the public 64KiB text budget.
+    let text = format!("add 17 25{}", " ".repeat(65536 - 9));
+    let mut request = agent.action("acp-prompt", "stalled-lost-reply");
+    request["version"] = json!(1);
+    request["text"] = json!(text);
+    let mut socket = UnixStream::connect(&host.socket).unwrap();
+    socket.set_write_timeout(Some(DEADLINE)).unwrap();
+    serde_json::to_writer(&mut socket, &request).unwrap();
+    socket.write_all(b"\n").unwrap();
+    let original = host.until("canonical admission despite blocked pipe", || {
+        host.inspect(&agent)["work"]
+            .as_array()?
+            .iter()
+            .find(|work| work["call_id"] == "stalled-lost-reply")
+            .cloned()
+    });
+    drop(socket); // Admission is observed before discarding the unread reply.
+    assert_eq!(original["state"], "accepted");
+    assert_eq!(original["delivery"], "not-submitted");
+    assert!(!agent.root.join("effect.json").exists());
+    let b = s03_controller(&host, "stalled writer successor");
+    let grant = s03_claim(&host, &agent, &b, "force", Value::Null);
+    let recovered = s03_handle(&host, &b["controller"], "read");
+    assert_eq!(recovered["controls"][0]["control"], grant["control"]);
+    let retained = recovered["controls"][0]["retained_work"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|work| work["work_id"] == original["work_id"])
+        .unwrap();
+    s03_same_work(retained, &original);
+    assert_eq!(retained["state"], "accepted");
+    host.deny(
+        agent.action("acp-close", "old-close-during-stall"),
+        &["stale-control", "stale-handle"],
+    );
+    agent.opened = grant;
+    assert_eq!(host.inspect(&agent)["target"], tuple);
+    assert_eq!(host.inspect(&agent)["lifecycle"], "ready");
+    agent.release("s03-reads");
+    let completed = host.completed(&agent, &original["work_id"]);
+    s03_same_work(&completed, &original);
+    assert_eq!(completed["outcome"]["stop_reason"], "end_turn");
+    assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+    assert_eq!(agent.effect()["session_id"], tuple["session_id"]);
+    assert_eq!(agent.effect()["value"], 42);
+    assert_eq!(agent.effect()["commands"], 1);
+    assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    host.close(&agent);
+    sentinel.alive();
+}
+
+#[test]
+fn e04s03_cooperative_offer_reserves_b_against_c_while_genuine_question_is_active() {
+    for kind in ["form", "permission"] {
+        let host = Host::new();
+        let mut agent = host.open(if kind == "form" {
+            "s02-form"
+        } else {
+            "s02-permission"
+        });
+        host.ready(&mut agent);
+        let tuple = agent.target.clone();
+        let pid = fs::read(agent.root.join("peer.pid")).unwrap();
+        let prompt = host.prompt(&agent, "question-before-cooperative-yield", "add 17 25");
+        let interaction = pending(&host, &agent, kind);
+        let original = host.work(&agent, &prompt["work_id"]);
+        let b = s03_controller(&host, "reserved B");
+        let c = s03_controller(&host, "excluded C");
+        let claim = s03_claim(&host, &agent, &b, "cooperative", json!({"kind":"now"}));
+        assert_eq!(claim["phase"], "waiting-owner");
+        host.call(
+            json!({"op":"control-handle","handle":agent.opened["control"],
+            "method":"yield-to","claim_id":claim["claim_id"]}),
+        );
+        let offered = s03_handle(&host, &claim["claim"], "read");
+        assert_eq!(offered["phase"], "offered", "{offered}");
+        let ownership = s03_ownership(&host, &agent);
+        assert!(ownership["owner"].is_null());
+        assert_eq!(ownership["reservation"]["claim_id"], claim["claim_id"]);
+        host.deny(
+            json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+            "controller":c["controller"],"mode":"cooperative","when":{"kind":"now"},
+            "observed":ownership["observed"]}),
+            &["control-reserved"],
+        );
+        let stale = if kind == "form" {
+            form_answer(
+                &agent,
+                &interaction,
+                "yielded-old-answer",
+                "accept",
+                Some(json!({"bonus":97})),
+            )
+        } else {
+            permission_answer(&agent, &interaction, "yielded-old-answer", "opaque-δ")
+        };
+        host.deny(stale, &["stale-control", "stale-handle"]);
+        assert_eq!(
+            pending(&host, &agent, kind)["interaction_id"],
+            interaction["interaction_id"]
+        );
+        assert_eq!(
+            host.inspect(&agent)["foreground"]["prompt_id"],
+            original["prompt_id"]
+        );
+        assert!(!agent.root.join("effect.json").exists());
+        agent.opened = s03_handle(&host, &offered["offer"], "accept");
+        // Explicit accept happens while the original prompt is still waiting.
+        assert!(host.work(&agent, &prompt["work_id"])["outcome"].is_null());
+        host.deny(
+            json!({"op":"control-handle","handle":offered["offer"],"method":"accept"}),
+            &["offer-consumed"],
+        );
+        let answer = if kind == "form" {
+            form_answer(
+                &agent,
+                &interaction,
+                "b-deliberate-answer",
+                "accept",
+                Some(json!({"bonus":15})),
+            )
+        } else {
+            permission_answer(&agent, &interaction, "b-deliberate-answer", "opaque-α")
+        };
+        host.call(answer);
+        let completed = host.completed(&agent, &prompt["work_id"]);
+        s03_same_work(&completed, &original);
+        assert_eq!(
+            agent.effect()["value"],
+            if kind == "form" { 57 } else { 42 }
+        );
+        assert_eq!(agent.effect()["commands"], 1);
+        assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+        assert_eq!(host.inspect(&agent)["target"], tuple);
+        assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
+        assert!(!agent.root.join("unexpected-cancel").exists());
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s03_cancelled_offer_cannot_touch_new_reservation_and_lost_accept_recovers_privately() {
+    for yield_first in [false, true] {
+        let host = Host::new();
+        let mut agent = host.open("s02-form");
+        host.ready(&mut agent);
+        let tuple = agent.target.clone();
+        let pid = fs::read(agent.root.join("peer.pid")).unwrap();
+        let prompt = host.prompt(&agent, "retained-through-cancel-and-recovery", "add 17 25");
+        let form = pending(&host, &agent, "form");
+        let original = host.work(&agent, &prompt["work_id"]);
+        let b = s03_controller(&host, "cancelled B");
+        let c = s03_controller(&host, "new reserved C");
+        let old = s03_claim(&host, &agent, &b, "cooperative", json!({"kind":"now"}));
+        let old_control = agent.opened["control"].clone();
+        let old_offer = yield_first.then(|| {
+            host.call(
+                json!({"op":"control-handle","handle":old_control,"method":"yield-to",
+                "claim_id":old["claim_id"]}),
+            );
+            let offered = s03_handle(&host, &old["claim"], "read");
+            assert_eq!(offered["phase"], "offered");
+            offered["offer"].clone()
+        });
+        s03_handle(&host, &old["claim"], "cancel");
+        let cancelled = s03_ownership(&host, &agent);
+        assert!(cancelled["owner"].is_null());
+        assert!(cancelled["reservation"].is_null());
+        s03_same_work(&host.work(&agent, &prompt["work_id"]), &original);
+        host.deny(
+            json!({"op":"control-handle","handle":old_control,"method":"yield-to",
+            "claim_id":old["claim_id"]}),
+            &["stale-handle", "stale-control"],
+        );
+        agent.opened = s03_claim(&host, &agent, &b, "force", Value::Null);
+        let next = s03_claim(&host, &agent, &c, "cooperative", json!({"kind":"now"}));
+        for method in ["cancel", "force"] {
+            let mut request = json!({"op":"control-handle","handle":old["claim"],"method":method});
+            if method == "force" {
+                request["observed"] = s03_ownership(&host, &agent)["observed"].clone();
+            }
+            host.deny(request, &["claim-completed"]);
+        }
+        if let Some(offer) = old_offer {
+            host.deny(
+                json!({"op":"control-handle","handle":offer,"method":"accept"}),
+                &["stale-offer", "claim-completed"],
+            );
+        }
+        assert_eq!(
+            s03_ownership(&host, &agent)["reservation"]["claim_id"],
+            next["claim_id"]
+        );
+        host.call(
+            json!({"op":"control-handle","handle":agent.opened["control"],
+            "method":"yield-to","claim_id":next["claim_id"]}),
+        );
+        let offer = s03_handle(&host, &next["claim"], "read");
+        assert_eq!(offer["phase"], "offered");
+        // Observe the accept through controller-private recovery, not a retry.
+        let mut connection = UnixStream::connect(&host.socket).unwrap();
+        connection.set_write_timeout(Some(DEADLINE)).unwrap();
+        serde_json::to_writer(
+            &mut connection,
+            &json!({"version":1,"op":"control-handle",
+            "handle":offer["offer"],"method":"accept"}),
+        )
+        .unwrap();
+        connection.write_all(b"\n").unwrap();
+        let private = host.until("lost accept recovered through original C handle", || {
+            let state = s03_handle(&host, &c["controller"], "read");
+            state["controls"].as_array()?.first().map(|_| state.clone())
+        });
+        drop(connection);
+        agent.opened = private["controls"][0].clone();
+        s03_same_work(&host.work(&agent, &prompt["work_id"]), &original);
+        assert_eq!(
+            pending(&host, &agent, "form")["interaction_id"],
+            form["interaction_id"]
+        );
+        host.deny(
+            json!({"op":"control-handle","handle":offer["offer"],"method":"accept"}),
+            &["offer-consumed"],
+        );
+        host.call(form_answer(
+            &agent,
+            &form,
+            "c-fresh-answer",
+            "accept",
+            Some(json!({"bonus":15})),
+        ));
+        let completed = host.completed(&agent, &prompt["work_id"]);
+        s03_same_work(&completed, &original);
+        assert_eq!(agent.effect()["value"], 57);
+        assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+        assert_eq!(host.inspect(&agent)["target"], tuple);
+        assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
+        assert!(!agent.root.join("unexpected-cancel").exists());
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s03_interrupt_outcomes_wait_for_original_response_and_stale_id_cannot_cancel_new_work() {
+    for outcome in ["cancelled", "end-turn", "error", "eof"] {
+        let host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open(&format!("s03-interrupt-{outcome}"));
+        host.ready(&mut agent);
+        let tuple = agent.target.clone();
+        let prompt = host.prompt(&agent, "original-interrupted-prompt", "add 17 25");
+        host.barrier(&agent, "prompt");
+        let original = host.work(&agent, &prompt["work_id"]);
+        let mut interrupt = agent.action("acp-interrupt", "deliberate-current-interrupt");
+        interrupt["prompt_id"] = original["prompt_id"].clone();
+        let b = s03_controller(&host, "interrupt successor");
+        let grant = s03_claim(&host, &agent, &b, "force", Value::Null);
+        host.deny(interrupt.clone(), &["stale-handle", "stale-control"]);
+        agent.opened = grant;
+        interrupt["control"] = agent.opened["control"].clone();
+        interrupt["owner_generation"] = agent.opened["generation"].clone();
+        let cancel = host.call(interrupt);
+        host.barrier(&agent, "s03-cancel");
+        let waiting = host.inspect(&agent);
+        assert_eq!(waiting["target"], tuple);
+        assert_eq!(waiting["foreground"]["state"], "cancelling");
+        assert_eq!(waiting["foreground"]["prompt_id"], original["prompt_id"]);
+        assert!(host.work(&agent, &prompt["work_id"])["outcome"].is_null());
+        assert_ne!(
+            host.work(&agent, &cancel["work_id"])["outcome"]["stop_reason"],
+            "cancelled"
+        );
+        agent.release("s03-cancel");
+        let terminal = host.until("actual original prompt terminal outcome", || {
+            let work = host.work(&agent, &prompt["work_id"]);
+            matches!(
+                work["state"].as_str(),
+                Some("completed" | "failed" | "unknown")
+            )
+            .then_some(work)
+        });
+        s03_same_work(&terminal, &original);
+        match outcome {
+            "cancelled" => {
+                assert_eq!(terminal["state"], "completed");
+                assert_eq!(terminal["outcome"]["stop_reason"], "cancelled");
+            }
+            "end-turn" => {
+                assert_eq!(terminal["state"], "completed");
+                assert_eq!(terminal["outcome"]["stop_reason"], "end_turn");
+            }
+            "error" => {
+                assert_eq!(terminal["state"], "failed");
+                assert_eq!(terminal["outcome"], json!({"kind":"error","code":-32603}));
+            }
+            "eof" => {
+                assert_eq!(terminal["state"], "unknown");
+                assert_ne!(terminal["outcome"]["stop_reason"], "cancelled");
+            }
+            _ => unreachable!(),
+        }
+        assert!(
+            !host
+                .call(json!({"op":"snapshot"}))
+                .to_string()
+                .contains("s03-private-interrupt-error")
+        );
+        if outcome == "eof" {
+            host.reaped(&agent, "peer.pid");
+            host.until("EOF workers joined before fallback", || {
+                (host.inspect(&agent)["resource"]["cleanup_complete"] == true).then_some(())
+            });
+        } else {
+            let next = host.prompt(&agent, "new-prompt-after-interrupt-outcome", "add 10 5");
+            host.barrier(&agent, "s03-next");
+            let mut stale = agent.action("acp-interrupt", "old-prompt-must-not-cancel-next");
+            stale["prompt_id"] = original["prompt_id"].clone();
+            host.deny(stale, &["stale-interaction"]);
+            assert_eq!(
+                host.inspect(&agent)["foreground"]["prompt_id"],
+                host.work(&agent, &next["work_id"])["prompt_id"]
+            );
+            agent.release("s03-next");
+            let completed = host.completed(&agent, &next["work_id"]);
+            assert_ne!(completed["prompt_id"], original["prompt_id"]);
+            assert_ne!(completed["rpc_id"], original["rpc_id"]);
+            assert_eq!(completed["outcome"]["stop_reason"], "end_turn");
+            assert_eq!(agent.effect()["value"], 57);
+            assert_eq!(agent.effect()["commands"], 2);
+            assert!(!agent.root.join("unexpected-cancel").exists());
+            host.close(&agent);
+        }
+        sentinel.alive();
+    }
+}
+
+#[test]
+fn e04s03_rendering_gap_resync_retains_tuple_pending_rpc_and_content_privacy() {
+    let host = Host::new();
+    let mut agent = host.open("s03-rendering");
+    host.ready(&mut agent);
+    let tuple = agent.target.clone();
+    let prompt = host.prompt(&agent, "render-gap-original", "add 17 25");
+    host.barrier(&agent, "s03-updates");
+    let original = host.work(&agent, &prompt["work_id"]);
+    let mut cursor = 0;
+    let mut kinds = std::collections::BTreeSet::new();
+    let mut tail = false;
+    let mut hostile = false;
+    let mut previous = None;
+    loop {
+        let page = host.call(json!({"op":"acp-inspect","target":tuple,
+            "include_content":true,"after":cursor,"limit":128}));
+        assert_eq!(page["target"], tuple);
+        if cursor == 0 {
+            assert_eq!(page["content"]["gap"], true);
+            assert!(page["truncation"]["through"].as_u64().unwrap() > 0);
+        }
+        for event in page["content"]["events"].as_array().unwrap() {
+            let seq = event["seq"].as_u64().unwrap();
+            assert!(seq > cursor);
+            if let Some(previous) = previous {
+                assert!(seq > previous);
+            }
+            previous = Some(seq);
+            kinds.insert(event["kind"].as_str().unwrap().to_owned());
+            tail |= event["text"] == "s03-tail-retained-2112";
+            hostile |= event["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("s03-hostile:"));
+            if matches!(
+                event["kind"].as_str(),
+                Some("agent-message" | "thought" | "tool" | "plan")
+            ) {
+                assert!(
+                    event.get("prompt_id").is_none(),
+                    "no arrival-guessed prompt association"
+                );
+            }
+        }
+        let through = page["content"]["through"].as_u64().unwrap();
+        if through == page["cursor"].as_u64().unwrap() {
+            break;
+        }
+        assert!(through > cursor);
+        cursor = through;
+    }
+    assert!(tail && hostile);
+    for kind in ["agent-message", "thought", "tool", "plan"] {
+        assert!(kinds.contains(kind));
+    }
+    assert_eq!(
+        host.inspect(&agent)["foreground"]["prompt_id"],
+        original["prompt_id"]
+    );
+    assert!(original["outcome"].is_null());
+    let metadata = [
+        host.call(json!({"op":"snapshot"})),
+        host.call(json!({"op":"events","after":0,"timeout_ms":0})),
+        host.call(json!({"op":"acp-inspect","target":tuple})),
+    ];
+    for projection in metadata {
+        let text = projection.to_string();
+        for private in [
+            "s03-seq-",
+            "s03-tail-retained",
+            "s03-hostile",
+            "s03-title-owned",
+            "s03-thought-retained",
+            "s03-tool-retained",
+            "s03-plan-retained",
+            "s03-bidi",
+        ] {
+            assert!(
+                !text.contains(private),
+                "content marker leaked into metadata: {private}"
+            );
+        }
+    }
+    agent.release("s03-updates");
+    let completed = host.completed(&agent, &prompt["work_id"]);
+    s03_same_work(&completed, &original);
+    assert_eq!(completed["outcome"]["stop_reason"], "end_turn");
+    assert_eq!(agent.effect()["value"], 42);
+    assert_eq!(agent.effect()["commands"], 1);
+    assert_eq!(agent.effect()["session_id"], tuple["session_id"]);
+    host.close(&agent);
+}
+
+fn s03_native_owner(host: &Host, agent: &mut Agent) -> (OriginalNative, Value) {
+    let mut native = OriginalNative::new(host);
+    let registration = native.call(json!({"op":"controller-create","role":"attachment",
+        "label":"S03 original attachment connection"}));
+    native.call(
+        json!({"op":"control-handle","handle":registration["controller"],"method":"view",
+        "view":{"serial":1,"target":{"kind":"acp","id":agent.target["id"]},"focused":true}}),
+    );
+    let ownership = s03_ownership(host, agent);
+    agent.opened = native.call(json!({"op":"ownership-claim",
+        "target":{"kind":"acp","id":agent.target["id"]},"controller":registration["controller"],
+        "mode":"force","observed":ownership["observed"]}));
+    agent.controller_id = registration["controller_id"].clone();
+    (native, registration)
+}
+
+fn s03_view(
+    native: &mut OriginalNative,
+    registration: &Value,
+    agent: &Agent,
+    serial: u64,
+    focused: bool,
+) {
+    native.call(json!({"op":"control-handle","handle":registration["controller"],"method":"view",
+        "view":{"serial":serial,"target":{"kind":"acp","id":agent.target["id"]},"focused":focused}}));
+}
+
+fn s03_consent(host: &Host, agent: &Agent, claim: &Value, serial: u64) -> Value {
+    json!({"op":"control-handle","handle":agent.opened["control"],"method":"consent-to",
+        "claim_id":claim["claim_id"],"view_serial":serial,
+        "activity_revision":s03_ownership(host, agent)["activity_revision"]})
+}
+
+#[test]
+fn e04s03_original_attachment_warning_keep_withdraw_preserve_control_without_native_batch() {
+    let host = Host::new();
+    let mut agent = host.open("s02-form");
+    host.ready(&mut agent);
+    let (mut native, registration) = s03_native_owner(&host, &mut agent);
+    let control = agent.opened["control"].clone();
+    let generation = agent.opened["generation"].clone();
+    let mut request = agent.action("acp-prompt", "original-attachment-active-question");
+    request["text"] = json!("add 17 25");
+    let prompt = native.call(request);
+    let form = pending(&host, &agent, "form");
+    let activity = s03_ownership(&host, &agent)["activity_revision"]
+        .as_u64()
+        .unwrap();
+    let b = s03_controller(&host, "external idle policy");
+    host.deny(
+        json!({"op":"control-handle","handle":b["controller"],"method":"view",
+        "view":{"serial":1,"target":{"kind":"acp","id":agent.target["id"]},"focused":false}}),
+        &["not-native-connection"],
+    );
+    host.deny(
+        json!({"op":"control-handle","handle":registration["controller"],"method":"view",
+        "view":{"serial":2,"target":{"kind":"acp","id":agent.target["id"]},"focused":false}}),
+        &["not-native-connection"],
+    );
+    for finish in ["keep", "withdraw"] {
+        let when = json!({"kind":"human-idle","idle_ms":0,"warning_ms":1700});
+        let claim = s03_claim(&host, &agent, &b, "cooperative", when.clone());
+        let facts = s03_ownership(&host, &agent)["reservation"]["conditional"].clone();
+        assert_eq!(facts["when"], when);
+        assert_eq!(facts["ready_for_consent"], true, "{facts}");
+        let consent = s03_consent(&host, &agent, &claim, 1);
+        host.deny(consent.clone(), &["not-native-connection"]);
+        host.deny(
+            json!({"op":"control-handle","handle":control,"method":"keep",
+            "claim_id":claim["claim_id"]}),
+            &["not-native-connection"],
+        );
+        for (field, invalid, code) in [
+            ("view_serial", json!(0), "stale-view"),
+            (
+                "activity_revision",
+                json!(
+                    s03_ownership(&host, &agent)["activity_revision"]
+                        .as_u64()
+                        .unwrap()
+                        + 1
+                ),
+                "stale-observation",
+            ),
+        ] {
+            let mut stale = consent.clone();
+            stale[field] = invalid;
+            let response = native.exchange(stale);
+            assert_eq!(response["ok"], false, "{response}");
+            assert_eq!(response["error"]["code"], code);
+        }
+        native.call(consent);
+        let warning = s03_ownership(&host, &agent)["reservation"]["conditional"].clone();
+        assert_eq!(warning["consent"], "recorded");
+        assert_eq!(warning["clock"]["kind"], "warning");
+        assert!(warning["clock"]["remaining_ms"].as_u64().unwrap() <= 1700);
+        if finish == "keep" {
+            native.call(
+                json!({"op":"control-handle","handle":control,"method":"keep",
+                "claim_id":claim["claim_id"]}),
+            );
+        } else {
+            s03_handle(&host, &claim["claim"], "withdraw");
+        }
+        let state = s03_handle(&host, &claim["claim"], "read");
+        assert_eq!(
+            state["phase"],
+            if finish == "keep" {
+                "aborted-by-owner"
+            } else {
+                "withdrawn"
+            }
+        );
+        let current = native.call(json!({"op":"control-handle","handle":control,"method":"read"}));
+        assert_eq!(current["control"], control);
+        assert_eq!(current["ownership"]["observed"]["generation"], generation);
+        let ownership = s03_ownership(&host, &agent);
+        assert!(
+            ownership["reservation"].is_null(),
+            "external policy must explicitly rearm"
+        );
+        assert_eq!(ownership["settlement_boundary"], "input-admission");
+        assert_eq!(
+            pending(&host, &agent, "form")["interaction_id"],
+            form["interaction_id"]
+        );
+        assert_eq!(
+            host.inspect(&agent)["foreground"]["prompt_id"],
+            host.work(&agent, &prompt["work_id"])["prompt_id"]
+        );
+        assert!(!agent.root.join("effect.json").exists());
+    }
+    assert!(
+        s03_ownership(&host, &agent)["activity_revision"]
+            .as_u64()
+            .unwrap()
+            > activity
+    );
+    native.call(form_answer(
+        &agent,
+        &form,
+        "original-human-fresh-answer",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.completed(&agent, &prompt["work_id"]);
+    assert_eq!(agent.effect()["value"], 57);
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    host.close(&agent);
+}
+
+#[test]
+fn e04s03_acp_background_offer_revalidates_focus_activity_and_exact_original_connection() {
+    let host = Host::new();
+    let mut agent = host.open("s02-form");
+    host.ready(&mut agent);
+    let (mut native, registration) = s03_native_owner(&host, &mut agent);
+    let before_borrowed = s03_ownership(&host, &agent)["activity_revision"].clone();
+    let prompt = host.prompt(&agent, "background-question-still-active", "add 17 25");
+    assert_eq!(
+        s03_ownership(&host, &agent)["activity_revision"],
+        before_borrowed
+    );
+    let form = pending(&host, &agent, "form");
+    let b = s03_controller(&host, "background policy requester");
+    let claim = s03_claim(
+        &host,
+        &agent,
+        &b,
+        "cooperative",
+        json!({"kind":"views-backgrounded","scope":"owner"}),
+    );
+    assert_eq!(
+        s03_ownership(&host, &agent)["reservation"]["conditional"]["eligibility"],
+        "ineligible"
+    );
+    s03_view(&mut native, &registration, &agent, 2, false);
+    assert_eq!(
+        s03_ownership(&host, &agent)["reservation"]["conditional"]["ready_for_consent"],
+        true
+    );
+    native.call(s03_consent(&host, &agent, &claim, 2));
+    let first = s03_handle(&host, &claim["claim"], "read");
+    assert_eq!(first["phase"], "offered");
+    // An offer is not a grant. A real changed focus invalidates final acceptance.
+    assert_eq!(
+        native.call(
+            json!({"op":"control-handle","handle":agent.opened["control"],
+        "method":"read"})
+        )["control"],
+        agent.opened["control"]
+    );
+    s03_view(&mut native, &registration, &agent, 3, true);
+    host.deny(
+        json!({"op":"control-handle","handle":first["offer"],"method":"accept"}),
+        &["stale-offer"],
+    );
+    assert_eq!(
+        s03_ownership(&host, &agent)["reservation"]["conditional"]["eligibility"],
+        "ineligible"
+    );
+    let stale_view = native.exchange(json!({"op":"control-handle","handle":registration["controller"],
+        "method":"view","view":{"serial":2,"target":{"kind":"acp","id":agent.target["id"]},"focused":false}}));
+    assert_eq!(stale_view["ok"], false);
+    assert_eq!(stale_view["error"]["code"], "stale-view");
+    s03_view(&mut native, &registration, &agent, 4, false);
+    native.call(s03_consent(&host, &agent, &claim, 4));
+    let second = s03_handle(&host, &claim["claim"], "read");
+    assert_eq!(second["phase"], "offered");
+    assert_ne!(first["offer"], second["offer"]);
+    let revision = s03_ownership(&host, &agent)["activity_revision"]
+        .as_u64()
+        .unwrap();
+    host.deny(
+        json!({"op":"control-handle","handle":agent.opened["control"],"method":"activity"}),
+        &["not-native-connection"],
+    );
+    assert_eq!(s03_ownership(&host, &agent)["activity_revision"], revision);
+    native
+        .call(json!({"op":"control-handle","handle":agent.opened["control"],"method":"activity"}));
+    host.deny(
+        json!({"op":"control-handle","handle":second["offer"],"method":"accept"}),
+        &["stale-offer", "claim-completed"],
+    );
+    assert_eq!(
+        s03_handle(&host, &claim["claim"], "read")["phase"],
+        "aborted-by-owner"
+    );
+    assert!(s03_ownership(&host, &agent)["reservation"].is_null());
+    // Activity preserves the human grant; only external policy creates a new
+    // claim. Never silently rearm or rebind the aborted claim's consent.
+    let rearmed = s03_claim(
+        &host,
+        &agent,
+        &b,
+        "cooperative",
+        json!({"kind":"views-backgrounded","scope":"owner"}),
+    );
+    native.call(s03_consent(&host, &agent, &rearmed, 4));
+    let fresh = s03_handle(&host, &rearmed["claim"], "read");
+    assert_eq!(fresh["phase"], "offered");
+    assert_ne!(fresh["offer"], second["offer"]);
+    let ownership = s03_ownership(&host, &agent);
+    assert_eq!(ownership["settlement_boundary"], "input-admission");
+    let original = host.work(&agent, &prompt["work_id"]);
+    assert_eq!(
+        host.inspect(&agent)["foreground"]["prompt_id"],
+        original["prompt_id"]
+    );
+    agent.opened = s03_handle(&host, &fresh["offer"], "accept");
+    host.call(form_answer(
+        &agent,
+        &form,
+        "background-successor-fresh-answer",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    s03_same_work(&host.completed(&agent, &prompt["work_id"]), &original);
+    assert_eq!(agent.effect()["value"], 57);
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    host.close(&agent);
 }
