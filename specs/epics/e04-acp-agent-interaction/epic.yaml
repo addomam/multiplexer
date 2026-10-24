@@ -2,7 +2,7 @@ id: e04
 type: epic
 context: context.yaml
 title: ACP-first agent interaction
-status: building-e04s02-reviewed-awaiting-local-checkpoint
+status: building-e04s02-complete-e04s03-next
 scope: ../../product/SCOPE_LATEST.yaml
 architecture: ../../adr/0004-acp-authoritative-input.md
 impact: ../../IMPACT_LATEST.md
@@ -29,7 +29,7 @@ stories:
     bcps: 8
     risk: P0
     delta: ADDED
-    status: failing
+    status: done
     spec: e04s02-story.md
     tasks: e04s02-tasks.yaml
   - id: e04s03
@@ -50,4 +50,4 @@ stories:
     tasks: e04s04-tasks.yaml
 plan_status: passed-independent-round3-100-100
 plan: PLAN.md
-runtime_implementation: e04s01-complete-e04s02-local-verified-reviewed-awaiting-checkpoint
+runtime_implementation: e04s01-e04s02-locally-complete-e04s03-next

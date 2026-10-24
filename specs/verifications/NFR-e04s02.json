@@ -37,9 +37,9 @@
       "Canonical inspection separates metadata from opt-in bounded content, with explicit work/delivery/application states and history truncation.",
       "Native view renders actual exact interaction and retained work, explicit review/selection and local validation limitations; no optimistic accepted history.",
       "Scoped evidence credential/control-ref scan found no matches; real provider content/auth/environment and raw transport are not recorded.",
-      "Both implementation worker resources remain preserved until a safe local integration commit; no unmerged work was discarded."
+      "Both worker commits are retained in f87ec7b; clean worktrees were removed without force after graceful OMP/MCP exit. Six owned PIDs, both worktrees/workspaces/tabs are absent; branches retained."
     ],
-    "evidence": ["e04s02-build.md", "AUDIT-e04s02.md", "e04s02-rich-native.json", "e04s02-native-form-decline.json", "e04s02-native-form-cancel.json"],
+    "evidence": ["e04s02-build.md", "AUDIT-e04s02.md", "e04s02-rich-native.json", "e04s02-native-form-decline.json", "e04s02-native-form-cancel.json", "e04s02-worker-retirement.json"],
     "limitations": ["Independent static security review found no supported findings; no runtime/provider security certification is asserted.", "Optional bundled blind-spot/completeness/trace/wiki helper scripts are absent; their checks are skipped, not passed."]
   },
   "terminal_verdicts": {"complete_current_run": "artifact://1266", "exact_story_run": "artifact://1269"},

@@ -122,7 +122,7 @@ gate_trace:
   heuristic_ratio: null
   downgrade_applied: false
 e04s01: done
-e04s02: failing
+e04s02: done
 e04s03: failing
 e04s04: failing
 e03_receipt_publication:
@@ -133,13 +133,13 @@ e03_receipt_publication:
   source_branch: retained
 e04_cycle:
   phase: build
-  status: e04s02-reviewed-awaiting-safe-local-checkpoint
+  status: e04s02-complete-e04s03-next
   branch: feat/acp-agent-interaction
   worktree: /Users/addomam/projects/amux-acp-build
   context: specs/epics/e04-acp-agent-interaction/context.yaml
   architecture: specs/adr/0004-acp-authoritative-input.md
   implementation_started: true
-  runtime_acceptance: passing-e04s02-local-reviewed-awaiting-safe-checkpoint
+  runtime_acceptance: passing-through-e04s02-local-only
   live_model_approval: separately-required
   historical_e03s08_and_review_caps: unchanged
   architecture_review: {round: 2, scores: [96.875, 100], must_fix: 0, evidence: specs/verifications/e04-architecture-review-round2.json}
@@ -149,14 +149,17 @@ e04_cycle:
   verification: {artifact: 'artifact://1171', workspace_passed: 343, suites: 30, ignored: 10, acp_library: 12, acp_s01: 23, omp_passed: 8}
   e04s01_checkpoint: {commit: 4d74d58, signing: unsigned-authorized-fallback, workers: retired-without-force, evidence: specs/verifications/e04s01-worker-retirement.json}
   e04s02_red: {commit: 1c8ba34, cases: 1, failed: 1, isolated_committed_check: failed-as-expected, evidence: specs/verifications/e04s02-build.md}
-  e04s02_workers: {backend: w1S, backend_commit: 388da67b06b2b39daccbef14200d483d8b614c0b, editor: w1T, editor_commit: c2a12d660e6a07e20295fcc432093f10675e752a, status: integrated-not-yet-safely-checkpointed, integration_owner: parent, worker_checks: intentionally-not-run}
+  e04s02_workers: {backend: w1S, backend_commit: 388da67b06b2b39daccbef14200d483d8b614c0b, editor: w1T, editor_commit: c2a12d660e6a07e20295fcc432093f10675e752a, status: safely-integrated-retired-without-force-branches-retained, integration_owner: parent, worker_checks: intentionally-not-run}
   e04s02_driver_baseline: {status: passed-S01-only-not-story-acceptance, evidence: specs/verifications/e04s02-runtime-driver-baseline-attempt3.json, failed_attempts_retained: [1, 2], cleanup: complete}
   e04s02_integration: {initial_tests: {passed: 18, failed: 1, artifact: 'artifact://1235'}, auth_ordering_repair: {targeted_passed: 1, story_passed: 19, library_passed: 22, workspace_passed: 372, artifact: 'artifact://1238'}, later_native_history_repair: {status: actual-before-after-passed-final-gates-pending, evidence: specs/verifications/e04s02-history-ui-after.json}, rich_native: specs/verifications/e04s02-rich-native.json, story_acceptance: still-failing}
   e04s02_current_proof: {artifact: 'artifact://1266', workspace_passed: 372, suites: 30, ignored: 10, strict_clippy_check_build_fmt: passed, omp_passed: 8, zsh_syntax: passed, exact_story_artifact: 'artifact://1269', library_passed: 22, integration_passed: 19, native_schema_projection_boundary: repaired-and-actual-after-proved}
   e04s02_build_review: {round: 1, max_rounds: 5, status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [2, 0], security_findings: 0, source: specs/verifications/e04s02-round1-source.json, audit: specs/verifications/AUDIT-e04s02.md, evidence: specs/verifications/e04s02-build-review-round1.json, story_tasks: all-six-passing}
+  e04s02_checkpoint: {commit: f87ec7b, signing: unsigned-authorized-fallback, workers: retired-without-force, evidence: specs/verifications/e04s02-worker-retirement.json}
 stories:
   e04s01:
     started_at: "2026-10-23T14:46:59-05:00"
     completed_at: "2026-10-23T23:06:24-05:00"
   e04s02:
     started_at: "2026-10-23T23:14:27-05:00"
+    completed_at: "2026-10-24T05:54:57.795882+00:00"
+    status: done

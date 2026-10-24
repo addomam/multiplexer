@@ -3,7 +3,7 @@ context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s02
 verified_at: '2026-10-24T05:32:21.443576+00:00'
 verifier: parent-actual-CLI-controlling-PTY-and-project-commands
-status: passed-local-S02-safe-integration-pending
+status: passed-local-S02-safely-integrated-workers-retired
 source: specs/verifications/e04s02-round1-source.json
 terminal_verdict:
   command: cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s02_ -- --nocapture
@@ -141,7 +141,7 @@ phases:
       fallback, unrelated sentinel survives, roots removed.
     failed_attempts: Preserved individually with their actual cleanup/fallback results; constructor-only long path has no-holder/root-removal
       receipt.
-    implementation_workers: Preserved until safe integration commit; not yet retired.
+    implementation_workers: Safely integrated as f87ec7b, gracefully exited and removed without force; all six owned PIDs/worktrees/workspaces/tabs absent, worker branches retained. See e04s02-worker-retirement.json.
     optional_helpers:
       blind_spots: skipped-not-bundled
       completeness_critic: skipped-not-bundled

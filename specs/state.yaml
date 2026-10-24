@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: commit-message
+  next_skill: build-epic
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -63,7 +63,8 @@ handoff:
     Subsequent actual native/API permission choices, all four original-native/API response orders, null-session bootstrap, native form decline/cancel and explicit Ctrl-C pending/late cancellation proofs pass with owned cleanup; every task remains failing until fresh review.
     Self-audit also found supported large-default/unset and canonical-content-versus-metadata UI limits. Both have actual failing-before/passing-after proof without widening canonical4MiB or submitted64KiB limits. Final workspace372/strict gates/Bun8/Zsh pass at artifact1266; exact story22library/19integration passes at artifact1269.
     S02 self-audit and fresh blind A/B round1 pass100/100 with zero must-fix/should-fix; security reports no supported findings. Two Consider-only comments are dispositioned without code changes. All six S02 tasks now pass actual command/smoke/security gates; safely checkpoint integration before retiring the two owned workers and starting S03. No historical cap reset/live approval/publication.
-  last_step_completed: e04s02-local-runtime-and-independent-round1-PASS
+    S02 is safely integrated locally as f87ec7b; both worker commits are ancestors and their clean worktrees were removed without force after graceful OMP/MCP exit. All six owned shell/agent/MCP PIDs, both worktrees and Herdr workspaces/tabs are absent; worker branches remain. S02 is done locally. Next: S03 on the feature branch, no renewed Plan/live/publication authority.
+  last_step_completed: e04s02-safe-integration-and-owned-worker-retirement
   required_reading:
     - specs/verifications/e04s02-build-review-round1.json
     - specs/verifications/e04s02-build.md
@@ -534,18 +535,24 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s02
   story_bcps: 8
-  step: 7
-  completed_steps: [0, 1, 2, 3, 4, 5, 6]
+  step: 8
+  completed_steps: [0, 1, 2, 3, 4, 5, 6, 7, 8]
   started_at: "2026-10-23T23:14:27-05:00"
   baseline: {commit: 8886c2b, code_commit: 4d74d58, evidence: 'artifact://1171', workspace_rust_passed: 343, omp_passed: 8, source: specs/verifications/e04s01-post-review-source.json}
   red: {commit: 1c8ba34, status: failed-as-expected-in-parent-and-isolated-committed-checkout, cases: 1, passed: 0, error: genuine-form-explicitly-rejected-by-S01, evidence: specs/verifications/e04s02-build.md}
   audit_result: pass
-  runtime_acceptance: passing-e04s02-local-reviewed-awaiting-safe-checkpoint
+  runtime_acceptance: passing-e04s02-local-only
   implementation_started: true
   integration_owner: parent
+  integration_commit: f87ec7b
+  integration_signing: {status: unsigned-user-authorized-fallback, global_config_changed: false}
+  completed_at: "2026-10-24T05:54:57.795882+00:00"
+  release_choice: keep-feature-branch-no-main-merge-push-or-release
+  cleanup_evidence: specs/verifications/e04s02-worker-retirement.json
+  trace_and_OKF: skipped-no-bundled-generating-scripts-not-a-coverage-PASS
   owned_sessions:
-    - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: integrated-under-verification-not-yet-safely-checkpointed, commit: 388da67b06b2b39daccbef14200d483d8b614c0b, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-backend-delivery.json}
-    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: integrated-under-verification-not-yet-safely-checkpointed, commit: c2a12d660e6a07e20295fcc432093f10675e752a, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-editor-delivery.json}
+    - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-and-removed-without-force, commit: 388da67b06b2b39daccbef14200d483d8b614c0b, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-backend-delivery.json}
+    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-and-removed-without-force, commit: c2a12d660e6a07e20295fcc432093f10675e752a, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-editor-delivery.json}
   lsp_references: {status: unavailable-in-isolated-worktree-not-no-callers, attempted: [exact-declaration-references, scoped-rust-analyzer-reload, workspace-folder-notification-route], limitation: device-exposes-request-not-notification-and-empty-references, reported: true}
   runtime_driver_baseline: {status: passed-S01-only-not-S02-acceptance, evidence: specs/verifications/e04s02-runtime-driver-baseline-attempt3.json, failed_attempts_retained: [1, 2], private_resources: removed-after-owned-cleanup}
 e04s02_build_review:
