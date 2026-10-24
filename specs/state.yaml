@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: build-epic
+  next_skill: develop-tdd
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -64,7 +64,8 @@ handoff:
     Self-audit also found supported large-default/unset and canonical-content-versus-metadata UI limits. Both have actual failing-before/passing-after proof without widening canonical4MiB or submitted64KiB limits. Final workspace372/strict gates/Bun8/Zsh pass at artifact1266; exact story22library/19integration passes at artifact1269.
     S02 self-audit and fresh blind A/B round1 pass100/100 with zero must-fix/should-fix; security reports no supported findings. Two Consider-only comments are dispositioned without code changes. All six S02 tasks now pass actual command/smoke/security gates; safely checkpoint integration before retiring the two owned workers and starting S03. No historical cap reset/live approval/publication.
     S02 is safely integrated locally as f87ec7b; both worker commits are ancestors and their clean worktrees were removed without force after graceful OMP/MCP exit. All six owned shell/agent/MCP PIDs, both worktrees and Herdr workspaces/tabs are absent; worker branches remain. S02 is done locally. Next: S03 on the feature branch, no renewed Plan/live/publication authority.
-  last_step_completed: e04s02-safe-integration-and-owned-worker-retirement
+    S03 starts from043cc0f with unchanged verified S02 runtime sources (workspace372/strict Rust/Bun8/Zsh and exact22library/19integration proof). Existing approved threat/impact/Plan/contracts are reused, not reopened. Parent owns shared authority/daemon/top-level routing and native test-module registration; independent backend and actual-PTY test slices will first deliver test-only commits, with no mid-flight checks or speculative source fixes.
+  last_step_completed: e04s03-approved-scope-and-verified-feature-baseline
   required_reading:
     - specs/verifications/e04s02-build-review-round1.json
     - specs/verifications/e04s02-build.md
@@ -531,7 +532,7 @@ e04s01_build_review:
   round_4: {status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [1, 0], source: specs/verifications/e04s01-round4-source.json, evidence: specs/verifications/e04s01-build-review-round4.json}
   round_5: {status: PASS-numerical-threshold, scores: [96.875, 100], must_fix: [0, 0], should_fix: [1, 0], source: specs/verifications/e04s01-round5-source.json, evidence: specs/verifications/e04s01-build-review-round5.json, reviewers: [E04S01ReviewA5, E04S01ReviewB5, E04S01Security5]}
   post_review_P2: {status: repaired-and-verified-not-independently-rereviewed, red: 'artifact://1165', red_failed: 2, green_passed: 2, current_full: 'artifact://1171', source: specs/verifications/e04s01-post-review-source.json, no_round_6: true}
-epic_cycle:
+e04s02_completed_cycle:
   scope: e04-acp-agent-interaction
   story: e04s02
   story_bcps: 8
@@ -573,3 +574,18 @@ e04s02_build_review:
   exact_story_verification: {artifact: 'artifact://1269', library_passed: 22, integration_passed: 19}
   security: {status: no-static-blocker-identified, findings: 0, evidence: specs/verifications/e04s02-security-review-round1.json, independent_runtime: false}
   historical_review_counters: unchanged
+epic_cycle:
+  scope: e04-acp-agent-interaction
+  story: e04s03
+  story_bcps: 8
+  step: 4
+  completed_steps: [0, 1, 2, 3]
+  started_at: "2026-10-24T05:59:41.553503+00:00"
+  baseline: {commit: 043cc0f, code_commit: f87ec7b, source: specs/verifications/e04s02-integration-source.json, workspace_evidence: 'artifact://1266', exact_story_evidence: 'artifact://1269', workspace_rust_passed: 372, omp_passed: 8, production_source_unchanged: true}
+  integration_owner: parent
+  implementation_started: false
+  audit_result: not-run
+  runtime_acceptance: failing-S03-unverified
+  approved_plan_reopened: false
+  trace_and_OKF: no-bundled-generating-scripts-not-a-coverage-PASS
+  owned_sessions: []

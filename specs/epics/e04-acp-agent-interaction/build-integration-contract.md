@@ -108,3 +108,14 @@ Implementation detail of the approved form/permission slice, not a reopened Plan
 - First valid memory-only target→ACP admission wins. Reserve every notification/mandatory response and content/work/call slot before publishing selection/cancel. During current-prompt cancellation, pending and late applicable session forms/permissions are nonselectable with distinct Cancel/Cancelled, selected responses are not duplicated, malformed/wrong-session requests still get exact protocol errors, and request-scoped bootstrap/auth forms are not guessed to belong to a prompt.
 - Retain exact typed inbound request ID and outbound request scope. Explicitly handle original scoped-RPC completion/closure without rebinding to a newer RPC, losing its responder, blocking the consumer or inventing agent application. Report any unresolved protocol-lifetime ambiguity to parent before changing semantics.
 
+## S03 execution ownership
+
+S02 is safely integrated as f87ec7b with retirement receipt043cc0f. No new interface or requirement is being designed. Existing Broker/Authority/AgentView signatures remain fixed.
+
+- Backend worker owns only `src/acp.rs`, `tests/acp.rs` and `tests/fixtures/acp_peer.rs`: admission/revocation order, stalled transport, cooperative/force/cancel/recovery and interrupt/outcome cases. First delivery is test-only; report any actual defect before a production repair.
+- Native worker owns only new `tests/acp/native.rs` and, after a parent-verified RED, `src/tui/agent.rs`: real controlling-PTY stale draft/raw-route, same-session handoff and inert/gap rendering boundaries. It may use the parent ACP Host/Agent helpers through `super::*`; parent alone adds its module declaration after integration. Do not copy/refactor legacy native test infrastructure.
+- Parent exclusively owns all shared files/global ledgers, conditional provenance and final runtime proof. Backend alone may extend the peer; native worker requests additional peer behavior through parent rather than editing it. Parent sequences any required shared fixes.
+- New standalone peer mode `s03-rendering` emits bounded mixed updates including synthetic escape/control content and enough sequenced events for a canonical gap, then holds `s03-updates` until explicit release. It retains normal arithmetic/session identity and completion. No live adapter, network or hidden production hook.
+- Both substantial workers first write/commit meaningful boundary tests without running build/lint/tests/formatters. Parent integrates and runs the named cases; an already-correct boundary is recorded as existing behavior, never given a fabricated RED. A real failure receives a separate test-only RED checkpoint and minimal production repair before GREEN. All task statuses remain failing until complete actual command/smoke/security gates.
+
+
