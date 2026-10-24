@@ -1,5 +1,9 @@
 //! Owned ACP v1 transport. Authority admission ends at the memory-only commit;
 //! neither workers nor ownership transfer reinterpret an admitted action.
+//! Forms and tool permissions retain exact wire responders across authority and
+//! parent-RPC completion. Interaction content (including selections) is bounded
+//! separately at 4 MiB; only completed content can be evicted. Local form checks
+//! cover the restricted flat ACP schema, not pattern/format or full JSON Schema.
 use agent_client_protocol_schema::{ProtocolVersion, v1 as acp};
 use anyhow::{Result, bail, ensure};
 use parking_lot::{Condvar, Mutex};
@@ -11,6 +15,7 @@ use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Weak};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
@@ -25,6 +30,9 @@ const HISTORY: usize = 2048;
 const COMPLETED: usize = 1024;
 const CALLS: usize = 4096;
 const STDERR: usize = 64 * 1024;
+const INTERACTIONS: usize = 64;
+const FIELDS: usize = 64;
+const OPTIONS: usize = 256;
 
 pub(crate) struct Broker {
     inner: Arc<Mutex<Instances>>,
@@ -75,7 +83,72 @@ enum Action {
     Prompt(String),
     Authenticate(String),
     Interrupt(String),
+    Answer(String, u64, FormAnswer),
+    Permission(String, u64, String),
     Close,
+}
+
+enum FormAnswer {
+    Accept(Value),
+    Decline,
+    Cancel,
+}
+
+struct Interaction {
+    id: String,
+    wire_id: acp::RequestId,
+    kind: &'static str,
+    session_scoped: bool,
+    request_scope: Option<acp::RequestId>,
+    parent_state: &'static str,
+    detail: Value,
+    bytes: usize,
+    state: &'static str,
+    selected_work: Option<String>,
+    selection: Option<Value>,
+    delivery: &'static str,
+    responding: bool,
+}
+
+impl Interaction {
+    fn metadata(&self) -> Value {
+        json!({"interaction_id":self.id,"revision":1,"kind":self.kind,"state":self.state,
+            "selected_work_id":self.selected_work,"delivery":self.delivery,"application":"unknown"})
+    }
+
+    fn content(&self) -> Value {
+        let mut result = self.metadata();
+        let object = result.as_object_mut().expect("metadata object");
+        for (key, value) in self.detail.as_object().expect("interaction object") {
+            object.insert(key.clone(), value.clone());
+        }
+        if let Some(selection) = &self.selection {
+            result["selection"] = selection.clone();
+        }
+        if self.request_scope.is_some() {
+            result["scope_parent_state"] = json!(self.parent_state);
+        }
+        result
+    }
+
+    fn affected_by_interrupt(&self, state: &State) -> bool {
+        self.session_scoped || self.request_scope.as_ref().is_some_and(|id|
+            state.outstanding.get(id).is_some_and(|pending| matches!(pending.kind, RpcKind::Prompt)))
+    }
+
+    fn cancel_frame(&self, work: &str) -> Result<Outgoing> {
+        let mut frame = if self.kind == "permission" {
+            encode(acp::Response::new(self.wire_id.clone(), Ok(
+                acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Cancelled))),
+                Some(work.to_owned()))?
+        } else {
+            encode(acp::Response::new(self.wire_id.clone(), Ok(
+                acp::CreateElicitationResponse::new(acp::ElicitationAction::Cancel))),
+                Some(work.to_owned()))?
+        };
+        frame.response_id = Some(self.wire_id.clone());
+        Ok(frame)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -94,6 +167,15 @@ struct Pending {
 struct Outgoing {
     bytes: Vec<u8>,
     work_id: Option<String>,
+    response_id: Option<acp::RequestId>,
+    response_write: Option<Arc<AtomicU8>>,
+}
+
+struct Responder {
+    interaction: Option<String>,
+    // 0: not finished, 1: written, 2: write failed. Publishing before taking
+    // state prevents a fast peer's legal ID reuse racing writer bookkeeping.
+    write: Arc<AtomicU8>,
 }
 
 struct Work {
@@ -104,6 +186,7 @@ struct Work {
     operation: &'static str,
     rpc_id: Option<acp::RequestId>,
     prompt_id: Option<String>,
+    interaction_id: Option<String>,
     state: &'static str,
     delivery: &'static str,
     outcome: Option<Value>,
@@ -123,6 +206,13 @@ struct State {
     work: VecDeque<Work>,
     completed_evicted: u64,
     outstanding: BTreeMap<acp::RequestId, Pending>,
+    // Includes queued/in-flight errors as well as selectable responders. A wire
+    // ID cannot be reused until the actual response write has finished.
+    responders: BTreeMap<acp::RequestId, Responder>,
+    interactions: VecDeque<Interaction>,
+    interaction_bytes: usize,
+    interactions_evicted: u64,
+    cancel_work: Option<String>,
     next_rpc: i64,
     output: VecDeque<Outgoing>,
     output_count: usize,
@@ -157,6 +247,11 @@ impl State {
             work: VecDeque::new(),
             completed_evicted: 0,
             outstanding: BTreeMap::new(),
+            responders: BTreeMap::new(),
+            interactions: VecDeque::new(),
+            interaction_bytes: 0,
+            interactions_evicted: 0,
+            cancel_work: None,
             next_rpc: 0,
             output: VecDeque::new(),
             output_count: 0,
@@ -218,6 +313,27 @@ impl State {
         }
     }
 
+    fn retain_capacity(&self, extra: usize) -> Result<()> {
+        let live_bytes: usize = self.interactions.iter()
+            .filter(|i| i.state == "pending" || i.responding).map(|i| i.bytes).sum();
+        ensure!(live_bytes + extra <= QUEUE_BYTES,
+            "capacity-exceeded: ACP interaction content budget");
+        Ok(())
+    }
+
+    fn trim_interactions(&mut self) {
+        while self.interaction_bytes > QUEUE_BYTES
+            || self.interactions.iter().filter(|i| i.state != "pending" && !i.responding).count() > COMPLETED
+        {
+            let Some(index) = self.interactions.iter()
+                .position(|i| i.state != "pending" && !i.responding) else { break };
+            if let Some(interaction) = self.interactions.remove(index) {
+                self.interaction_bytes -= interaction.bytes;
+                self.interactions_evicted += 1;
+            }
+        }
+    }
+
     fn close(&mut self, failure: Option<&'static str>) {
         if !self.live() {
             // Resource identity failure can arrive after an explicit close won.
@@ -242,6 +358,18 @@ impl State {
             }
         }
         self.outstanding.clear();
+        for interaction in &mut self.interactions {
+            if interaction.request_scope.is_some() && interaction.parent_state == "outstanding" {
+                interaction.parent_state = "unknown";
+            }
+            if interaction.state == "pending" {
+                self.responders.remove(&interaction.wire_id);
+                interaction.state = "unknown";
+            } else if interaction.responding {
+                // An owned in-flight response can still add delivery evidence.
+                interaction.state = "unknown";
+            }
+        }
         for frame in self.input.drain(..) {
             self.input_count -= 1;
             self.input_bytes -= frame.len();
@@ -250,8 +378,15 @@ impl State {
         for frame in self.output.drain(..) {
             self.output_count -= 1;
             self.output_bytes -= frame.bytes.len();
+            if let Some(id) = &frame.response_id
+                && let Some(Responder {interaction: Some(interaction_id), ..}) = self.responders.remove(id)
+                && let Some(interaction) = self.interactions.iter_mut().find(|i| i.id == interaction_id)
+            {
+                interaction.responding = false;
+            }
         }
         self.trim_work();
+        self.trim_interactions();
         self.changed();
     }
 
@@ -269,10 +404,29 @@ impl State {
         Ok(())
     }
 
-    fn enqueue(&mut self, frame: Outgoing) {
+    fn enqueue(&mut self, mut frame: Outgoing) {
+        if let Some(id) = &frame.response_id {
+            frame.response_write = Some(self.responders.get(id).expect("reserved responder").write.clone());
+        }
         self.output_count += 1;
         self.output_bytes += frame.bytes.len();
         self.output.push_back(frame);
+    }
+
+    fn finish_response(&mut self, id: &acp::RequestId, write: &Arc<AtomicU8>) {
+        let result = write.load(Ordering::Acquire);
+        if result == 0 || !self.responders.get(id).is_some_and(|r| Arc::ptr_eq(&r.write, write)) {
+            return;
+        }
+        if let Some(Responder {interaction: Some(interaction_id), ..}) = self.responders.remove(id)
+            && let Some(interaction) = self.interactions.iter_mut().find(|i| i.id == interaction_id)
+        {
+            interaction.responding = false;
+            interaction.delivery = if result == 1 { "submitted" } else { "write-failed" };
+            if result == 2 && interaction.state != "unknown" { interaction.state = "failed"; }
+        }
+        self.trim_interactions();
+        self.changed();
     }
 
     fn rpc(
@@ -428,7 +582,8 @@ impl Broker {
             "acp-authenticate" => &["method_id"],
             "acp-interrupt" => &["prompt_id"],
             "acp-close" => &[],
-            "acp-answer" | "acp-permission" => bail!("unsupported: ACP interactions unavailable"),
+            "acp-answer" => &["interaction_id", "revision", "action", "values"],
+            "acp-permission" => &["interaction_id", "revision", "option_id"],
             _ => bail!("invalid-request: unknown ACP mutation"),
         };
         closed(
@@ -471,6 +626,29 @@ impl Broker {
                 Action::Authenticate(string(request, "method_id", 256)?.to_owned())
             }
             "acp-interrupt" => Action::Interrupt(string(request, "prompt_id", 256)?.to_owned()),
+            "acp-answer" => {
+                let id = string(request, "interaction_id", 256)?.to_owned();
+                let revision = request["revision"].as_u64()
+                    .ok_or_else(|| anyhow::anyhow!("invalid-request: ACP revision required"))?;
+                let action = match request["action"].as_str() {
+                    Some("accept") => {
+                        let values = request.get("values").filter(|v| v.is_object())
+                            .ok_or_else(|| anyhow::anyhow!("invalid-request: ACP values object required"))?;
+                        ensure!(value_bytes(values) <= LOCAL_CONTENT,
+                            "invalid-request: ACP answer budget");
+                        FormAnswer::Accept(values.clone())
+                    }
+                    Some("decline") if request.get("values").is_none() => FormAnswer::Decline,
+                    Some("cancel") if request.get("values").is_none() => FormAnswer::Cancel,
+                    _ => bail!("invalid-request: ACP answer action or values"),
+                };
+                Action::Answer(id, revision, action)
+            }
+            "acp-permission" => Action::Permission(
+                string(request, "interaction_id", 256)?.to_owned(),
+                request["revision"].as_u64()
+                    .ok_or_else(|| anyhow::anyhow!("invalid-request: ACP revision required"))?,
+                string(request, "option_id", 256)?.to_owned()),
             _ => Action::Close,
         };
         Ok(PreparedAction {
@@ -510,6 +688,8 @@ impl Broker {
         );
         let work_id = prepared.work_id;
         let mut prompt_id = None;
+        let mut selections = Vec::new();
+        let mut frames = Vec::new();
         let (operation, request, notification) = match &prepared.action {
             Action::Prompt(text) => {
                 ensure!(
@@ -580,6 +760,15 @@ impl Broker {
                     .as_ref()
                     .ok_or_else(|| anyhow::anyhow!("not-ready: ACP session unavailable"))?;
                 prompt_id = Some(prompt.clone());
+                for (index, interaction) in state.interactions.iter().enumerate() {
+                    if interaction.state == "pending" && interaction.affected_by_interrupt(&state) {
+                        frames.push(interaction.cancel_frame(&work_id)?);
+                        let selection = if interaction.kind == "permission" {
+                            json!({"outcome":"cancelled"})
+                        } else { json!({"action":"cancel"}) };
+                        selections.push((index, value_bytes(&selection), selection));
+                    }
+                }
                 let notification = acp::Notification {
                     method: "session/cancel".into(),
                     params: Some(acp::ClientNotification::CancelNotification(
@@ -592,18 +781,73 @@ impl Broker {
                     Some(encode(notification, Some(work_id.clone()))?),
                 )
             }
+            Action::Answer(id, revision, answer) => {
+                let index = pending_interaction(&state, id, *revision, "form")?;
+                let interaction = &state.interactions[index];
+                let action = match answer {
+                    FormAnswer::Accept(values) => {
+                        validate_form_values(&interaction.detail["schema"], values)
+                            .map_err(|category| anyhow::anyhow!("invalid-request: {category}"))?;
+                        let content = BTreeMap::<String, acp::ElicitationContentValue>::deserialize(values)
+                            .map_err(|_| anyhow::anyhow!("invalid-request: ACP typed form values"))?;
+                        acp::ElicitationAction::Accept(acp::ElicitationAcceptAction::new().content(content))
+                    }
+                    FormAnswer::Decline => acp::ElicitationAction::Decline,
+                    FormAnswer::Cancel => acp::ElicitationAction::Cancel,
+                };
+                let response = acp::CreateElicitationResponse::new(action);
+                let selection = serde_json::to_value(&response)?;
+                selections.push((index, value_bytes(&selection), selection));
+                let mut frame = encode(acp::Response::new(interaction.wire_id.clone(), Ok(response)),
+                    Some(work_id.clone()))?;
+                frame.response_id = Some(interaction.wire_id.clone());
+                ("acp-answer", None, Some(frame))
+            }
+            Action::Permission(id, revision, option) => {
+                let index = pending_interaction(&state, id, *revision, "permission")?;
+                let interaction = &state.interactions[index];
+                ensure!(interaction.detail["options"].as_array().is_some_and(|options|
+                    options.iter().any(|offered| offered["option_id"] == option.as_str())),
+                    "invalid-request: ACP permission option unavailable");
+                let response = acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Selected(
+                    acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(option.as_str()))));
+                let selection = json!({"option_id":option});
+                selections.push((index, value_bytes(&selection), selection));
+                let mut frame = encode(acp::Response::new(interaction.wire_id.clone(), Ok(response)),
+                    Some(work_id.clone()))?;
+                frame.response_id = Some(interaction.wire_id.clone());
+                ("acp-permission", None, Some(frame))
+            }
             Action::Close => ("acp-close", None, None),
         };
+        if let Some(frame) = notification {
+            // session/cancel precedes its mandatory response frames on the wire.
+            frames.insert(0, frame);
+        }
+        state.capacity(&frames, request.is_some())?;
+        let selection_bytes: usize = selections.iter().map(|(_, bytes, _)| bytes).sum();
+        state.retain_capacity(selection_bytes)?;
+        let interaction_id = selections.first().map(|(index, _, _)| state.interactions[*index].id.clone());
+        let response_rpc = if matches!(prepared.action, Action::Answer(..) | Action::Permission(..)) {
+            selections.first().map(|(index, _, _)| state.interactions[*index].wire_id.clone())
+        } else { None };
         let rpc_id = if let Some((request, kind)) = request {
             Some(state.rpc(request, kind, Some(work_id.clone()))?)
-        } else {
-            if let Some(frame) = notification {
-                state.capacity(std::slice::from_ref(&frame), false)?;
-                state.enqueue(frame);
-            }
-            None
-        };
+        } else { response_rpc };
         // No fallible operation below this point.
+        for frame in frames {
+            state.enqueue(frame);
+        }
+        for (index, bytes, selection) in selections {
+            let interaction = &mut state.interactions[index];
+            interaction.state = "selected";
+            interaction.selected_work = Some(work_id.clone());
+            interaction.selection = Some(selection);
+            interaction.responding = true;
+            interaction.bytes += bytes;
+            state.interaction_bytes += bytes;
+        }
+        state.trim_interactions();
         state.calls.insert(prepared.call_id.clone());
         state.work.push_back(Work {
             id: work_id.clone(),
@@ -613,6 +857,7 @@ impl Broker {
             operation,
             rpc_id,
             prompt_id: prompt_id.clone(),
+            interaction_id,
             state: "accepted",
             delivery: "not-submitted",
             outcome: None,
@@ -627,12 +872,13 @@ impl Broker {
                 );
             }
             Action::Interrupt(_) => {
+                state.cancel_work = Some(work_id.clone());
                 if let Some((_, cancelling)) = &mut state.foreground {
                     *cancelling = true;
                 }
             }
             Action::Close => state.close(None),
-            Action::Authenticate(_) => {}
+            Action::Authenticate(_) | Action::Answer(..) | Action::Permission(..) => {}
         }
         state.changed();
         let result = json!({"kind":"acp-admitted","call_id":prepared.call_id,"work_id":work_id,
@@ -695,8 +941,9 @@ impl Broker {
             } else {
                 state.seq
             };
+            let interactions: Vec<_> = state.interactions.iter().map(Interaction::content).collect();
             result["content"] = json!({"after":after,"through":through,"gap":after < state.evicted_through,
-                "events":events,"interactions":[],"agent":state.agent_content,"authentication":auth_projection(&state)});
+                "events":events,"interactions":interactions,"agent":state.agent_content,"authentication":auth_projection(&state)});
         }
         Ok(result)
     }
@@ -807,11 +1054,14 @@ impl Instance {
     fn projection(&self, state: &State) -> Value {
         let work: Vec<_> = state.work.iter().map(|w| json!({"work_id":w.id,"call_id":w.call_id,
             "controller_id":w.controller,"owner_generation":w.generation,"op":w.operation,
-            "rpc_id":w.rpc_id,"prompt_id":w.prompt_id,"state":w.state,"delivery":w.delivery,"outcome":w.outcome})).collect();
+            "rpc_id":w.rpc_id,"prompt_id":w.prompt_id,"interaction_id":w.interaction_id,
+            "state":w.state,"delivery":w.delivery,"application":"unknown","outcome":w.outcome})).collect();
         json!({"target":self.target(state),"lifecycle":state.lifecycle,"seq":state.seq,
             "foreground":state.foreground.as_ref().map(|(id,cancelling)| json!({"prompt_id":id,"state":if *cancelling {"cancelling"} else {"active"}})),
-            "work":work,"interactions":[],"agent":state.agent,"authentication":auth_projection(state),
-            "cursor":state.seq,"gap":state.evicted_through > 0,"truncation":{"through":state.evicted_through,"completed_work":state.completed_evicted},
+            "work":work,"interactions":state.interactions.iter().map(Interaction::metadata).collect::<Vec<_>>(),
+            "agent":state.agent,"authentication":auth_projection(state),
+            "cursor":state.seq,"gap":state.evicted_through > 0,
+            "truncation":{"through":state.evicted_through,"completed_work":state.completed_evicted,"interactions":state.interactions_evicted},
             "resource":{"failure":state.failure,"stderr_truncated":state.stderr_truncated,
                 "cleanup_complete":state.cleanup_complete()}})
     }
@@ -903,7 +1153,9 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         let mut state = instance.state.lock();
         ensure!(state.live(), "target-ended: ACP launch ended");
         state.rpc(
-            acp::ClientRequest::InitializeRequest(acp::InitializeRequest::new(ProtocolVersion::V1)),
+            acp::ClientRequest::InitializeRequest(acp::InitializeRequest::new(ProtocolVersion::V1)
+                .client_capabilities(acp::ClientCapabilities::new().elicitation(
+                    acp::ElicitationCapabilities::new().form(acp::ElicitationFormCapabilities::new())))),
             RpcKind::Initialize,
             None,
         )?;
@@ -1011,9 +1263,16 @@ fn writer(instance: Arc<Instance>, mut stdin: impl Write) {
             state.output.pop_front().expect("writer queue checked")
         };
         let result = stdin.write_all(&frame.bytes).and_then(|()| stdin.flush());
+        if let Some(write) = &frame.response_write {
+            write.store(if result.is_ok() { 1 } else { 2 }, Ordering::Release);
+        }
         let mut state = instance.state.lock();
         state.output_count -= 1;
         state.output_bytes -= frame.bytes.len();
+        if let (Some(wire_id), Some(write)) = (&frame.response_id, &frame.response_write) {
+            state.finish_response(wire_id, write);
+        }
+        let final_frame = !state.output.iter().any(|queued| queued.work_id == frame.work_id);
         if let Some(id) = &frame.work_id {
             if let Some(work) = state.work.iter_mut().find(|w| &w.id == id) {
                 // Delivery is evidence independent from the canonical response.
@@ -1022,11 +1281,14 @@ fn writer(instance: Arc<Instance>, mut stdin: impl Write) {
                 } else {
                     "write-failed"
                 };
-                if !work.done && result.is_ok() {
+                if !work.done && result.is_ok() && final_frame {
                     work.state = "submitted";
                 }
-                if work.operation == "acp-interrupt" && result.is_ok() {
+                if matches!(work.operation, "acp-interrupt" | "acp-answer" | "acp-permission")
+                    && final_frame
+                {
                     work.done = true;
+                    if result.is_err() && work.state != "unknown" { work.state = "failed"; }
                 }
             }
             state.trim_work();
@@ -1172,10 +1434,11 @@ fn consume(instance: &Instance, lifetime: &crate::control::AcpLifetime) {
             state.input_count -= 1;
             state.input_bytes -= next.len();
         }
-        if applied.is_err() {
+        if let Err(error) = applied {
             lifetime.end(|| {
                 let mut state = instance.state.lock();
-                let category = state.transport_error.unwrap_or("protocol");
+                let category = state.transport_error.unwrap_or(
+                    if error.to_string().starts_with("capacity-exceeded:") { "capacity" } else { "protocol" });
                 state.close(Some(category));
             });
             instance.wake.notify_all();
@@ -1210,43 +1473,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
         if message.get("id").is_some() {
             let request: acp::Request<Value> = decode(message)?;
             validate_rpc_id(&request.id)?;
-            // No form/terminal/filesystem/URL capability in s01. Every incoming
-            // request gets a reserved explicit response, including unknown methods.
-            let response = if method == "session/request_permission"
-                && state.foreground.as_ref().is_some_and(|(_, c)| *c)
-            {
-                match decode::<acp::RequestPermissionRequest>(request.params.unwrap_or(Value::Null))
-                {
-                    Ok(permission)
-                        if state.session.as_deref() == Some(permission.session_id.0.as_ref()) =>
-                    {
-                        let result = acp::RequestPermissionResponse::new(
-                            acp::RequestPermissionOutcome::Cancelled,
-                        );
-                        encode(acp::Response::new(request.id, Ok(result)), None)?
-                    }
-                    _ => encode(
-                        acp::Response::<Value>::new(request.id, Err(acp::Error::invalid_params())),
-                        None,
-                    )?,
-                }
-            } else {
-                let error = if method == "elicitation/create" {
-                    acp::Error::invalid_params()
-                } else {
-                    acp::Error::method_not_found()
-                };
-                encode(acp::Response::<Value>::new(request.id, Err(error)), None)?
-            };
-            if state
-                .capacity(std::slice::from_ref(&response), false)
-                .is_err()
-            {
-                state.transport_error = Some("egress-capacity");
-                bail!("transport-failed: ACP response capacity");
-            }
-            state.enqueue(response);
-            state.changed();
+            incoming_request(state, &method, request)?;
             return Ok(());
         }
         if method == "session/update" {
@@ -1298,6 +1525,13 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
         .outstanding
         .remove(&id)
         .ok_or_else(|| anyhow::anyhow!("transport-failed: unretained ACP response"))?;
+    // Completing an outbound RPC does not cancel its inbound responder. Keep
+    // the exact scope until a deliberate response or connection closure.
+    for interaction in &mut state.interactions {
+        if interaction.request_scope.as_ref() == Some(&id) {
+            interaction.parent_state = "completed";
+        }
+    }
     let mut follow_up_error = None;
     let outcome = match (pending.kind, result) {
         (RpcKind::Initialize, Ok(value)) => {
@@ -1335,7 +1569,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
                 };
                 state.auth.push((id, kind));
             }
-            state.agent = json!({"protocol_version":1,"text_prompt":true,"forms":false,"terminal":false,"filesystem":false,
+            state.agent = json!({"protocol_version":1,"text_prompt":true,"forms":true,"terminal":false,"filesystem":false,
                 "capabilities":{"load_session":initialized.agent_capabilities.load_session,
                     "prompt":{"image":initialized.agent_capabilities.prompt_capabilities.image,
                         "audio":initialized.agent_capabilities.prompt_capabilities.audio,
@@ -1386,6 +1620,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
             let response: acp::PromptResponse = decode(value)?;
             let reason = serde_json::to_value(response.stop_reason)?;
             state.foreground = None;
+            state.cancel_work = None;
             state.event(
                 "completion",
                 json!({"work_id":pending.work_id,"rpc_id":id,"stop_reason":reason}),
@@ -1394,6 +1629,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
         }
         (RpcKind::Prompt, Err(error)) => {
             state.foreground = None;
+            state.cancel_work = None;
             let code = i32::from(error.code);
             state.event(
                 "error",
@@ -1422,6 +1658,381 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
     Ok(())
 }
 
+fn pending_interaction(state: &State, id: &str, revision: u64, kind: &str) -> Result<usize> {
+    ensure!(revision == 1, "stale-interaction: ACP revision changed");
+    let index = state.interactions.iter().position(|i| i.id == id)
+        .ok_or_else(|| anyhow::anyhow!("stale-interaction: ACP interaction absent"))?;
+    let interaction = &state.interactions[index];
+    ensure!(interaction.kind == kind && interaction.state == "pending"
+        && state.responders.get(&interaction.wire_id).and_then(|r| r.interaction.as_deref()) == Some(id),
+        "stale-interaction: ACP interaction not selectable");
+    Ok(index)
+}
+
+fn incoming_request(state: &mut State, method: &str, request: acp::Request<Value>) -> Result<()> {
+    if let Some(responder) = state.responders.get(&request.id) {
+        let result = responder.write.load(Ordering::Acquire);
+        ensure!(result != 0,
+            "transport-failed: ACP responder identity reused");
+        let write = responder.write.clone();
+        state.finish_response(&request.id, &write);
+        if result == 2 {
+            state.transport_error = Some("write");
+            bail!("transport-failed: ACP responder write failed");
+        }
+    }
+    ensure!(state.responders.len() < INTERACTIONS,
+        "capacity-exceeded: ACP responder budget");
+    let parsed = match method {
+        "elicitation/create" => parse_form(state, request.params.unwrap_or(Value::Null)),
+        "session/request_permission" => parse_permission(state, request.params.unwrap_or(Value::Null)),
+        _ => return error_response(state, request.id, acp::Error::method_not_found()),
+    };
+    let (kind, session_scoped, request_scope, detail) = match parsed {
+        Ok(parsed) => parsed,
+        Err(_) => {
+            state.event("error", json!({"code":-32602,"category":"unsupported-or-invalid-interaction"}));
+            return error_response(state, request.id, acp::Error::invalid_params());
+        }
+    };
+    let mut interaction = Interaction {
+        id: fresh("interaction"), wire_id: request.id.clone(), kind, session_scoped,
+        request_scope, parent_state: "outstanding", bytes: value_bytes(&detail),
+        detail, state: "pending", selected_work: None, selection: None,
+        delivery: "not-submitted", responding: false,
+    };
+    let cancelling = interaction.affected_by_interrupt(state)
+        && state.foreground.as_ref().is_some_and(|(_, c)| *c);
+    let response = if cancelling {
+        let work = state.cancel_work.as_deref()
+            .ok_or_else(|| anyhow::anyhow!("transport-failed: ACP cancel work absent"))?;
+        let response = interaction.cancel_frame(work)?;
+        state.capacity(std::slice::from_ref(&response), false)?;
+        interaction.state = "selected";
+        interaction.responding = true;
+        interaction.selected_work = Some(work.to_owned());
+        let selection = if kind == "permission" {
+            json!({"outcome":"cancelled"})
+        } else { json!({"action":"cancel"}) };
+        interaction.bytes += value_bytes(&selection);
+        interaction.selection = Some(selection);
+        Some(response)
+    } else { None };
+    state.retain_capacity(interaction.bytes)?;
+    // Every budget, including mandatory cancellation, precedes publication.
+    state.responders.insert(request.id, Responder {
+        interaction: Some(interaction.id.clone()), write: Arc::new(AtomicU8::new(0)),
+    });
+    state.interaction_bytes += interaction.bytes;
+    state.interactions.push_back(interaction);
+    if let Some(response) = response { state.enqueue(response); }
+    state.trim_interactions();
+    state.changed();
+    Ok(())
+}
+
+fn error_response(state: &mut State, id: acp::RequestId, error: acp::Error) -> Result<()> {
+    let mut frame = encode(acp::Response::<Value>::new(id.clone(), Err(error)), None)?;
+    frame.response_id = Some(id.clone());
+    if state.capacity(std::slice::from_ref(&frame), false).is_err() {
+        state.transport_error = Some("egress-capacity");
+        bail!("transport-failed: ACP response capacity");
+    }
+    state.responders.insert(id, Responder {interaction:None, write:Arc::new(AtomicU8::new(0))});
+    state.enqueue(frame);
+    state.changed();
+    Ok(())
+}
+
+type ParsedInteraction = (&'static str, bool, Option<acp::RequestId>, Value);
+
+fn parse_form(state: &State, mut params: Value) -> Result<ParsedInteraction> {
+    ensure!(params["mode"] == "form", "unsupported: ACP elicitation mode");
+    validate_form_schema(&params["requestedSchema"])
+        .map_err(|category| anyhow::anyhow!("unsupported: {category}"))?;
+    // Make official omitted defaults explicit for both content consumers,
+    // without copying the full schema or erasing any declared constraints.
+    let schema = params["requestedSchema"].as_object_mut().expect("validated schema object");
+    schema.entry("type").or_insert_with(|| json!("object"));
+    schema.entry("properties").or_insert_with(|| json!({}));
+    // Check before untagged/default-on-error decoding can choose one scope or
+    // erase a malformed tool-call identity.
+    ensure!(params.get("sessionId").is_some() != params.get("requestId").is_some(),
+        "invalid-request: ACP elicitation scope");
+    if let Some(tool) = params.get("toolCallId").filter(|v| !v.is_null()) {
+        ensure!(params.get("sessionId").is_some() && tool.as_str().is_some_and(valid_id),
+            "invalid-request: ACP elicitation tool identity");
+    }
+    let typed = acp::CreateElicitationRequest::deserialize(&params)
+        .map_err(|_| anyhow::anyhow!("invalid-request: ACP form"))?;
+    let (session_scoped, request_scope) = match typed.scope() {
+        acp::ElicitationScope::Session(scope) => {
+            ensure!(valid_id(scope.session_id.0.as_ref())
+                && state.session.as_deref() == Some(scope.session_id.0.as_ref()),
+                "invalid-request: ACP form session");
+            (true, None)
+        }
+        acp::ElicitationScope::Request(scope) => {
+            validate_rpc_id(&scope.request_id)?;
+            ensure!(state.outstanding.contains_key(&scope.request_id)
+                && params.get("toolCallId").is_none(), "invalid-request: ACP form request scope");
+            (false, Some(scope.request_id.clone()))
+        }
+        _ => bail!("unsupported: ACP elicitation scope"),
+    };
+    let scope = serde_json::to_value(typed.scope())?;
+    Ok(("form", session_scoped, request_scope, json!({
+        "message":typed.message,"scope":scope,"schema":params["requestedSchema"].take(),
+        "validation_limitations":["pattern and format are displayed but not locally validated; agent validation remains authoritative"]
+    })))
+}
+
+fn parse_permission(state: &State, params: Value) -> Result<ParsedInteraction> {
+    let permission: acp::RequestPermissionRequest = decode(params)?;
+    ensure!(state.session.as_deref() == Some(permission.session_id.0.as_ref())
+        && valid_id(permission.tool_call.tool_call_id.0.as_ref()),
+        "invalid-request: ACP permission scope");
+    ensure!(!permission.options.is_empty() && permission.options.len() <= OPTIONS,
+        "invalid-request: ACP permission options");
+    let mut ids = BTreeSet::new();
+    let mut options = Vec::with_capacity(permission.options.len());
+    for option in permission.options {
+        ensure!(valid_id(option.option_id.0.as_ref()) && ids.insert(option.option_id.0.clone()),
+            "invalid-request: ACP permission option identity");
+        ensure!(matches!(option.kind, acp::PermissionOptionKind::AllowOnce
+            | acp::PermissionOptionKind::AllowAlways | acp::PermissionOptionKind::RejectOnce
+            | acp::PermissionOptionKind::RejectAlways), "unsupported: ACP permission kind");
+        options.push(json!({"option_id":option.option_id,"name":option.name,"kind":option.kind}));
+    }
+    Ok(("permission", true, None, json!({
+        "scope":{"sessionId":permission.session_id,"toolCallId":permission.tool_call.tool_call_id},
+        "tool_call":permission.tool_call,"options":options
+    })))
+}
+
+type Validation = std::result::Result<(), &'static str>;
+
+fn schema_keys(value: &Value, allowed: &[&str]) -> Validation {
+    let object = value.as_object().ok_or("invalid form schema")?;
+    if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err("unsupported form schema");
+    }
+    for key in ["title", "description"] {
+        if object.get(key).is_some_and(|v| !v.is_null() && !v.is_string()) {
+            return Err("invalid form annotation");
+        }
+    }
+    Ok(())
+}
+
+fn choices(list: &Value, titled: bool) -> std::result::Result<usize, &'static str> {
+    let entries = list.as_array().ok_or("invalid form choices")?;
+    if entries.is_empty() || entries.len() > OPTIONS { return Err("form option budget"); }
+    let mut seen = [""; OPTIONS];
+    for (index, entry) in entries.iter().enumerate() {
+        let value = if titled {
+            schema_keys(entry, &["const", "title", "description", "_meta"])?;
+            if !entry["title"].is_string() { return Err("invalid titled choice"); }
+            entry["const"].as_str()
+        } else { entry.as_str() }.ok_or("invalid form choice")?;
+        seen[index] = value;
+    }
+    seen[..entries.len()].sort_unstable();
+    if seen[..entries.len()].windows(2).any(|pair| pair[0] == pair[1]) {
+        return Err("duplicate form choices");
+    }
+    Ok(entries.len())
+}
+
+fn optional<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
+    value.get(key).filter(|v| !v.is_null())
+}
+
+fn count_bounds(field: &Value, min: &str, max: &str, ceiling: u64) -> Validation {
+    for key in [min, max] {
+        if optional(field, key).is_some_and(|v| v.as_u64().is_none_or(|n| n > ceiling)) {
+            return Err("invalid form count bound");
+        }
+    }
+    if let (Some(min), Some(max)) = (optional(field, min), optional(field, max))
+        && min.as_u64() > max.as_u64() { return Err("invalid form count range"); }
+    Ok(())
+}
+
+fn validate_form_schema(schema: &Value) -> Validation {
+    schema_keys(schema, &["type", "title", "description", "properties", "required", "_meta"])?;
+    if schema.get("type").is_some_and(|v| v != "object") { return Err("invalid form root type"); }
+    let properties = schema.get("properties")
+        .map(|v| v.as_object().ok_or("invalid form properties")).transpose()?;
+    let field_count = properties.map_or(0, serde_json::Map::len);
+    if field_count > FIELDS { return Err("form field budget"); }
+    if let Some(required) = optional(schema, "required") {
+        let required = required.as_array().ok_or("invalid required fields")?;
+        if required.len() > field_count { return Err("invalid required fields"); }
+        for (index, name) in required.iter().enumerate() {
+            if !name.as_str().is_some_and(|name| properties.is_some_and(|p| p.contains_key(name)))
+                || required[..index].contains(name) { return Err("invalid required fields"); }
+        }
+    }
+    let mut option_count = 0;
+    for field in properties.into_iter().flat_map(|p| p.values()) {
+        let common = ["type", "title", "description", "default", "_meta"];
+        let kind = field["type"].as_str().ok_or("invalid form field type")?;
+        let extra: &[&str] = match kind {
+            "string" => &["minLength", "maxLength", "pattern", "format", "enum", "oneOf"],
+            "number" | "integer" => &["minimum", "maximum"],
+            "boolean" => &[],
+            "array" => &["minItems", "maxItems", "items"],
+            _ => return Err("unsupported form field"),
+        };
+        let object = field.as_object().ok_or("invalid form field")?;
+        if object.keys().any(|key| !common.contains(&key.as_str()) && !extra.contains(&key.as_str())) {
+            return Err("unsupported form constraint");
+        }
+        for annotation in ["title", "description"] {
+            if optional(field, annotation).is_some_and(|v| !v.is_string()) {
+                return Err("invalid form annotation");
+            }
+        }
+        match kind {
+            "string" => {
+                count_bounds(field, "minLength", "maxLength", u32::MAX as u64)?;
+                if optional(field, "pattern").is_some_and(|v| !v.is_string()) {
+                    return Err("invalid form pattern");
+                }
+                if optional(field, "format").is_some_and(|v|
+                    !matches!(v.as_str(), Some("email" | "uri" | "date" | "date-time"))) {
+                    return Err("unsupported form format");
+                }
+                for (key, titled) in [("enum", false), ("oneOf", true)] {
+                    if let Some(list) = optional(field, key) { option_count += choices(list, titled)?; }
+                }
+                if let (Some(plain), Some(titled)) = (optional(field, "enum"), optional(field, "oneOf")) {
+                    let plain = plain.as_array().ok_or("invalid form choices")?;
+                    let titled = titled.as_array().ok_or("invalid form choices")?;
+                    if !plain.iter().any(|v| titled.iter().any(|o| o["const"] == *v)) {
+                        return Err("empty form choice intersection");
+                    }
+                }
+            }
+            "integer" | "number" => {
+                for key in ["minimum", "maximum"] {
+                    if let Some(bound) = optional(field, key) {
+                        if kind == "integer" {
+                            if bound.as_i64().is_none() { return Err("invalid integer bound"); }
+                        } else if !bound.as_f64().is_some_and(f64::is_finite) {
+                            return Err("invalid number bound");
+                        }
+                    }
+                }
+                if let (Some(min), Some(max)) = (optional(field, "minimum"), optional(field, "maximum")) {
+                    let reversed = if kind == "integer" { min.as_i64() > max.as_i64() }
+                        else { min.as_f64() > max.as_f64() };
+                    if reversed { return Err("invalid numeric range"); }
+                }
+            }
+            "array" => {
+                count_bounds(field, "minItems", "maxItems", u64::MAX)?;
+                let items = &field["items"];
+                schema_keys(items, &["type", "enum", "anyOf", "_meta"])?;
+                if items.get("type").is_some_and(|v| v != "string") {
+                    return Err("unsupported multiselect items");
+                }
+                let (list, titled) = match (items.get("enum"), items.get("anyOf")) {
+                    (Some(list), None) if items["type"] == "string" => (list, false),
+                    (None, Some(list)) => (list, true),
+                    _ => return Err("unsupported multiselect items"),
+                };
+                let count = choices(list, titled)?;
+                option_count += count;
+                if optional(field, "minItems").and_then(Value::as_u64).unwrap_or(0) > count as u64 {
+                    return Err("impossible multiselect minimum");
+                }
+            }
+            _ => {}
+        }
+        if option_count > OPTIONS { return Err("form option budget"); }
+        if let Some(default) = optional(field, "default") { validate_field_value(field, default)?; }
+    }
+    Ok(())
+}
+
+fn validate_field_value(field: &Value, value: &Value) -> Validation {
+    match field["type"].as_str() {
+        Some("string") => {
+            let text = value.as_str().ok_or("form string required")?;
+            let count = text.chars().count() as u64;
+            if optional(field, "minLength").and_then(Value::as_u64).is_some_and(|n| count < n)
+                || optional(field, "maxLength").and_then(Value::as_u64).is_some_and(|n| count > n) {
+                return Err("form string length");
+            }
+            if optional(field, "enum").and_then(Value::as_array)
+                .is_some_and(|options| !options.iter().any(|o| o == value))
+                || optional(field, "oneOf").and_then(Value::as_array)
+                .is_some_and(|options| !options.iter().any(|o| o["const"] == *value)) {
+                return Err("form choice unavailable");
+            }
+        }
+        Some("integer") => {
+            let number = value.as_i64().ok_or("form i64 integer required")?;
+            if optional(field, "minimum").and_then(Value::as_i64).is_some_and(|n| number < n)
+                || optional(field, "maximum").and_then(Value::as_i64).is_some_and(|n| number > n) {
+                return Err("form integer bound");
+            }
+        }
+        Some("number") => {
+            let number = value.as_f64().filter(|n| n.is_finite()).ok_or("form finite number required")?;
+            if optional(field, "minimum").and_then(Value::as_f64).is_some_and(|n| number < n)
+                || optional(field, "maximum").and_then(Value::as_f64).is_some_and(|n| number > n) {
+                return Err("form number bound");
+            }
+        }
+        Some("boolean") if value.is_boolean() => {}
+        Some("array") => {
+            let selected = value.as_array().ok_or("form string array required")?;
+            let count = selected.len() as u64;
+            if selected.len() > OPTIONS
+                || optional(field, "minItems").and_then(Value::as_u64).is_some_and(|n| count < n)
+                || optional(field, "maxItems").and_then(Value::as_u64).is_some_and(|n| count > n) {
+                return Err("form selection count");
+            }
+            let items = &field["items"];
+            for (index, item) in selected.iter().enumerate() {
+                if !item.is_string() || selected[..index].contains(item) {
+                    return Err("form distinct string selections required");
+                }
+                let offered = if let Some(plain) = items["enum"].as_array() { plain.contains(item) }
+                    else { items["anyOf"].as_array().is_some_and(|options|
+                        options.iter().any(|o| o["const"] == *item)) };
+                if !offered { return Err("form choice unavailable"); }
+            }
+        }
+        _ => return Err("form value type"),
+    }
+    Ok(())
+}
+
+/// Shared local validation, not general JSON Schema or pattern/format
+/// certification. Omitted optional fields stay unset rather than defaulted.
+pub(crate) fn validate_form_values(schema: &Value, values: &Value) -> std::result::Result<(), &'static str> {
+    if value_bytes(values) > LOCAL_CONTENT { return Err("form answer budget"); }
+    validate_form_schema(schema)?;
+    let properties = schema.get("properties").and_then(Value::as_object);
+    let values = values.as_object().ok_or("form values object required")?;
+    if let Some(required) = optional(schema, "required").and_then(Value::as_array) {
+        for name in required {
+            if !values.contains_key(name.as_str().ok_or("invalid required fields")?) {
+                return Err("required form value missing");
+            }
+        }
+    }
+    for (name, value) in values {
+        let field = properties.and_then(|p| p.get(name)).ok_or("unknown form value")?;
+        validate_field_value(field, value)?;
+    }
+    Ok(())
+}
+
 fn content_event(state: &mut State, kind: &'static str, chunk: acp::ContentChunk) -> Result<()> {
     if let Some(id) = &chunk.message_id {
         ensure!(
@@ -1445,12 +2056,28 @@ fn decode<T: serde::de::DeserializeOwned>(value: Value) -> Result<T> {
         .map_err(|_| anyhow::anyhow!("transport-failed: invalid ACP payload"))
 }
 
+// Count serialized retained content without allocating a second schema/answer
+// buffer. The actual wire frame is allocated only by encode.
+fn value_bytes(value: &Value) -> usize {
+    struct Counter(usize);
+    impl Write for Counter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 += bytes.len();
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    }
+    let mut counter = Counter(0);
+    serde_json::to_writer(&mut counter, value).expect("JSON value serializes");
+    counter.0
+}
+
 fn encode(message: impl Serialize, work_id: Option<String>) -> Result<Outgoing> {
     let mut bytes = serde_json::to_vec(&acp::JsonRpcMessage::wrap(message))
         .map_err(|_| anyhow::anyhow!("invalid-request: ACP encoding failed"))?;
     bytes.push(b'\n');
     ensure!(bytes.len() <= FRAME, "capacity-exceeded: ACP frame budget");
-    Ok(Outgoing { bytes, work_id })
+    Ok(Outgoing { bytes, work_id, response_id: None, response_write: None })
 }
 
 fn request_frame(
@@ -1605,6 +2232,8 @@ mod tests {
         state.enqueue(Outgoing {
             bytes: vec![0; QUEUE_BYTES],
             work_id: None,
+            response_id: None,
+            response_write: None,
         });
         let _in_flight = state.output.pop_front().unwrap();
         assert!(
@@ -1612,7 +2241,9 @@ mod tests {
                 .capacity(
                     &[Outgoing {
                         bytes: vec![0],
-                        work_id: None
+                        work_id: None,
+                        response_id: None,
+                        response_write: None,
                     }],
                     false
                 )
@@ -1771,6 +2402,8 @@ mod tests {
                 state.enqueue(Outgoing {
                     bytes: b"{}\n".to_vec(),
                     work_id: None,
+                    response_id: None,
+                    response_write: None,
                 });
             }
             let error = apply(
@@ -1808,6 +2441,8 @@ mod tests {
                 state.enqueue(Outgoing {
                     bytes: vec![b'\n'],
                     work_id: None,
+                    response_id: None,
+                    response_write: None,
                 });
             }
         }
@@ -2098,5 +2733,296 @@ mod tests {
         );
         let state = instance.state.lock();
         assert!(state.calls.is_empty() && state.work.is_empty() && state.output.is_empty());
+    }
+
+    fn form_message(id: Value, session: &str) -> Value {
+        json!({"id":id,"method":"elicitation/create","params":{
+            "mode":"form","sessionId":session,"message":"Synthetic question",
+            "requestedSchema":{"type":"object","properties":{"n":{"type":"integer"}},"required":["n"]}}})
+    }
+
+    fn interaction_action(target: &Value, interaction: &Value, call: &str) -> Value {
+        json!({"op":"acp-answer","target":target,"control":{"kind":"control","ref":"unit"},
+            "owner_generation":7,"call_id":call,"interaction_id":interaction["interaction_id"],
+            "revision":interaction["revision"],"action":"accept","values":{"n":9}})
+    }
+
+    #[test]
+    fn acp_form_values_preserve_unset_false_zero_empty_and_i64_boundaries() {
+        let schema = json!({"type":"object","properties":{
+            "optional":{"type":"integer","default":99},
+            "flag":{"type":"boolean","default":true},
+            "zero":{"type":"integer","minimum":0,"maximum":0},
+            "empty":{"type":"string","maxLength":0},
+            "min":{"type":"integer","minimum":i64::MIN,"maximum":i64::MIN},
+            "max":{"type":"integer","minimum":i64::MAX,"maximum":i64::MAX},
+            "number":{"type":"number","minimum":-0.5,"maximum":0.5}
+        },"required":["flag","zero","empty","min","max","number"]});
+        let values = json!({"flag":false,"zero":0,"empty":"","min":i64::MIN,"max":i64::MAX,"number":0.5});
+        assert_eq!(validate_form_values(&schema, &values), Ok(()));
+        for name in ["flag", "zero", "empty", "min", "max", "number"] {
+            let mut missing = values.clone();
+            missing.as_object_mut().unwrap().remove(name);
+            assert_eq!(validate_form_values(&schema, &missing), Err("required form value missing"));
+            let mut null = values.clone();
+            null[name] = Value::Null;
+            assert!(validate_form_values(&schema, &null).is_err());
+        }
+        let mut invalid = values.clone();
+        invalid["min"] = json!(i64::MIN + 1);
+        assert_eq!(validate_form_values(&schema, &invalid), Err("form integer bound"));
+        invalid["min"] = json!(i64::MIN);
+        invalid["max"] = json!(i64::MAX as u64 + 1);
+        assert_eq!(validate_form_values(&schema, &invalid), Err("form i64 integer required"));
+        invalid["max"] = json!(i64::MAX);
+        invalid["zero"] = json!(0.0);
+        assert_eq!(validate_form_values(&schema, &invalid), Err("form i64 integer required"));
+        invalid["zero"] = json!(0);
+        invalid["number"] = json!(0.50001);
+        assert_eq!(validate_form_values(&schema, &invalid), Err("form number bound"));
+    }
+
+    #[test]
+    fn acp_form_enum_intersection_unicode_and_distinct_multiselect_are_enforced() {
+        let schema = json!({"type":"object","properties":{
+            "text":{"type":"string","minLength":2,"maxLength":2,"pattern":"agent-checks","format":"email"},
+            "single":{"type":"string","enum":["a","b"],"oneOf":[{"const":"b","title":"B"},{"const":"c","title":"C"}]},
+            "many":{"type":"array","items":{"type":"string","enum":["a","b"]},"minItems":1,"maxItems":2},
+            "titled":{"type":"array","items":{"anyOf":[{"const":"x","title":"X"},{"const":"y","title":"Y"}]},"maxItems":1}
+        },"required":["text","single","many","titled"]});
+        let values = json!({"text":"λ🙂","single":"b","many":["a","b"],"titled":["y"]});
+        assert_eq!(validate_form_values(&schema, &values), Ok(()));
+        for (field, invalid) in [
+            ("text", json!("λ")), ("text", json!("λ🙂a")), ("single", json!("a")),
+            ("single", json!("c")), ("many", json!(["a","a"])), ("many", json!([])),
+            ("many", json!(["a",null])), ("many", json!(["unoffered"])),
+            ("titled", json!(["x","y"])), ("titled", json!([1])),
+        ] {
+            let mut rejected = values.clone();
+            rejected[field] = invalid;
+            assert!(validate_form_values(&schema, &rejected).is_err(), "{rejected}");
+        }
+    }
+
+    #[test]
+    fn acp_raw_schema_rejects_coercible_defaults_root_types_and_unknown_constraints() {
+        for schema in [
+            json!({"type":"array","properties":{}}),
+            json!({"type":null,"properties":{}}),
+            json!({"type":"object","properties":{"n":{"type":"integer","default":"9"}}}),
+            json!({"type":"object","properties":{"b":{"type":"boolean","default":0}}}),
+            json!({"type":"object","properties":{"s":{"type":"string","default":false}}}),
+            json!({"type":"object","properties":{"a":{"type":"array","items":{"type":"string","enum":["x"]},"default":["x",5]}}}),
+            json!({"type":"object","properties":{"n":{"type":"number","minimum":10,"maximum":9}}}),
+            json!({"type":"object","properties":{"n":{"type":"integer","minimum":1.5}}}),
+            json!({"type":"object","properties":{"s":{"type":"string","minLength":3,"maxLength":2}}}),
+            json!({"type":"object","properties":{"s":{"type":"string","enum":["x"],"oneOf":[{"const":"y","title":"Y"}]}}}),
+            json!({"type":"object","properties":{"s":{"type":"string","enum":["x","x"]}}}),
+            json!({"type":"object","properties":{"s":{"type":"string","enum":[]}}}),
+            json!({"type":"object","properties":{"a":{"type":"array","items":{"type":"integer","enum":[1]}}}}),
+            json!({"type":"object","properties":{"nested":{"type":"object","properties":{}}}}),
+            json!({"type":"object","properties":{},"required":["absent"]}),
+            json!({"type":"object","properties":{"n":{"type":"integer","multipleOf":2}}}),
+            json!({"type":"object","properties":{"n":{"type":"integer","default":-1,"minimum":0}}}),
+        ] {
+            assert!(validate_form_values(&schema, &json!({})).is_err(), "{schema}");
+        }
+        let mut fields = serde_json::Map::new();
+        for index in 0..FIELDS { fields.insert(format!("f{index}"), json!({"type":"boolean"})); }
+        let mut schema = json!({"type":"object","properties":fields});
+        assert_eq!(validate_form_values(&schema, &json!({})), Ok(()));
+        schema["properties"]["overflow"] = json!({"type":"boolean"});
+        assert_eq!(validate_form_values(&schema, &json!({})), Err("form field budget"));
+        let offered: Vec<_> = (0..OPTIONS).map(|n| format!("v{n}")).collect();
+        let mut schema = json!({"type":"object","properties":{"choice":{"type":"string","enum":offered}}});
+        assert_eq!(validate_form_values(&schema, &json!({"choice":"v255"})), Ok(()));
+        schema["properties"]["another"] = json!({"type":"string","enum":["extra"]});
+        assert_eq!(validate_form_values(&schema, &json!({})), Err("form option budget"));
+    }
+
+    #[test]
+    fn acp_first_valid_prepared_response_wins_without_losing_history_or_duplicate_wire_response() {
+        let (broker, instance, target) = ready_broker();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!(77), "session")).unwrap();
+        }
+        let interaction = broker.metadata(&instance.id).unwrap()["interactions"][0].clone();
+        let winner = interaction_action(&target, &interaction, "winner");
+        let mut loser = interaction_action(&target, &interaction, "loser");
+        loser["values"]["n"] = json!(999);
+        let first = broker.prepare("acp-answer", &winner, "original").unwrap();
+        let second = broker.prepare("acp-answer", &loser, "original").unwrap();
+        let receipt = broker.commit(first, 7).unwrap();
+        assert!(broker.commit(second, 7).unwrap_err().to_string().starts_with("stale-interaction:"));
+        let state = instance.state.lock();
+        assert_eq!(state.work.len(), 1);
+        assert_eq!(state.interactions[0].selected_work.as_deref(), receipt["work_id"].as_str());
+        assert_eq!(state.interactions[0].selection.as_ref().unwrap()["content"]["n"], 9);
+        assert!(!state.calls.contains("loser"));
+        let frame: Value = serde_json::from_slice(&state.output[0].bytes).unwrap();
+        assert_eq!(frame["id"], 77);
+        assert_eq!(frame["result"]["content"]["n"], 9);
+        assert_eq!(state.output_count, 1);
+    }
+
+    #[test]
+    fn acp_interrupt_reserves_every_frame_and_late_capacity_failure_never_publishes_choice() {
+        let (broker, instance, target) = ready_broker();
+        let request = prompt_request(&target, "prompt");
+        broker.commit(broker.prepare("acp-prompt", &request, "controller").unwrap(), 7).unwrap();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!("form"), "session")).unwrap();
+            apply(&instance, &mut state, json!({"id":"permission","method":"session/request_permission",
+                "params":{"sessionId":"session","toolCall":{"toolCallId":"tool"},
+                "options":[{"optionId":"reject","name":"Deny once","kind":"reject_once"}]}})).unwrap();
+            while state.output_count < EGRESS - 2 {
+                state.enqueue(Outgoing {bytes:b"{}\n".to_vec(), work_id:None, response_id:None, response_write:None});
+            }
+        }
+        let prompt_id = broker.metadata(&instance.id).unwrap()["foreground"]["prompt_id"].clone();
+        let action = json!({"op":"acp-interrupt","target":target,"control":{"kind":"control","ref":"unit"},
+            "owner_generation":7,"call_id":"cancel","prompt_id":prompt_id});
+        assert!(broker.commit(broker.prepare("acp-interrupt", &action, "controller").unwrap(), 7)
+            .unwrap_err().to_string().starts_with("capacity-exceeded:"));
+        {
+            let mut state = instance.state.lock();
+            assert!(!state.foreground.as_ref().unwrap().1);
+            assert!(state.interactions.iter().all(|i| i.state == "pending"));
+            assert!(!state.calls.contains("cancel"));
+            let frame = state.output.pop_back().unwrap();
+            state.output_bytes -= frame.bytes.len();
+            state.output_count -= 1;
+        }
+        broker.commit(broker.prepare("acp-interrupt", &action, "controller").unwrap(), 7).unwrap();
+        let mut state = instance.state.lock();
+        assert_eq!(state.output_count, EGRESS);
+        assert!(state.foreground.as_ref().unwrap().1);
+        assert!(state.interactions.iter().all(|i| i.state == "selected"));
+        let reserved: Vec<Value> = state.output.iter().rev().take(3)
+            .map(|frame| serde_json::from_slice(&frame.bytes).unwrap()).collect();
+        assert_eq!(reserved[0]["result"]["outcome"]["outcome"], "cancelled");
+        assert_eq!(reserved[1]["result"]["action"], "cancel");
+        assert_eq!(reserved[2]["method"], "session/cancel");
+        assert!(apply(&instance, &mut state, form_message(json!("late"), "session")).is_err());
+        assert!(!state.interactions.iter().any(|i| i.wire_id == acp::RequestId::Str("late".into())));
+        state.close(Some("egress-capacity"));
+        assert!(state.interactions.iter().all(|i| i.state == "unknown"));
+    }
+
+    #[test]
+    fn acp_wire_id_is_reserved_through_inflight_response_and_typed_ids_do_not_alias() {
+        let (broker, instance, target) = ready_broker();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!(41), "session")).unwrap();
+            apply(&instance, &mut state, form_message(json!("41"), "session")).unwrap();
+        }
+        let interaction = broker.metadata(&instance.id).unwrap()["interactions"][0].clone();
+        let action = interaction_action(&target, &interaction, "selected");
+        broker.commit(broker.prepare("acp-answer", &action, "controller").unwrap(), 7).unwrap();
+        let mut state = instance.state.lock();
+        let _inflight = state.output.pop_front().unwrap();
+        assert!(apply(&instance, &mut state, form_message(json!(41), "session")).is_err());
+        assert_eq!(state.interactions.len(), 2);
+        assert_eq!(state.interactions[1].state, "pending");
+        assert_eq!(state.responders.len(), 2);
+    }
+
+    #[test]
+    fn acp_request_scoped_bootstrap_is_not_guessed_into_current_prompt_interrupt() {
+        let (broker, instance, target) = ready_broker();
+        let prompt = prompt_request(&target, "prompt");
+        broker.commit(broker.prepare("acp-prompt", &prompt, "controller").unwrap(), 7).unwrap();
+        {
+            let mut state = instance.state.lock();
+            state.outstanding.insert(acp::RequestId::Number(90), Pending {kind:RpcKind::Authenticate, work_id:None});
+            let mut bootstrap = form_message(json!("bootstrap"), "session");
+            bootstrap["params"].as_object_mut().unwrap().remove("sessionId");
+            bootstrap["params"]["requestId"] = json!(90);
+            apply(&instance, &mut state, bootstrap).unwrap();
+            let mut prompt_form = form_message(json!("prompt-form"), "session");
+            prompt_form["params"].as_object_mut().unwrap().remove("sessionId");
+            prompt_form["params"]["requestId"] = json!(0);
+            apply(&instance, &mut state, prompt_form).unwrap();
+        }
+        let prompt_id = broker.metadata(&instance.id).unwrap()["foreground"]["prompt_id"].clone();
+        let interrupt = json!({"op":"acp-interrupt","target":target,"control":{"kind":"control","ref":"unit"},
+            "owner_generation":7,"call_id":"interrupt","prompt_id":prompt_id});
+        broker.commit(broker.prepare("acp-interrupt", &interrupt, "controller").unwrap(), 7).unwrap();
+        let state = instance.state.lock();
+        assert_eq!(state.interactions[0].state, "pending");
+        assert_eq!(state.interactions[1].state, "selected");
+        assert_eq!(state.interactions[1].selection.as_ref().unwrap()["action"], "cancel");
+    }
+
+    #[test]
+    fn acp_completed_response_stamp_allows_reuse_before_bookkeeping_without_releasing_new_responder() {
+        let (broker, instance, target) = ready_broker();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!("reused"), "session")).unwrap();
+        }
+        let old = broker.metadata(&instance.id).unwrap()["interactions"][0].clone();
+        let action = interaction_action(&target, &old, "old-answer");
+        broker.commit(broker.prepare("acp-answer", &action, "controller").unwrap(), 7).unwrap();
+        let mut state = instance.state.lock();
+        let in_flight = state.output.pop_front().unwrap();
+        let written = in_flight.response_write.as_ref().unwrap();
+        // The write finished outside state; the FIFO consumer wins the next
+        // state lock before the writer can publish its ordinary bookkeeping.
+        written.store(1, Ordering::Release);
+        apply(&instance, &mut state, form_message(json!("reused"), "session")).unwrap();
+        assert_eq!(state.interactions[0].delivery, "submitted");
+        assert_eq!(state.interactions[1].state, "pending");
+        assert_ne!(state.interactions[0].id, state.interactions[1].id);
+        let new_id = state.interactions[1].id.clone();
+        state.finish_response(&acp::RequestId::Str("reused".into()), written);
+        assert_eq!(state.responders[&acp::RequestId::Str("reused".into())].interaction.as_deref(), Some(new_id.as_str()));
+        assert_eq!(state.interactions[1].delivery, "not-submitted");
+    }
+
+    #[test]
+    fn acp_form_answer_exact_byte_limit_and_empty_official_schema_are_supported() {
+        assert_eq!(validate_form_values(&json!({}), &json!({})), Ok(()));
+        assert_eq!(validate_form_values(&json!({"type":"object"}), &json!({})), Ok(()));
+        assert_eq!(validate_form_values(&json!({"type":"object","properties":null}), &json!({})),
+            Err("invalid form properties"));
+        let schema = json!({"type":"object","properties":{"text":{"type":"string"}}});
+        let mut values = json!({"text":"x".repeat(LOCAL_CONTENT - 11)});
+        assert_eq!(validate_form_values(&schema, &values), Ok(()));
+        values["text"] = json!("x".repeat(LOCAL_CONTENT - 10));
+        assert_eq!(validate_form_values(&schema, &values), Err("form answer budget"));
+    }
+
+    #[test]
+    fn acp_scoped_rpc_closure_distinguishes_completed_parent_from_unknown_parent() {
+        let (broker, instance, target) = ready_broker();
+        let prompt = prompt_request(&target, "first");
+        broker.commit(broker.prepare("acp-prompt", &prompt, "controller").unwrap(), 7).unwrap();
+        {
+            let mut state = instance.state.lock();
+            let mut form = form_message(json!("first-scoped"), "session");
+            form["params"].as_object_mut().unwrap().remove("sessionId");
+            form["params"]["requestId"] = json!(0);
+            apply(&instance, &mut state, form).unwrap();
+            apply(&instance, &mut state, json!({"id":0,"result":{"stopReason":"end_turn"}})).unwrap();
+            assert_eq!(state.interactions[0].state, "pending");
+            assert_eq!(state.interactions[0].parent_state, "completed");
+        }
+        let prompt = prompt_request(&target, "second");
+        broker.commit(broker.prepare("acp-prompt", &prompt, "controller").unwrap(), 7).unwrap();
+        let mut state = instance.state.lock();
+        let mut form = form_message(json!("second-scoped"), "session");
+        form["params"].as_object_mut().unwrap().remove("sessionId");
+        form["params"]["requestId"] = json!(1);
+        apply(&instance, &mut state, form).unwrap();
+        state.close(Some("eof"));
+        assert_eq!(state.interactions[0].parent_state, "completed");
+        assert_eq!(state.interactions[1].parent_state, "unknown");
+        assert!(state.interactions.iter().all(|i| i.state == "unknown"));
+        assert_eq!(state.work[0].state, "completed");
+        assert_eq!(state.work[1].state, "unknown");
     }
 }
