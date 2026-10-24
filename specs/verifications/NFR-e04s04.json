@@ -1,23 +1,23 @@
 {
   "scope": "e04s04-current-implemented-local-tasks1-3-not-live-or-whole-story",
-  "status": "failing-round2-S04-OPS-02-idle-endpoint-cleanup-truth",
-  "source": "specs/verifications/e04s04-round2-source.json",
-  "source_commit": "6a94038",
+  "status": "local-tasks1-3-PASS-whole-story-failing-live-unapproved-unimplemented",
+  "source": "specs/verifications/e04s04-round3-source.json",
+  "source_commit": "6a5d9af",
   "production_changes": [
     "src/acp.rs"
   ],
   "dependency_changes": false,
-  "current_contiguous_verification": "artifact://1457",
-  "current_independent_review": "specs/verifications/e04s04-build-review-round2.json",
-  "current_operational_must_fix": 1,
+  "current_contiguous_verification": "artifact://1515",
+  "current_independent_review": "specs/verifications/e04s04-build-review-round3.json",
+  "current_operational_must_fix": 0,
   "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
-  "wall_seconds": 218.86,
+  "wall_seconds": 215.72,
   "counts": {
-    "selected": 8,
-    "workspace": 392,
+    "selected": 10,
+    "workspace": 394,
     "workspace_suites": 30,
     "workspace_ignored": 10,
-    "default": 281,
+    "default": 283,
     "default_suites": 12,
     "default_ignored": 7,
     "showcase_exact": 1,
@@ -28,10 +28,12 @@
   "named_cases": [
     "acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application",
     "acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree",
-    "acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation",
     "acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects",
+    "acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation",
     "acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force",
     "native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs",
+    "acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure",
+    "acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown",
     "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
     "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes"
   ],
@@ -41,7 +43,7 @@
     "supported_security_findings": 0,
     "operational_must_fix": 1,
     "repair": "specs/verifications/e04s04-retained-pipe-before-after.json",
-    "independent_clearance": "pending-round2"
+    "independent_clearance": "round2-FAIL-additional-endpoint-truth-must-fix"
   },
   "actual_repair_runtime": "specs/verifications/e04s04-retained-pipe-runtime.json",
   "observed_repair": {
@@ -72,7 +74,7 @@
       57
     ],
     "actual_CLI_controlling_PTY": true,
-    "current_repaired_source_native_acceptance_case": "passed-at1457"
+    "current_repaired_source_native_acceptance_case": "passed-at1515"
   },
   "resource_boundaries": {
     "frames_bytes": 1048576,
@@ -81,7 +83,8 @@
     "additional_cancellation_descriptors_per_instance": 2,
     "all_workers_joined_no_detach": true,
     "uncaptured_retained_endpoint_cleanup": "failed-incomplete-retained-and-charged",
-    "known_ProcessTree_changed": false
+    "known_ProcessTree_changed": false,
+    "original_stdio_owner": "all3 retained until final probes after joins; descriptors dropped before cleanup/charge publication"
   },
   "privacy": "No real provider/auth/env/content tracing or credential reads. New S04 JSON/security evidence credential/private-control-ref scan has no matches. Synthetic content remains separate from metadata.",
   "owned_herdr_cleanup": "specs/verifications/e04s04-worker-retirement.json",
@@ -104,5 +107,23 @@
     "prerequisites": "specs/verifications/e04s04-live-prerequisites.json"
   },
   "historical_caps": "unchanged",
-  "new_live_provider_runs": 0
+  "new_live_provider_runs": 0,
+  "endpoint_truth_RCA": "specs/verifications/e04s04-endpoint-truth-before-after.json",
+  "actual_endpoint_truth_runtime": "specs/verifications/e04s04-endpoint-truth-runtime.json",
+  "previous_round2": {
+    "evidence": "specs/verifications/e04s04-build-review-round2.json",
+    "AND_gate": "FAIL",
+    "supported_security_findings": 0,
+    "operational_must_fix": 1,
+    "next_round": 3
+  },
+  "current_supported_security_findings": 0,
+  "local_tasks": {
+    "1": "passing",
+    "2": "passing",
+    "3": "passing",
+    "4": "failing"
+  },
+  "independent_clearance_round": 3,
+  "next_changed_source_round": 4
 }

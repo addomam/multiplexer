@@ -1,0 +1,100 @@
+{
+  "scope": "S04-OPS-02 endpoint lifetime truth",
+  "status": "final-runtime-and-independent-round3-PASS-local-only",
+  "RED": {
+    "commit": "8a71a14",
+    "job": "bg_220",
+    "artifact": "artifact://1498",
+    "exit_code": 101,
+    "compiled": true,
+    "passed": 0,
+    "failed": 2,
+    "test_seconds": 1.01,
+    "wall_seconds": 4.07,
+    "source_files": [
+      "tests/acp/acceptance.rs",
+      "tests/fixtures/acp_peer.rs"
+    ],
+    "observed": [
+      "idle stdin-only retainer alive after close but cleanup_complete=true/failure=null",
+      "early stdout-only frame-reader failure with retainer alive but cleanup_complete=true/failure=frame"
+    ]
+  },
+  "GREEN": {
+    "commit": "6b38b77",
+    "job": "bg_222",
+    "passed_endpoint_cases": 2,
+    "endpoint_seconds": 3.14,
+    "passed_prior_blocked_case": 1,
+    "prior_seconds": 3.13,
+    "cargo_build": true,
+    "wall_seconds": 12.07
+  },
+  "other_attempts": [
+    {
+      "job": "bg_221",
+      "exit_code": 101,
+      "kind": "compilation-error-missing-pollfd-revents-not-behavioral-RED"
+    },
+    {
+      "job": "bg_223",
+      "artifact": "artifact://1508",
+      "exit_code": 101,
+      "selected_passed": 10,
+      "workspace_passed": 394,
+      "stopped_at": "strict workspace Clippy nonminimal_bool",
+      "remaining_gates_ran": false,
+      "repair": "equivalent Option::is_none_or startup predicate; no suppression"
+    },
+    {
+      "job": "bg_224",
+      "artifact": "artifact://1512",
+      "exit_code": 0,
+      "selected_passed": 10,
+      "workspace_passed": 394,
+      "default_passed": 283,
+      "wall_seconds": 217.62,
+      "all_remaining_gates": "passed",
+      "superseded_by": "explicit drop of owned descriptors before finish may publish cleanup_complete/release charge; final contiguous bg225 required"
+    }
+  ],
+  "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
+  "actual_repair_runtime": "specs/verifications/e04s04-endpoint-truth-runtime.json",
+  "whole_story": "failing",
+  "historical_caps": "unchanged",
+  "live_driver_implemented": false,
+  "final_source_commit": "6a5d9af",
+  "final_verification": {
+    "artifact": "artifact://1515",
+    "job": "bg_225",
+    "exit_code": 0,
+    "wall_seconds": 215.72,
+    "counts": {
+      "selected": 10,
+      "workspace": 394,
+      "workspace_suites": 30,
+      "workspace_ignored": 10,
+      "default": 283,
+      "default_suites": 12,
+      "default_ignored": 7,
+      "showcase_exact": 1,
+      "native_exact_guards": 2,
+      "omp": 8,
+      "omp_assertions": 49
+    },
+    "actual_raw_result_rows": 46,
+    "named_cases": [
+      "acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application",
+      "acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree",
+      "acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects",
+      "acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation",
+      "acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force",
+      "native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs",
+      "acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure",
+      "acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown",
+      "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
+      "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes"
+    ]
+  },
+  "independent_clearance": "specs/verifications/e04s04-build-review-round3.json"
+}

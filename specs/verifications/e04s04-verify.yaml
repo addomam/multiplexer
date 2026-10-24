@@ -1,10 +1,10 @@
 type: verification
 context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
-verified_at: '2026-10-24T08:04:17.516831+00:00'
-status: failing-round2-idle-endpoint-truth-covered1457-gates-pass
-source: specs/verifications/e04s04-round2-source.json
-source_commit: 6a94038
+verified_at: '2026-10-24T08:48:32.925097+00:00'
+status: local-tasks1-3-PASS-whole-story-failing-live-unapproved-unimplemented
+source: specs/verifications/e04s04-round3-source.json
+source_commit: 6a5d9af
 terminal_verdict:
   command: cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture && cargo test --workspace &&
     cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace
@@ -14,17 +14,17 @@ terminal_verdict:
     -- --exact --nocapture && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies
     -- --ignored --exact --nocapture
   exit_code: 0
-  artifact: artifact://1457
-  job: bg_216
-  wall_seconds: 218.86
+  artifact: artifact://1515
+  job: bg_225
+  wall_seconds: 215.72
   note: One actual contiguous command; all46 raw Rust result rows parsed. Overlapping suite counts are not distinct totals;
     summary0.00s is not wall duration.
   counts:
-    selected: 8
-    workspace: 392
+    selected: 10
+    workspace: 394
     workspace_suites: 30
     workspace_ignored: 10
-    default: 281
+    default: 283
     default_suites: 12
     default_ignored: 7
     showcase_exact: 1
@@ -34,10 +34,12 @@ terminal_verdict:
   named_S04_cases:
   - acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application
   - acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree
-  - acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation
   - acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects
+  - acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation
   - acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force
   - native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs
+  - acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure
+  - acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown
   - acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown
   - acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes
 outside_test:
@@ -58,21 +60,33 @@ outside_test:
     - 57
     same_target_original_RPC: true
     termios_host_drainer_cleanup: true
-  current_permanent_native_full_case: PASS-at1457
+  current_permanent_native_full_case: PASS-at1515
+  endpoint_truth_actual_CLI:
+    passed: true
+    evidence: specs/verifications/e04s04-endpoint-truth-runtime.json
+    paths: 3
+    daemon0_before_retainer_release: true
+    owned_cleanup_without_fallback: true
+    PTY_drainer_started: false
 retained_pipe_RCA: specs/verifications/e04s04-retained-pipe-before-after.json
 final_native_revisit:
   passed_retained_fail_closed_guards: 2
-  current_artifact: artifact://1457
+  current_artifact: artifact://1515
   earlier_detailed_evidence: specs/verifications/e04s04-native-fence.json
   native_application_settlement: still-unresolved-not-an-acceptance-PASS
 security:
   self_audit: specs/verifications/AUDIT-e04s04.md
   previous_round1: specs/security/epics/e04/e04s04-review-round1.json
   previous_operational_must_fix: 1
-  current_independent: specs/security/epics/e04/e04s04-review-round2.json
-  current_operational_must_fix: 1
-  AND_gate: FAIL
+  current_independent: specs/security/epics/e04/e04s04-review-round3.json
+  current_operational_must_fix: 0
+  AND_gate: PASS-local-tasks1-3
   actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
+  previous_round2: specs/security/epics/e04/e04s04-review-round2.json
+  supported_security_findings: 0
+  build_review: specs/verifications/e04s04-build-review-round3.json
+  independent_clearance_round: 3
+  next_changed_source_round: 4
 nfr: specs/verifications/NFR-e04s04.json
 worker_retirement: specs/verifications/e04s04-worker-retirement.json
 historical_failures:
@@ -82,12 +96,19 @@ historical_failures:
   - 1396
   production_RED: 1449
   record: specs/verifications/e04s04-build.md
+  production_RED_endpoint_truth: 1498
 live_task:
   status: failing-not-approved-not-implemented-or-executed
   required_test: e04s04_live_adapters
   prerequisites: specs/verifications/e04s04-live-prerequisites.json
   zero_case_command: never-counts-as-PASS
-all_task_ledgers: failing-until-independent-review-security-gates
+all_task_ledgers: tasks1-3-passing-actual-runtime-and-independent-round3;task4-failing-unapproved-unimplemented
 whole_story: failing
 historical_e03_and_review_caps: unchanged
 ACP_main_merge_push_release: not-authorized-not-run
+endpoint_truth_RCA: specs/verifications/e04s04-endpoint-truth-before-after.json
+local_tasks:
+  1: passing
+  2: passing
+  3: passing
+  4: failing

@@ -1,0 +1,83 @@
+{
+  "scope": "e04s04-build-round3-current-local-tasks1-3-not-live-whole-story",
+  "branch": "feat/acp-agent-interaction",
+  "source_commit": "6a5d9af",
+  "base": "5311409",
+  "checkpoint": "322652c",
+  "RED_commit": "8a71a14",
+  "production_changes": [
+    "src/acp.rs"
+  ],
+  "dependency_changes": false,
+  "source_note": "Actual shasum output for19 frozen files, exact final1515 code committed6a5d9af. README/CHANGELOG and final bug record committed. No frozen source changes during review. Other changes verification/ledgers only.",
+  "sha256": {
+    "src/acp.rs": "2d29db3564a618f37bb97e051e4e7317fe3f0dfadd4c35d423102f1d72fa26fd",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+    "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+    "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+    "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+    "src/tui/agent.rs": "31c38bc46b09a77fe1856bfe691b46eb986513fe7bc43b6346654cd25a8ad3d7",
+    "src/runtime.rs": "89f9a66729954e9e4f4308a128018abde0662a66cf9d8761360b0141dd930ba1",
+    "tests/acp.rs": "f5e46fb8347116b62ca1023ba57c879c54143d993a3450107117a819339e3776",
+    "tests/acp/native.rs": "eb0db1d27495e3b43b00e45032aa41f5ea49184a160ac9974f4bf27d79a1650c",
+    "tests/acp/acceptance.rs": "2d968ad37a889704ba3b7ffc6e59a969bc715ec7c41c76d702d03f8fb2aa61c5",
+    "tests/acp/native/acceptance.rs": "4fd8c364315d4e46149e15ff4c181eebb040f524701cc33811b413d3c9a106e4",
+    "tests/fixtures/acp_peer.rs": "71d6466091d5741ebbe9bab105988ad5918a7e05a1aca606fe643ebe677049d6",
+    "README.md": "0598229af0d9960ed196e2790114926e92820ccd39ca177f45b7098d0fecab90",
+    "CHANGELOG.md": "87949404e207999c070847d2208f9220701f3270b5133bb0b446431bc869eae1",
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+    "specs/bugs/BUG-e03-native-settlement.md": "7760fed1078fe739ca4a2a41f3adacbe48968931ea85ccc349aa1987000543c2",
+    "specs/bugs/BUG-e04-acp-retained-pipes.md": "29ebadc6f5892db9a70e9eaec4434282d378ca83c85ba3ba90f4fc325df218c5"
+  },
+  "current_contiguous_verification": {
+    "artifact": "artifact://1515",
+    "job": "bg_225",
+    "exit_code": 0,
+    "wall_seconds": 215.72,
+    "counts": {
+      "selected": 10,
+      "workspace": 394,
+      "workspace_suites": 30,
+      "workspace_ignored": 10,
+      "default": 283,
+      "default_suites": 12,
+      "default_ignored": 7,
+      "showcase_exact": 1,
+      "native_exact_guards": 2,
+      "omp": 8,
+      "omp_assertions": 49
+    },
+    "actual_raw_result_rows": 46,
+    "named_cases": [
+      "acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application",
+      "acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree",
+      "acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects",
+      "acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation",
+      "acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force",
+      "native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs",
+      "acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure",
+      "acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown",
+      "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
+      "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes"
+    ]
+  },
+  "self_audit": "specs/verifications/AUDIT-e04s04.md",
+  "retained_pipe_before_after": "specs/verifications/e04s04-retained-pipe-before-after.json",
+  "actual_outside_test": "specs/verifications/e04s04-endpoint-truth-runtime.json",
+  "earlier_complete_native_proof": "specs/verifications/e04s04-complete-native-attempt1.json",
+  "live_driver_implemented": false,
+  "live_approval": "separately-required-not-granted",
+  "whole_story": "failing",
+  "historical_caps": "unchanged",
+  "review_round": 3,
+  "max_rounds": 5,
+  "repair_commit": "6b38b77",
+  "retained_endpoint_before_after": "specs/verifications/e04s04-endpoint-truth-before-after.json",
+  "actual_previous_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
+  "previous_rounds": [
+    "specs/verifications/e04s04-build-review-round1.json",
+    "specs/verifications/e04s04-build-review-round2.json"
+  ]
+}

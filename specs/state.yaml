@@ -32,8 +32,8 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: develop-tdd
-  blocked: false
+  next_skill: setup-environment
+  blocked: true
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -76,8 +76,15 @@ handoff:
     Retained-pipe defect is now confirmed at1449: exact1 RED, admitted close/captured peer absent, only explicit escaped-endpoint release completes cleanup. Test-only9c46d0b precedes repair6a94038. Focused bg215 exact1 PASS; actual built-CLI close/direct-shutdown proof also passes while retainer remains alive, unknown cleanup stays charged, and owned processes/socket/root are cleaned without fallback. Full current source gates run as bg216, not PASS before completion; next fresh round2 remains required.
     Current contiguous bg216/artifact1457 passes exact8/workspace392/default281, strict workspace/default Rust/fmt, OMP8/49/Zsh, final native guards2 and actual showcase1, wall218.86s. Actual repaired-source CLI close/shutdown finishes before retainer EOF with complete owned cleanup and truthful unknown capacity. Current self-audit PASS and19-source round2 freeze are ready; all task statuses remain failing until fresh independent clearance. Task4 remains separately unapproved/unimplemented, not a zero-case PASS.
     Fresh round2 A96.875/B100 each match19/19 source hashes; B's original0-item denominator is preserved and corrected by that reviewer with full32-item coverage. A and specialist independently identify idle/early-exit endpoint observability; specialist S04-OPS-02 HIGH must-fix keeps AND FAIL. Actual CLI reproduces cleanup_complete=true/failure=null while idle stdin-only escaped retainer remains alive. Preserve exact19-source checkpoint, add failing endpoint-truth regressions, retain all pipe ownership until final classification, and consume round3; all tasks stay failing/no cap reset.
-  last_step_completed: e04s04-round2-failure-and-idle-endpoint-actual-counterexample
+    OPS02 compiled RED8a71a14/artifact1498 fails both idle-stdin and early-stdout cleanup truth. Original-endpoint owner repair6b38b77 plus final cleanup-publication ordering6a5d9af passes focused2+prior1, final contiguous1515 selected10/workspace394/default283/strict Rust/fmt/OMP8/49/Zsh/native guards2/showcase1,215.72s. Actual final-source CLI3paths exits daemon0 before explicit retainer release, truthful incomplete cleanup and sentinel/root/socket boundaries/no fallback. Self-audit PASS and19-file freeze ready; fresh blind round3 A/B/security dispatched. All tasks stay failing until clearance; live Task4 remains absent/unapproved, no cap reset.
+    Fresh S04 round3 clears implemented local tasks1–3: A/B each100/32items and independently19/19 hashes; specialist0 supported security/0 operational must, with honest0/19 hash-tool limitation. B Consider1 recommends keeping causal owner/E2E ordering intact; accepted/no source change. Both prior operational findings and delivery-race Consider are independently cleared. Task1–3 now passing, Task4/story still failing because the real driver is absent and exact installed closure/launcher/model/auth/private-root/enforceable-spend bindings lack approval. Next human decision: private pinned setup-only (Codex ACP2.2.2 and Claude ACP0.94.0, no auth/provider contact or global changes), then separate exact live approval. No main merge/push/release. Frozen bug/source snapshot6a5d9af intentionally unchanged; current gate records closure. Next changed-source review round4/5, historical caps/fence unchanged.
+  last_step_completed: e04s04-local-tasks1-3-runtime-and-independent-round3-PASS-live-prerequisites-blocked
   required_reading:
+    - specs/verifications/e04s04-build-review-round3.json
+    - specs/security/epics/e04/e04s04-review-round3.json
+    - specs/verifications/e04s04-round3-source.json
+    - specs/verifications/e04s04-endpoint-truth-before-after.json
+    - specs/verifications/e04s04-endpoint-truth-runtime.json
     - specs/verifications/e04s04-round2-source.json
     - specs/verifications/e04s04-build-review-round2.json
     - specs/security/epics/e04/e04s04-review-round2.json
@@ -647,12 +654,12 @@ epic_cycle:
   integration_owner: parent
   implementation_started: true
   approved_plan_reopened: false
-  runtime_acceptance: failing-S04-live-task-local-repaired-source-runtime-pass-review-pending
+  runtime_acceptance: failing-live-task-local1-3-runtime-and-independent-PASS
   live_approval: separately-required-exact-two-adapters-closures-models-auth-roots-prompts-spend
   ACP_publication: not-authorized
   historical_native_failure_and_review_caps: unchanged
-  current_local_verification: {source_commit: 6a94038, artifact: 'artifact://1457', selected: 8, workspace: 392, default: 281, strict_Rust_OMP_Zsh: passed, showcase: 1, native_unknown_guards: 2, actual_CLI_lifecycle: specs/verifications/e04s04-retained-pipe-runtime.json, source: specs/verifications/e04s04-round2-source.json, audit: specs/verifications/AUDIT-e04s04.md}
-  build_review: {scope: e04s04-build-current-local-source, round: 2, max_rounds: 5, status: FAIL-operational-must-fix, scores: [96.875, 100], security_findings: 0, operational_must_fix: 1, evidence: specs/verifications/e04s04-build-review-round2.json, whole_story: failing-live-task-unapproved-and-unimplemented, historical_caps: unchanged}
+  current_local_verification: {source_commit: 6a5d9af, artifact: 'artifact://1515', selected: 10, workspace: 394, default: 283, strict_Rust_OMP_Zsh: passed, showcase: 1, native_unknown_guards: 2, actual_CLI_lifecycle: specs/verifications/e04s04-endpoint-truth-runtime.json, source: specs/verifications/e04s04-round3-source.json, audit: specs/verifications/AUDIT-e04s04.md}
+  build_review: {scope: e04s04-build-current-local-source, round: 3, max_rounds: 5, status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [0, 1], security_findings: 0, operational_must_fix: 0, evidence: specs/verifications/e04s04-build-review-round3.json, previous_round2: specs/verifications/e04s04-build-review-round2.json, whole_story: failing-live-task-unapproved-and-unimplemented, next_source_round: 4, historical_caps: unchanged}
   owned_sessions:
     - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}
