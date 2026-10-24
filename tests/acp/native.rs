@@ -3,6 +3,9 @@ use super::*;
 
 #[path = "native/acceptance.rs"]
 mod acceptance;
+
+#[path = "native/live.rs"]
+pub(super) mod live;
 use alacritty_terminal::Term;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Dimensions;

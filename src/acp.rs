@@ -23,6 +23,8 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+mod grok;
+
 const FRAME: usize = 1024 * 1024;
 const QUEUE_BYTES: usize = 4 * 1024 * 1024;
 const INGRESS: usize = 64;
@@ -103,6 +105,7 @@ struct Interaction {
     id: String,
     wire_id: acp::RequestId,
     kind: &'static str,
+    grok_question: bool,
     session_scoped: bool,
     request_scope: Option<acp::RequestId>,
     parent_state: &'static str,
@@ -155,6 +158,11 @@ impl Interaction {
                         acp::RequestPermissionOutcome::Cancelled,
                     )),
                 ),
+                Some(work.to_owned()),
+            )?
+        } else if self.grok_question {
+            encode(
+                acp::Response::new(self.wire_id.clone(), Ok(json!({"outcome":"cancelled"}))),
                 Some(work.to_owned()),
             )?
         } else {
@@ -882,10 +890,20 @@ impl Broker {
                 let response = acp::CreateElicitationResponse::new(action);
                 let selection = serde_json::to_value(&response)?;
                 selections.push((index, value_bytes(&selection), selection));
-                let mut frame = encode(
-                    acp::Response::new(interaction.wire_id.clone(), Ok(response)),
-                    Some(work_id.clone()),
-                )?;
+                let mut frame = if interaction.grok_question {
+                    encode(
+                        acp::Response::new(
+                            interaction.wire_id.clone(),
+                            Ok(grok::response(&interaction.detail["schema"], answer)?),
+                        ),
+                        Some(work_id.clone()),
+                    )?
+                } else {
+                    encode(
+                        acp::Response::new(interaction.wire_id.clone(), Ok(response)),
+                        Some(work_id.clone()),
+                    )?
+                };
                 frame.response_id = Some(interaction.wire_id.clone());
                 ("acp-answer", None, Some(frame))
             }
@@ -1992,6 +2010,12 @@ fn incoming_request(state: &mut State, method: &str, request: acp::Request<Value
     );
     let parsed = match method {
         "elicitation/create" => parse_form(state, request.params.unwrap_or(Value::Null)),
+        "_x.ai/ask_user_question" => grok::form(request.params.unwrap_or(Value::Null))
+            .and_then(|params| parse_form(state, params))
+            .map(|(kind, session, scope, mut detail)| {
+                detail["actions"] = json!(["accept", "cancel"]);
+                (kind, session, scope, detail)
+            }),
         "session/request_permission" => {
             parse_permission(state, request.params.unwrap_or(Value::Null))
         }
@@ -2011,6 +2035,7 @@ fn incoming_request(state: &mut State, method: &str, request: acp::Request<Value
         id: fresh("interaction"),
         wire_id: request.id.clone(),
         kind,
+        grok_question: method == "_x.ai/ask_user_question",
         session_scoped,
         request_scope,
         parent_state: "outstanding",
@@ -3336,24 +3361,120 @@ mod tests {
     }
 
     #[test]
+    fn e04s04_grok_other_notes_and_unsupported_decline_preserve_pending_responder() {
+        let (broker, instance, target) = ready_broker();
+        let detail = {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, grok_question(76, "session", false)).unwrap();
+            state.interactions[0].content()
+        };
+        let properties = detail["schema"]["properties"].as_object().unwrap();
+        let (field, schema) = properties
+            .iter()
+            .find(|(_, schema)| schema["title"] == "Which synthetic choice?")
+            .unwrap();
+        let notes = schema["_meta"]["grok_notes_key"].as_str().unwrap();
+        let mut request = interaction_action(&target, &detail, "unsupported-grok-decline");
+        request["action"] = json!("decline");
+        request.as_object_mut().unwrap().remove("values");
+        let prepared = broker.prepare("acp-answer", &request, "original").unwrap();
+        assert!(
+            broker
+                .commit(prepared, 7)
+                .unwrap_err()
+                .to_string()
+                .starts_with("unsupported:")
+        );
+        request["call_id"] = json!("grok-other-without-notes");
+        request["action"] = json!("accept");
+        request["values"] = json!({field:"Other"});
+        let prepared = broker.prepare("acp-answer", &request, "original").unwrap();
+        assert!(
+            broker
+                .commit(prepared, 7)
+                .unwrap_err()
+                .to_string()
+                .starts_with("invalid-request:")
+        );
+        {
+            let state = instance.state.lock();
+            assert!(state.output.is_empty() && state.work.is_empty());
+            assert_eq!(state.interactions[0].state, "pending");
+            assert!(!state.calls.contains("unsupported-grok-decline"));
+            assert!(!state.calls.contains("grok-other-without-notes"));
+        }
+        request["call_id"] = json!("grok-freeform");
+        request["values"] = json!({field:"Other",notes:"synthetic free-form answer"});
+        let prepared = broker.prepare("acp-answer", &request, "original").unwrap();
+        broker.commit(prepared, 7).unwrap();
+        let state = instance.state.lock();
+        let response: Value = serde_json::from_slice(&state.output[0].bytes).unwrap();
+        assert_eq!(response["id"], 76);
+        assert_eq!(
+            response["result"],
+            json!({"outcome":"accepted",
+            "answers":{"Which synthetic choice?":["Other"]},
+            "annotations":{"Which synthetic choice?":{"notes":"synthetic free-form answer"}}})
+        );
+    }
+
+    #[test]
+    fn e04s04_grok_nullable_multiselect_is_single_choice_not_an_invalid_question() {
+        let (_, instance, _) = ready_broker();
+        let mut message = grok_question(75, "session", false);
+        message["params"]["questions"][0]["multiSelect"] = Value::Null;
+        let mut state = instance.state.lock();
+        apply(&instance, &mut state, message).unwrap();
+        assert_eq!(
+            state.interactions.len(),
+            1,
+            "installed Grok sends null for an omitted optional flag"
+        );
+        let detail = state.interactions[0].content();
+        let fields = detail["schema"]["properties"].as_object().unwrap();
+        let field = fields
+            .values()
+            .find(|value| value["title"] == "Which synthetic choice?")
+            .unwrap();
+        assert_eq!(field["type"], "string");
+        assert_eq!(field["oneOf"][0]["const"], "alpha");
+    }
+
+    #[test]
     fn e04s04_grok_genuine_question_preserves_choices_original_response_and_single_selection() {
         for multiple in [false, true] {
             let (broker, instance, target) = ready_broker();
             {
                 let mut state = instance.state.lock();
-                apply(&instance, &mut state, grok_question(71, "session", multiple)).unwrap();
+                apply(
+                    &instance,
+                    &mut state,
+                    grok_question(71, "session", multiple),
+                )
+                .unwrap();
             }
             let detail = {
                 let state = instance.state.lock();
-                assert_eq!(state.interactions.len(), 1, "real Grok question must be canonical");
+                assert_eq!(
+                    state.interactions.len(),
+                    1,
+                    "real Grok question must be canonical"
+                );
                 state.interactions[0].content()
             };
             assert_eq!(detail["scope"]["sessionId"], "session");
             assert_eq!(detail["scope"]["toolCallId"], "grok-question-tool");
             let fields = detail["schema"]["properties"].as_object().unwrap();
-            let field = fields.iter().find(|(_, value)| value["title"] == "Which synthetic choice?")
-                .expect("original question text is displayed").0;
-            let answer = if multiple { json!(["alpha", "beta"]) } else { json!("alpha") };
+            let field = fields
+                .iter()
+                .find(|(_, value)| value["title"] == "Which synthetic choice?")
+                .expect("original question text is displayed")
+                .0;
+            let answer = if multiple {
+                json!(["alpha", "beta"])
+            } else {
+                json!("alpha")
+            };
             let values = json!({field:answer});
             let mut request = interaction_action(&target, &detail, "grok-answer");
             request["values"] = values;
@@ -3361,18 +3482,36 @@ mod tests {
             request["call_id"] = json!("grok-losing-answer");
             let losing = broker.prepare("acp-answer", &request, "original").unwrap();
             broker.commit(first, 7).unwrap();
-            assert!(broker.commit(losing, 7).unwrap_err().to_string().starts_with("stale-interaction:"));
+            assert!(
+                broker
+                    .commit(losing, 7)
+                    .unwrap_err()
+                    .to_string()
+                    .starts_with("stale-interaction:")
+            );
             let state = instance.state.lock();
             assert_eq!(state.output.len(), 1, "one exact response, no new prompt");
             let response: Value = serde_json::from_slice(&state.output[0].bytes).unwrap();
             assert_eq!(response["id"], 71);
             assert_eq!(response["result"]["outcome"], "accepted");
-            assert_eq!(response["result"]["answers"]["Which synthetic choice?"],
-                if multiple { json!(["alpha", "beta"]) } else { json!(["alpha"]) });
+            assert_eq!(
+                response["result"]["answers"]["Which synthetic choice?"],
+                if multiple {
+                    json!(["alpha", "beta"])
+                } else {
+                    json!(["alpha"])
+                }
+            );
             if !multiple {
-                assert_eq!(response["result"]["annotations"]["Which synthetic choice?"]["preview"], "<safe-preview>");
+                assert_eq!(
+                    response["result"]["annotations"]["Which synthetic choice?"]["preview"],
+                    "<safe-preview>"
+                );
             }
-            assert_eq!(state.interactions[0].selection.as_ref().unwrap()["content"][field], answer);
+            assert_eq!(
+                state.interactions[0].selection.as_ref().unwrap()["content"][field],
+                answer
+            );
             assert!(!state.calls.contains("grok-losing-answer"));
         }
     }
@@ -3386,14 +3525,23 @@ mod tests {
                 "scope" => message["params"]["sessionId"] = json!("another-session"),
                 "question" => {
                     let duplicate = message["params"]["questions"][0].clone();
-                    message["params"]["questions"].as_array_mut().unwrap().push(duplicate);
+                    message["params"]["questions"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(duplicate);
                 }
                 "choice" => {
                     let duplicate = message["params"]["questions"][0]["options"][0].clone();
-                    message["params"]["questions"][0]["options"].as_array_mut().unwrap().push(duplicate);
+                    message["params"]["questions"][0]["options"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(duplicate);
                 }
                 "mode" => message["params"]["mode"] = json!("invented-mode"),
-                _ => message["params"]["questions"] = json!(vec![message["params"]["questions"][0].clone(); 65]),
+                _ => {
+                    message["params"]["questions"] =
+                        json!(vec![message["params"]["questions"][0].clone(); 65])
+                }
             }
             let mut state = instance.state.lock();
             apply(&instance, &mut state, message).unwrap();
@@ -3408,7 +3556,13 @@ mod tests {
     #[test]
     fn e04s04_grok_interrupt_cancels_exact_pending_and_late_question_without_a_choice_window() {
         let (broker, instance, target) = ready_broker();
-        let prompt = broker.prepare("acp-prompt", &prompt_request(&target, "grok-original"), "original").unwrap();
+        let prompt = broker
+            .prepare(
+                "acp-prompt",
+                &prompt_request(&target, "grok-original"),
+                "original",
+            )
+            .unwrap();
         let admitted = broker.commit(prompt, 7).unwrap();
         {
             let mut state = instance.state.lock();
@@ -3420,18 +3574,28 @@ mod tests {
         let prompt_id = broker.metadata(&instance.id).unwrap()["foreground"]["prompt_id"].clone();
         let mut interrupt = interrupt;
         interrupt["prompt_id"] = prompt_id;
-        let prepared = broker.prepare("acp-interrupt", &interrupt, "original").unwrap();
+        let prepared = broker
+            .prepare("acp-interrupt", &interrupt, "original")
+            .unwrap();
         broker.commit(prepared, 7).unwrap();
         let mut state = instance.state.lock();
         apply(&instance, &mut state, grok_question(74, "session", false)).unwrap();
         for id in [73, 74] {
-            let responses: Vec<Value> = state.output.iter()
+            let responses: Vec<Value> = state
+                .output
+                .iter()
                 .filter_map(|frame| serde_json::from_slice::<Value>(&frame.bytes).ok())
-                .filter(|frame| frame["id"] == id).collect();
+                .filter(|frame| frame["id"] == id)
+                .collect();
             assert_eq!(responses.len(), 1);
             assert_eq!(responses[0]["result"], json!({"outcome":"cancelled"}));
         }
-        assert!(state.interactions.iter().all(|interaction| interaction.state == "selected"));
+        assert!(
+            state
+                .interactions
+                .iter()
+                .all(|interaction| interaction.state == "selected")
+        );
         assert!(state.foreground.as_ref().unwrap().1);
     }
 

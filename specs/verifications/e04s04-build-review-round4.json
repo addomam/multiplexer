@@ -1,0 +1,22 @@
+{
+  "scope": "e04s04-complete-Codex-Grok-live-integration",
+  "review_round": 4,
+  "max_rounds": 5,
+  "numeric_AND_gate": "PASS",
+  "acceptance_gate": "FAIL-pending-native-Other-recovery-repair",
+  "source_manifest": "specs/verifications/e04s04-round4-source.json",
+  "reviewers": [
+    {"name":"A","report":"specs/verifications/e04s04-review-a-round4.json","total_items":32,"individually_assessed":32,"must_fix":0,"should_fix":1,"consider":0,"score":96.875,"hashes_matched":22,"hashes_total":22},
+    {"name":"B","report":"specs/verifications/e04s04-review-b-round4.json","total_items":32,"individually_assessed":32,"must_fix":0,"should_fix":1,"consider":0,"score":96.875,"hashes_matched":22,"hashes_total":22}
+  ],
+  "security": {"report":"specs/security/epics/e04/e04s04-review-round4.json","supported_security_findings":0,"operational_must_fix":0,"score":100,"independent_hashes_computed":0,"hashes_total":22,"limitation":"No independent hash/Git capability; full original static report preserved verbatim after same-round delivery recovery. A/B independently match all22."},
+  "dispositions": [
+    {"id":"S04-OTHER-01","reviewers":["A","B"],"category":"should-fix","status":"accepted-for-repair-before-acceptance","consumer_impact":"Native Other without notes is captured before broker rejection, leaving the same native grant unable to correct or cancel the pending question.","plan":"Reproduce with actual controlling PTY and genuine Grok wire peer, preserve test-only RED, move the existing conditional notes rule into shared local form validation before native capture, retain exact original wire response and no replay. Run repaired native smoke/full gates and fresh final round5. No additional provider execution is needed for this local-validation repair."}
+  ],
+  "whole_story": "failing",
+  "tasks": "all-four-failing-pending-repair-and-fresh-clearance",
+  "runtime_evidence": "Actual Codex/Grok artifact1659 and full1664 remain PASS on this exact round4 source; neither contains the newly identified Other-recovery regression.",
+  "next_source_review_round": 5,
+  "historical_native_fence_and_caps": "unchanged",
+  "publication": "not-authorized-not-performed"
+}

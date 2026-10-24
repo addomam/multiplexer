@@ -2,6 +2,16 @@
 
 Scope: new local ACP session path and amux-owned interaction view. No native application-fence repair or e03 acceptance/review reset. Architecture proposed; production code is unchanged. Detailed implementation Plan is gated on architecture review/confirmation.
 
+## Current S04 Codex/Grok live-integration amendment
+
+User explicitly replaces Claude with Grok and authorizes existing OAuth subscriptions with cheap/free supported models. Existing reviewed local source and historical caps remain intact. Actual low-effort Grok question baseline reaches its built-in tool, gets method-not-found, completes without a canonical form, and cleans its daemon/adapter/workers/socket/root without fallback. Grok's published question is the ACP `_x.ai/ask_user_question` extension, not standard `elicitation/create`; no prose/MCP substitute is acceptable.
+
+Target: private `src/acp.rs` request parsing, canonical form response encoding and mandatory interrupt responses; `src/tui/agent.rs` must not offer unsupported decline for a Grok accept/cancel-only form. Existing daemon/client/control APIs remain unchanged. Both API/native consumers reuse the same bounded interaction/schema/admission ledger; no generic provider trait, second agent or wire-rewriting compatibility proxy.
+
+Risk: **High/P0** at same-session/tool/RPC identity, first-valid response and cancellation. Validate exact session, bounded distinct questions/options/labels and all response values before publication/admission; preserve descriptions/previews and distinguish unsupported actions. Reuse existing frame/interaction/answer/queue budgets and authority transaction. Unknown extensions remain method-not-found; malformed supported requests receive invalid-params without invented answers. No I/O under state/authority locks.
+
+Proof: add consumer-visible question/answer/wrong-session/duplicate-choice/cancellation regressions before the repair; run actual Codex/Grok CLI/native acceptance, full local regressions and fresh source review without resetting the round3/5 history. Model/effort are actual wire observations; live observer forwards bytes unchanged and enforces a private cumulative prompt budget with no API-key or premium fallback. Public evidence is content-free; OAuth copies and runtime artifacts stay private and are removed after owned cleanup.
+
 ## Existing module purpose, callers and contracts
 
 | Module | Purpose / callers | Contracts and intended delta |

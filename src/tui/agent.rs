@@ -1021,7 +1021,7 @@ impl AgentView {
         self.draw_editor(frame, editor);
         frame.render_widget(Paragraph::new(vec![
             Line::raw(self.notice),
-            Line::styled("F9 questions/history | Tab fields | F4 unset | F5 review/accept F6 decline F7 cancel | Enter prompt/permission | F8 auth | Ctrl-C interrupt | PgUp/PgDn scroll",
+            Line::styled("F9 questions/history | Tab fields | F4 unset | F5 review/accept F6 decline (if offered) F7 cancel | Enter prompt/permission | F8 auth | Ctrl-C interrupt | PgUp/PgDn scroll",
                 Style::default().fg(MUTED)),
         ]), footer);
     }
@@ -1118,6 +1118,12 @@ impl AgentView {
 }
 
 impl Interaction {
+    fn decline_offered(&self) -> bool {
+        self.detail["actions"]
+            .as_array()
+            .is_none_or(|actions| actions.iter().any(|action| action == "decline"))
+    }
+
     fn new(id: &str, revision: u64, detail: &Value, content_bytes: usize) -> Self {
         let mut item = Self {
             id: id.to_owned(),
@@ -1370,6 +1376,10 @@ impl Interaction {
                 return self.answer("accept", binding, notice);
             }
             KeyCode::F(6) if plain && deliberate && self.detail["kind"] == "form" => {
+                if !self.decline_offered() {
+                    *notice = "This question offers accept/cancel, not decline.";
+                    return None;
+                }
                 return self.answer("decline", binding, notice);
             }
             KeyCode::F(7) if plain && deliberate && self.detail["kind"] == "form" => {
@@ -1763,7 +1773,11 @@ impl Interaction {
             (self.scroll + self.page).min(self.rows.len()),
             self.rows.len(),
             if self.reviewed {
-                "REVIEW: F5 accepts; F6 declines; F7 cancels"
+                if self.decline_offered() {
+                    "REVIEW: F5 accepts; F6 declines; F7 cancels"
+                } else {
+                    "REVIEW: F5 accepts; F7 cancels; decline is not offered"
+                }
             } else {
                 self.status.as_str()
             }
@@ -1817,7 +1831,13 @@ impl Interaction {
                     );
                 }
             }
-            self.display.push_str("Tab/Shift-Tab fields; text/numeric editing/paste; arrows offered choices; Space bool/multiselect; F4 unset.\nF5 validate/review, then F5 accept; F6 decline; F7 cancel. Defaults are editable, never automatic responses.\nLocal validation is not full JSON Schema or pattern/format certification; the agent validates independently.\n");
+            self.display.push_str("Tab/Shift-Tab fields; text/numeric editing/paste; arrows offered choices; Space bool/multiselect; F4 unset.\nF5 validate/review, then F5 accept; F7 cancel. Defaults are editable, never automatic responses.\n");
+            self.display.push_str(if self.decline_offered() {
+                "F6 decline.\n"
+            } else {
+                "Decline is not offered by this question.\n"
+            });
+            self.display.push_str("Local validation is not full JSON Schema or pattern/format certification; the agent validates independently.\n");
             for (index, field) in self.fields.iter().enumerate() {
                 let property = &self.detail["schema"]["properties"][&field.name];
                 let active = index == self.field;

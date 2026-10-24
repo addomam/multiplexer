@@ -16,6 +16,12 @@ mod native;
 #[path = "acp/acceptance.rs"]
 mod acceptance;
 
+#[test]
+#[ignore = "requires explicit private Codex/Grok OAuth, model and usage approval"]
+fn e04s04_live_adapters() {
+    native::live::run();
+}
+
 fn exchange(socket: &Path, mut request: Value) -> std::io::Result<Value> {
     request["version"] = json!(1);
     let mut stream = UnixStream::connect(socket)?;

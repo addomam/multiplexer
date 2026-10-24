@@ -12,7 +12,7 @@ tasks:
     stale-input rejection with observed cleanup; write redacted complete local matrix.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
   risk: P0
-  status: passing
+  status: failing
   scenarios:
   - SC-e04s04-P0-01
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -28,7 +28,7 @@ tasks:
     snapshot/ownership/shutdown; no false settlement or unrelated cleanup.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
   risk: P0
-  status: passing
+  status: failing
   scenarios:
   - SC-e04s04-P1-04
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -44,7 +44,7 @@ tasks:
     fence; document best-effort terminal fallback without altering historical e03 failure/caps.
   verify: "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture"
   risk: P0
-  status: passing
+  status: failing
   scenarios:
   - SC-e04s04-P0-03
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -56,9 +56,9 @@ tasks:
     - real-daemon
     - Security Review
 - id: 4
-  description: Only after separate exact live approval, run fail-closed ignored e04s04_live_adapters against real pinned Codex
-    and Claude adapters with genuine questions/allow/deny, same-session handoff, bounded cheapest approved models, redacted
-    evidence and owned cleanup. Missing approval or a failed/unsupported row remains failing, never skipped-to-pass.
+  description: Under the user's subsequent live authorization replacing Claude with Grok, run fail-closed ignored e04s04_live_adapters against real pinned Codex
+    and Grok adapters using existing OAuth subscriptions, genuine questions/allow/deny, same-session handoff, bounded cheap/free supported models, redacted
+    evidence and owned cleanup. A failed/unsupported row remains failing, never skipped-to-pass; no API-key or premium-model fallback.
   verify: cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture
   risk: P0
   status: failing
@@ -73,3 +73,4 @@ tasks:
     - real-daemon
     - Security Review
 evidence: specs/verifications/e04s04-build.md
+revalidation: Prior source6a5d9af tasks1–3 passed independent round3; live-discovered source changes require fresh full/runtime/review gates before current tasks pass again. Historical evidence/caps are retained.

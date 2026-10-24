@@ -1,0 +1,254 @@
+{
+  "reviewer": "A",
+  "review_round": 4,
+  "max_rounds": 5,
+  "scope": "e04s04-complete-Codex-Grok-live-integration-round4",
+  "source_root": "/Users/addomam/projects/amux-acp-build",
+  "source_manifest": "specs/verifications/e04s04-round4-source.json",
+  "historical_caps": "unchanged",
+  "story_acceptance": false,
+  "overall_correctness": "incorrect",
+  "confidence": 0.84,
+  "must_fix_count": 0,
+  "should_fix_count": 1,
+  "consider_count": 0,
+  "total_items": 32,
+  "individually_assessed": 32,
+  "score": 96.875,
+  "formula": "100*(32-must_fix-should_fix)/32 = 100*(32-0-1)/32 = 96.875",
+  "verdict": "one-should-fix-zero-must-fix-not-story-acceptance",
+  "fowler_smells": [],
+  "checks_run": false,
+  "verification_not_executed_by_child": [
+    "cargo test",
+    "cargo clippy",
+    "cargo build",
+    "cargo fmt",
+    "bun test",
+    "zsh -n",
+    "live adapter/provider/auth",
+    "native fence runtime"
+  ],
+  "hash_verification": {
+    "method": "Python hashlib.sha256 of each manifest path, compared to specs/verifications/e04s04-round4-source.json",
+    "matched": 22,
+    "total": 22,
+    "mismatched": [],
+    "limitation": "One SHA-256 implementation. No second algorithm. Did not hash files outside the frozen 22. Working-tree ledgers outside the manifest were not part of the equality claim."
+  },
+  "blind": {
+    "round4_review_b": "not read",
+    "round4_security": "not read",
+    "private_auth_bindings": "not read",
+    "round3_reports": "schema/footer shape only; conclusions not used as evidence"
+  },
+  "findings": [
+    {
+      "category": "should-fix",
+      "title": "Let native Other notes be corrected after rejection",
+      "body": "A native accept of Other with empty or omitted notes passes Interaction::values, which only calls validate_form_values and treats qN_notes as optional. Commit then fails in grok::response at src/acp/grok.rs:160-164 with invalid-request and, as the unit case shows, leaves the question pending with an empty output queue. The editor has already set captured in src/tui/agent.rs:1721-1723. The daemon error arrives asynchronously; src/tui/control.rs:423-429 records the code and does not call restore_unqueued. editable at src/tui/agent.rs:1294-1296 then refuses F5, F7, and draft edits, so that attachment cannot supply the required notes or cancel the retained question. Ctrl-C can still interrupt the prompt, and a new API call can answer it. Impact is a stuck native correction path for a supported Grok answer, not a second wire response or a consumed responder.",
+      "priority": 2,
+      "confidence": 0.88,
+      "file_path": "src/acp/grok.rs",
+      "line_start": 160,
+      "line_end": 164,
+      "consumer": "src/tui/agent.rs:1648 values(); src/tui/agent.rs:1721 capture(); src/tui/agent.rs:1294 editable(); src/tui/control.rs:423 poll error",
+      "suggestion": "Before capture, reject Other unless the sibling field named by _meta.grok_notes_key is non-empty, using the same rule as grok::response, and do not set captured. Alternatively, if an acp-answer error returns while that interaction is still pending with a null selected_work_id, clear captured so a deliberate corrected answer can be sent."
+    }
+  ],
+  "checklist": [
+    {
+      "item": 1,
+      "id": "grokMethodNotElicitation",
+      "score": 1,
+      "evidence": "src/acp.rs:2012-2016 dispatches _x.ai/ask_user_question through grok::form then parse_form. elicitation/create remains a separate arm. No prose or MCP question parser was added."
+    },
+    {
+      "item": 2,
+      "id": "closedDecoderBounds",
+      "score": 1,
+      "evidence": "grok::form schema_keys rejects unknown request, question, and option fields. Count is capped at FIELDS/2 and total choices at OPTIONS before parse_form publication. Invented mode is rejected."
+    },
+    {
+      "item": 3,
+      "id": "nullableMultiSelect",
+      "score": 1,
+      "evidence": "Null or absent multiSelect/multi_select becomes single string oneOf. Both flags together are rejected. Explicit true becomes a minItems 1 array. Unit case e04s04_grok_nullable_multiselect covers null."
+    },
+    {
+      "item": 4,
+      "id": "choicesPreviewsOther",
+      "score": 1,
+      "evidence": "Labels, descriptions, and non-null string previews are preserved. Other is added when absent. Accepted answers are label arrays keyed by question text; a single selected preview and non-empty notes become annotations. Empty annotations are omitted."
+    },
+    {
+      "item": 5,
+      "id": "duplicateTextAndLabels",
+      "score": 1,
+      "evidence": "Duplicate question text and per-question option labels are rejected before an interaction is published. Optional question/option ids are shape-checked and are not answer keys; the published Grok response tests key answers by question text, so unused duplicate ids have no selection effect."
+    },
+    {
+      "item": 6,
+      "id": "exactSessionToolRpc",
+      "score": 1,
+      "evidence": "parse_form requires the live session and a valid toolCallId. The JSON-RPC id is stored as wire_id and returned on accept, cancel, and invalid-params. A mismatched session publishes no interaction."
+    },
+    {
+      "item": 7,
+      "id": "wireResponseShape",
+      "score": 1,
+      "evidence": "Accept uses outcome accepted. Cancel and interrupt use outcome cancelled, including late questions. Decline bails before encode. Upstream AskUserQuestionExtResponse accepts label vectors and omits empty annotations; this matches that contract."
+    },
+    {
+      "item": 8,
+      "id": "planChatSkipNotFabricated",
+      "score": 1,
+      "evidence": "mode plan is accepted as a question, not as decline or cancel. actions are only accept and cancel. No chat_about_this or skip_interview outcome is synthesized. README and the form message state that limitation."
+    },
+    {
+      "item": 9,
+      "id": "firstValidSelection",
+      "score": 1,
+      "evidence": "Grok answers use pending_interaction and the existing prepare/commit winner. The losing call is stale-interaction, is absent from calls, and does not add a second output frame."
+    },
+    {
+      "item": 10,
+      "id": "declineDoesNotConsume",
+      "score": 1,
+      "evidence": "API decline returns unsupported before enqueue. The unit case keeps output and work empty, state pending, and the call id unrecorded. Native F6 returns None when actions omit decline."
+    },
+    {
+      "item": 11,
+      "id": "forceAuthorityOnly",
+      "score": 1,
+      "evidence": "The production delta does not call interrupt, kill, or session/cancel from force. Live question_force checks the original work tuple and pending question after ownership-claim mode force. Unchanged control.rs force remains authority-only."
+    },
+    {
+      "item": 12,
+      "id": "staleNoReplay",
+      "score": 1,
+      "evidence": "Commit checks the admitted generation. The live row rejects a stale API answer with stale-control or stale-handle and fences a physical F5 from the lost owner before the current answer. Binding changes discard drafts rather than rebinding them."
+    },
+    {
+      "item": 13,
+      "id": "originalPromptIdentity",
+      "score": 1,
+      "evidence": "Question and force completion require the original prompt and, unless the permission row is an explicit reject_once, end_turn. reject_once may finish cancelled. The observer counts session/cancel separately, and the recorded final matrix has cancellations 0."
+    },
+    {
+      "item": 14,
+      "id": "interruptCancelExact",
+      "score": 1,
+      "evidence": "Interaction::cancel_frame emits outcome cancelled for grok_question. The interrupt arm cancels pending session-scoped questions and sends session/cancel only for that explicit interrupt, not for force."
+    },
+    {
+      "item": 15,
+      "id": "lateQuestionNoWindow",
+      "score": 1,
+      "evidence": "A question arriving while foreground is cancelling is selected and responded before publication. The unit case checks both the pending and late RPC ids."
+    },
+    {
+      "item": 16,
+      "id": "ordinaryCancelRetainsCalls",
+      "score": 1,
+      "evidence": "No new claim-cancel path was added. Unchanged control admission still grants nobody on ordinary pending cancellation and does not discard accepted calls. This patch does not reopen that contract."
+    },
+    {
+      "item": 17,
+      "id": "admissionAtomic",
+      "score": 1,
+      "evidence": "daemon acp_action still authorizes, prepares, then admit_acp, which checks the current generation under the target lock before commit. grok::response performs no I/O and takes no second lock."
+    },
+    {
+      "item": 18,
+      "id": "budgetsBeforePublish",
+      "score": 1,
+      "evidence": "Invalid Grok requests become invalid-params on the original RPC and do not push an interaction. Valid questions pass retain_capacity before responder publication. Frame and queue caps are the existing ones."
+    },
+    {
+      "item": 19,
+      "id": "noIoUnderLock",
+      "score": 1,
+      "evidence": "The new codec is pure JSON. Commit still does not spawn, join, or probe under the state lock. The test observer is outside the daemon lock order."
+    },
+    {
+      "item": 20,
+      "id": "responderCleanup",
+      "score": 1,
+      "evidence": "Decline and Other-without-notes return before enqueue and do not record the call. Close, pipe ownership, and worker joins are outside this delta and were not rewritten."
+    },
+    {
+      "item": 21,
+      "id": "liveCleanupOracle",
+      "score": 1,
+      "evidence": "The ignored driver checks termios restoration, controlling-PTY exit 0, drainer join, canonical close, daemon exit 0, socket and root absence, and sentinel survival before Host fallback. Parent artifact 1659 is cited, not re-executed."
+    },
+    {
+      "item": 22,
+      "id": "declineNotOffered",
+      "score": 1,
+      "evidence": "decline_offered is false when an actions array exists and lacks decline. Grok sets [accept, cancel]. Absent actions still offer decline for standard elicitation. F6 sends nothing for Grok."
+    },
+    {
+      "item": 23,
+      "id": "acceptCancelOffered",
+      "score": 1,
+      "evidence": "F5 still reviews then accepts. F7 sends cancel, which grok::response encodes as outcome cancelled. The footer and review line say decline is not offered."
+    },
+    {
+      "item": 24,
+      "id": "otherNotesNativeRecovery",
+      "score": 0,
+      "evidence": "Broker retention is correct, but native local validation does not know the Other-notes rule. After the async invalid-request, captured stays set and the same attachment cannot correct or cancel the retained question. This is the should-fix."
+    },
+    {
+      "item": 25,
+      "id": "inertDisplay",
+      "score": 1,
+      "evidence": "Question text, descriptions, previews, and notes reach the host through display_value/inert and ratatui Paragraph/Line cells, not a raw terminal write. Control and bidi characters are replaced."
+    },
+    {
+      "item": 26,
+      "id": "grokUnitCases",
+      "score": 1,
+      "evidence": "Current tests cover nullable single choice, single and multi answers, preview, Other notes, decline retention, wrong session, duplicate text/labels, bad mode, count, first-valid, and explicit/late cancel. They assert wire and state, not source text."
+    },
+    {
+      "item": 27,
+      "id": "liveMatrixHonesty",
+      "score": 1,
+      "evidence": "e04s04_live_adapters is ignored unless explicitly selected and fail-closes without a private absolute config. It requires Codex and Grok, four named rows, original end_turn except explicit reject_once cancelled, and zero session/cancel. The observer forwards the original chunk, not reserialized JSON."
+    },
+    {
+      "item": 28,
+      "id": "noFalseGateOrFenceReset",
+      "score": 1,
+      "evidence": "The live test is not treated as a zero-case pass. README still calls terminal settlement best-effort. BUG-e03-native-settlement.md is in the frozen manifest and was not rewritten by this review. Historical caps are not reset here."
+    },
+    {
+      "item": 29,
+      "id": "privacyBoundaries",
+      "score": 1,
+      "evidence": "Default metadata omits question text. The observer stores field types, model, effort, and counts, not prompts or answers. It refuses API-key environments. Production gained no shell interpolation; the live effect command is test-only, quote-checked, and confined to the private cwd."
+    },
+    {
+      "item": 30,
+      "id": "offeredPermissionsExact",
+      "score": 1,
+      "evidence": "Permission encoding is unchanged. The live allow/deny rows select the exact offered allow_once or reject_once id and check the approved file bytes or absence. No allow option is fabricated."
+    },
+    {
+      "item": 31,
+      "id": "noProviderTrait",
+      "score": 1,
+      "evidence": "src/acp/grok.rs is a private closed codec into the existing form ledger and responder. Cargo.toml and Cargo.lock match the frozen manifest. No second agent or compatibility proxy was added."
+    },
+    {
+      "item": 32,
+      "id": "conventionsAndMaintainability",
+      "score": 1,
+      "evidence": "Runtime state stays in memory. IDs and errors remain explicit. The codec is one module rather than a plugin seam. README and CHANGELOG match accept/cancel, nullable single choice, and the unresolved fence. No actionable Fowler smell was introduced."
+    }
+  ],
+  "explanation": "One should-fix, zero must-fix. Score 100*(32-0-1)/32=96.875. This is not story acceptance and does not reset historical caps. Grok _x.ai/ask_user_question is a closed projection into the existing form, responder, admission, and cancel path. Nullable multiSelect is single choice; duplicate question text and option labels are rejected; accept/cancel keep the original RPC; unsupported decline sends nothing. Force is not wired to interrupt or kill. The defect is native recovery: Other without notes fails only in grok::response after the editor has captured the action, and the async invalid-request does not clear that capture, so the same attachment cannot correct the still-pending question. checks_run=false. Independent hashlib.sha256 matched 22/22 manifest files. Limitations: no build, test, clippy, formatter, provider, auth, or second hash algorithm; round4 reviewer B and security reports were not read.\n\nnumeric_rubric (1=met on inspected source; item 24 is the should-fix, not an extra score deduction):\n1 grokMethodNotElicitation=1 src/acp.rs:2012-2016 dispatches _x.ai/ask_user_question through grok::form then parse_form. elicitation/create remains a separate arm. No prose or MCP question parser was added.\n2 closedDecoderBounds=1 grok::form schema_keys rejects unknown request, question, and option fields. Count is capped at FIELDS/2 and total choices at OPTIONS before parse_form publication. Invented mode is rejected.\n3 nullableMultiSelect=1 Null or absent multiSelect/multi_select becomes single string oneOf. Both flags together are rejected. Explicit true becomes a minItems 1 array. Unit case e04s04_grok_nullable_multiselect covers null.\n4 choicesPreviewsOther=1 Labels, descriptions, and non-null string previews are preserved. Other is added when absent. Accepted answers are label arrays keyed by question text; a single selected preview and non-empty notes become annotations. Empty annotations are omitted.\n5 duplicateTextAndLabels=1 Duplicate question text and per-question option labels are rejected before an interaction is published. Optional question/option ids are shape-checked and are not answer keys; the published Grok response tests key answers by question text, so unused duplicate ids have no selection effect.\n6 exactSessionToolRpc=1 parse_form requires the live session and a valid toolCallId. The JSON-RPC id is stored as wire_id and returned on accept, cancel, and invalid-params. A mismatched session publishes no interaction.\n7 wireResponseShape=1 Accept uses outcome accepted. Cancel and interrupt use outcome cancelled, including late questions. Decline bails before encode. Upstream AskUserQuestionExtResponse accepts label vectors and omits empty annotations; this matches that contract.\n8 planChatSkipNotFabricated=1 mode plan is accepted as a question, not as decline or cancel. actions are only accept and cancel. No chat_about_this or skip_interview outcome is synthesized. README and the form message state that limitation.\n9 firstValidSelection=1 Grok answers use pending_interaction and the existing prepare/commit winner. The losing call is stale-interaction, is absent from calls, and does not add a second output frame.\n10 declineDoesNotConsume=1 API decline returns unsupported before enqueue. The unit case keeps output and work empty, state pending, and the call id unrecorded. Native F6 returns None when actions omit decline.\n11 forceAuthorityOnly=1 The production delta does not call interrupt, kill, or session/cancel from force. Live question_force checks the original work tuple and pending question after ownership-claim mode force. Unchanged control.rs force remains authority-only.\n12 staleNoReplay=1 Commit checks the admitted generation. The live row rejects a stale API answer with stale-control or stale-handle and fences a physical F5 from the lost owner before the current answer. Binding changes discard drafts rather than rebinding them.\n13 originalPromptIdentity=1 Question and force completion require the original prompt and, unless the permission row is an explicit reject_once, end_turn. reject_once may finish cancelled. The observer counts session/cancel separately, and the recorded final matrix has cancellations 0.\n14 interruptCancelExact=1 Interaction::cancel_frame emits outcome cancelled for grok_question. The interrupt arm cancels pending session-scoped questions and sends session/cancel only for that explicit interrupt, not for force.\n15 lateQuestionNoWindow=1 A question arriving while foreground is cancelling is selected and responded before publication. The unit case checks both the pending and late RPC ids.\n16 ordinaryCancelRetainsCalls=1 No new claim-cancel path was added. Unchanged control admission still grants nobody on ordinary pending cancellation and does not discard accepted calls. This patch does not reopen that contract.\n17 admissionAtomic=1 daemon acp_action still authorizes, prepares, then admit_acp, which checks the current generation under the target lock before commit. grok::response performs no I/O and takes no second lock.\n18 budgetsBeforePublish=1 Invalid Grok requests become invalid-params on the original RPC and do not push an interaction. Valid questions pass retain_capacity before responder publication. Frame and queue caps are the existing ones.\n19 noIoUnderLock=1 The new codec is pure JSON. Commit still does not spawn, join, or probe under the state lock. The test observer is outside the daemon lock order.\n20 responderCleanup=1 Decline and Other-without-notes return before enqueue and do not record the call. Close, pipe ownership, and worker joins are outside this delta and were not rewritten.\n21 liveCleanupOracle=1 The ignored driver checks termios restoration, controlling-PTY exit 0, drainer join, canonical close, daemon exit 0, socket and root absence, and sentinel survival before Host fallback. Parent artifact 1659 is cited, not re-executed.\n22 declineNotOffered=1 decline_offered is false when an actions array exists and lacks decline. Grok sets [accept, cancel]. Absent actions still offer decline for standard elicitation. F6 sends nothing for Grok.\n23 acceptCancelOffered=1 F5 still reviews then accepts. F7 sends cancel, which grok::response encodes as outcome cancelled. The footer and review line say decline is not offered.\n24 otherNotesNativeRecovery=0 Broker retention is correct, but native local validation does not know the Other-notes rule. After the async invalid-request, captured stays set and the same attachment cannot correct or cancel the retained question. This is the should-fix.\n25 inertDisplay=1 Question text, descriptions, previews, and notes reach the host through display_value/inert and ratatui Paragraph/Line cells, not a raw terminal write. Control and bidi characters are replaced.\n26 grokUnitCases=1 Current tests cover nullable single choice, single and multi answers, preview, Other notes, decline retention, wrong session, duplicate text/labels, bad mode, count, first-valid, and explicit/late cancel. They assert wire and state, not source text.\n27 liveMatrixHonesty=1 e04s04_live_adapters is ignored unless explicitly selected and fail-closes without a private absolute config. It requires Codex and Grok, four named rows, original end_turn except explicit reject_once cancelled, and zero session/cancel. The observer forwards the original chunk, not reserialized JSON.\n28 noFalseGateOrFenceReset=1 The live test is not treated as a zero-case pass. README still calls terminal settlement best-effort. BUG-e03-native-settlement.md is in the frozen manifest and was not rewritten by this review. Historical caps are not reset here.\n29 privacyBoundaries=1 Default metadata omits question text. The observer stores field types, model, effort, and counts, not prompts or answers. It refuses API-key environments. Production gained no shell interpolation; the live effect command is test-only, quote-checked, and confined to the private cwd.\n30 offeredPermissionsExact=1 Permission encoding is unchanged. The live allow/deny rows select the exact offered allow_once or reject_once id and check the approved file bytes or absence. No allow option is fabricated.\n31 noProviderTrait=1 src/acp/grok.rs is a private closed codec into the existing form ledger and responder. Cargo.toml and Cargo.lock match the frozen manifest. No second agent or compatibility proxy was added.\n32 conventionsAndMaintainability=1 Runtime state stays in memory. IDs and errors remain explicit. The codec is one module rather than a plugin seam. README and CHANGELOG match accept/cancel, nullable single choice, and the unresolved fence. No actionable Fowler smell was introduced.\n\nmust_fix_count=0 should_fix_count=1 consider_count=0 total_items=32 individually_assessed=32 score=96.875 formula=100*(32-0-1)/32 verdict=one-should-fix-zero-must-fix-not-story-acceptance hash_verification=22/22 match checks_run=false fowler_smells=none"
+}

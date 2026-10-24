@@ -90,12 +90,16 @@ Genuine ACP forms and tool permissions appear in this same conversation, includi
 | Toggle boolean or multiselect choice | Space |
 | Explicitly unset a field | F4 |
 | Validate/review form, then accept unchanged values | F5, then F5 |
-| Decline form / cancel form | F6 / F7 |
+| Decline form when offered / cancel form | F6 / F7 |
 | Select the exact highlighted permission option | Enter |
 
 Known flat string, number, integer, boolean, enum, titled-enum and multiselect controls are supported. Defaults start editable, never submit automatically; omitted optional values remain unset rather than becoming false, zero, empty or a default. Declared defaults may require explicit unset before the submitted answer fits **64 KiB**. Required values, offered choices, enum intersection, Unicode lengths, numeric bounds and selection counts are checked locally and again at admission. Pattern/format constraints are displayed but **not locally certified**; agent validation remains authoritative. Unknown/nested schemas or unsupported modes receive explicit protocol errors.
 
 Only the first valid response is canonical; a stale losing answer is neither sent nor added as accepted history. Form decline, form cancel and explicit foreground interruption are distinct. Navigation, focus loss and detach never answer or deny. During explicit interruption, applicable pending and late questions receive Cancel/Cancelled without becoming selectable; the interrupt is confirmed only by the original prompt response, not by notification delivery. A written answer is not proof of agent application.
+
+Grok's genuine `_x.ai/ask_user_question` ACP extension uses the same canonical form, authority and retained responder as standard elicitation. Single/multiple choices, descriptions, previews and free-form **Other** notes are preserved; duplicate question text or option labels are rejected. Grok offers accept/cancel, not decline: F6 sends nothing and the API rejects decline without consuming the question. Plan-specific chat/skip are not fabricated as decline or cancel.
+
+Codex ACP 2.2.2 exposes built-in `request_user_input` in Plan collaboration mode. Its explicit `/plan` prompt command toggles that mode on the existing session without an inference turn; use it again before requesting file changes. amux does not secretly change the adapter's mode, approval policy, authentication or model.
 
 Ownership is fenced at **amux input admission**, not at provider application. Already accepted work may continue under its original IDs after handoff. Force changes authority only; it never interrupts or kills the adapter. Ordinary pending cancellation invalidates the old control, grants nobody and retains accepted work. A second foreground prompt is busy, not steering or an implicit queue.
 
@@ -105,7 +109,9 @@ Default inspection, global snapshots and events are metadata-only. Transcript co
 
 ACP pipe workers have independent cancellation: an escaped process retaining stdio cannot keep close or daemon shutdown waiting for EOF. The transport owner retains the original three endpoints through known-tree termination and worker joins, including idle-writer and early-reader exits. Final endpoint probes, not worker activity, determine cleanup certainty: a still-held or unclassifiable endpoint keeps cleanup failed/incomplete and its target slot charged. Cancellation does not rewrite successful I/O as failed delivery. This is not a claim that amux can identify or terminate every orphan.
 
-Local deterministic-peer CLI/controlling-PTY evidence is in [transport verification](specs/verifications/e04s01-build.md), [interaction verification](specs/verifications/e04s02-build.md), [ownership verification](specs/verifications/e04s03-build.md) and [complete-broker verification](specs/verifications/e04s04-build.md); each records its own acceptance status. None proves real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. Terminal-only input remains **best-effort**: unknown native/application settlement blocks a safe grant, even after visible output or whole-turn completion. ACP does not retrofit a fence into an upstream native TUI. The thin non-ACP integration API remains deferred until solid ACP acceptance.
+Local deterministic-peer CLI/controlling-PTY evidence is in [transport verification](specs/verifications/e04s01-build.md), [interaction verification](specs/verifications/e04s02-build.md), [ownership verification](specs/verifications/e04s03-build.md) and [complete-broker verification](specs/verifications/e04s04-build.md); local peers alone do not prove provider compatibility. The separately authorized [Codex/Grok live matrix](specs/verifications/e04s04-live-codex-grok.json) records exercised OAuth/model/native/API/allow/deny results and failed attempts; it is not approval for new live runs or ACP publication.
+
+Terminal-only input remains **best-effort**: unknown native/application settlement blocks a safe grant, even after visible output or whole-turn completion. ACP does not retrofit a fence into an upstream native TUI. The thin non-ACP integration API remains deferred until solid ACP acceptance.
 
 ## Picker and native interaction
 

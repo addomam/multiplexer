@@ -2,6 +2,8 @@
 
 Status: **APPROVED — independent Plan round3, 100/100, zero findings.** User selected **Plan, then Build if reviews pass**; that Build authorization is active. Complete reports and previous failed rounds are retained in specs/verifications/e04-plan-review-round*.json. This is not runtime acceptance, live-model approval, or ACP publication permission.
 
+Subsequent user execution amendment: replace Claude with **Grok** for S04 real-adapter acceptance, use the existing local **OAuth subscriptions** and **cheap/free supported models**, and run/repair the integration. This supersedes the original Codex/Claude live selection and live-authorization hold only; no architecture/Plan reopening, historical review reset, API-key/premium fallback, global config/auth/default-daemon changes or ACP publication authority. Current exact runtime bindings and actual outcomes belong in the S04 evidence, not retroactively in the approved review record.
+
 ## Goal and immutable boundaries
 
 Deliver one owned ACP adapter/connection/session shared by the local API and an actual amux conversation view. ACP admission, not provider application, is the explicitly approved handoff cut. Already-admitted work can continue after transfer and remains visible under its originating identities. No process, request, prompt, question or permission is implicitly cancelled by force, owner disconnect, local timeout, yield or ordinary pending-claim cancellation.

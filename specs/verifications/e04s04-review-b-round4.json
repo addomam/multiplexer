@@ -1,0 +1,285 @@
+{
+  "reviewer": "B",
+  "round": 4,
+  "max_rounds": 5,
+  "historical_caps": "unchanged",
+  "scope": "e04s04-complete-Codex-Grok-live-integration-round4",
+  "branch": "feat/acp-agent-interaction",
+  "source_manifest": "specs/verifications/e04s04-round4-source.json",
+  "verdict": "pass-with-should-fix",
+  "overall_correctness": "incorrect",
+  "score": 96.875,
+  "formula": "100*(32-must_fix-should_fix)/32",
+  "must_fix": 0,
+  "should_fix": 1,
+  "consider": 0,
+  "numeric_gate": "pass",
+  "numeric_gate_rule": "zero must-fix and score>=94",
+  "fowler_smells": "Divergent Change: the Other-requires-notes rule is enforced only in grok::response, not in validate_form_values, which the native editor already calls before capture. No new provider trait, Middle Man, Feature Envy, or Data Clump. Pre-existing long methods in acp.rs were not expanded into a second framework.",
+  "hash_verification": {
+    "matched": 22,
+    "total": 22,
+    "algorithm": "SHA256",
+    "method": "Python hashlib.sha256 over each frozen path under /Users/addomam/projects/amux-acp-build",
+    "result": "matched",
+    "limitation": "none; all 22 manifest digests were computed and compared"
+  },
+  "tool_limits": [
+    "Did not run cargo test, clippy, fmt, check, or build.",
+    "Did not launch Codex, Grok, the daemon, or the controlling PTY, and did not read private auth, bindings, or global settings.",
+    "Did not read reviewer A or current security reports.",
+    "Parent live/full-gate artifacts were read as supplied evidence, not re-executed.",
+    "Public GitHub main Grok types were read only as mechanism context; pinned 1.0.67 wire remains the runtime authority and was not contacted."
+  ],
+  "verification_not_executed_by_child": [
+    "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture",
+    "cargo test --workspace",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "cargo check --workspace --all-targets",
+    "cargo build --workspace",
+    "cargo fmt --check",
+    "bun test integrations/omp",
+    "zsh -n integrations/zsh/adapter.zsh",
+    "cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture",
+    "cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture"
+  ],
+  "checklist": [
+    {
+      "id": 1,
+      "area": "correctness",
+      "title": "Grok questions enter only through _x.ai/ask_user_question.",
+      "result": "pass",
+      "evidence": "src/acp.rs incoming_request maps that method through grok::form then parse_form. The unmatched arm still returns method-not-found. No prose or MCP question decoder was added."
+    },
+    {
+      "id": 2,
+      "area": "correctness",
+      "title": "The decoder uses the existing form ledger and responder.",
+      "result": "pass",
+      "evidence": "src/acp/grok.rs form() emits mode form plus requestedSchema. incoming_request stores one Interaction and one responder. grok_question only selects the wire encoder."
+    },
+    {
+      "id": 3,
+      "area": "correctness",
+      "title": "Nullable multiSelect means single choice.",
+      "result": "pass",
+      "evidence": "src/acp/grok.rs filters a null flag to false before as_bool. A non-boolean flag is invalid-request. e04s04_grok_nullable_multiselect_is_single_choice_not_an_invalid_question asserts type string."
+    },
+    {
+      "id": 4,
+      "area": "correctness",
+      "title": "Single, multi, preview, and Other notes keep their wire meaning.",
+      "result": "pass",
+      "evidence": "Single fields use oneOf and multi fields use items.anyOf. Answers are arrays keyed by question text. A single selected option copies its preview into annotations; Other without notes is rejected. This matches the published accepted-response shape and the unit assertions."
+    },
+    {
+      "id": 5,
+      "area": "correctness",
+      "title": "Duplicate text, duplicate labels, and bad scope never publish.",
+      "result": "pass",
+      "evidence": "grok.rs rejects duplicate question text and option labels. parse_form rejects a session that is not the live session. e04s04_grok_bad_scope_duplicate_questions_and_choices_never_publish expects no interaction and JSON-RPC -32602."
+    },
+    {
+      "id": 6,
+      "area": "correctness",
+      "title": "No generic provider trait or fake question substitute.",
+      "result": "pass",
+      "evidence": "The production delta adds a private grok module and one method arm. Cargo.toml and Cargo.lock are unchanged from the frozen manifest. README does not claim prose or MCP compatibility."
+    },
+    {
+      "id": 7,
+      "area": "authority/identity",
+      "title": "API and native first-valid selection is retained once.",
+      "result": "pass",
+      "evidence": "Both surfaces call Broker::commit under Authority::admit_acp. The first answer marks the interaction selected; the second prepare/commit hits stale-interaction. The Grok unit test asserts one output frame and no losing call id."
+    },
+    {
+      "id": 8,
+      "area": "authority/identity",
+      "title": "Unsupported decline sends nothing and keeps the question.",
+      "result": "pass",
+      "evidence": "grok::response bails on FormAnswer::Decline before enqueue. e04s04_grok_other_notes_and_unsupported_decline_preserve_pending_responder asserts empty output, pending state, and no consumed call id."
+    },
+    {
+      "id": 9,
+      "area": "authority/identity",
+      "title": "Session identity must be the live session.",
+      "result": "pass",
+      "evidence": "parse_form requires state.session to equal the form sessionId after grok::form copies it. A foreign sessionId is invalid-params and publishes no interaction."
+    },
+    {
+      "id": 10,
+      "area": "authority/identity",
+      "title": "Tool and RPC identities stay bound to the original request.",
+      "result": "pass",
+      "evidence": "toolCallId must pass valid_id and is preserved on the canonical scope. The wire response uses the original RequestId. Responder reuse is resolved before parsing."
+    },
+    {
+      "id": 11,
+      "area": "authority/identity",
+      "title": "Stale controls, drafts, and input are not replayed.",
+      "result": "pass",
+      "evidence": "admit_acp rechecks generation before commit. AgentView discards an interaction draft when the binding changes. The delta does not add a raw terminal route or a retry of a rejected action."
+    },
+    {
+      "id": 12,
+      "area": "authority/identity",
+      "title": "Conditional consent and attachment provenance stay intact.",
+      "result": "pass",
+      "evidence": "src/control.rs is unchanged in the frozen manifest. Force in the live driver replaces only the API grant. question_force compares the native prompt controller_id with the original owner before that replacement."
+    },
+    {
+      "id": 13,
+      "area": "authority/identity",
+      "title": "reject_once is not a force cancellation and sends no session/cancel.",
+      "result": "pass",
+      "evidence": "Permission commit encodes Selected(option_id) only. session/cancel is built only in Action::Interrupt. Parent live evidence records Grok cancellations 0 beside a cancelled deny stop reason; this child did not re-run that matrix."
+    },
+    {
+      "id": 14,
+      "area": "concurrency/cancel",
+      "title": "Force does not interrupt, kill, or discard accepted calls.",
+      "result": "pass",
+      "evidence": "Force remains ownership-claim mode force in daemon/control. It does not call cancel_frame or session/cancel. Accepted writer records are still consumed without a later owner check."
+    },
+    {
+      "id": 15,
+      "area": "concurrency/cancel",
+      "title": "Ordinary pending-claim cancellation grants nobody and retains calls.",
+      "result": "pass",
+      "evidence": "The claim-cancel path in src/control.rs is outside the production delta and still does not invoke acp-interrupt or drop ACP work."
+    },
+    {
+      "id": 16,
+      "area": "concurrency/cancel",
+      "title": "Explicit interrupt cancels pending and late Grok questions.",
+      "result": "pass",
+      "evidence": "Grok questions are session-scoped, so affected_by_interrupt is true. cancel_frame emits {outcome:cancelled}. A question arriving while foreground is cancelling is selected nonselectable before publication. The interrupt unit test covers ids 73 and 74."
+    },
+    {
+      "id": 17,
+      "area": "concurrency/cancel",
+      "title": "Question and force rows still require the original end_turn.",
+      "result": "pass",
+      "evidence": "An accepted Grok answer does not complete the prompt or emit session/cancel. Force does not either. Live complete() still demands end_turn except the explicit deny row. Source does not synthesize stopReason."
+    },
+    {
+      "id": 18,
+      "area": "resources/cleanup",
+      "title": "Frame, schema, and queue bounds still precede publication.",
+      "result": "pass",
+      "evidence": "Question count is capped at FIELDS/2 and options at OPTIONS inside grok::form. parse_form runs validate_form_schema. retain_capacity runs before responder insert. Overflow returns from apply and closes the instance instead of publishing a partial question."
+    },
+    {
+      "id": 19,
+      "area": "resources/cleanup",
+      "title": "Lock order is unchanged and the codec does no I/O under locks.",
+      "result": "pass",
+      "evidence": "admit_acp still locks authority, then commit locks ACP state. grok::form and grok::response only transform JSON. No new authority/ACP to topology edge was added."
+    },
+    {
+      "id": 20,
+      "area": "resources/cleanup",
+      "title": "Owned process cleanup is not altered by the codec.",
+      "result": "pass",
+      "evidence": "Adapter spawn remains Command::new on the operator argv. Close, reap, and cleanup functions are outside the production delta."
+    },
+    {
+      "id": 21,
+      "area": "native UX",
+      "title": "The native UI offers accept/cancel and not decline for Grok.",
+      "result": "pass",
+      "evidence": "incoming_request sets actions to [accept, cancel]. content() projects that array. decline_offered is false, and F6 returns without answer(decline). Forms that omit actions still offer decline."
+    },
+    {
+      "id": 22,
+      "area": "native UX",
+      "title": "Plan chat and skip are not fabricated as decline or cancel.",
+      "result": "pass",
+      "evidence": "mode plan is accepted and then rewritten to a form. No encoder emits chat_about_this or skip_interview. F7 remains outcome cancelled, which is the protocol cancel variant, not skip."
+    },
+    {
+      "id": 23,
+      "area": "native UX",
+      "title": "Previews and descriptions stay inert in the host terminal.",
+      "result": "pass",
+      "evidence": "Choice and schema rendering go through display_value and push_inert, which escape controls and bidi overrides. Preview is returned only to the agent that supplied it."
+    },
+    {
+      "id": 24,
+      "area": "native UX",
+      "title": "A native Other answer missing notes can be corrected or cancelled.",
+      "result": "fail",
+      "evidence": "Notes are omitted from required at src/acp/grok.rs:122-123, so the editor's validate_form_values accepts Other alone and capture runs. Commit then fails at src/acp/grok.rs:161-164. The async DaemonError path does not restore captured, so F5 and F7 stay blocked while the question remains pending."
+    },
+    {
+      "id": 25,
+      "area": "test quality",
+      "title": "Broker regressions cover the new codec contracts.",
+      "result": "pass",
+      "evidence": "Five acp.rs tests cover nullable single choice, Other notes, decline retention, single and multi wire shape, one winning selection, duplicate text/labels, bad scope/mode/count, and exact interrupt cancellation. They do not drive the TUI capture latch."
+    },
+    {
+      "id": 26,
+      "area": "test quality",
+      "title": "The live driver is opt-in, bounded, and fail-closed.",
+      "result": "pass",
+      "evidence": "e04s04_live_adapters is ignored. configuration() requires approval, two absolute adapters, and max_prompts_per_adapter == 4. question_force checks the original prompt and pending question after force, then rejects a stale API answer and a stale F5 before the current API answer. This child did not execute it."
+    },
+    {
+      "id": 27,
+      "area": "test quality",
+      "title": "The observer forwards accepted bytes and enforces the prompt ceiling.",
+      "result": "pass",
+      "evidence": "inspectFrames parses for counts, then callbacks the original chunk. A policy throw drops that chunk fail-closed rather than rewriting it. The budget file must be an integer limit from 1 to 12, and used is incremented only after the model check."
+    },
+    {
+      "id": 28,
+      "area": "test quality",
+      "title": "The live permission effect stays on the approved private path.",
+      "result": "pass",
+      "evidence": "The shell text is test-only and rejected if the private cwd contains a quote. confined_permission requires the offered path or command to match that exact effect. Production argv spawn was not changed."
+    },
+    {
+      "id": 29,
+      "area": "privacy/security",
+      "title": "Public metadata and observer evidence do not carry question content.",
+      "result": "pass",
+      "evidence": "Interaction::metadata omits detail. Invalid Grok requests emit only code and category. The observer question_shape stores key types, not labels or notes. This child did not open private evidence files."
+    },
+    {
+      "id": 30,
+      "area": "privacy/security",
+      "title": "The delta adds no production shell or terminal injection.",
+      "result": "pass",
+      "evidence": "run() still uses Command::new and args. New display strings pass the existing inert sanitizer. Operator-selected absolute ACP executables remain privileged local configuration, not a remote command string."
+    },
+    {
+      "id": 31,
+      "area": "maintainability/conventions",
+      "title": "The codec stays closed and follows project conventions.",
+      "result": "pass",
+      "evidence": "Runtime question state stays in memory. No remote protocol, restoration, or plugin trait was added. The one maintainability defect is the divergent Other-notes check recorded as the should-fix, not a second abstraction."
+    },
+    {
+      "id": 32,
+      "area": "maintainability/conventions",
+      "title": "Docs match the contract and historical caps are untouched.",
+      "result": "pass",
+      "evidence": "README and CHANGELOG describe accept/cancel, nullable/multi/Other, and best-effort terminal settlement. Story and task status remain failing. This review does not reset any prior cap or approve publication."
+    }
+  ],
+  "findings": [
+    {
+      "category": "should-fix",
+      "title": "Release native Grok Other answers rejected for missing notes",
+      "body": "Selecting Other and accepting before notes passes the editor because the notes property is not required (src/acp/grok.rs:122-123) and values() only calls validate_form_values (src/tui/agent.rs:1648) before capture. Commit then fails at src/acp/grok.rs:161-164, correctly sending no wire response and leaving the question pending, but the native consumer does not recover: submit returns after enqueue, and the later DaemonError handler (src/tui/control.rs:421-428) never calls restore_unqueued. editable() then refuses both a corrected accept and F7 cancel while captured is set and the same revision stays pending (src/tui/agent.rs:1294-1296). API callers can retry with a new call id; the attached grant cannot. Enforce the Other-notes rule inside validate_form_values, which the editor already runs before capture, and clear captured when an acp-answer DaemonError leaves that interaction pending.",
+      "priority": 2,
+      "confidence": 0.9,
+      "file_path": "src/acp/grok.rs",
+      "line_start": 161,
+      "line_end": 164,
+      "consumer_impact": "The same native grant cannot correct or cancel a still-pending Grok question after an empty Other answer."
+    }
+  ]
+}

@@ -1,25 +1,27 @@
 {
-  "scope": "e04s04-current-implemented-local-tasks1-3-not-live-or-whole-story",
-  "status": "local-tasks1-3-PASS-whole-story-failing-live-unapproved-unimplemented",
-  "source": "specs/verifications/e04s04-round3-source.json",
-  "source_commit": "6a5d9af",
+  "scope": "e04s04-complete-Codex-Grok-live-integration",
+  "status": "runtime-and-full-gates-PASS-story-pending-independent-round4",
+  "source": "specs/verifications/e04s04-round4-source.json",
+  "source_commit": "working-tree-after-e2f77e6",
   "production_changes": [
-    "src/acp.rs"
+    "src/acp.rs",
+    "src/acp/grok.rs",
+    "src/tui/agent.rs"
   ],
   "dependency_changes": false,
-  "current_contiguous_verification": "artifact://1515",
-  "current_independent_review": "specs/verifications/e04s04-build-review-round3.json",
-  "current_operational_must_fix": 0,
+  "current_contiguous_verification": "artifact://1664",
+  "current_independent_review": "round4-running-not-cleared",
+  "current_operational_must_fix": "pending-independent-report",
   "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
-  "wall_seconds": 215.72,
+  "wall_seconds": 211.50,
   "counts": {
     "selected": 10,
-    "workspace": 394,
+    "workspace": 399,
     "workspace_suites": 30,
-    "workspace_ignored": 10,
-    "default": 283,
+    "workspace_ignored": 11,
+    "default": 288,
     "default_suites": 12,
-    "default_ignored": 7,
+    "default_ignored": 8,
     "showcase_exact": 1,
     "native_exact_guards": 2,
     "omp": 8,
@@ -74,7 +76,7 @@
       57
     ],
     "actual_CLI_controlling_PTY": true,
-    "current_repaired_source_native_acceptance_case": "passed-at1515"
+    "current_repaired_source_native_acceptance_case": "passed-at1664"
   },
   "resource_boundaries": {
     "frames_bytes": 1048576,
@@ -86,7 +88,7 @@
     "known_ProcessTree_changed": false,
     "original_stdio_owner": "all3 retained until final probes after joins; descriptors dropped before cleanup/charge publication"
   },
-  "privacy": "No real provider/auth/env/content tracing or credential reads. New S04 JSON/security evidence credential/private-control-ref scan has no matches. Synthetic content remains separate from metadata.",
+  "privacy": "User-authorized existing Codex/Grok OAuth copied into0700/0600 private homes; cleared API-key env, safe metadata-only public evidence. All owned auth/config/transcript/effect runtime files removed after observed PID absence/no open holders. No global auth/config/default-daemon changes or Claude execution.",
   "owned_herdr_cleanup": "specs/verifications/e04s04-worker-retirement.json",
   "native_fence": {
     "evidence": "specs/verifications/e04s04-native-fence.json",
@@ -94,22 +96,28 @@
     "settlement_repaired": false
   },
   "unclaimed": [
-    "real-adapter/provider/auth/model compatibility",
-    "whole-story acceptance",
+    "unexercised adapter/provider/auth/model combinations beyond pinned Codex/Grok matrix",
+    "whole-story independent clearance before round4 reports",
     "Linux/MSRV/RSS/latency/CI/coverage-percentage proof",
     "native upstream fence repair",
     "ACP publication"
   ],
   "live_task": {
-    "status": "failing-separately-unapproved-and-unimplemented",
+    "status": "complete-real-matrix-PASS-pending-current-source-review",
     "required_test": "e04s04_live_adapters",
-    "command_available_or_executed": false,
+    "command_available_or_executed": true,
     "prerequisites": "specs/verifications/e04s04-live-prerequisites.json",
     "private_setup": "specs/verifications/e04s04-private-setup.json",
-    "installed_closure_captured": true
+    "installed_closure_captured": true,
+    "evidence": "specs/verifications/e04s04-live-codex-grok.json",
+    "actual_artifact": "artifact://1659",
+    "executed": 1,
+    "passed": 1,
+    "primary_real_rows": 8,
+    "private_OAuth_runtime_removed": true
   },
   "historical_caps": "unchanged",
-  "new_live_provider_runs": 0,
+  "new_live_provider_runs": "Authorized Codex/Grok only; bounded prompt counts in live evidence, not a charged-provider-call total",
   "endpoint_truth_RCA": "specs/verifications/e04s04-endpoint-truth-before-after.json",
   "actual_endpoint_truth_runtime": "specs/verifications/e04s04-endpoint-truth-runtime.json",
   "previous_round2": {
@@ -119,14 +127,17 @@
     "operational_must_fix": 1,
     "next_round": 3
   },
-  "current_supported_security_findings": 0,
+  "current_supported_security_findings": "pending-independent-round4",
   "local_tasks": {
-    "1": "passing",
-    "2": "passing",
-    "3": "passing",
+    "1": "failing-pending-current-independent-clearance",
+    "2": "failing-pending-current-independent-clearance",
+    "3": "failing-pending-current-independent-clearance",
     "4": "failing"
   },
-  "independent_clearance_round": 3,
-  "next_changed_source_round": 4,
-  "private_setup_scope": "User-approved exact installation/static verification only; no amux dependency/source changes or auth/provider execution."
+  "independent_clearance_round": "pending4-of5",
+  "next_changed_source_round": 5,
+  "private_setup_scope": "Historical setup-only evidence retained; later user explicitly authorized private Codex/Grok OAuth/cheap live execution, not global changes or publication.",
+  "previous_local_baseline": {"source":"6a5d9af","artifact":"artifact://1515","review":"specs/verifications/e04s04-build-review-round3.json"},
+  "current_CLI_smoke": "specs/verifications/e04s04-grok-codec-cli.json",
+  "final_native_guard_job": "bg_242"
 }
