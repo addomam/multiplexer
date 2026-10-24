@@ -745,7 +745,23 @@ fn main() -> Result<()> {
                         receive(&mut reader)?.ok_or("complete permission response missing")?;
                     permitted = permission_allows(&response, &json!(73))?;
                     bonus
-                } else if mode == "s04-grok-other" {
+                } else if mode == "s04-grok-large" && commands == 0 {
+                    emit(
+                        json!({"jsonrpc":"2.0","id":"grok-large","method":"_x.ai/ask_user_question","params":{
+                        "sessionId":session,"toolCallId":"grok-large-tool","mode":"default",
+                        "questions":[{"question":"Q".repeat(600_000),"multiSelect":false,
+                            "options":[{"label":"Zero","description":"No adjustment"}]}]}}),
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("large Grok response missing")?;
+                    if response["id"] != "grok-large" || response["error"]["code"] != -32602 {
+                        return Err("unrepresentable Grok question was not rejected explicitly".into());
+                    }
+                    fs::write(
+                        root.join("grok-large-rejected.json"),
+                        serde_json::to_vec(&response)?,
+                    )?;
+                    0
+                } else if matches!(mode.as_str(), "s04-grok-other" | "s04-grok-large") {
                     emit(
                         json!({"jsonrpc":"2.0","id":"grok-other","method":"_x.ai/ask_user_question","params":{
                         "sessionId":session,"toolCallId":"grok-other-tool","mode":"default",

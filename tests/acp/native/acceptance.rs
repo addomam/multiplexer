@@ -639,3 +639,64 @@ fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() 
     assert!(!agent.root.join("unexpected-cancel").exists());
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
+
+#[test]
+fn e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("s04-grok-large");
+    host.ready(&mut agent);
+    let pid = fs::read(agent.root.join("peer.pid")).unwrap();
+    let mut native = native_attachment(&host, &agent);
+    dismiss_ownership(&host, &agent, &mut native);
+    let original_owner = ownership(&host, &agent)["owner"].clone();
+    let original = native_prompt(&host, &agent, &mut native, "add 17 25");
+    completed_turn(&host, &agent, &original, 42, 1);
+    let rejected: Value = serde_json::from_slice(
+        &fs::read(agent.root.join("grok-large-rejected.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(rejected["id"], "grok-large");
+    assert_eq!(rejected["error"]["code"], -32602);
+    assert!(
+        host.inspect(&agent)["content"]["interactions"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "an unrepresentable question must never be offered for native capture"
+    );
+    assert_eq!(ownership(&host, &agent)["owner"], original_owner);
+    native.wait("Foreground: none");
+    let fresh = native_prompt(&host, &agent, &mut native, "add 1 2");
+    let form = pending(&host, &agent, "form");
+    native.wait(form["interaction_id"].as_str().unwrap());
+    show_interaction(&host, &agent, &mut native, Some(&form));
+    native.send(b"\x1b[B"); // Deliberately select Other on the subsequent small question.
+    native.send(b"\t");
+    native.paste("7");
+    native.send(ACCEPT_FORM);
+    native.wait("REVIEW: F5 accepts");
+    native.send(ACCEPT_FORM);
+    completed_turn(&host, &agent, &fresh, 52, 2);
+    assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
+    assert_eq!(ownership(&host, &agent)["owner"], original_owner);
+    let reply: Value = serde_json::from_slice(
+        &fs::read(agent.root.join("grok-response-2.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        reply,
+        json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"accepted",
+        "answers":{"Arithmetic adjustment":["Other"]},
+        "annotations":{"Arithmetic adjustment":{"notes":"7"}}}})
+    );
+    assert!(
+        !host.inspect(&agent)["work"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|work| work["op"] == "acp-interrupt")
+    );
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    finish(host, &mut agent, &mut native, &mut sentinel);
+}
