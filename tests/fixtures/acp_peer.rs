@@ -315,7 +315,7 @@ fn s03_rendering(reader: &mut impl BufRead, root: &Path, session: &str) -> Resul
 
 // Called in a fresh, single-threaded executable, before any watchdog exists.
 // The intermediary is waited by the peer; only the reparented child retains I/O.
-fn retain_orphan_pipes(root: &Path) -> Result<()> {
+fn retain_orphan_pipes(root: &Path, keep: Option<i32>) -> Result<()> {
     let intermediary = unsafe { libc::getpid() };
     let child = unsafe { libc::fork() };
     if child < 0 {
@@ -326,6 +326,14 @@ fn retain_orphan_pipes(root: &Path) -> Result<()> {
     }
     while unsafe { libc::getppid() } == intermediary {
         std::thread::sleep(Duration::from_millis(1));
+    }
+    if let Some(keep) = keep {
+        for fd in [libc::STDIN_FILENO, libc::STDOUT_FILENO, libc::STDERR_FILENO] {
+            if fd != keep {
+                // Only this freshly forked fixture's own inherited stdio.
+                unsafe { libc::close(fd) };
+            }
+        }
     }
     fs::write(root.join("retainer.pid"), std::process::id().to_string())?;
     fs::write(
@@ -361,14 +369,28 @@ fn main() -> Result<()> {
             std::thread::park();
         }
     }
-    if mode == "s04-pipe-retainer" {
-        return retain_orphan_pipes(&root);
+    if matches!(
+        mode.as_str(),
+        "s04-pipe-retainer" | "s04-pipe-retainer-stdin" | "s04-pipe-retainer-stdout"
+    ) {
+        let keep = match mode.as_str() {
+            "s04-pipe-retainer-stdin" => Some(libc::STDIN_FILENO),
+            "s04-pipe-retainer-stdout" => Some(libc::STDOUT_FILENO),
+            _ => None,
+        };
+        return retain_orphan_pipes(&root, keep);
     }
-    if mode == "s04-retained-pipes" {
+    let retainer_mode = match mode.as_str() {
+        "s04-retained-pipes" => Some("s04-pipe-retainer"),
+        "s04-idle-stdin-retainer" => Some("s04-pipe-retainer-stdin"),
+        "s04-stdout-retainer" => Some("s04-pipe-retainer-stdout"),
+        _ => None,
+    };
+    if let Some(retainer_mode) = retainer_mode {
         let mut intermediary = Command::new(std::env::current_exe()?);
         intermediary
             .arg(&root)
-            .arg("s04-pipe-retainer")
+            .arg(retainer_mode)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
@@ -478,13 +500,22 @@ fn main() -> Result<()> {
                         startup_bonus += form_bonus(&response, &json!("bootstrap-form"), false)?;
                     }
                 }
-                if ["oversized", "invalid-utf8", "malformed", "partial", "flood"]
-                    .contains(&mode.as_str())
+                if [
+                    "oversized",
+                    "s04-stdout-retainer",
+                    "invalid-utf8",
+                    "malformed",
+                    "partial",
+                    "flood",
+                ]
+                .contains(&mode.as_str())
                 {
                     barrier(&root, "hostile")?;
                     let mut stdout = std::io::stdout().lock();
                     match mode.as_str() {
-                        "oversized" => stdout.write_all(&vec![b'x'; 1024 * 1024 + 1])?,
+                        "oversized" | "s04-stdout-retainer" => {
+                            stdout.write_all(&vec![b'x'; 1024 * 1024 + 1])?
+                        }
                         "invalid-utf8" => {
                             stdout.write_all(b"{\"jsonrpc\":\"2.0\",\"method\":\"\xff\"}\n")?
                         }

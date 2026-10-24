@@ -806,3 +806,140 @@ fn e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown() {
         s04_finish(host, &agents, &mut sentinel, true);
     }
 }
+
+fn s04_single_endpoint_retainer(host: &Host, agent: &Agent) -> (S04PipeRetainer, i32) {
+    let retainer = S04PipeRetainer {
+        root: agent.root.clone(),
+        released: false,
+    };
+    let (identity, peer, held): (Value, i32, i32) =
+        host.until("single endpoint reparented", || {
+            Some((
+                serde_json::from_slice(&fs::read(agent.root.join("retainer.ready")).ok()?).ok()?,
+                fs::read_to_string(agent.root.join("peer.pid"))
+                    .ok()?
+                    .parse()
+                    .ok()?,
+                fs::read_to_string(agent.root.join("retainer.pid"))
+                    .ok()?
+                    .parse()
+                    .ok()?,
+            ))
+        });
+    assert_ne!(identity["parent"], peer);
+    assert_ne!(identity["parent"], identity["intermediary"]);
+    assert_eq!(identity["session"], unsafe { libc::getsid(held) });
+    assert_ne!(unsafe { libc::getsid(held) }, peer);
+    assert!(!pid_gone(held));
+    (retainer, held)
+}
+
+fn s04_remaining_slots_stay_bounded(host: &Host) -> Vec<Agent> {
+    let siblings: Vec<_> = (0..7)
+        .map(|_| {
+            let agent = host.open("hold-initialize");
+            host.barrier(&agent, "initialize");
+            agent
+        })
+        .collect();
+    let controller = host.call(
+        json!({"op":"controller-create","role":"external","label":"Uncertain endpoint capacity"}),
+    );
+    let project = host.call(json!({"op":"snapshot"}))["projects"][0]["id"].clone();
+    let executable = Path::new(env!("CARGO_BIN_EXE_amux"))
+        .parent()
+        .unwrap()
+        .join("examples/acp_fixture");
+    host.deny(
+        json!({"op":"acp-open","project":project,"controller":controller["controller"],
+        "command":[executable,host.root,"arithmetic"]}),
+        &["capacity-exceeded"],
+    );
+    for sibling in &siblings {
+        host.close(sibling);
+    }
+    siblings
+}
+
+fn s04_finish_single_endpoint(
+    mut host: Host,
+    agent: &Agent,
+    siblings: &[Agent],
+    mut retainer: S04PipeRetainer,
+    held: i32,
+    sentinel: &mut Sentinel,
+) {
+    assert_eq!(host.call(json!({"op":"shutdown"}))["shutting_down"], true);
+    let deadline = Instant::now() + DEADLINE;
+    let status = loop {
+        if let Some(status) = host.daemon.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "single retained endpoint pinned shutdown"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    assert!(status.success(), "{status}");
+    host.reaped(agent, "peer.pid");
+    assert!(!pid_gone(held), "daemon exit must precede fixture EOF");
+    assert!(!agent.root.join("retainer.release").exists());
+    assert!(!agent.root.join("fixture-fallback").exists());
+    sentinel.alive();
+    retainer.release(&host, agent);
+    let mut agents: Vec<_> = siblings.iter().collect();
+    agents.push(agent);
+    s04_finish(host, &agents, sentinel, true);
+}
+
+#[test]
+fn e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown() {
+    for close_first in [true, false] {
+        let host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open("s04-idle-stdin-retainer");
+        let (retainer, held) = s04_single_endpoint_retainer(&host, &agent);
+        host.ready(&mut agent);
+        let idle = host.inspect(&agent);
+        assert!(idle["foreground"].is_null());
+        assert!(idle["work"].as_array().unwrap().is_empty());
+        let mut siblings = Vec::new();
+        if close_first {
+            host.call(agent.action("acp-close", "idle-stdin-only-close"));
+            host.reaped(&agent, "peer.pid");
+            assert!(!pid_gone(held));
+            let closed = host.inspect(&agent);
+            assert_eq!(closed["resource"]["cleanup_complete"], false, "{closed}");
+            assert_eq!(closed["resource"]["failure"], "cleanup");
+            assert_eq!(closed["lifecycle"], "failed");
+            siblings = s04_remaining_slots_stay_bounded(&host);
+        }
+        s04_finish_single_endpoint(host, &agent, &siblings, retainer, held, &mut sentinel);
+    }
+}
+
+#[test]
+fn e04s04_retained_endpoint_truth_after_stdout_reader_failure() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let agent = host.open("s04-stdout-retainer");
+    let (retainer, held) = s04_single_endpoint_retainer(&host, &agent);
+    host.barrier(&agent, "hostile");
+    agent.release("hostile");
+    host.reaped(&agent, "peer.pid");
+    let terminal = host.until("final cleanup classified after frame-reader exit", || {
+        let state = host.inspect(&agent);
+        (state["resource"]["cleanup_complete"] == true || state["resource"]["failure"] == "cleanup")
+            .then_some(state)
+    });
+    assert!(!pid_gone(held));
+    assert_eq!(
+        terminal["resource"]["cleanup_complete"], false,
+        "{terminal}"
+    );
+    assert_eq!(terminal["resource"]["failure"], "cleanup");
+    assert_eq!(terminal["lifecycle"], "failed");
+    let siblings = s04_remaining_slots_stay_bounded(&host);
+    s04_finish_single_endpoint(host, &agent, &siblings, retainer, held, &mut sentinel);
+}
