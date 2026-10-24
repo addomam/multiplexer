@@ -10,11 +10,13 @@ use parking_lot::{Condvar, Mutex};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
+use std::os::fd::AsRawFd;
+use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Weak};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -1207,6 +1209,130 @@ fn reap_uncaptured(mut child: std::process::Child) -> std::io::Result<std::proce
     child.wait()
 }
 
+// Dropping the owner's wake sender interrupts every poll independently of peer
+// EOF. A cancelled endpoint that is still held keeps process cleanup uncertain.
+struct PipeCancellation {
+    wake: UnixStream,
+    stopped: AtomicBool,
+    retained: AtomicBool,
+}
+
+impl PipeCancellation {
+    fn new() -> io::Result<(Arc<Self>, UnixStream)> {
+        let (wake, sender) = UnixStream::pair()?;
+        Ok((
+            Arc::new(Self {
+                wake,
+                stopped: AtomicBool::new(false),
+                retained: AtomicBool::new(false),
+            }),
+            sender,
+        ))
+    }
+}
+
+struct PipeIo<T> {
+    inner: T,
+    cancellation: Arc<PipeCancellation>,
+}
+
+impl<T: AsRawFd> PipeIo<T> {
+    fn new(inner: T, cancellation: Arc<PipeCancellation>) -> io::Result<Self> {
+        let fd = inner.as_raw_fd();
+        let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+        if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(Self {
+            inner,
+            cancellation,
+        })
+    }
+
+    fn hung_up(&self, events: i16) -> io::Result<bool> {
+        let mut fd = libc::pollfd {
+            fd: self.inner.as_raw_fd(),
+            events,
+            revents: 0,
+        };
+        loop {
+            if unsafe { libc::poll(&mut fd, 1, 0) } >= 0 {
+                return Ok(fd.revents & (libc::POLLHUP | libc::POLLERR) != 0);
+            }
+            let error = io::Error::last_os_error();
+            if error.kind() != io::ErrorKind::Interrupted {
+                return Err(error);
+            }
+        }
+    }
+
+    fn transfer(
+        &mut self,
+        events: i16,
+        mut operation: impl FnMut(&mut T) -> io::Result<usize>,
+    ) -> io::Result<usize> {
+        loop {
+            let result = operation(&mut self.inner);
+            match &result {
+                Ok(0) => return result,
+                Err(error)
+                    if !matches!(
+                        error.kind(),
+                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                    ) =>
+                {
+                    return result;
+                }
+                _ => {}
+            }
+            if self.cancellation.stopped.load(Ordering::Acquire) && !self.hung_up(events)? {
+                self.cancellation.retained.store(true, Ordering::Release);
+                // Interrupted would be retried by write_all, defeating cancellation.
+                return Err(io::ErrorKind::ConnectionAborted.into());
+            }
+            match result {
+                Ok(count) => return Ok(count),
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(_) => {}
+            }
+            let mut fds = [
+                libc::pollfd {
+                    fd: self.inner.as_raw_fd(),
+                    events,
+                    revents: 0,
+                },
+                libc::pollfd {
+                    fd: self.cancellation.wake.as_raw_fd(),
+                    events: libc::POLLIN,
+                    revents: 0,
+                },
+            ];
+            if unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as _, -1) } < 0 {
+                let error = io::Error::last_os_error();
+                if error.kind() != io::ErrorKind::Interrupted {
+                    return Err(error);
+                }
+            }
+        }
+    }
+}
+
+impl<T: Read + AsRawFd> Read for PipeIo<T> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.transfer(libc::POLLIN, |inner| inner.read(buffer))
+    }
+}
+
+impl<T: Write + AsRawFd> Write for PipeIo<T> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        self.transfer(libc::POLLOUT, |inner| inner.write(buffer))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
+}
+
 fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
     let mut command = Command::new(&instance.command[0]);
     command
@@ -1243,6 +1369,14 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         finish(&instance);
         return;
     }
+    let (cancellation, wake_sender) = match PipeCancellation::new() {
+        Ok(pair) => pair,
+        Err(_) => {
+            lifetime.end(|| instance.state.lock().close(Some("stdio")));
+            finish(&instance);
+            return;
+        }
+    };
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(_) => {
@@ -1280,9 +1414,18 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         Ok(())
     });
     if publication.is_ok() {
-        let stdin = child.stdin.take();
-        let stdout = child.stdout.take();
-        let stderr = child.stderr.take();
+        let stdin = child
+            .stdin
+            .take()
+            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
+        let stdout = child
+            .stdout
+            .take()
+            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
+        let stderr = child
+            .stderr
+            .take()
+            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
         if let (Some(stdin), Some(stdout), Some(stderr)) = (stdin, stdout, stderr) {
             let jobs = [
                 thread::Builder::new().name("acp-writer".into()).spawn({
@@ -1318,12 +1461,14 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         thread::sleep(Duration::from_millis(5));
     }
     let terminated = tree.terminated();
+    cancellation.stopped.store(true, Ordering::Release);
+    drop(wake_sender);
     instance.wake.notify_all();
     let mut workers_joined = true;
     for handle in threads.into_iter().flatten() {
         workers_joined &= handle.join().is_ok();
     }
-    if !reaped || !terminated || !workers_joined {
+    if !reaped || !terminated || !workers_joined || cancellation.retained.load(Ordering::Acquire) {
         let mut state = instance.state.lock();
         state.failure = Some("cleanup");
         state.lifecycle = "failed";
