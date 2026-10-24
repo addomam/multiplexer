@@ -1402,9 +1402,9 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         })),
         _ => None,
     };
-    if !cancellation
+    if cancellation
         .as_ref()
-        .is_some_and(|pipes| pipes.nonblocking().is_ok())
+        .is_none_or(|pipes| pipes.nonblocking().is_err())
     {
         lifetime.end(|| instance.state.lock().close(Some("stdio")));
     }
@@ -1485,6 +1485,8 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
             .into_iter()
             .all(|end| pipes.hung_up(end).unwrap_or(false))
     });
+    // Release owned descriptors before finish can release the instance charge.
+    drop(cancellation);
     if !reaped || !terminated || !workers_joined || !endpoints_closed {
         let mut state = instance.state.lock();
         state.failure = Some("cleanup");
