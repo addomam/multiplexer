@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: commit-message
+  next_skill: build-epic
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -54,7 +54,8 @@ handoff:
     First-read/no-cache banner corrected without retaining the wrong prior agent identity. Actual first-read and retained-cache CLI/PTY proofs, workspace341/strict gates and Bun8/Zsh pass on the final build.
     Round5 meets the approved numerical AND gate at96.875/100, zero must-fix; raw A incorrect/P2 remains retained. The sole nonblocking cancellation-responder defect was reproduced twice, repaired and verified; no sixth round or post-repair independent PASS is claimed.
     Current repaired proof: workspace343/30suites/10ignored and strict gates, Bun8/Zsh, plus actual CLI invalid-params/cancelled-original/same-session57 and owned cleanup. S01 local acceptance passes; integration checkpoint precedes S02. No live or publication approval.
-  last_step_completed: e04s01-review-gate-and-post-review-P2-repair-verified
+    Verified S01 integration committed locally as4d74d58 using the authorized unsigned fallback after1Password failed. Both owned S01 OMP sessions exited gracefully; Herdr removed their workspaces/tabs/worktrees without force and original shell PIDs are absent.
+  last_step_completed: e04s01-feature-checkpoint-and-owned-worker-retirement
   required_reading:
     - specs/verifications/e04s01-build.md
     - specs/epics/e04-acp-agent-interaction/PLAN.md
@@ -474,8 +475,8 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s01
   story_bcps: 8
-  step: 7
-  completed_steps: [0, 1, 2, 3, 4, 5, 6]
+  step: 8
+  completed_steps: [0, 1, 2, 3, 4, 5, 6, 7, 8]
   started_at: "2026-10-23T14:46:59-05:00"
   baseline: {commit: a46eaddeb79a9a42628d9cb39cd60945ece27fbb, evidence: 'artifact://731', workspace_rust_passed: 308, omp_passed: 8}
   audit_result: pass-with-verified-post-review-P2-repair
@@ -484,9 +485,14 @@ epic_cycle:
   implementation_started: true
   integration_owner: parent
   integration_signing: {status: unsigned-fallback-user-authorized, signer_attempt: '1Password failed to fill whole buffer; commit object not written', global_config_changed: false}
+  integration_commit: 4d74d58
+  completed_at: "2026-10-23T23:06:24-05:00"
+  release_choice: keep-feature-branch-no-main-merge-push-or-release
+  cleanup_evidence: specs/verifications/e04s01-worker-retirement.json
+  trace_and_OKF: skipped-no-bundled-generating-scripts-not-a-coverage-PASS
   owned_sessions:
-    - {agent: e04-s01-backend, workspace: w1R, tab: 'w1R:t1', pane: 'w1R:p1', branch: feat/acp-s01-backend, worktree: /Users/addomam/projects/amux-acp-s01-backend, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, status: merged-in-tree-pending-verified-commit, commit: 72e2aa0229ecc10eb4dd8dc4c89534a189a9c73f, worker_verification: intentionally-not-run}
-    - {agent: e04-s01-view, workspace: w1Q, tab: 'w1Q:t1', pane: 'w1Q:p1', branch: feat/acp-s01-view, worktree: /Users/addomam/projects/amux-acp-s01-view, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, status: merged-in-tree-pending-verified-commit, commit: 286694494abf5127680f89425389df21016f7158, worker_verification: intentionally-not-run}
+    - {agent: e04-s01-backend, workspace: w1R, tab: 'w1R:t1', pane: 'w1R:p1', branch: feat/acp-s01-backend, worktree: /Users/addomam/projects/amux-acp-s01-backend, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, status: safely-integrated-retired-and-removed-without-force, commit: 72e2aa0229ecc10eb4dd8dc4c89534a189a9c73f, worker_verification: intentionally-not-run}
+    - {agent: e04-s01-view, workspace: w1Q, tab: 'w1Q:t1', pane: 'w1Q:p1', branch: feat/acp-s01-view, worktree: /Users/addomam/projects/amux-acp-s01-view, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, status: safely-integrated-retired-and-removed-without-force, commit: 286694494abf5127680f89425389df21016f7158, worker_verification: intentionally-not-run}
 e04s01_build_review:
   scope: e04s01-local-conversation-transport
   round: 5

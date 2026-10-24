@@ -1,6 +1,6 @@
 # e04s01 Build evidence
 
-Status: **PASS — e04s01 local acceptance; feature integration checkpoint pending.** Round5 meets the approved96.875/100 AND threshold with zero must-fix. Its sole nonblocking P2 is repaired and verified; raw A incorrect report remains unchanged and no independent post-repair PASS is claimed. Later stories, new live ACP harness/model/auth checks and ACP publication remain separately gated.
+Status: **PASS — e04s01 complete, safely integrated locally in4d74d58; owned Herdr workers/workspaces/tabs/worktrees retired.** Round5 meets the approved96.875/100 AND threshold with zero must-fix. Its sole nonblocking P2 is repaired and verified; raw A incorrect report remains unchanged and no independent post-repair PASS is claimed. Later stories, new live ACP harness/model/auth checks and ACP publication remain separately gated.
 
 ## Baseline and Plan gate
 
@@ -108,4 +108,10 @@ Fresh code A/B and security review3 were dispatched against the frozen source in
 - Actual built CLI proof `e04s01-cancel-invalid-permission-cli.json`: both bad-params/scope paths receive invalid_params; original cancellation confirms, follow-up on the same live session reaches57/count2, native IDs stay unchanged. Owned peer absent before fallback, workers joined, unrelated sentinel alive, daemon0, no fallback signals; private root removed only after no-holder check. This is synthetic local peer compatibility, not live-provider proof.
 - The initial precautionary human-decision hold was cleared after reading the exact approved AND rule: no zero-should-fix or mandatory post-P2 round is added. The verified later source is recorded separately in `e04s01-post-review-source.json`; no independent review of that repair is claimed.
 - All six S01 tasks now pass their named exercised scenarios and local runtime gate. Story completion and Herdr retirement follow the safe feature checkpoint. No S02 implementation, live run, main merge/push or release has happened.
+
+## Local checkpoint and owned worker retirement
+
+- Integration merge commit4d74d58 contains both worker commits and verified parent integration. The configured1Password signer failed to fill its buffer and wrote no commit; used the user's authorized unsigned fallback for this local feature checkpoint without changing global configuration.
+- Both owned OMP sessions exited via Ctrl-D; exact panes then showed only their original Zsh foreground. `herdr worktree remove` without force retired w1R/w1Q; both checkout paths and original shell PIDs are absent. Exact tab inventories return workspace_not_found. Full evidence: `e04s01-worker-retirement.json`.
+- No unmerged work discarded or user workspace touched. Keep feat/acp-agent-interaction; no ACP main merge/push/release. No bundled trace/OKF generating scripts exist, so refresh is explicitly skipped, not claimed as coverage or runtime acceptance. S01 is done; S02 still starts failing.
 

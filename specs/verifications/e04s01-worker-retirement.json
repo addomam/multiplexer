@@ -1,0 +1,34 @@
+{
+  "scope": "owned-e04s01-herdr-workers-only",
+  "integration_commit": "4d74d58",
+  "signing": "unsigned-authorized-fallback-after-1Password-fill-buffer-failure",
+  "completed_at": "2026-10-23T23:06:24-05:00",
+  "graceful_exit": "Ctrl-D; both panes observed original Zsh foreground with no OMP process",
+  "removal": "herdr worktree remove without --force after safe integration commit",
+  "resources": [
+    {
+      "workspace": "w1R",
+      "tab": "w1R:t1",
+      "pane": "w1R:p1",
+      "shell_pid": 31264,
+      "path": "/Users/addomam/projects/amux-acp-s01-backend",
+      "commit": "72e2aa0229ecc10eb4dd8dc4c89534a189a9c73f",
+      "worktree_removed": true,
+      "shell_absent": true,
+      "workspace_and_tabs_absent": "herdr tab list returned workspace_not_found"
+    },
+    {
+      "workspace": "w1Q",
+      "tab": "w1Q:t1",
+      "pane": "w1Q:p1",
+      "shell_pid": 31255,
+      "path": "/Users/addomam/projects/amux-acp-s01-view",
+      "commit": "286694494abf5127680f89425389df21016f7158",
+      "worktree_removed": true,
+      "shell_absent": true,
+      "workspace_and_tabs_absent": "herdr tab list returned workspace_not_found"
+    }
+  ],
+  "user_resources_touched": false,
+  "unmerged_work_discarded": false
+}
