@@ -149,7 +149,8 @@ e04_cycle:
   verification: {artifact: 'artifact://1171', workspace_passed: 343, suites: 30, ignored: 10, acp_library: 12, acp_s01: 23, omp_passed: 8}
   e04s01_checkpoint: {commit: 4d74d58, signing: unsigned-authorized-fallback, workers: retired-without-force, evidence: specs/verifications/e04s01-worker-retirement.json}
   e04s02_red: {commit: 1c8ba34, cases: 1, failed: 1, isolated_committed_check: failed-as-expected, evidence: specs/verifications/e04s02-build.md}
-  e04s02_workers: {backend: w1S, editor: w1T, integration_owner: parent, checks: parent-only-after-both-integrate}
+  e04s02_workers: {backend: w1S, editor: w1T, editor_commit: c2a12d660e6a07e20295fcc432093f10675e752a, editor_status: complete-unverified-awaiting-integration, integration_owner: parent, checks: parent-only-after-both-integrate}
+  e04s02_driver_baseline: {status: passed-S01-only-not-story-acceptance, evidence: specs/verifications/e04s02-runtime-driver-baseline-attempt3.json, failed_attempts_retained: [1, 2], cleanup: complete}
 stories:
   e04s01:
     started_at: "2026-10-23T14:46:59-05:00"

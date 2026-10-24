@@ -57,6 +57,7 @@ handoff:
     Verified S01 integration committed locally as4d74d58 using the authorized unsigned fallback after1Password failed. Both owned S01 OMP sessions exited gracefully; Herdr removed their workspaces/tabs/worktrees without force and original shell PIDs are absent.
     S02 starts on the same isolated feature branch from8886c2b with the verified343-test S01 baseline. Concrete form/permission projection, shared validator, keybinding and exclusive file responsibilities are recorded; all S02 tasks remain failing.
     S02 test-only RED1c8ba34 fails1/1 as expected in parent and exact isolated committed checkout. Herdr backend w1S and editor w1T are dispatched from that base with gpt6.1-sol/high and disjoint file ownership; parent retains all shared routing and verification.
+    Parent actual CLI/controlling-PTY driver baseline passes same-session42→57, termios/owned cleanup and unchanged native IDs with no fallback. Two driver-only failures and their later cleanup receipts are retained; this is S01 code, not S02 acceptance.
   last_step_completed: e04s02-isolated-red-proved-and-owned-workers-dispatched
   required_reading:
     - specs/verifications/e04s01-build.md
@@ -532,5 +533,6 @@ epic_cycle:
   integration_owner: parent
   owned_sessions:
     - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: dispatched-awaiting-native-completion, worker_verification: forbidden-parent-only}
-    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: dispatched-awaiting-native-completion, worker_verification: forbidden-parent-only}
+    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: worker-complete-unverified-awaiting-integration, commit: c2a12d660e6a07e20295fcc432093f10675e752a, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-editor-delivery.json}
   lsp_references: {status: unavailable-in-isolated-worktree-not-no-callers, attempted: [exact-declaration-references, scoped-rust-analyzer-reload, workspace-folder-notification-route], limitation: device-exposes-request-not-notification-and-empty-references, reported: true}
+  runtime_driver_baseline: {status: passed-S01-only-not-S02-acceptance, evidence: specs/verifications/e04s02-runtime-driver-baseline-attempt3.json, failed_attempts_retained: [1, 2], private_resources: removed-after-owned-cleanup}

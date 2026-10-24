@@ -1,0 +1,15 @@
+{
+  "scope": "native-ordering-driver-baseline-S01-only-not-S02-acceptance",
+  "root": "/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/acp-s02-native-gate-baseline-lwc2daxn",
+  "live_ACP_provider_auth_model": false,
+  "status": "failed",
+  "error": "OSError('AF_UNIX path too long')",
+  "surface": null,
+  "cleanup": {
+    "fallback_signals": [],
+    "drainer_errors": [],
+    "drainer_joined": true,
+    "private_root_removed": false
+  },
+  "owned_sentinel_fixture_reaped": true
+}
