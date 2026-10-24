@@ -3327,6 +3327,114 @@ mod tests {
             "revision":interaction["revision"],"action":"accept","values":{"n":9}})
     }
 
+    fn grok_question(id: i64, session: &str, multiple: bool) -> Value {
+        json!({"jsonrpc":"2.0","id":id,"method":"_x.ai/ask_user_question","params":{
+            "sessionId":session,"toolCallId":"grok-question-tool","mode":"default",
+            "questions":[{"question":"Which synthetic choice?","multiSelect":multiple,
+                "options":[{"label":"alpha","description":"First","preview":"<safe-preview>"},
+                    {"label":"beta","description":"Second"}]}]}})
+    }
+
+    #[test]
+    fn e04s04_grok_genuine_question_preserves_choices_original_response_and_single_selection() {
+        for multiple in [false, true] {
+            let (broker, instance, target) = ready_broker();
+            {
+                let mut state = instance.state.lock();
+                apply(&instance, &mut state, grok_question(71, "session", multiple)).unwrap();
+            }
+            let detail = {
+                let state = instance.state.lock();
+                assert_eq!(state.interactions.len(), 1, "real Grok question must be canonical");
+                state.interactions[0].content()
+            };
+            assert_eq!(detail["scope"]["sessionId"], "session");
+            assert_eq!(detail["scope"]["toolCallId"], "grok-question-tool");
+            let fields = detail["schema"]["properties"].as_object().unwrap();
+            let field = fields.iter().find(|(_, value)| value["title"] == "Which synthetic choice?")
+                .expect("original question text is displayed").0;
+            let answer = if multiple { json!(["alpha", "beta"]) } else { json!("alpha") };
+            let values = json!({field:answer});
+            let mut request = interaction_action(&target, &detail, "grok-answer");
+            request["values"] = values;
+            let first = broker.prepare("acp-answer", &request, "original").unwrap();
+            request["call_id"] = json!("grok-losing-answer");
+            let losing = broker.prepare("acp-answer", &request, "original").unwrap();
+            broker.commit(first, 7).unwrap();
+            assert!(broker.commit(losing, 7).unwrap_err().to_string().starts_with("stale-interaction:"));
+            let state = instance.state.lock();
+            assert_eq!(state.output.len(), 1, "one exact response, no new prompt");
+            let response: Value = serde_json::from_slice(&state.output[0].bytes).unwrap();
+            assert_eq!(response["id"], 71);
+            assert_eq!(response["result"]["outcome"], "accepted");
+            assert_eq!(response["result"]["answers"]["Which synthetic choice?"],
+                if multiple { json!(["alpha", "beta"]) } else { json!(["alpha"]) });
+            if !multiple {
+                assert_eq!(response["result"]["annotations"]["Which synthetic choice?"]["preview"], "<safe-preview>");
+            }
+            assert_eq!(state.interactions[0].selection.as_ref().unwrap()["content"][field], answer);
+            assert!(!state.calls.contains("grok-losing-answer"));
+        }
+    }
+
+    #[test]
+    fn e04s04_grok_bad_scope_duplicate_questions_and_choices_never_publish() {
+        for malformed in ["scope", "question", "choice", "mode", "count"] {
+            let (_, instance, _) = ready_broker();
+            let mut message = grok_question(72, "session", false);
+            match malformed {
+                "scope" => message["params"]["sessionId"] = json!("another-session"),
+                "question" => {
+                    let duplicate = message["params"]["questions"][0].clone();
+                    message["params"]["questions"].as_array_mut().unwrap().push(duplicate);
+                }
+                "choice" => {
+                    let duplicate = message["params"]["questions"][0]["options"][0].clone();
+                    message["params"]["questions"][0]["options"].as_array_mut().unwrap().push(duplicate);
+                }
+                "mode" => message["params"]["mode"] = json!("invented-mode"),
+                _ => message["params"]["questions"] = json!(vec![message["params"]["questions"][0].clone(); 65]),
+            }
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, message).unwrap();
+            assert!(state.interactions.is_empty(), "{malformed}");
+            let response: Value = serde_json::from_slice(&state.output[0].bytes).unwrap();
+            assert_eq!(response["id"], 72);
+            assert_eq!(response["error"]["code"], -32602, "{malformed}");
+            assert!(state.work.is_empty() && state.foreground.is_none());
+        }
+    }
+
+    #[test]
+    fn e04s04_grok_interrupt_cancels_exact_pending_and_late_question_without_a_choice_window() {
+        let (broker, instance, target) = ready_broker();
+        let prompt = broker.prepare("acp-prompt", &prompt_request(&target, "grok-original"), "original").unwrap();
+        let admitted = broker.commit(prompt, 7).unwrap();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, grok_question(73, "session", false)).unwrap();
+        }
+        let interrupt = json!({"op":"acp-interrupt","target":target,"control":{"kind":"control","ref":"unit"},
+            "owner_generation":7,"call_id":"grok-explicit-interrupt","prompt_id":admitted["prompt_id"]});
+        // Prompt identity comes from retained work, never inferred from a notification.
+        let prompt_id = broker.metadata(&instance.id).unwrap()["foreground"]["prompt_id"].clone();
+        let mut interrupt = interrupt;
+        interrupt["prompt_id"] = prompt_id;
+        let prepared = broker.prepare("acp-interrupt", &interrupt, "original").unwrap();
+        broker.commit(prepared, 7).unwrap();
+        let mut state = instance.state.lock();
+        apply(&instance, &mut state, grok_question(74, "session", false)).unwrap();
+        for id in [73, 74] {
+            let responses: Vec<Value> = state.output.iter()
+                .filter_map(|frame| serde_json::from_slice::<Value>(&frame.bytes).ok())
+                .filter(|frame| frame["id"] == id).collect();
+            assert_eq!(responses.len(), 1);
+            assert_eq!(responses[0]["result"], json!({"outcome":"cancelled"}));
+        }
+        assert!(state.interactions.iter().all(|interaction| interaction.state == "selected"));
+        assert!(state.foreground.as_ref().unwrap().1);
+    }
+
     #[test]
     fn acp_form_values_preserve_unset_false_zero_empty_and_i64_boundaries() {
         let schema = json!({"type":"object","properties":{
