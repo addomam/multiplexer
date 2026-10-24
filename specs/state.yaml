@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: develop-tdd
+  next_skill: commit-message
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -58,8 +58,20 @@ handoff:
     S02 starts on the same isolated feature branch from8886c2b with the verified343-test S01 baseline. Concrete form/permission projection, shared validator, keybinding and exclusive file responsibilities are recorded; all S02 tasks remain failing.
     S02 test-only RED1c8ba34 fails1/1 as expected in parent and exact isolated committed checkout. Herdr backend w1S and editor w1T are dispatched from that base with gpt6.1-sol/high and disjoint file ownership; parent retains all shared routing and verification.
     Parent actual CLI/controlling-PTY driver baseline passes same-session42→57, termios/owned cleanup and unchanged native IDs with no fallback. Two driver-only failures and their later cleanup receipts are retained; this is S01 code, not S02 acceptance.
-  last_step_completed: e04s02-isolated-red-proved-and-owned-workers-dispatched
+    Both S02 worker commits are integrated without conflicts, pending the parent integration commit. First matrix18/19 exposed a test-only stale bootstrap read tuple; actual private CLI proved original auth RPC completion and same-session57, then targeted1/S02 tests19/library22/workspace372 and strict gates passed.
+    Actual native smoke then found the65th question hidden by the editor's64-total history cap. The editor now shares the broker's64-live plus1024-completed ceiling; before/after CLI/PTY proof confirms genuine reviewed65th answer57/count65 and owned cleanup. All native flat controls also pass with exact typed selection and causal68; final gates, permission/race surfaces and fresh reviews remain.
+    Subsequent actual native/API permission choices, all four original-native/API response orders, null-session bootstrap, native form decline/cancel and explicit Ctrl-C pending/late cancellation proofs pass with owned cleanup; every task remains failing until fresh review.
+    Self-audit also found supported large-default/unset and canonical-content-versus-metadata UI limits. Both have actual failing-before/passing-after proof without widening canonical4MiB or submitted64KiB limits. Final workspace372/strict gates/Bun8/Zsh pass at artifact1266; exact story22library/19integration passes at artifact1269.
+    S02 self-audit and fresh blind A/B round1 pass100/100 with zero must-fix/should-fix; security reports no supported findings. Two Consider-only comments are dispositioned without code changes. All six S02 tasks now pass actual command/smoke/security gates; safely checkpoint integration before retiring the two owned workers and starting S03. No historical cap reset/live approval/publication.
+  last_step_completed: e04s02-local-runtime-and-independent-round1-PASS
   required_reading:
+    - specs/verifications/e04s02-build-review-round1.json
+    - specs/verifications/e04s02-build.md
+    - specs/verifications/AUDIT-e04s02.md
+    - specs/verifications/e04s02-verify.yaml
+    - specs/verifications/NFR-e04s02.json
+    - specs/verifications/e04s02-round1-source.json
+    - specs/verifications/e04s02-security-review-round1.json
     - specs/verifications/e04s01-build.md
     - specs/epics/e04-acp-agent-interaction/PLAN.md
     - specs/epics/e04-acp-agent-interaction/build-integration-contract.md
@@ -522,17 +534,35 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s02
   story_bcps: 8
-  step: 4
-  completed_steps: [0, 1, 2, 3]
+  step: 7
+  completed_steps: [0, 1, 2, 3, 4, 5, 6]
   started_at: "2026-10-23T23:14:27-05:00"
   baseline: {commit: 8886c2b, code_commit: 4d74d58, evidence: 'artifact://1171', workspace_rust_passed: 343, omp_passed: 8, source: specs/verifications/e04s01-post-review-source.json}
   red: {commit: 1c8ba34, status: failed-as-expected-in-parent-and-isolated-committed-checkout, cases: 1, passed: 0, error: genuine-form-explicitly-rejected-by-S01, evidence: specs/verifications/e04s02-build.md}
-  audit_result: not-started
-  runtime_acceptance: failing-e04s02-not-implemented
+  audit_result: pass
+  runtime_acceptance: passing-e04s02-local-reviewed-awaiting-safe-checkpoint
   implementation_started: true
   integration_owner: parent
   owned_sessions:
-    - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: dispatched-awaiting-native-completion, worker_verification: forbidden-parent-only}
-    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: worker-complete-unverified-awaiting-integration, commit: c2a12d660e6a07e20295fcc432093f10675e752a, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-editor-delivery.json}
+    - {agent: e04-s02-backend, workspace: w1S, tab: 'w1S:t1', pane: 'w1S:p1', branch: feat/acp-s02-backend, worktree: /Users/addomam/projects/amux-acp-s02-backend, base: 1c8ba34, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: integrated-under-verification-not-yet-safely-checkpointed, commit: 388da67b06b2b39daccbef14200d483d8b614c0b, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-backend-delivery.json}
+    - {agent: e04-s02-view, workspace: w1T, tab: 'w1T:t1', pane: 'w1T:p1', branch: feat/acp-s02-view, worktree: /Users/addomam/projects/amux-acp-s02-view, base: 1c8ba34, files: [src/tui/agent.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: integrated-under-verification-not-yet-safely-checkpointed, commit: c2a12d660e6a07e20295fcc432093f10675e752a, worker_verification: intentionally-not-run-parent-only, evidence: specs/verifications/e04s02-editor-delivery.json}
   lsp_references: {status: unavailable-in-isolated-worktree-not-no-callers, attempted: [exact-declaration-references, scoped-rust-analyzer-reload, workspace-folder-notification-route], limitation: device-exposes-request-not-notification-and-empty-references, reported: true}
   runtime_driver_baseline: {status: passed-S01-only-not-S02-acceptance, evidence: specs/verifications/e04s02-runtime-driver-baseline-attempt3.json, failed_attempts_retained: [1, 2], private_resources: removed-after-owned-cleanup}
+e04s02_build_review:
+  scope: e04s02-genuine-forms-and-permissions
+  round: 1
+  max_rounds: 5
+  status: PASS
+  reviewers: [E04S02ReviewA1, E04S02ReviewB1, E04S02Security1]
+  source: specs/verifications/e04s02-round1-source.json
+  self_audit: specs/verifications/AUDIT-e04s02.md
+  scores: [100, 100]
+  must_fix: [0, 0]
+  should_fix: [0, 0]
+  consider: [2, 0]
+  evidence: specs/verifications/e04s02-build-review-round1.json
+  open_findings: []
+  current_verification: {artifact: 'artifact://1266', workspace_passed: 372, suites: 30, ignored: 10, omp_passed: 8, zsh_syntax: passed}
+  exact_story_verification: {artifact: 'artifact://1269', library_passed: 22, integration_passed: 19}
+  security: {status: no-static-blocker-identified, findings: 0, evidence: specs/verifications/e04s02-security-review-round1.json, independent_runtime: false}
+  historical_review_counters: unchanged

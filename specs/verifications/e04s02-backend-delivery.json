@@ -1,0 +1,61 @@
+{
+  "status": "worker-complete-integrated-under-verification-not-story-acceptance",
+  "workspace": "w1S",
+  "tab": "w1S:t1",
+  "pane": "w1S:p1",
+  "integration_owner": "parent",
+  "completion_receipt": "artifact://1208",
+  "delivery": {
+    "type": "result",
+    "task_id": "e04-s02-backend",
+    "exit": "pass",
+    "commit": "388da67b06b2b39daccbef14200d483d8b614c0b",
+    "changed_files": [
+      "src/acp.rs",
+      "tests/acp.rs",
+      "tests/fixtures/acp_peer.rs"
+    ],
+    "implemented_scenarios": [
+      {
+        "id": "SC-e04s02-P0-01",
+        "coverage": "Session- and request-scoped forms during initialize, newSession, authentication and prompt; retained responders after parent-RPC completion; exact original arithmetic effects."
+      },
+      {
+        "id": "SC-e04s02-P1-02",
+        "coverage": "All supported flat types, enum intersection, multiselect, defaults/unset/null distinctions, Unicode lengths, numeric bounds, malformed schemas, field/option/answer limits and explicit pattern/format limitations."
+      },
+      {
+        "id": "SC-e04s02-P0-03",
+        "coverage": "Exact offered allow/reject once/always options causally gate tool arithmetic; original-native allow and API deny share the same session."
+      },
+      {
+        "id": "SC-e04s02-P0-04",
+        "coverage": "API/original-native winners in both admission orders; losing selections excluded from accepted history; fresh interaction IDs prevent reused wire-ID rebinding; actual write failure and EOF remain distinct from application."
+      },
+      {
+        "id": "SC-e04s02-P0-05",
+        "coverage": "Atomic interrupt reservations; pending, already-selected and late form/permission handling; writer-capacity rejection; content/count exhaustion; bootstrap/auth forms excluded from prompt cancellation."
+      },
+      {
+        "id": "SC-e04s02-P1-06",
+        "coverage": "Distinct decline/cancel responses; exact protocol errors for unsupported schemas, URL/filesystem/terminal/unknown requests and invalid scopes."
+      }
+    ],
+    "interface_projection_notes": [
+      "Existing Broker public signatures remain unchanged. Added pub(crate) fn validate_form_values(schema: &Value, values: &Value) -> std::result::Result<(), &'static str>.",
+      "Top-level interaction metadata remains content-free. Canonical details and retained selections are confined to content.interactions.",
+      "Form details expose message, official scope and requested-schema shape, plus validation_limitations. Request-scoped details expose scope_parent_state as outstanding, completed or unknown.",
+      "Permission details expose exact scope, official tool_call shape and options containing option_id, name and kind. Response binding preserves typed wire IDs and offered values.",
+      "Response-write completion uses bounded per-responder evidence so fast legal wire-ID reuse cannot race delayed writer bookkeeping or release a newer responder.",
+      "Retained interaction content is capped at 4 MiB, including selections. Completed-history eviction reports truncation.interactions and never evicts live responders.",
+      "Response work includes exact rpc_id and interaction_id; delivery remains separate from application. No shared-file changes or new dependencies were introduced.",
+      "Committed unsigned using command-local signing fallback; commit hooks were disabled to preserve the parent-only verification boundary."
+    ],
+    "remaining_uncertainties": [
+      "Compilation, tests, lint, formatting and actual CLI/controlling-PTY behavior remain unverified pending parent integration.",
+      "OriginalNative regression coverage uses the original persistent registration/provenance path; it does not claim actual human PTY proof.",
+      "No acceptance ledger or scenario status was marked passing."
+    ],
+    "verify_output": "intentionally not run; parent owns checks"
+  }
+}

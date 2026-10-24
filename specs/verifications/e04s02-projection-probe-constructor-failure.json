@@ -1,0 +1,9 @@
+{
+  "scope": "owned-verification-driver-constructor-only-not-product-behavior",
+  "status": "failed",
+  "cause": "Private probe label exceeded Darwin AF_UNIX SUN_LEN; daemon log reports path must be shorter than SUN_LEN",
+  "socket_path_bytes": 113,
+  "no_open_holders": true,
+  "agent_not_started": true,
+  "private_root_removed": true
+}

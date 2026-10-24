@@ -1,0 +1,155 @@
+type: verification
+context: specs/epics/e04-acp-agent-interaction/context.yaml
+story_id: e04s02
+verified_at: '2026-10-24T05:32:21.443576+00:00'
+verifier: parent-actual-CLI-controlling-PTY-and-project-commands
+status: passed-local-S02-safe-integration-pending
+source: specs/verifications/e04s02-round1-source.json
+terminal_verdict:
+  command: cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s02_ -- --nocapture
+  exit_code: 0
+  artifact: artifact://1269
+  note: Single contiguous actual run; no output merged from prior attempts.
+  stdout_stderr: |2+
+        Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+         Running unittests src/lib.rs (target/debug/deps/amux-4d8026d0d2d5ead6)
+
+    running 22 tests
+    test acp::tests::acp_failed_open_rollback_requires_empty_complete_ended_lifetime ... ok
+    test acp::tests::acp_failed_open_rollback_preserves_admitted_close_and_uncertain_cleanup ... ok
+    test acp::tests::acp_capture_failure_after_close_retains_uncertain_cleanup ... ok
+    test acp::tests::acp_auth_response_survives_follow_up_session_capacity_failure ... ok
+    test acp::tests::acp_closed_identity_and_utf8_byte_boundaries_reject_before_admission ... ok
+    test acp::tests::acp_first_valid_prepared_response_wins_without_losing_history_or_duplicate_wire_response ... ok
+    test acp::tests::acp_inflight_writer_budget_cannot_be_reused_while_frame_is_owned ... ok
+    test acp::tests::acp_completed_response_stamp_allows_reuse_before_bookkeeping_without_releasing_new_responder ... ok
+    test acp::tests::acp_consumed_startup_response_cannot_publish_after_lifetime_end ... ok
+    test acp::tests::acp_form_enum_intersection_unicode_and_distinct_multiselect_are_enforced ... ok
+    test acp::tests::acp_generation_and_writer_capacity_rejection_do_not_commit_or_consume_call_id ... ok
+    test acp::tests::acp_form_values_preserve_unset_false_zero_empty_and_i64_boundaries ... ok
+    test acp::tests::acp_interrupt_reserves_every_frame_and_late_capacity_failure_never_publishes_choice ... ok
+    test acp::tests::acp_request_scoped_bootstrap_is_not_guessed_into_current_prompt_interrupt ... ok
+    test acp::tests::acp_form_answer_exact_byte_limit_and_empty_official_schema_are_supported ... ok
+    test acp::tests::acp_raw_schema_rejects_coercible_defaults_root_types_and_unknown_constraints ... ok
+    test acp::tests::acp_scoped_rpc_closure_distinguishes_completed_parent_from_unknown_parent ... ok
+    test acp::tests::acp_wire_id_is_reserved_through_inflight_response_and_typed_ids_do_not_alias ... ok
+    test acp::tests::acp_uncertain_capture_cleanup_keeps_capacity_and_is_not_complete ... ok
+    test acp::tests::acp_framing_rejects_partial_oversized_and_preserves_next_frame ... ok
+    test acp::tests::acp_uncaptured_owned_group_is_reaped_without_signalling_other_processes ... ok
+    test acp::tests::acp_exact_lifetime_tombstones_survive_history_eviction_and_reserve_final_close ... ok
+
+    test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 98 filtered out; finished in 0.42s
+
+        Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
+         Running tests/acp.rs (target/debug/deps/acp-95009646ab41d491)
+
+    running 19 tests
+    test e04s02_api_form_answer_resumes_exact_pending_prompt ... ok
+    test e04s02_actual_response_pipe_failure_records_failed_delivery_not_agent_application ... ok
+    test e04s02_authentication_form_uses_exact_retained_auth_rpc_without_new_prompt ... ok
+    test e04s02_force_and_pending_claim_cancellation_retain_same_unanswered_form ... ok
+    test e04s02_all_supported_values_validate_before_actual_arithmetic_and_defaults_never_submit ... ok
+    test e04s02_decline_and_cancel_are_distinct_deliberate_actions ... ok
+    test e04s02_native_allow_then_api_deny_resume_same_session_without_second_tool_effect ... ok
+    test e04s02_parent_rpc_completion_retains_responder_without_rebinding_scope ... ok
+    test e04s02_submitted_form_response_followed_by_eof_is_not_agent_application ... ok
+    test e04s02_reused_wire_id_gets_fresh_interaction_and_old_ui_answer_cannot_rebind ... ok
+    test e04s02_request_scoped_initialize_and_session_forms_resume_original_bootstrap ... ok
+    test e04s02_interrupt_pending_selected_and_late_interactions_reserves_exact_obligations ... ok
+    test e04s02_request_scoped_prompt_and_invalid_scopes_preserve_exact_original_work ... ok
+    test e04s02_exact_offered_allow_and_reject_once_and_always_control_real_tool_effect ... ok
+    test e04s02_unadvertised_url_filesystem_terminal_and_unknown_requests_get_exact_errors ... ok
+    test e04s02_original_native_and_api_first_valid_response_win_in_both_admission_orders ... ok
+    test e04s02_completed_interaction_content_truncates_without_evicting_live_responder ... ok
+    test e04s02_interaction_content_and_pending_count_caps_fail_without_eviction_or_choice_loss ... ok
+    test e04s02_malformed_and_unsupported_schema_receive_errors_and_original_prompt_still_applies ... ok
+
+    test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 4.94s
+
+phases:
+  cold_start:
+    passed: true
+    method: Fresh private daemon/socket/HOME/config/project roots for real built CLI and controlling-PTY probes.
+  mechanical:
+    passed: true
+    artifact: artifact://1266
+    command: cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets
+      && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh
+    workspace_passed: 372
+    suites: 30
+    ignored: 10
+    omp_passed: 8
+    omp_assertions: 49
+  security:
+    status: passed-static-no-supported-findings
+    self_audit: specs/verifications/AUDIT-e04s02.md
+    evidence: specs/verifications/e04s02-security-review-round1.json
+  independent_code_review:
+    passed: true
+    round: 1
+    max_rounds: 5
+    scores: [100, 100]
+    must_fix: [0, 0]
+    should_fix: [0, 0]
+    consider: [2, 0]
+    evidence: specs/verifications/e04s02-build-review-round1.json
+  nfr:
+    evidence: specs/verifications/NFR-e04s02.json
+    local_contract: passed
+    overall_go: passed-local-S02-only
+  actual_native:
+    passed: true
+    evidence_index: specs/verifications/e04s02-build.md
+    steps:
+    - scenario: SC-e04s02-P0-01
+      actual: Genuine native null-session initialize form resumes original RPC0; API/auth/session scopes covered by exact
+        retained-RPC tests and private auth RCA.
+      evidence: e04s02-bootstrap-native-attempt2.json
+    - scenario: SC-e04s02-P1-02
+      actual: Every known typed control reviewed and accepted at68; current-source large default explicitly unset, huge optional
+        name omitted, answer15 resumes same session at57.
+      evidence:
+      - e04s02-rich-native.json
+      - e04s02-native-schema-defaults-after-attempt2.json
+      - e04s02-native-projection-budget-after-attempt2.json
+    - scenario: SC-e04s02-P0-03
+      actual: Native/API select all exact offered allow/reject once/always values in one session; denied turns do not run
+        tool.
+      evidence: e04s02-permissions-native-api-attempt3.json
+    - scenario: SC-e04s02-P0-04
+      actual: Both real native/API admission orders for form and permission yield one canonical response, stale loser and
+        no losing accepted history.
+      evidence:
+      - e04s02-form-api-first.json
+      - e04s02-form-native-first.json
+      - e04s02-permission-api-first.json
+      - e04s02-permission-native-first.json
+    - scenario: SC-e04s02-P0-05
+      actual: Native Ctrl-C cancels pending and late requests exactly; original work remains cancelling until original cancelled
+        response; peer survives.
+      evidence: e04s02-native-interrupt.json
+    - scenario: SC-e04s02-P1-06
+      actual: Native form decline32 vs cancel22 remain distinct end_turn responses; explicit unsupported-schema/method errors
+        and continuing original prompt covered by real stdio integration.
+      evidence:
+      - e04s02-native-form-decline.json
+      - e04s02-native-form-cancel.json
+      - artifact://1269
+  resource_cleanup:
+    successful_native_probes: Normal TUI/host/daemon exit0, termios restored, peer absent and owned workers joined before
+      fallback, unrelated sentinel survives, roots removed.
+    failed_attempts: Preserved individually with their actual cleanup/fallback results; constructor-only long path has no-holder/root-removal
+      receipt.
+    implementation_workers: Preserved until safe integration commit; not yet retired.
+    optional_helpers:
+      blind_spots: skipped-not-bundled
+      completeness_critic: skipped-not-bundled
+      trace: skipped-not-bundled
+      OKF_wiki: skipped-not-bundled
+gaps:
+  local_runtime: closed-for-S02-named-scenarios
+  independent_code_and_security: passed-round1-100-100-zero-must-fix-zero-supported-security-findings
+  story_tasks: all-six-passing-after-actual-command-smoke-and-review-gates
+  live_provider_auth_model: not-authorized-not-run
+  historical_native_fence: unchanged-failing

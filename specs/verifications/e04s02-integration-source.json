@@ -1,0 +1,18 @@
+{
+  "scope": "e04s02-verified-local-integration",
+  "reviewed_source": "specs/verifications/e04s02-round1-source.json",
+  "sha256": {
+    "src/acp.rs": "8271ef33617489fe74b2d7e0563174383c599bf8d76db846504b9c7603da7511",
+    "src/tui/agent.rs": "31c38bc46b09a77fe1856bfe691b46eb986513fe7bc43b6346654cd25a8ad3d7",
+    "tests/acp.rs": "cdc63ca4fe315e69021de8712ccd86a34b78f2547087e05eab784087606c9597",
+    "tests/fixtures/acp_peer.rs": "89dc7da79c3f83abde8f3883d441ec5f5c1d55072a20571c5378220b48fe1ab3",
+    "README.md": "77ee60a70b3abd339d4a70d3994793a94b61bd38e16f33f6e8bea35412bdea27",
+    "CHANGELOG.md": "20c5f3ae56eb246c7ca7b96ce4e3b1599e02cb0ce41259a79c3db3b6e02b24f9"
+  },
+  "production_and_test_sources_unchanged_since_independent_review": true,
+  "post_review_docs_only": "README removes obsolete under-review status; completed evidence/ledgers added. No production or test changes.",
+  "current_verification": "artifact://1266",
+  "exact_story_verification": "artifact://1269",
+  "review": "specs/verifications/e04s02-build-review-round1.json",
+  "publication_authorized": false
+}

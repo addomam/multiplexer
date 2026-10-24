@@ -1,0 +1,26 @@
+{
+  "scope": "e04s02-genuine-forms-and-permissions",
+  "round": 1,
+  "max_rounds": 5,
+  "reviewed_source": "specs/verifications/e04s02-round1-source.json",
+  "dual_blind_AND_gate": "PASS",
+  "rule": "Each independent code reviewer score >=94 and zero must-fix; actual local runtime/evidence and no new supported security findings also required.",
+  "reviewers": [
+    {"name": "E04S02ReviewA1", "checks": 32, "failed_checks": 0, "score": 100, "must_fix": 0, "should_fix": 0, "consider": 2, "overall_correctness": "correct", "report": "e04s02-code-review-A-round1.json", "rubric_detail": "e04s02-code-review-A-round1-supplement.json"},
+    {"name": "E04S02ReviewB1", "checks": 32, "failed_checks": 0, "score": 100, "must_fix": 0, "should_fix": 0, "consider": 0, "overall_correctness": "correct", "report": "e04s02-code-review-B-round1.json"}
+  ],
+  "same_round_clarification": "A supplied the originally requested individual32-check detail after its aggregate verdict. Same reviewer, source and assessment; not a new review round. Original report retained separately.",
+  "security": {"reviewer": "E04S02Security1", "status": "no-static-blocker-identified", "supported_findings": 0, "separate_proven_P0_contract_violations": 0, "report": "e04s02-security-review-round1.json", "limitations": "Read-only static review; parent runtime evidence, no independent runtime or hash/diff recomputation claimed."},
+  "consider_dispositions": [
+    {"id": "A1-C1", "title": "Refresh cached request-parent state", "priority": 3, "decision": "no-code-change-current-unused-cache-field-not-a-consumer-defect", "reason": "Backend content is authoritative and correctly updates the original parent state. The editor does not render or consult cached scope_parent_state for admission or pending checks; exact official scope and current canonical work remain truthful. Adding synchronization solely for an unused future display would be speculative. No current requirement or check fails.", "source": "src/tui/agent.rs:355-364", "reviewer_check": 24},
+    {"id": "A1-C2", "title": "Keep boolean unset distinct on first Space", "priority": 3, "decision": "retain-standard-deliberate-checkbox-toggle", "reason": "Unset remains None until deliberate Space; first Space selects true, second selects false, and F4 returns to unset. These are distinct typed states, not omission/default coercion. A no-op first press or changing its selected value adds a new UX policy without fixing a current defect; preserve the existing supported control semantics.", "source": "src/tui/agent.rs:1459-1466", "reviewer_check": 11}
+  ],
+  "open_must_fix": [],
+  "open_should_fix": [],
+  "open_findings": [],
+  "production_source_changed_after_review": false,
+  "actual_current_verification": {"workspace": "artifact://1266", "passed": 372, "suites": 30, "ignored": 10, "strict_clippy_check_build_fmt": "passed", "omp_passed": 8, "zsh_syntax": "passed", "exact_story": "artifact://1269", "library_passed": 22, "integration_passed": 19, "actual_native_evidence_index": "e04s02-build.md"},
+  "historical_e03_and_S01_counters": "unchanged",
+  "live_provider_auth_model_acceptance": "not-authorized-not-run",
+  "main_merge_push_release": "not-authorized"
+}

@@ -3,7 +3,7 @@ context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s02
 title: Genuine forms and permission decisions
 spec: e04s02-story.md
-status: failing
+status: passing
 bcps: 8
 risk: P0
 tasks:
@@ -12,7 +12,7 @@ tasks:
     bootstrap support and capability enablement only after full supported field paths.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P0-01
   - SC-e04s02-P1-06
@@ -29,7 +29,7 @@ tasks:
     validation semantics, explicit review/accept/decline/cancel and truthful pattern/format limits.
   verify: "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P1-02
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -45,7 +45,7 @@ tasks:
     paths; never synthesize options or implicit dismissal.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P0-03
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -61,7 +61,7 @@ tasks:
     evidence while excluding rejected losing answers from shared history.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P0-04
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -77,7 +77,7 @@ tasks:
     reserved writer capacity before publication; selected requests never receive duplicate responses.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P0-05
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -93,7 +93,7 @@ tasks:
     observe owned cleanup and record redacted evidence.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s02_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s02-P0-01
   - SC-e04s02-P0-03

@@ -1,0 +1,27 @@
+{
+  "scope": "e04s02-authentication-test-ordering-root-cause",
+  "live_ACP_provider_auth_model": false,
+  "root": "/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/acp-s02-auth-rca-p9f2e0xq",
+  "status": "passed-root-cause-confirmed",
+  "old_bootstrap_tuple_rejected_as": "stale-target",
+  "same_target_instance_connection": true,
+  "only_first_session_established": true,
+  "original_auth_work_state": "completed",
+  "exact_original_auth_rpc": 2,
+  "form_scope_rpc": 2,
+  "same_session_effect": {
+    "session_id": "arithmetic-55044",
+    "value": 57,
+    "commands": 1,
+    "rpc_id": 4
+  },
+  "daemon_exit": 0,
+  "peer_absent_before_fallback": true,
+  "owned_workers_joined": true,
+  "cleanup": {
+    "fallback_signals": [],
+    "drainer_errors": [],
+    "drainer_joined": true,
+    "private_root_removed": true
+  }
+}

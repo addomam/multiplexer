@@ -12,6 +12,10 @@
 - Preserve the last confirmed ACP draft/transcript across failed inspection reads, surface the failure separately and restart history only for a real target-identity change. Distinguish an unread target from a retained cache; clear superseded local rejection notices on deliberate requeue without claiming agent admission.
 - Sanitize remaining bidi/line-format marks in ACP metadata and native chrome; reject them in ACP names. Exercise actual queued-response lifetime ordering rather than claiming a late reply from an already-reaped peer.
 - Answer malformed or foreign-session cancel-time permissions with explicit protocol errors without dropping the original prompt or killing its ACP session; valid late permissions retain distinct Cancelled semantics.
+- Enable genuine request-/session-scoped ACP forms and exact offered tool permissions on the same owned connection. Retain original bootstrap/auth/prompt scope and typed responder identity through parent completion and wire-ID reuse.
+- Add native typed flat controls, editable defaults and explicit unset, two-step review/accept, separate form decline/cancel and deliberate permission allow/reject once/always. Share backend answer validation; expose local pattern/format limitations without claiming general JSON Schema validation.
+- Linearize competing API/native responses and reserve explicit-interrupt replies atomically. Keep late applicable forms/permissions nonselectable, losing answers out of accepted history, and written delivery distinct from agent application.
+- Align native history with 64 live/responding plus 1024 retained completed records; account for bounded server metadata separately from the 4-MiB canonical content cap. Preserve supported large declared defaults and optional omission while keeping submitted answers within 64 KiB.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 

@@ -75,15 +75,33 @@ amux acp inspect "$TARGET_JSON" --content --after 0
 amux acp attach "$ACP_VIEW_ID"
 ```
 
-The initial target has a null session while initialization runs. Inspect the live descriptor to obtain the exact `kind`, `id`, `instance_id`, `connection_generation` and `session_id` tuple; capture it together with current control/generation and a unique call ID for each deliberate mutation. `acp-prompt`, `acp-authenticate`, `acp-interrupt` and `acp-close` use that captured authority. Stale or duplicate actions are rejected, never rebound or replayed. Basic conversation transport does not advertise form capability; unsupported peer requests receive explicit errors.
+The initial target has a null session while initialization runs. Inspect the live descriptor to obtain the exact `kind`, `id`, `instance_id`, `connection_generation` and `session_id` tuple; capture it together with current control/generation and a unique call ID for each deliberate mutation. `acp-prompt`, `acp-authenticate`, `acp-answer`, `acp-permission`, `acp-interrupt` and `acp-close` use that captured authority. Responses additionally address the exact canonical interaction ID/revision. Stale or duplicate actions are rejected, never rebound or replayed.
 
 In the ACP view, **Enter** submits a local prompt, **Alt/Shift-Enter** inserts a newline, and bracketed paste only edits the draft. **F8** explicitly selects an advertised agent-type authentication method; no automatic login, URL or credential form is opened. **Ctrl-C** requests interruption of the exact foreground prompt, not a process signal. Page keys and the mouse wheel navigate history without acquiring control. Revocation clears the old draft. Prefix opens the shared picker; prefix twice never forwards raw bytes into an ACP session.
+
+Genuine ACP forms and tool permissions appear in this same conversation, including request-scoped forms during initialization/authentication. They are not inferred from terminal text. Form capability is advertised; URL elicitation, client filesystem and client terminal services are not.
+
+| Interaction action | Key |
+|---|---|
+| Cycle questions, permissions and history | F9 |
+| Select form field | Tab / Shift-Tab |
+| Edit text or numeric field | Typing / bracketed paste |
+| Highlight an offered choice | Arrow keys |
+| Toggle boolean or multiselect choice | Space |
+| Explicitly unset a field | F4 |
+| Validate/review form, then accept unchanged values | F5, then F5 |
+| Decline form / cancel form | F6 / F7 |
+| Select the exact highlighted permission option | Enter |
+
+Known flat string, number, integer, boolean, enum, titled-enum and multiselect controls are supported. Defaults start editable, never submit automatically; omitted optional values remain unset rather than becoming false, zero, empty or a default. Declared defaults may require explicit unset before the submitted answer fits **64 KiB**. Required values, offered choices, enum intersection, Unicode lengths, numeric bounds and selection counts are checked locally and again at admission. Pattern/format constraints are displayed but **not locally certified**; agent validation remains authoritative. Unknown/nested schemas or unsupported modes receive explicit protocol errors.
+
+Only the first valid response is canonical; a stale losing answer is neither sent nor added as accepted history. Form decline, form cancel and explicit foreground interruption are distinct. Navigation, focus loss and detach never answer or deny. During explicit interruption, applicable pending and late questions receive Cancel/Cancelled without becoming selectable; the interrupt is confirmed only by the original prompt response, not by notification delivery. A written answer is not proof of agent application.
 
 Ownership is fenced at **amux input admission**, not at provider application. Already accepted work may continue under its original IDs after handoff. Force changes authority only; it never interrupts or kills the adapter. Ordinary pending cancellation invalidates the old control, grants nobody and retains accepted work. A second foreground prompt is busy, not steering or an implicit queue.
 
 Default inspection, global snapshots and events are metadata-only. Transcript content is an explicit bounded incremental read with gap indicators. Closing a native shell does not close a sibling ACP view; explicit `acp-close` and daemon shutdown end the owned ACP lifetime. Unknown process-identity cleanup stays incomplete, retained and charged rather than being advertised as successful cleanup.
 
-Local deterministic-peer CLI/controlling-PTY evidence is in [e04s01 Build verification](specs/verifications/e04s01-build.md). It is not proof of real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. The thin non-ACP integration API remains out of scope.
+Local deterministic-peer CLI/controlling-PTY evidence is in [e04s01 transport verification](specs/verifications/e04s01-build.md) and [e04s02 interaction verification](specs/verifications/e04s02-build.md). Neither proves real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. The thin non-ACP integration API remains out of scope.
 
 ## Picker and native interaction
 

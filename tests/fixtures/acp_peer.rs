@@ -61,7 +61,7 @@ fn unsupported(reader: &mut impl BufRead, root: &Path, session: Option<&str>) ->
         (
             "form",
             "elicitation/create",
-            json!({"mode":"form","message":"synthetic form","requestedSchema":{"type":"object","properties":{}}}),
+            json!({"mode":"form","message":"synthetic unsupported nested form","requestedSchema":{"type":"object","properties":{"nested":{"type":"object","properties":{}}}}}),
             -32602,
         ),
         (
@@ -99,6 +99,170 @@ fn unsupported(reader: &mut impl BufRead, root: &Path, session: Option<&str>) ->
         return Err("null-ID request did not receive its exact error".into());
     }
     fs::write(root.join("unsupported-complete"), b"all explicit errors")?;
+    Ok(())
+}
+
+fn form_schema() -> Value {
+    json!({"type":"object","properties":{
+        "bonus":{"type":"integer","minimum":-100,"maximum":100,"default":0}
+    },"required":["bonus"]})
+}
+
+fn rich_schema() -> Value {
+    json!({"type":"object","properties":{
+        "bonus":{"type":"integer","minimum":-100,"maximum":100,"default":0},
+        "ratio":{"type":"number","minimum":0,"maximum":2,"default":1.0},
+        "enabled":{"type":"boolean","default":true},
+        "text":{"type":"string","minLength":2,"maxLength":3,"pattern":"^.*$","format":"email","default":"ab"},
+        "choice":{"type":"string","enum":["add","subtract","unavailable"],"oneOf":[
+            {"const":"add","title":"Add"},{"const":"subtract","title":"Subtract"}],"default":"add"},
+        "titled":{"type":"string","oneOf":[{"const":"twenty","title":"Twenty"},{"const":"zero","title":"Zero"}]},
+        "flags":{"type":"array","items":{"type":"string","enum":["a","b","c"]},"minItems":1,"maxItems":2,"default":["a"]},
+        "titled_flags":{"type":"array","items":{"anyOf":[{"const":"red","title":"Red"},{"const":"blue","title":"Blue"}]},"maxItems":2},
+        "optional":{"type":"integer","default":99}
+    },"required":["bonus","ratio","enabled","text","choice","titled","flags","titled_flags"]})
+}
+
+fn send_form(id: Value, scope: Value, schema: Value, message: &str) -> Result<()> {
+    let mut params = scope;
+    params["mode"] = json!("form");
+    params["message"] = json!(message);
+    params["requestedSchema"] = schema;
+    emit(json!({"jsonrpc":"2.0","id":id,"method":"elicitation/create","params":params}))?;
+    Ok(())
+}
+
+fn form_bonus(response: &Value, id: &Value, rich: bool) -> Result<i64> {
+    if response.get("id") != Some(id) || response.get("error").is_some() {
+        return Err("form lost its exact original responder".into());
+    }
+    match response["result"]["action"].as_str() {
+        Some("decline") => Ok(-10),
+        Some("cancel") => Ok(-20),
+        Some("accept") => {
+            let values = &response["result"]["content"];
+            let bonus = values["bonus"].as_i64().ok_or("integer answer required")?;
+            if !rich {
+                return Ok(bonus);
+            }
+            let ratio = values["ratio"].as_f64().ok_or("number answer required")?;
+            let enabled = values["enabled"]
+                .as_bool()
+                .ok_or("boolean answer required")?;
+            let text = values["text"].as_str().ok_or("string answer required")?;
+            let choice = match values["choice"].as_str() {
+                Some("add") => 10,
+                Some("subtract") => -10,
+                _ => return Err("unoffered enum".into()),
+            };
+            let titled = match values["titled"].as_str() {
+                Some("twenty") => 20,
+                Some("zero") => 0,
+                _ => return Err("unoffered titled enum".into()),
+            };
+            let flags = values["flags"].as_array().ok_or("array answer required")?;
+            let titled_flags = values["titled_flags"]
+                .as_array()
+                .ok_or("titled array answer required")?;
+            Ok(bonus
+                + (ratio * 4.0) as i64
+                + if enabled { 100 } else { 0 }
+                + text.chars().count() as i64
+                + choice
+                + titled
+                + flags.len() as i64 * 3
+                + titled_flags.len() as i64 * 7
+                + values.get("optional").and_then(Value::as_i64).unwrap_or(0))
+        }
+        _ => Err("explicit form disposition required".into()),
+    }
+}
+
+fn send_permission(id: Value, session: &str) -> Result<()> {
+    emit(
+        json!({"jsonrpc":"2.0","id":id,"method":"session/request_permission","params":{
+        "sessionId":session,"toolCall":{"toolCallId":"arithmetic-gate","title":"Synthetic private tool",
+            "kind":"execute","status":"pending","rawInput":{"operation":"add"}},
+        "options":[
+            {"optionId":"opaque-α","name":"Allow this invocation","kind":"allow_once"},
+            {"optionId":"opaque-β","name":"Remember allow","kind":"allow_always"},
+            {"optionId":"opaque-γ","name":"Reject this invocation","kind":"reject_once"},
+            {"optionId":"opaque-δ","name":"Remember rejection","kind":"reject_always"}
+        ]}}),
+    )?;
+    Ok(())
+}
+
+fn permission_allows(response: &Value, id: &Value) -> Result<bool> {
+    if response.get("id") != Some(id) || response["result"]["outcome"]["outcome"] != "selected" {
+        return Err("permission lost its exact selected responder".into());
+    }
+    match response["result"]["outcome"]["optionId"].as_str() {
+        Some("opaque-α" | "opaque-β") => Ok(true),
+        Some("opaque-γ" | "opaque-δ") => Ok(false),
+        _ => Err("fabricated permission reached tool".into()),
+    }
+}
+
+fn cancel_interactions(
+    reader: &mut impl BufRead,
+    root: &Path,
+    session: &str,
+    selected: &str,
+) -> Result<()> {
+    send_form(
+        json!("cancel-form"),
+        json!({"sessionId":session}),
+        form_schema(),
+        "Pending cancellation form",
+    )?;
+    send_permission(json!(73), session)?;
+    barrier(root, "interactions")?;
+    let mut notification = 0;
+    let mut form = 0;
+    let mut permission = 0;
+    for _ in 0..3 {
+        let response = receive(reader)?.ok_or("cancellation frame missing")?;
+        if response["method"] == "session/cancel" && response["params"]["sessionId"] == session {
+            notification += 1;
+        } else if response["id"] == "cancel-form" {
+            if selected == "form" {
+                let _ = form_bonus(&response, &json!("cancel-form"), false)?;
+            } else if response["result"]["action"] != "cancel" {
+                return Err("form not cancelled".into());
+            }
+            form += 1;
+        } else if response["id"] == 73 {
+            if selected == "permission" {
+                let _ = permission_allows(&response, &json!(73))?;
+            } else if response["result"]["outcome"]["outcome"] != "cancelled" {
+                return Err("permission not cancelled".into());
+            }
+            permission += 1;
+        } else {
+            return Err("wrong or duplicate cancellation response".into());
+        }
+    }
+    if (notification, form, permission) != (1, 1, 1) {
+        return Err("cancellation obligations not exactly once".into());
+    }
+    send_form(
+        json!("late-form"),
+        json!({"sessionId":session}),
+        form_schema(),
+        "Late session form",
+    )?;
+    send_permission(json!("late-permission"), session)?;
+    for id in ["late-form", "late-permission"] {
+        let response = receive(reader)?.ok_or("late cancellation missing")?;
+        if response["id"] != id
+            || (id == "late-form" && response["result"]["action"] != "cancel")
+            || (id == "late-permission" && response["result"]["outcome"]["outcome"] != "cancelled")
+        {
+            return Err("late interaction became a choice or lost cancellation".into());
+        }
+    }
+    barrier(root, "cancel-responses")?;
     Ok(())
 }
 
@@ -158,6 +322,8 @@ fn main() -> Result<()> {
     let mut commands = 0_u64;
     let mut authenticated = false;
     let mut failed_once = false;
+    let mut startup_bonus = 0_i64;
+    let mut parent_completed_form = false;
     let mut reader = BufReader::new(std::io::stdin().lock());
     while let Some(request) = receive(&mut reader)? {
         if request["method"] == "session/cancel" {
@@ -167,6 +333,18 @@ fn main() -> Result<()> {
         let Some(id) = request.get("id") else {
             continue;
         };
+        if parent_completed_form
+            && request["id"] == "bootstrap-form"
+            && request.get("method").is_none()
+        {
+            startup_bonus += form_bonus(&request, &json!("bootstrap-form"), false)?;
+            parent_completed_form = false;
+            fs::write(
+                root.join("scoped-response"),
+                b"exact completed parent responder",
+            )?;
+            continue;
+        }
         let result = match request["method"].as_str() {
             Some("initialize") => {
                 fs::write(
@@ -178,6 +356,21 @@ fn main() -> Result<()> {
                 }
                 if mode == "unsupported-bootstrap" {
                     unsupported(&mut reader, &root, None)?;
+                }
+                if mode == "s02-init" || mode == "s02-parent-completed" {
+                    send_form(
+                        json!("bootstrap-form"),
+                        json!({"requestId":id}),
+                        form_schema(),
+                        "Initialize configuration",
+                    )?;
+                    if mode == "s02-parent-completed" {
+                        parent_completed_form = true;
+                    } else {
+                        let response =
+                            receive(&mut reader)?.ok_or("initialize form response missing")?;
+                        startup_bonus += form_bonus(&response, &json!("bootstrap-form"), false)?;
+                    }
                 }
                 if ["oversized", "invalid-utf8", "malformed", "partial", "flood"]
                     .contains(&mode.as_str())
@@ -238,6 +431,16 @@ fn main() -> Result<()> {
                     )?;
                     continue;
                 }
+                if mode == "auth-form" {
+                    send_form(
+                        json!(41),
+                        json!({"requestId":id}),
+                        form_schema(),
+                        "Non-secret authentication configuration",
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("auth form response missing")?;
+                    startup_bonus += form_bonus(&response, &json!(41), false)?;
+                }
                 barrier(&root, "authenticate")?;
                 authenticated = true;
                 json!({})
@@ -251,6 +454,16 @@ fn main() -> Result<()> {
                         json!({"jsonrpc":"2.0","id":id,"error":{"code":-32000,"message":"synthetic-private-auth-error"}}),
                     )?;
                     continue;
+                }
+                if mode == "s02-session" {
+                    send_form(
+                        json!("41"),
+                        json!({"requestId":id}),
+                        form_schema(),
+                        "Session configuration",
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("session form response missing")?;
+                    startup_bonus += form_bonus(&response, &json!("41"), false)?;
                 }
                 json!({"sessionId":session})
             }
@@ -272,12 +485,123 @@ fn main() -> Result<()> {
                 if parts.len() != 3 || parts[0] != "add" {
                     return Err("expected arithmetic command".into());
                 }
+                if mode == "s02-write-fail" {
+                    send_form(
+                        json!("write-failed-form"),
+                        json!({"sessionId":session}),
+                        form_schema(),
+                        "Response pipe failure",
+                    )?;
+                    if unsafe { libc::close(libc::STDIN_FILENO) } != 0 {
+                        return Err(std::io::Error::last_os_error().into());
+                    }
+                    barrier(&root, "closed-input")?;
+                    return Ok(());
+                }
+                if mode == "s02-selected-eof" {
+                    send_form(
+                        json!("unconfirmed-form"),
+                        json!({"sessionId":session}),
+                        form_schema(),
+                        "Unconfirmed response",
+                    )?;
+                    barrier(&root, "answer-selected")?;
+                    return Ok(());
+                }
+                if matches!(
+                    mode.as_str(),
+                    "s02-cancel" | "s02-selected-cancel" | "s02-selected-permission-cancel"
+                ) {
+                    let selected = match mode.as_str() {
+                        "s02-selected-cancel" => "form",
+                        "s02-selected-permission-cancel" => "permission",
+                        _ => "none",
+                    };
+                    cancel_interactions(&mut reader, &root, &session, selected)?;
+                    emit(json!({"jsonrpc":"2.0","id":id,"result":{"stopReason":"cancelled"}}))?;
+                    continue;
+                }
+                if mode == "s02-content-capacity" || mode == "s02-count-capacity" {
+                    let count = if mode == "s02-count-capacity" { 65 } else { 8 };
+                    let message = if mode == "s02-count-capacity" {
+                        "pending".into()
+                    } else {
+                        "x".repeat(600 * 1024)
+                    };
+                    for index in 0..count {
+                        send_form(
+                            json!(index),
+                            json!({"sessionId":session}),
+                            form_schema(),
+                            &message,
+                        )?;
+                        barrier(&root, &format!("content-{index}"))?;
+                    }
+                    return Err("interaction capacity was not enforced".into());
+                }
+                let mut permitted = true;
+                if mode == "s02-invalid-scopes" {
+                    for (index, scope) in [
+                        json!({"sessionId":format!("{session}-foreign")}),
+                        json!({"requestId":99999}),
+                        json!({"sessionId":session,"requestId":id}),
+                        json!({"sessionId":session,"toolCallId":42}),
+                    ]
+                    .into_iter()
+                    .enumerate()
+                    {
+                        send_form(
+                            json!(format!("invalid-scope-{index}")),
+                            scope,
+                            form_schema(),
+                            "Invalid scope",
+                        )?;
+                        let response =
+                            receive(&mut reader)?.ok_or("invalid scope response missing")?;
+                        if response["id"] != format!("invalid-scope-{index}")
+                            || response["error"]["code"] != -32602
+                        {
+                            return Err(
+                                "invalid scope was guessed into a session or request".into()
+                            );
+                        }
+                    }
+                    fs::write(
+                        root.join("invalid-scopes-rejected"),
+                        b"exact invalid params",
+                    )?;
+                }
+                if mode == "s02-history" {
+                    send_form(
+                        json!("live-anchor"),
+                        json!({"sessionId":session}),
+                        form_schema(),
+                        "Live responder never evicted",
+                    )?;
+                    for index in 0..8 {
+                        let form_id = json!(format!("completed-content-{index}"));
+                        send_form(
+                            form_id.clone(),
+                            json!({"sessionId":session}),
+                            form_schema(),
+                            &"h".repeat(600 * 1024),
+                        )?;
+                        let response = receive(&mut reader)?.ok_or("history response missing")?;
+                        startup_bonus += form_bonus(&response, &form_id, false)?;
+                        barrier(&root, &format!("history-{index}"))?;
+                    }
+                    barrier(&root, "history-answers")?;
+                    let response = receive(&mut reader)?.ok_or("live anchor response missing")?;
+                    startup_bonus += form_bonus(&response, &json!("live-anchor"), false)?;
+                }
                 let bonus = if mode == "form-prompt" {
-                    emit(json!({"jsonrpc":"2.0","id":"bonus-form","method":"elicitation/create",
+                    emit(
+                        json!({"jsonrpc":"2.0","id":"bonus-form","method":"elicitation/create",
                         "params":{"mode":"form","sessionId":session,"message":"Choose arithmetic adjustment",
                         "requestedSchema":{"type":"object","properties":{
                             "bonus":{"type":"integer","title":"Adjustment","minimum":-100,"maximum":100,"default":0}
-                        },"required":["bonus"]}}}))?;
+                        },"required":["bonus"]}}}),
+                    )?;
                     let answer = receive(&mut reader)?.ok_or("form answer missing")?;
                     if !answer["error"].is_null() {
                         fs::write(root.join("form-rejected"), b"explicit protocol error")?;
@@ -289,10 +613,59 @@ fn main() -> Result<()> {
                     answer["result"]["content"]["bonus"]
                         .as_i64()
                         .ok_or("typed integer adjustment required")?
-                } else {
+                } else if matches!(
+                    mode.as_str(),
+                    "s02-form"
+                        | "s02-request-prompt"
+                        | "s02-invalid-scopes"
+                        | "s02-rich"
+                        | "s02-decline"
+                        | "s02-form-cancel"
+                        | "s02-invalid-schema"
+                ) {
+                    let schema = if root.join("schema.json").exists() {
+                        serde_json::from_slice(&fs::read(root.join("schema.json"))?)?
+                    } else if mode == "s02-rich" {
+                        rich_schema()
+                    } else {
+                        form_schema()
+                    };
+                    let scope = if mode == "s02-request-prompt" {
+                        json!({"requestId":id})
+                    } else {
+                        json!({"sessionId":session})
+                    };
+                    send_form(
+                        json!("reusable-form"),
+                        scope,
+                        schema,
+                        "Synthetic private arithmetic question",
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("form response missing")?;
+                    if mode == "s02-invalid-schema" {
+                        if response["id"] != "reusable-form" || response["error"]["code"] != -32602
+                        {
+                            return Err("unsupported schema not explicitly rejected".into());
+                        }
+                        fs::write(root.join("invalid-schema-rejected"), b"invalid_params")?;
+                        0
+                    } else {
+                        form_bonus(&response, &json!("reusable-form"), mode == "s02-rich")?
+                    }
+                } else if mode == "s02-permission" {
+                    send_permission(json!(73), &session)?;
+                    let response = receive(&mut reader)?.ok_or("permission response missing")?;
+                    permitted = permission_allows(&response, &json!(73))?;
+                    if permitted {
+                        fs::write(root.join("tool-effect"), b"authorized tool ran")?;
+                    }
                     0
+                } else {
+                    std::mem::take(&mut startup_bonus)
                 };
-                total += parts[1].parse::<i64>()? + parts[2].parse::<i64>()? + bonus;
+                if permitted {
+                    total += parts[1].parse::<i64>()? + parts[2].parse::<i64>()? + bonus;
+                }
                 commands += 1;
                 fs::write(
                     root.join("effect.tmp"),

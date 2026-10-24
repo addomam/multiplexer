@@ -1103,3 +1103,971 @@ fn e04s02_api_form_answer_resumes_exact_pending_prompt() {
     host.close(&agent);
     sentinel.alive();
 }
+
+fn pending(host: &Host, agent: &Agent, kind: &str) -> Value {
+    host.until("exact pending canonical interaction", || {
+        let projection = host.inspect(agent);
+        assert!(
+            !matches!(projection["lifecycle"].as_str(), Some("failed" | "ended")),
+            "{projection}"
+        );
+        projection["content"]["interactions"]
+            .as_array()?
+            .iter()
+            .find(|i| i["kind"] == kind && i["state"] == "pending")
+            .cloned()
+    })
+}
+
+fn form_answer(
+    agent: &Agent,
+    form: &Value,
+    call: &str,
+    action: &str,
+    values: Option<Value>,
+) -> Value {
+    let mut request = agent.action("acp-answer", call);
+    request["interaction_id"] = form["interaction_id"].clone();
+    request["revision"] = form["revision"].clone();
+    request["action"] = json!(action);
+    if let Some(values) = values {
+        request["values"] = values;
+    }
+    request
+}
+
+fn permission_answer(agent: &Agent, permission: &Value, call: &str, option: &str) -> Value {
+    let mut request = agent.action("acp-permission", call);
+    request["interaction_id"] = permission["interaction_id"].clone();
+    request["revision"] = permission["revision"].clone();
+    request["option_id"] = json!(option);
+    request
+}
+
+// Original persistent registration/provenance, not a controlling human PTY.
+// Parent's separate CLI/PTY smoke proves the actual human surface.
+struct OriginalNative(BufReader<UnixStream>);
+
+impl OriginalNative {
+    fn new(host: &Host) -> Self {
+        let stream = UnixStream::connect(&host.socket).unwrap();
+        stream.set_read_timeout(Some(DEADLINE)).unwrap();
+        stream.set_write_timeout(Some(DEADLINE)).unwrap();
+        Self(BufReader::new(stream))
+    }
+
+    fn exchange(&mut self, mut request: Value) -> Value {
+        request["version"] = json!(1);
+        request["persistent"] = json!(true);
+        serde_json::to_writer(self.0.get_mut(), &request).unwrap();
+        self.0.get_mut().write_all(b"\n").unwrap();
+        let mut line = String::new();
+        self.0
+            .by_ref()
+            .take(8 * 1024 * 1024)
+            .read_line(&mut line)
+            .unwrap();
+        assert!(line.ends_with('\n'));
+        serde_json::from_str(&line).unwrap()
+    }
+
+    fn call(&mut self, request: Value) -> Value {
+        let response = self.exchange(request);
+        assert_eq!(response["ok"], true, "{response}");
+        response["result"].clone()
+    }
+
+    fn acquire(&mut self, host: &Host, agent: &mut Agent) {
+        let registration = self.call(
+            json!({"op":"controller-create","role":"attachment","label":"Original S02 connection"}),
+        );
+        self.call(
+            json!({"op":"control-handle","handle":registration["controller"],"method":"view",
+            "view":{"serial":1,"target":{"kind":"acp","id":agent.target["id"]},"focused":true}}),
+        );
+        let ownership =
+            host.view(agent.target["id"].as_str().unwrap()).unwrap()["ownership"].clone();
+        let grant = self.call(json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+            "controller":registration["controller"],"mode":"force","observed":ownership["observed"]}));
+        agent.opened["control"] = grant["control"].clone();
+        agent.opened["generation"] = grant["generation"].clone();
+        agent.controller_id = registration["controller_id"].clone();
+    }
+}
+
+#[test]
+fn e04s02_request_scoped_initialize_and_session_forms_resume_original_bootstrap() {
+    for mode in ["s02-init", "s02-session"] {
+        let host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open(mode);
+        let form = pending(&host, &agent, "form");
+        assert!(form["scope"].get("sessionId").is_none(), "{form}");
+        assert!(form["scope"]["requestId"].is_number(), "{form}");
+        let metadata = host.inspect(&agent);
+        assert!(metadata["foreground"].is_null());
+        let mut forged = form_answer(
+            &agent,
+            &form,
+            "foreign-revision",
+            "accept",
+            Some(json!({"bonus":99})),
+        );
+        forged["revision"] = json!(2);
+        host.deny(forged, &["stale-interaction"]);
+        host.call(form_answer(
+            &agent,
+            &form,
+            "bootstrap-config",
+            "accept",
+            Some(json!({"bonus":15})),
+        ));
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "after-exact-bootstrap-response", "add 17 25");
+        let original = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(original["outcome"]["stop_reason"], "end_turn");
+        assert_eq!(agent.effect()["value"], 57);
+        assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+        assert_eq!(agent.effect()["session_id"], agent.target["session_id"]);
+        host.close(&agent);
+        sentinel.alive();
+    }
+}
+
+#[test]
+fn e04s02_authentication_form_uses_exact_retained_auth_rpc_without_new_prompt() {
+    let host = Host::new();
+    let mut agent = host.open("auth-form");
+    host.until("explicit auth required", || {
+        (host.inspect(&agent)["lifecycle"] == "auth-required").then_some(())
+    });
+    let mut authenticate = agent.action("acp-authenticate", "explicit-auth");
+    authenticate["method_id"] = json!("agent-login");
+    let admitted = host.call(authenticate);
+    let form = pending(&host, &agent, "form");
+    assert_eq!(
+        form["scope"]["requestId"],
+        host.work(&agent, &admitted["work_id"])["rpc_id"]
+    );
+    host.call(form_answer(
+        &agent,
+        &form,
+        "auth-config",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.barrier(&agent, "authenticate");
+    agent.release("authenticate");
+    // Session establishment can overtake a caller inspecting the auth result.
+    // Resync the exact read tuple; never relax stale-target mutation checks.
+    host.ready(&mut agent);
+    let completed = host.completed(&agent, &admitted["work_id"]);
+    assert_eq!(completed["rpc_id"], form["scope"]["requestId"]);
+    let prompt = host.prompt(&agent, "after-auth-form", "add 17 25");
+    host.completed(&agent, &prompt["work_id"]);
+    assert_eq!(agent.effect()["value"], 57);
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_parent_rpc_completion_retains_responder_without_rebinding_scope() {
+    let host = Host::new();
+    let mut agent = host.open("s02-parent-completed");
+    host.ready(&mut agent);
+    let form = pending(&host, &agent, "form");
+    assert_eq!(form["scope"]["requestId"], 0);
+    assert_eq!(form["scope_parent_state"], "completed");
+    host.call(form_answer(
+        &agent,
+        &form,
+        "completed-parent-form",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.until("original completed parent responder consumed", || {
+        agent.root.join("scoped-response").exists().then_some(())
+    });
+    let prompt = host.prompt(&agent, "not-rebound-to-this-prompt", "add 17 25");
+    let work = host.completed(&agent, &prompt["work_id"]);
+    assert_ne!(work["rpc_id"], form["scope"]["requestId"]);
+    assert_eq!(agent.effect()["value"], 57);
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_all_supported_values_validate_before_actual_arithmetic_and_defaults_never_submit() {
+    let host = Host::new();
+    let mut agent = host.open("s02-rich");
+    host.ready(&mut agent);
+    let prompt = host.prompt(&agent, "typed-rich-form", "add 17 25");
+    let form = pending(&host, &agent, "form");
+    assert!(!agent.root.join("effect.json").exists());
+    let values = json!({"bonus":5,"ratio":1.25,"enabled":false,"text":"λa","choice":"subtract",
+        "titled":"twenty","flags":["a","b"],"titled_flags":["red"]});
+    for (index, (field, invalid)) in [
+        ("bonus", json!(101)),
+        ("bonus", json!(0.5)),
+        ("ratio", json!(2.01)),
+        ("enabled", json!(null)),
+        ("text", json!("λ")),
+        ("text", json!("four")),
+        ("choice", json!("unavailable")),
+        ("titled", json!("not-offered")),
+        ("flags", json!(["a", "a"])),
+        ("flags", json!([])),
+        ("flags", json!(["a", 3])),
+        ("titled_flags", json!(["red", "blue", "red"])),
+        ("optional", json!(null)),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut invalid_values = values.clone();
+        invalid_values[field] = invalid;
+        host.deny(
+            form_answer(
+                &agent,
+                &form,
+                &format!("invalid-{index}"),
+                "accept",
+                Some(invalid_values),
+            ),
+            &["invalid-request"],
+        );
+    }
+    let mut missing = values.clone();
+    missing.as_object_mut().unwrap().remove("enabled");
+    host.deny(
+        form_answer(&agent, &form, "missing-required", "accept", Some(missing)),
+        &["invalid-request"],
+    );
+    assert!(!agent.root.join("effect.json").exists());
+    let accepted = host.call(form_answer(
+        &agent,
+        &form,
+        "typed-accept",
+        "accept",
+        Some(values.clone()),
+    ));
+    let original = host.completed(&agent, &prompt["work_id"]);
+    assert_eq!(agent.effect()["value"], 77);
+    assert_eq!(agent.effect()["commands"], 1);
+    assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+    let projection = host.inspect(&agent);
+    let interaction = projection["content"]["interactions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["interaction_id"] == form["interaction_id"])
+        .unwrap();
+    assert_eq!(interaction["selection"]["content"], values);
+    assert_eq!(interaction["selected_work_id"], accepted["work_id"]);
+    assert_eq!(interaction["application"], "unknown");
+    assert!(
+        interaction["validation_limitations"]
+            .as_array()
+            .is_some_and(|limitations| limitations.iter().any(|v| v
+                .as_str()
+                .is_some_and(|s| s.contains("pattern") && s.contains("format"))))
+    );
+    let public = host.call(json!({"op":"snapshot"})).to_string();
+    assert!(!public.contains("Synthetic private arithmetic question"));
+    assert!(!public.contains("requestedSchema"));
+    let metadata = exchange(
+        &host.socket,
+        json!({"op":"acp-inspect","target":agent.target}),
+    )
+    .unwrap()["result"]
+        .clone();
+    assert!(metadata.get("content").is_none());
+    for detail in metadata["interactions"].as_array().unwrap() {
+        assert!(detail.get("schema").is_none());
+        assert!(detail.get("selection").is_none());
+        assert!(detail.get("message").is_none());
+    }
+    assert!(!projection["work"].as_array().unwrap().iter().any(|w| {
+        w["call_id"]
+            .as_str()
+            .is_some_and(|id| id.starts_with("invalid-") || id == "missing-required")
+    }));
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_decline_and_cancel_are_distinct_deliberate_actions() {
+    for (mode, action, expected) in [
+        ("s02-decline", "decline", 32),
+        ("s02-form-cancel", "cancel", 22),
+    ] {
+        let host = Host::new();
+        let mut agent = host.open(mode);
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "explicit-disposition", "add 17 25");
+        let form = pending(&host, &agent, "form");
+        host.deny(
+            form_answer(
+                &agent,
+                &form,
+                "invalid-disposition-content",
+                action,
+                Some(json!({})),
+            ),
+            &["invalid-request"],
+        );
+        host.call(form_answer(
+            &agent,
+            &form,
+            "reviewed-disposition",
+            action,
+            None,
+        ));
+        let original = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(original["outcome"]["stop_reason"], "end_turn");
+        assert_eq!(agent.effect()["value"], expected);
+        assert_eq!(
+            host.inspect(&agent)["content"]["interactions"][0]["selection"]["action"],
+            action
+        );
+        assert!(!agent.root.join("unexpected-cancel").exists());
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s02_exact_offered_allow_and_reject_once_and_always_control_real_tool_effect() {
+    for (option, allows) in [
+        ("opaque-α", true),
+        ("opaque-β", true),
+        ("opaque-γ", false),
+        ("opaque-δ", false),
+    ] {
+        let host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open("s02-permission");
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "tool-gated-original-prompt", "add 17 25");
+        let permission = pending(&host, &agent, "permission");
+        assert_eq!(permission["scope"]["sessionId"], agent.target["session_id"]);
+        assert_eq!(
+            permission["scope"]["toolCallId"],
+            permission["tool_call"]["toolCallId"]
+        );
+        host.deny(
+            permission_answer(&agent, &permission, "fabricated-option", "allow_once"),
+            &["invalid-request"],
+        );
+        assert!(!agent.root.join("tool-effect").exists());
+        host.call(permission_answer(
+            &agent,
+            &permission,
+            "reviewed-exact-option",
+            option,
+        ));
+        let work = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(work["outcome"]["stop_reason"], "end_turn");
+        assert_eq!(agent.effect()["value"], if allows { 42 } else { 0 });
+        assert_eq!(agent.root.join("tool-effect").exists(), allows);
+        assert_eq!(agent.effect()["rpc_id"], work["rpc_id"]);
+        assert_eq!(
+            host.inspect(&agent)["content"]["interactions"][0]["selection"]["option_id"],
+            option
+        );
+        host.close(&agent);
+        sentinel.alive();
+    }
+}
+
+#[test]
+fn e04s02_original_native_and_api_first_valid_response_win_in_both_admission_orders() {
+    for kind in ["form", "permission"] {
+        for native_first in [false, true] {
+            let host = Host::new();
+            let mut agent = host.open(if kind == "form" {
+                "s02-form"
+            } else {
+                "s02-permission"
+            });
+            host.ready(&mut agent);
+            let mut native = OriginalNative::new(&host);
+            native.acquire(&host, &mut agent);
+            let prompt = host.prompt(&agent, "same-native-owned-prompt", "add 17 25");
+            let interaction = pending(&host, &agent, kind);
+            let api = if kind == "form" {
+                form_answer(
+                    &agent,
+                    &interaction,
+                    "api-choice",
+                    "accept",
+                    Some(json!({"bonus":15})),
+                )
+            } else {
+                permission_answer(&agent, &interaction, "api-choice", "opaque-α")
+            };
+            let original_native = if kind == "form" {
+                form_answer(
+                    &agent,
+                    &interaction,
+                    "native-choice",
+                    "accept",
+                    Some(json!({"bonus":-7})),
+                )
+            } else {
+                permission_answer(&agent, &interaction, "native-choice", "opaque-γ")
+            };
+            // Both envelopes capture the same pending revision before either
+            // admission. The first receipt is the ordering barrier, not sleep.
+            let (winner, loser) = if native_first {
+                let winner = native.call(original_native);
+                let loser = exchange(&host.socket, api).unwrap();
+                (winner, loser)
+            } else {
+                let winner = host.call(api);
+                let loser = native.exchange(original_native);
+                (winner, loser)
+            };
+            assert_eq!(loser["ok"], false, "{loser}");
+            assert_eq!(loser["error"]["code"], "stale-interaction", "{loser}");
+            let original = host.completed(&agent, &prompt["work_id"]);
+            assert_eq!(original["outcome"]["stop_reason"], "end_turn");
+            let expected = if kind == "form" {
+                if native_first { 35 } else { 57 }
+            } else if native_first {
+                0
+            } else {
+                42
+            };
+            assert_eq!(agent.effect()["value"], expected);
+            assert_eq!(agent.effect()["commands"], 1);
+            let projection = host.inspect(&agent);
+            assert_eq!(
+                projection["content"]["interactions"][0]["selected_work_id"],
+                winner["work_id"]
+            );
+            let losing_id = if native_first {
+                "api-choice"
+            } else {
+                "native-choice"
+            };
+            assert!(
+                !projection["work"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|w| w["call_id"] == losing_id)
+            );
+            assert!(!agent.root.join("unexpected-cancel").exists());
+            host.close(&agent);
+        }
+    }
+}
+
+#[test]
+fn e04s02_reused_wire_id_gets_fresh_interaction_and_old_ui_answer_cannot_rebind() {
+    let host = Host::new();
+    let mut agent = host.open("s02-form");
+    host.ready(&mut agent);
+    let first = host.prompt(&agent, "first-turn", "add 17 25");
+    let old = pending(&host, &agent, "form");
+    host.call(form_answer(
+        &agent,
+        &old,
+        "first-answer",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.completed(&agent, &first["work_id"]);
+    let second = host.prompt(&agent, "second-turn", "add 1 2");
+    let current = pending(&host, &agent, "form");
+    assert_ne!(current["interaction_id"], old["interaction_id"]);
+    host.deny(
+        form_answer(
+            &agent,
+            &old,
+            "stale-ui-choice",
+            "accept",
+            Some(json!({"bonus":97})),
+        ),
+        &["stale-interaction"],
+    );
+    host.call(form_answer(
+        &agent,
+        &current,
+        "new-deliberate-choice",
+        "accept",
+        Some(json!({"bonus":5})),
+    ));
+    host.completed(&agent, &second["work_id"]);
+    assert_eq!(agent.effect()["value"], 65);
+    assert_eq!(agent.effect()["commands"], 2);
+    let inspect = host.inspect(&agent);
+    assert!(
+        !inspect["work"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|w| w["call_id"] == "stale-ui-choice")
+    );
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_interrupt_pending_selected_and_late_interactions_reserves_exact_obligations() {
+    for selected in ["none", "form", "permission"] {
+        let host = Host::new();
+        let mut agent = host.open(match selected {
+            "form" => "s02-selected-cancel",
+            "permission" => "s02-selected-permission-cancel",
+            _ => "s02-cancel",
+        });
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "cancel-exact-prompt", "add 17 25");
+        host.barrier(&agent, "interactions");
+        let form = pending(&host, &agent, "form");
+        let permission = pending(&host, &agent, "permission");
+        let accepted_answer = match selected {
+            "form" => Some(host.call(form_answer(
+                &agent,
+                &form,
+                "selected-before-cancel",
+                "accept",
+                Some(json!({"bonus":15})),
+            ))),
+            "permission" => Some(host.call(permission_answer(
+                &agent,
+                &permission,
+                "selected-before-cancel",
+                "opaque-γ",
+            ))),
+            _ => None,
+        };
+        let mut interrupt = agent.action("acp-interrupt", "cancel-with-obligations");
+        interrupt["prompt_id"] = host.work(&agent, &prompt["work_id"])["prompt_id"].clone();
+        let cancel = host.call(interrupt);
+        host.deny(
+            permission_answer(
+                &agent,
+                &permission,
+                "losing-permission-after-cancel",
+                "opaque-α",
+            ),
+            &["stale-interaction"],
+        );
+        host.deny(
+            form_answer(&agent, &form, "losing-form-after-cancel", "decline", None),
+            &["stale-interaction"],
+        );
+        agent.release("interactions");
+        host.barrier(&agent, "cancel-responses");
+        let projection = host.inspect(&agent);
+        assert_eq!(host.work(&agent, &prompt["work_id"])["state"], "submitted");
+        assert_eq!(projection["foreground"]["state"], "cancelling");
+        let interactions = projection["content"]["interactions"].as_array().unwrap();
+        assert_eq!(interactions.len(), 4);
+        assert!(interactions.iter().all(|i| i["state"] == "selected"));
+        for interaction in interactions {
+            let original_selected = (selected == "form"
+                && interaction["interaction_id"] == form["interaction_id"])
+                || (selected == "permission"
+                    && interaction["interaction_id"] == permission["interaction_id"]);
+            assert_eq!(
+                interaction["selected_work_id"],
+                if original_selected {
+                    accepted_answer.as_ref().unwrap()["work_id"].clone()
+                } else {
+                    cancel["work_id"].clone()
+                }
+            );
+            assert_eq!(interaction["application"], "unknown");
+            host.deny(
+                if interaction["kind"] == "form" {
+                    form_answer(
+                        &agent,
+                        interaction,
+                        &format!("late-choice-{}", interaction["interaction_id"]),
+                        "cancel",
+                        None,
+                    )
+                } else {
+                    permission_answer(
+                        &agent,
+                        interaction,
+                        &format!("late-choice-{}", interaction["interaction_id"]),
+                        "opaque-α",
+                    )
+                },
+                &["stale-interaction"],
+            );
+        }
+        agent.release("cancel-responses");
+        let original = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(original["outcome"]["stop_reason"], "cancelled");
+        assert!(!agent.root.join("effect.json").exists());
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s02_interaction_content_and_pending_count_caps_fail_without_eviction_or_choice_loss() {
+    for (mode, retained) in [("s02-content-capacity", 6), ("s02-count-capacity", 64)] {
+        let host = Host::new();
+        let mut sentinel = Sentinel::new();
+        let mut agent = host.open(mode);
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "capacity-original-work", "add 17 25");
+        for index in 0..retained {
+            host.barrier(&agent, &format!("content-{index}"));
+            host.until("new live responder retained before next arrival", || {
+                let inspect = host.inspect(&agent);
+                (inspect["interactions"].as_array()?.len() == index + 1).then_some(())
+            });
+            agent.release(&format!("content-{index}"));
+        }
+        host.until("exact instance reports resource failure", || {
+            (host.inspect(&agent)["lifecycle"] == "failed").then_some(())
+        });
+        let projection = host.inspect(&agent);
+        assert_eq!(
+            projection["interactions"].as_array().unwrap().len(),
+            retained
+        );
+        assert!(
+            projection["interactions"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|i| i["state"] == "unknown")
+        );
+        assert_eq!(host.work(&agent, &prompt["work_id"])["state"], "unknown");
+        assert!(!agent.root.join("effect.json").exists());
+        host.reaped(&agent, "peer.pid");
+        host.call(json!({"op":"controller-create","role":"external","label":"responsive after interaction exhaustion"}));
+        sentinel.alive();
+    }
+}
+
+#[test]
+fn e04s02_submitted_form_response_followed_by_eof_is_not_agent_application() {
+    let host = Host::new();
+    let mut agent = host.open("s02-selected-eof");
+    host.ready(&mut agent);
+    let prompt = host.prompt(&agent, "unconfirmed-original", "add 17 25");
+    host.barrier(&agent, "answer-selected");
+    let form = pending(&host, &agent, "form");
+    let answer = host.call(form_answer(
+        &agent,
+        &form,
+        "unconfirmed-selection",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.until("actual response write submitted", || {
+        (host.work(&agent, &answer["work_id"])["delivery"] == "submitted").then_some(())
+    });
+    agent.release("answer-selected");
+    host.until("EOF unknown on original prompt", || {
+        (host.work(&agent, &prompt["work_id"])["state"] == "unknown").then_some(())
+    });
+    let projection = host.inspect(&agent);
+    assert_eq!(
+        projection["content"]["interactions"][0]["application"],
+        "unknown"
+    );
+    assert_eq!(
+        host.work(&agent, &answer["work_id"])["application"],
+        "unknown"
+    );
+    assert!(!agent.root.join("effect.json").exists());
+    host.reaped(&agent, "peer.pid");
+}
+
+#[test]
+fn e04s02_malformed_and_unsupported_schema_receive_errors_and_original_prompt_still_applies() {
+    for schema in [
+        json!({"type":"array","properties":{}}),
+        json!({"type":"object","properties":{"n":{"type":"integer","default":"coercible"}}}),
+        json!({"type":"object","properties":{"a":{"type":"array","items":{"type":"string","enum":["x"]},"default":["x",4]}}}),
+        json!({"type":"object","properties":{"nested":{"type":"object","properties":{}}}}),
+        json!({"type":"object","properties":{"n":{"type":"_future"}}}),
+        json!({"type":"object","properties":{"n":{"type":"number","minimum":4,"maximum":3}}}),
+        json!({"type":"object","properties":{"s":{"type":"string","enum":["a"],"oneOf":[{"const":"b","title":"B"}]}}}),
+    ] {
+        let host = Host::new();
+        let mut agent = host.open("s02-invalid-schema");
+        host.ready(&mut agent);
+        fs::write(
+            agent.root.join("schema.json"),
+            serde_json::to_vec(&schema).unwrap(),
+        )
+        .unwrap();
+        let prompt = host.prompt(&agent, "after-unsupported-schema", "add 17 25");
+        let original = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(original["outcome"]["stop_reason"], "end_turn");
+        assert_eq!(agent.effect()["value"], 42);
+        assert!(agent.root.join("invalid-schema-rejected").exists());
+        assert_eq!(host.inspect(&agent)["interactions"], json!([]));
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s02_unadvertised_url_filesystem_terminal_and_unknown_requests_get_exact_errors() {
+    for mode in ["unsupported-bootstrap", "unsupported-prompt"] {
+        let host = Host::new();
+        let mut agent = host.open(mode);
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "after-unadvertised-requests", "add 17 25");
+        host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(agent.effect()["value"], 42);
+        assert!(agent.root.join("unsupported-complete").exists());
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s02_request_scoped_prompt_and_invalid_scopes_preserve_exact_original_work() {
+    for mode in ["s02-request-prompt", "s02-invalid-scopes"] {
+        let host = Host::new();
+        let mut agent = host.open(mode);
+        host.ready(&mut agent);
+        let prompt = host.prompt(&agent, "exact-scoped-prompt", "add 17 25");
+        let form = pending(&host, &agent, "form");
+        if mode == "s02-request-prompt" {
+            assert_eq!(
+                form["scope"]["requestId"],
+                host.work(&agent, &prompt["work_id"])["rpc_id"]
+            );
+            assert!(form["scope"].get("sessionId").is_none());
+        } else {
+            assert!(agent.root.join("invalid-scopes-rejected").exists());
+        }
+        host.call(form_answer(
+            &agent,
+            &form,
+            "scoped-prompt-answer",
+            "accept",
+            Some(json!({"bonus":15})),
+        ));
+        let original = host.completed(&agent, &prompt["work_id"]);
+        assert_eq!(agent.effect()["value"], 57);
+        assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+        assert_eq!(agent.effect()["session_id"], agent.target["session_id"]);
+        host.close(&agent);
+    }
+}
+
+#[test]
+fn e04s02_native_allow_then_api_deny_resume_same_session_without_second_tool_effect() {
+    let host = Host::new();
+    let mut agent = host.open("s02-permission");
+    host.ready(&mut agent);
+    let mut native = OriginalNative::new(&host);
+    native.acquire(&host, &mut agent);
+    let first = host.prompt(&agent, "native-allowed-tool", "add 17 25");
+    let permission = pending(&host, &agent, "permission");
+    native.call(permission_answer(
+        &agent,
+        &permission,
+        "native-allow-always",
+        "opaque-β",
+    ));
+    host.completed(&agent, &first["work_id"]);
+    assert_eq!(agent.effect()["value"], 42);
+    let marker = fs::read(agent.root.join("tool-effect")).unwrap();
+    let second = host.prompt(&agent, "api-denied-tool", "add 100 200");
+    let next = pending(&host, &agent, "permission");
+    assert_ne!(next["interaction_id"], permission["interaction_id"]);
+    host.call(permission_answer(
+        &agent,
+        &next,
+        "api-reject-always",
+        "opaque-δ",
+    ));
+    let original = host.completed(&agent, &second["work_id"]);
+    assert_eq!(agent.effect()["value"], 42);
+    assert_eq!(agent.effect()["commands"], 2);
+    assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+    assert_eq!(fs::read(agent.root.join("tool-effect")).unwrap(), marker);
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_force_and_pending_claim_cancellation_retain_same_unanswered_form() {
+    let host = Host::new();
+    let mut agent = host.open("s02-form");
+    host.ready(&mut agent);
+    let prompt = host.prompt(&agent, "form-through-ownership-transitions", "add 17 25");
+    let form = pending(&host, &agent, "form");
+    let stale_answer = form_answer(
+        &agent,
+        &form,
+        "stale-answer",
+        "accept",
+        Some(json!({"bonus":97})),
+    );
+    let successor =
+        host.call(json!({"op":"controller-create","role":"external","label":"Form successor"}));
+    let ownership = host.view(agent.target["id"].as_str().unwrap()).unwrap()["ownership"].clone();
+    let forced = host.call(
+        json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+        "controller":successor["controller"],"mode":"force","observed":ownership["observed"]}),
+    );
+    host.deny(stale_answer, &["stale-control", "stale-handle"]);
+    let requester = host.call(
+        json!({"op":"controller-create","role":"external","label":"Withdrawn pending claimant"}),
+    );
+    let ownership = host.view(agent.target["id"].as_str().unwrap()).unwrap()["ownership"].clone();
+    let claim = host.call(json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+        "controller":requester["controller"],"mode":"cooperative","when":{"kind":"now"},"observed":ownership["observed"]}));
+    host.call(json!({"op":"control-handle","handle":claim["claim"],"method":"cancel"}));
+    let retained = pending(&host, &agent, "form");
+    assert_eq!(retained["interaction_id"], form["interaction_id"]);
+    assert_eq!(retained["scope"], form["scope"]);
+    assert!(!agent.root.join("effect.json").exists());
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    let ownership = host.view(agent.target["id"].as_str().unwrap()).unwrap()["ownership"].clone();
+    assert!(ownership["owner"].is_null());
+    let recovered = host.call(
+        json!({"op":"ownership-claim","target":{"kind":"acp","id":agent.target["id"]},
+        "controller":successor["controller"],"mode":"force","observed":ownership["observed"]}),
+    );
+    assert_ne!(recovered["generation"], forced["generation"]);
+    agent.opened = recovered;
+    host.call(form_answer(
+        &agent,
+        &retained,
+        "fresh-answer-after-recovery",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    let original = host.completed(&agent, &prompt["work_id"]);
+    assert_eq!(agent.effect()["value"], 57);
+    assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+    assert_eq!(original["controller_id"], agent.controller_id);
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_completed_interaction_content_truncates_without_evicting_live_responder() {
+    let host = Host::new();
+    let mut agent = host.open("s02-history");
+    host.ready(&mut agent);
+    let prompt = host.prompt(&agent, "bounded-interaction-history", "add 17 25");
+    let anchor = host.until("live anchor interaction", || {
+        host.inspect(&agent)["content"]["interactions"]
+            .as_array()?
+            .iter()
+            .find(|i| i["message"] == "Live responder never evicted")
+            .cloned()
+    });
+    let mut oldest = None;
+    for index in 0..8 {
+        let form = host.until("next large history form", || {
+            host.inspect(&agent)["content"]["interactions"]
+                .as_array()?
+                .iter()
+                .find(|i| {
+                    i["state"] == "pending" && i["interaction_id"] != anchor["interaction_id"]
+                })
+                .cloned()
+        });
+        if oldest.is_none() {
+            oldest = Some(form.clone());
+        }
+        host.call(form_answer(
+            &agent,
+            &form,
+            &format!("history-answer-{index}"),
+            "accept",
+            Some(json!({"bonus":1})),
+        ));
+        host.barrier(&agent, &format!("history-{index}"));
+        host.until("writer releases completed interaction content", || {
+            host.inspect(&agent)["content"]["interactions"]
+                .as_array()?
+                .iter()
+                .find(|i| {
+                    i["interaction_id"] == form["interaction_id"] && i["delivery"] == "submitted"
+                })
+                .map(|_| ())
+        });
+        agent.release(&format!("history-{index}"));
+    }
+    host.barrier(&agent, "history-answers");
+    let inspect = host.inspect(&agent);
+    assert!(inspect["truncation"]["interactions"].as_u64().unwrap() > 0);
+    let retained = inspect["content"]["interactions"].as_array().unwrap();
+    assert!(
+        retained
+            .iter()
+            .any(|i| i["interaction_id"] == anchor["interaction_id"] && i["state"] == "pending")
+    );
+    let oldest = oldest.unwrap();
+    assert!(
+        !retained
+            .iter()
+            .any(|i| i["interaction_id"] == oldest["interaction_id"])
+    );
+    host.deny(
+        form_answer(
+            &agent,
+            &oldest,
+            "evicted-old-ui-choice",
+            "accept",
+            Some(json!({"bonus":97})),
+        ),
+        &["stale-interaction"],
+    );
+    host.call(form_answer(
+        &agent,
+        &anchor,
+        "retained-live-answer",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    agent.release("history-answers");
+    let original = host.completed(&agent, &prompt["work_id"]);
+    assert_eq!(agent.effect()["value"], 65);
+    assert_eq!(agent.effect()["commands"], 1);
+    assert_eq!(agent.effect()["rpc_id"], original["rpc_id"]);
+    host.close(&agent);
+}
+
+#[test]
+fn e04s02_actual_response_pipe_failure_records_failed_delivery_not_agent_application() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("s02-write-fail");
+    host.ready(&mut agent);
+    let prompt = host.prompt(&agent, "pipe-failure-original", "add 17 25");
+    host.barrier(&agent, "closed-input");
+    let form = pending(&host, &agent, "form");
+    let answer = host.call(form_answer(
+        &agent,
+        &form,
+        "response-to-closed-pipe",
+        "accept",
+        Some(json!({"bonus":15})),
+    ));
+    host.until("actual responder write failure", || {
+        (host.work(&agent, &answer["work_id"])["delivery"] == "write-failed").then_some(())
+    });
+    let projection = host.inspect(&agent);
+    assert_eq!(host.work(&agent, &answer["work_id"])["state"], "failed");
+    assert_eq!(projection["content"]["interactions"][0]["state"], "failed");
+    assert_eq!(
+        projection["content"]["interactions"][0]["delivery"],
+        "write-failed"
+    );
+    assert_eq!(
+        projection["content"]["interactions"][0]["application"],
+        "unknown"
+    );
+    host.until(
+        "original prompt is unconfirmed after failed response",
+        || (host.work(&agent, &prompt["work_id"])["state"] == "unknown").then_some(()),
+    );
+    assert!(!agent.root.join("effect.json").exists());
+    host.reaped(&agent, "peer.pid");
+    sentinel.alive();
+}
