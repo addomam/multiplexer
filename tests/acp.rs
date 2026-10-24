@@ -1065,3 +1065,41 @@ fn e04s01_native_input_execution_screen_and_close_reject_acp_without_effect() {
     assert_eq!(agent.effect()["value"], 42);
     host.close(&agent);
 }
+
+#[test]
+fn e04s02_api_form_answer_resumes_exact_pending_prompt() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("form-prompt");
+    host.ready(&mut agent);
+    let admitted = host.prompt(&agent, "prompt-awaiting-genuine-form", "add 17 25");
+    let form = host.until("genuine pending form on the original session", || {
+        assert!(
+            !agent.root.join("form-rejected").exists(),
+            "pre-S02 broker rejected the genuine form instead of publishing it"
+        );
+        let projection = host.inspect(&agent);
+        assert_eq!(projection["lifecycle"], "ready", "{projection}");
+        projection["content"]["interactions"]
+            .as_array()?
+            .iter()
+            .find(|interaction| interaction["kind"] == "form" && interaction["state"] == "pending")
+            .cloned()
+    });
+    assert_eq!(form["scope"]["sessionId"], agent.target["session_id"]);
+    assert!(!agent.root.join("effect.json").exists());
+    let mut answer = agent.action("acp-answer", "deliberate-form-answer");
+    answer["interaction_id"] = form["interaction_id"].clone();
+    answer["revision"] = form["revision"].clone();
+    answer["action"] = json!("accept");
+    answer["values"] = json!({"bonus":15});
+    host.call(answer);
+    let completed = host.completed(&agent, &admitted["work_id"]);
+    assert_eq!(completed["outcome"]["stop_reason"], "end_turn");
+    let effect = agent.effect();
+    assert_eq!(effect["session_id"], agent.target["session_id"]);
+    assert_eq!(effect["value"], 57);
+    assert_eq!(effect["commands"], 1);
+    host.close(&agent);
+    sentinel.alive();
+}

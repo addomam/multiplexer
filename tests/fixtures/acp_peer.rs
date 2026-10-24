@@ -272,7 +272,27 @@ fn main() -> Result<()> {
                 if parts.len() != 3 || parts[0] != "add" {
                     return Err("expected arithmetic command".into());
                 }
-                total += parts[1].parse::<i64>()? + parts[2].parse::<i64>()?;
+                let bonus = if mode == "form-prompt" {
+                    emit(json!({"jsonrpc":"2.0","id":"bonus-form","method":"elicitation/create",
+                        "params":{"mode":"form","sessionId":session,"message":"Choose arithmetic adjustment",
+                        "requestedSchema":{"type":"object","properties":{
+                            "bonus":{"type":"integer","title":"Adjustment","minimum":-100,"maximum":100,"default":0}
+                        },"required":["bonus"]}}}))?;
+                    let answer = receive(&mut reader)?.ok_or("form answer missing")?;
+                    if !answer["error"].is_null() {
+                        fs::write(root.join("form-rejected"), b"explicit protocol error")?;
+                        return Err("form was rejected instead of answered".into());
+                    }
+                    if answer["id"] != "bonus-form" || answer["result"]["action"] != "accept" {
+                        return Err("wrong original form response".into());
+                    }
+                    answer["result"]["content"]["bonus"]
+                        .as_i64()
+                        .ok_or("typed integer adjustment required")?
+                } else {
+                    0
+                };
+                total += parts[1].parse::<i64>()? + parts[2].parse::<i64>()? + bonus;
                 commands += 1;
                 fs::write(
                     root.join("effect.tmp"),
