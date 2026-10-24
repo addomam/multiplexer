@@ -65,8 +65,21 @@ handoff:
     S02 self-audit and fresh blind A/B round1 pass100/100 with zero must-fix/should-fix; security reports no supported findings. Two Consider-only comments are dispositioned without code changes. All six S02 tasks now pass actual command/smoke/security gates; safely checkpoint integration before retiring the two owned workers and starting S03. No historical cap reset/live approval/publication.
     S02 is safely integrated locally as f87ec7b; both worker commits are ancestors and their clean worktrees were removed without force after graceful OMP/MCP exit. All six owned shell/agent/MCP PIDs, both worktrees and Herdr workspaces/tabs are absent; worker branches remain. S02 is done locally. Next: S03 on the feature branch, no renewed Plan/live/publication authority.
     S03 starts from043cc0f with unchanged verified S02 runtime sources (workspace372/strict Rust/Bun8/Zsh and exact22library/19integration proof). Existing approved threat/impact/Plan/contracts are reused, not reopened. Parent owns shared authority/daemon/top-level routing and native test-module registration; independent backend and actual-PTY test slices will first deliver test-only commits, with no mid-flight checks or speculative source fixes.
-  last_step_completed: e04s03-approved-scope-and-verified-feature-baseline
+    S03 test-only integration9638f68 preserves both worker deliveries; parent registered native cases and corrected API-version/public-shape/Darwin-pointer fixture errors without production edits. Admission unit1 and backend7 pass; native4 fail at fixture lifetime, canonical inert-text expectation and unclassified cooperative prompt navigation (artifact1329). All S03 tasks remain failing; native worker continues bounded test-only repair from9638f68 with no checks.
+    Actual outside-test original-native conditional proof attempt3 and two-surface handoff attempt2 pass on unchanged f87ec7b production: safe offer before original question completion, reserved B excludes C, force never cancels, pending cancel grants nobody and retains work/private recovery, fresh human warning/confirmation and typed15 reach130/count2 without replay. TUI/host/daemon exit0, termios restored, owned peer/workers/drainer/root cleaned without fallback; unrelated sentinel survives. Fresh full gates/audit/reviews remain; no live/publication approval or historical cap reset.
+    Native-only repaira71cc1e is integrated; all four native cases now pass, including explicit fresh7/cumulative67 and actual inert hostile surface. A later busy-preserved-draft fixture failure1344 was not ignored: parent added rendered foreground readiness, not retry/replay. Current exact unit1/integration11 and workspace384/30suites/10ignored, strict Rust, OMP8/49 and Zsh all pass at1346; nativePTY19/fullPTY34 at1337. Self-audit PASS and source freeze e04s03-round1-source.json are complete; fresh blind S03 A/B/security round1 is next. Tasks remain failing, workers preserved, production unchanged.
+    Fresh S03 blind round1 A/B each score100/100 on32items with zero must/should/consider and independently match all14 frozen source hashes; security0 supported/operational findings. Raw reports and AND gate are preserved. All six actual task gates now pass; safely commit unchanged reviewed source before graceful owned-worker retirement and S04. No historical cap reset, live run, install or ACP publication.
+  last_step_completed: e04s03-independent-round1-AND-PASS
   required_reading:
+    - specs/verifications/e04s03-build-review-round1.json
+    - specs/security/epics/e04/e04s03-review-round1.json
+    - specs/verifications/e04s03-verify.yaml
+    - specs/verifications/e04s03-round1-source.json
+    - specs/verifications/AUDIT-e04s03.md
+    - specs/verifications/NFR-e04s03.json
+    - specs/verifications/e04s03-build.md
+    - specs/verifications/e04s03-conditional-native-attempt3.json
+    - specs/verifications/e04s03-handoff-native-attempt2.json
     - specs/verifications/e04s02-build-review-round1.json
     - specs/verifications/e04s02-build.md
     - specs/verifications/AUDIT-e04s02.md
@@ -578,14 +591,20 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s03
   story_bcps: 8
-  step: 4
-  completed_steps: [0, 1, 2, 3]
+  step: 7
+  completed_steps: [0, 1, 2, 3, 4, 5, 6]
   started_at: "2026-10-24T05:59:41.553503+00:00"
   baseline: {commit: 043cc0f, code_commit: f87ec7b, source: specs/verifications/e04s02-integration-source.json, workspace_evidence: 'artifact://1266', exact_story_evidence: 'artifact://1269', workspace_rust_passed: 372, omp_passed: 8, production_source_unchanged: true}
   integration_owner: parent
-  implementation_started: false
-  audit_result: not-run
-  runtime_acceptance: failing-S03-unverified
+  implementation_started: true
+  audit_result: PASS-self-audit
+  runtime_acceptance: passed-local-task-gates-safe-checkpoint-and-retirement-pending
   approved_plan_reopened: false
   trace_and_OKF: no-bundled-generating-scripts-not-a-coverage-PASS
-  owned_sessions: []
+  test_checkpoint: {commit: 9638f68, production_code: f87ec7b, unit_passed: 1, integration_passed: 7, integration_failed: 4, artifact: 'artifact://1329', confirmed_product_defects: 0}
+  actual_runtime: {conditional: specs/verifications/e04s03-conditional-native-attempt3.json, handoff_force_cancel_no_replay: specs/verifications/e04s03-handoff-native-attempt2.json, passed: true, owned_cleanup_without_fallback: true, story_acceptance: still-failing}
+  verified_candidate: {source: specs/verifications/e04s03-round1-source.json, artifact: 'artifact://1346', unit_passed: 1, integration_passed: 11, workspace_passed: 384, suites: 30, ignored: 10, strict_rust: passed, omp: 8, zsh_syntax: passed, native_pty_filter: 19, pty_control: 34, audit: specs/verifications/AUDIT-e04s03.md}
+  build_review: {scope: e04s03-build, round: 1, max_rounds: 5, status: PASS, scores: [100, 100], must_fix: [0, 0], should_fix: [0, 0], consider: [0, 0], evidence: specs/verifications/e04s03-build-review-round1.json, security_findings: 0, historical_caps: unchanged}
+  owned_sessions:
+    - {agent: e04-s03-backend, workspace: w1V, tab: 'w1V:t1', pane: 'w1V:p1', branch: feat/acp-s03-backend, worktree: /Users/addomam/projects/amux-acp-s03-backend, base: 31b167d, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: done-test-only-integrated-awaiting-acceptance, commit: 62874f299f112e70fb02a7a8a206badba878b52f, integration: 9638f68, completion_job: bg_196, worker_verification: prohibited-parent-only}
+    - {agent: e04-s03-native, workspace: w1W, tab: 'w1W:t1', pane: 'w1W:p1', branch: feat/acp-s03-native, worktree: /Users/addomam/projects/amux-acp-s03-native, base: 31b167d, files: [tests/acp/native.rs], first_delivery: tests-only-no-production-repair, commit: 61812ca700de54abd1975f47ca05db0652e9ab8b, repair_commit: a71cc1e6454256973258e0ee30dffebbd8af427a, integration_base: 9638f68, model: openai-codex/gpt-6.1-sol, thinking: high, status: done-test-only-integrated-awaiting-fresh-review-and-safe-retirement, completion_job: bg_201, worker_verification: prohibited-parent-only}

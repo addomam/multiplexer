@@ -16,6 +16,8 @@
 - Add native typed flat controls, editable defaults and explicit unset, two-step review/accept, separate form decline/cancel and deliberate permission allow/reject once/always. Share backend answer validation; expose local pattern/format limitations without claiming general JSON Schema validation.
 - Linearize competing API/native responses and reserve explicit-interrupt replies atomically. Keep late applicable forms/permissions nonselectable, losing answers out of accepted history, and written delivery distinct from agent application.
 - Align native history with 64 live/responding plus 1024 retained completed records; account for bounded server metadata separately from the 4-MiB canonical content cap. Preserve supported large declared defaults and optional omission while keeping submitted answers within 64 KiB.
+- Exercise running-question reserved handoff, noncancelling force, pending cancellation/private recovery, original-attachment conditional consent and all native input/draft fences against the same live ACP peer. Preserve stale-answer rejection and independently observed fresh arithmetic effects after deliberate reacquisition.
+- Verify canonical gap/category retention and inert hostile rendering through a real controlling PTY. Keep actual cleanup observations separate from fixture fallback; pin the native test host until post-TUI termios observation and deliberately type fresh answers rather than asserting incidental defaults.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 

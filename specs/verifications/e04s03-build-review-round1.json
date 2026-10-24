@@ -1,0 +1,54 @@
+{
+  "scope": "e04s03-build",
+  "round": 1,
+  "max_rounds": 5,
+  "completed_at": "2026-10-24T07:06:34.924749+00:00",
+  "status": "PASS",
+  "source": "specs/verifications/e04s03-round1-source.json",
+  "numeric_rule": "both >=94 with zero must-fix;32 items each;100*(32-must-should)/32",
+  "scores": [
+    100,
+    100
+  ],
+  "total_items": [
+    32,
+    32
+  ],
+  "must_fix": [
+    0,
+    0
+  ],
+  "should_fix": [
+    0,
+    0
+  ],
+  "consider": [
+    0,
+    0
+  ],
+  "raw_reports": [
+    "specs/verifications/e04s03-review-a-round1.json",
+    "specs/verifications/e04s03-review-b-round1.json"
+  ],
+  "both_reviewers_independently_matched_all_14_frozen_hashes": true,
+  "reviewers_ran_checks": false,
+  "parent_current_checks": "artifact://1346",
+  "native_regressions": "artifact://1337",
+  "security": {
+    "supported_findings": 0,
+    "operational_findings": 0,
+    "scope": "static S03 implemented-flow trace, not real-adapter or blanket runtime assurance",
+    "evidence": "specs/security/epics/e04/e04s03-review-round1.json",
+    "limitation": "Security specialist had no mounted hashing tool; both independent code reviewers verified all14 frozen hashes."
+  },
+  "dispositions": [
+    {
+      "source": "Reviewer A unscored Fowler note, not a finding",
+      "observation": "Two fixture interrupt-mode branches repeat a cancel-shape validation.",
+      "decision": "Keep explicit local fixture branches; no consumer failure or must/should/consider finding, no speculative refactor or post-review source change."
+    }
+  ],
+  "source_changed_after_review": false,
+  "historical_e03_S01_caps": "unchanged",
+  "S04_live_and_publication": "not-authorized-not-accepted"
+}

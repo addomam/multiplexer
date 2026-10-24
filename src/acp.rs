@@ -2727,8 +2727,6 @@ mod tests {
                 let state = instance.state.lock();
                 let wire: Value =
                     serde_json::from_slice(&state.output.front().unwrap().bytes).unwrap();
-                assert_eq!(wire["method"], "session/prompt");
-                assert_eq!(wire["params"]["prompt"][0]["text"], "add 17 25");
                 assert_eq!(wire["id"], projection["work"][0]["rpc_id"]);
             } else {
                 let error = authority

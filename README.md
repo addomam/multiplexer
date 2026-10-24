@@ -99,9 +99,11 @@ Only the first valid response is canonical; a stale losing answer is neither sen
 
 Ownership is fenced at **amux input admission**, not at provider application. Already accepted work may continue under its original IDs after handoff. Force changes authority only; it never interrupts or kills the adapter. Ordinary pending cancellation invalidates the old control, grants nobody and retains accepted work. A second foreground prompt is busy, not steering or an implicit queue.
 
+Cooperative yield reserves the unowned gap for that requester; accepting its offer is explicit and may happen before the original prompt finishes. Questions, permissions and admitted work stay on the same live connection/session. Conditional keep/withdraw preserve the human's control; focus or activity changes can retract an offer, and reacquisition policy stays outside amux. A borrowed control does not acquire the original attachment's activity provenance. Dismiss the ownership panel with **Esc** before returning to the conversation editor; acquiring control never submits an old draft.
+
 Default inspection, global snapshots and events are metadata-only. Transcript content is an explicit bounded incremental read with gap indicators. Closing a native shell does not close a sibling ACP view; explicit `acp-close` and daemon shutdown end the owned ACP lifetime. Unknown process-identity cleanup stays incomplete, retained and charged rather than being advertised as successful cleanup.
 
-Local deterministic-peer CLI/controlling-PTY evidence is in [e04s01 transport verification](specs/verifications/e04s01-build.md) and [e04s02 interaction verification](specs/verifications/e04s02-build.md). Neither proves real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. The thin non-ACP integration API remains out of scope.
+Local deterministic-peer CLI/controlling-PTY evidence is in [transport verification](specs/verifications/e04s01-build.md), [interaction verification](specs/verifications/e04s02-build.md) and [ownership verification](specs/verifications/e04s03-build.md); each records its own acceptance status. None proves real adapter/provider/auth/model compatibility. New live checks and ACP main publication require separate approval. The thin non-ACP integration API remains out of scope.
 
 ## Picker and native interaction
 

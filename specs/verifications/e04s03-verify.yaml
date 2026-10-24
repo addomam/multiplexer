@@ -1,0 +1,86 @@
+type: verification
+context: specs/epics/e04-acp-agent-interaction/context.yaml
+story_id: e04s03
+verified_at: '2026-10-24T07:06:34.924749+00:00'
+verifier: parent-actual-CLI-controlling-PTY-and-project-commands
+status: passed-local-task-gates-safe-completion-pending
+source: specs/verifications/e04s03-round1-source.json
+terminal_verdict:
+  command: cargo fmt && cargo build --example acp_fixture && cargo test --lib e04s03_ -- --nocapture && cargo test --test acp e04s03_ -- --nocapture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh
+  exit_code: 0
+  artifact: artifact://1346
+  note: Single contiguous actual current run; earlier failures are preserved, not combined into a PASS.
+  library_passed: 1
+  integration_passed: 11
+  integration_ignored: 0
+phases:
+  cold_start:
+    passed: true
+    method: Fresh private daemon/socket/HOME/config/project roots; real built CLI, owned synthetic arithmetic peer and controlling PTY.
+  mechanical:
+    passed: true
+    artifact: artifact://1346
+    workspace_passed: 384
+    suites: 30
+    ignored: 10
+    strict_workspace_clippy_check_build_fmt: passed
+    omp_passed: 8
+    omp_assertions: 49
+    stock_zsh_syntax: passed
+  security:
+    status: passed-static-no-supported-or-operational-findings
+    self_audit: specs/verifications/AUDIT-e04s03.md
+    evidence: specs/security/epics/e04/e04s03-review-round1.json
+    limitation: Security specialist traced current sources but lacked hashing tools; both code reviewers independently matched all14 frozen hashes. Not live-adapter assurance.
+  independent_code_review:
+    passed: true
+    round: 1
+    max_rounds: 5
+    scores: [100, 100]
+    total_items: [32, 32]
+    must_fix: [0, 0]
+    should_fix: [0, 0]
+    consider: [0, 0]
+    evidence: specs/verifications/e04s03-build-review-round1.json
+    source_changed_after_review: false
+  nfr:
+    evidence: specs/verifications/NFR-e04s03.json
+    local_contract: passed
+    overall_go: passed-local-S03-only
+  actual_native:
+    passed: true
+    evidence_index: specs/verifications/e04s03-build.md
+    conditional: specs/verifications/e04s03-conditional-native-attempt3.json
+    handoff_force_cancel_no_replay: specs/verifications/e04s03-handoff-native-attempt2.json
+    conditional_value: 42
+    conditional_commands: 1
+    two_surface_value: 130
+    two_surface_commands: 2
+    same_live_tuple_and_original_RPC: observed
+    force_implicit_cancel_or_kill: absent
+    pending_cancel_grants: none
+    private_recovery: retained-original-work-no-control
+    keep_withdraw: preserve-human-control
+    observer_input_and_old_drafts: not-replayed
+    cleanup_before_fallback: complete-no-fallback
+    tui_host_daemon_exit: [0, 0, 0]
+    original_termios: restored
+    unrelated_sentinel: survived-until-intentional-reap
+  native_regression:
+    artifact: artifact://1337
+    native_pty_filter_passed: 19
+    full_pty_control_passed: 34
+historical_attempts:
+  evidence: specs/verifications/e04s03-build.md
+  initial_integration: {artifact: 'artifact://1329', passed: 7, failed: 4}
+  first_corrected: {artifact: 'artifact://1342', passed: 11, failed: 0}
+  later_readiness_failure: {artifact: 'artifact://1344', passed: 10, failed: 1, later_workspace_gates_executed: false}
+  confirmed_production_defects: 0
+  correction: Test-host lifetime/canonical expectation and actual rendered editor readiness, not application retry or replay.
+limits:
+  real_adapter_provider_auth_checks: not-run-not-approved
+  S04_complete_broker: not-yet-accepted
+  historical_native_fence: unchanged-failing
+  historical_review_caps: unchanged
+  main_merge_push_release: not-authorized
+  missing_bundled_trace_OKF_scripts: skipped-not-coverage-PASS

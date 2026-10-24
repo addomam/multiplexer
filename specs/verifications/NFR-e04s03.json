@@ -1,0 +1,20 @@
+{
+  "scope": "e04s03-local-ownership-and-native-boundaries",
+  "status": "passed-local-S03-runtime-regressions-and-scoped-static-security",
+  "source": "specs/verifications/e04s03-round1-source.json",
+  "verification": "artifact://1346",
+  "production_implementation_or_dependency_changes": false,
+  "observed": {
+    "admission": "Both actual Authority/Broker commit/revoke orderings; held peer input pipe does not block force, private recovery or snapshot inspection; original admitted work eventually produces42 under its original RPC/session after transfer and socket loss.",
+    "identity_and_lifecycle": "Reserved explicit cooperative accept while genuine question is pending; ordinary cancel invalidates old control, grants none and retains work; force does not interrupt or kill; stale original prompt ID cannot cancel its successor. Actual CLI/PTY handoff reaches130/count2 without replay.",
+    "native_provenance": "Original persistent connection activity is distinct from borrowed control; actual original human keep/withdraw and focus-invalidated conditional acceptance preserve control. No invented ACP PTY-call ledger or automatic reacquisition policy.",
+    "history_and_rendering": "2112 update burst crosses bounded canonical retention; explicit gap/pagination retains category tail and exact inert hostile text, no arrival-guessed prompt association. Actual native surface has no hostile title, clipboard, CSI or bidi effect.",
+    "privacy": "Snapshot/events/default inspect do not contain synthetic transcript markers; new evidence credential/private-control-ref scan has no matches. No real content, auth environment, provider trace or credentials recorded.",
+    "cleanup": "Real native TUI exits0 and termios is checked while original Zsh session leader remains pinned; explicit host finish exits0 and drainer joins. Native finish checks daemon/socket/root and unrelated sentinel before fixture fallback. Outside-test successful private CLI/PTY records observe peer/worker cleanup, root/drainer retirement, daemon/host/TUI0 and sentinel survival with no fallback. Group fallback requires a successful original-leader observation, not a reaped PID or observation error."
+  },
+  "regressions": {"admission_unit": 1, "s03_integration": 11, "native_pty_filter": 19, "pty_control": 34, "workspace": 384, "suites": 30, "historical_ignored": 10, "omp": 8, "omp_assertions": 49, "strict_rust_and_zsh_syntax": "passed"},
+  "independent_review": {"round": 1, "scores": [100, 100], "must_fix": [0, 0], "should_fix": [0, 0], "supported_security_findings": 0, "operational_findings": 0, "evidence": "specs/verifications/e04s03-build-review-round1.json", "security": "specs/security/epics/e04/e04s03-review-round1.json", "limitation": "Security specialist lacked hashing tools; both independent code reviewers matched all14 frozen hashes. Static scope, not live-adapter assurance."},
+  "unclaimed": ["new latency or RSS benchmark", "real adapter/provider/auth/model compatibility", "S04 complete-broker acceptance", "repair or acceptance of native e03 application settlement", "main merge/push/release"],
+  "historical_failures_and_review_caps": "unchanged",
+  "product_live_provider_runs": 0
+}

@@ -131,7 +131,9 @@ impl Attachment {
             unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) },
             0
         );
-        let tui_exit = host.root.join(format!("native-{}.exit", uuid::Uuid::new_v4().simple()));
+        let tui_exit = host
+            .root
+            .join(format!("native-{}.exit", uuid::Uuid::new_v4().simple()));
         let mut command = Command::new("/bin/zsh");
         command
             .args(["-f", "-c"])
@@ -292,7 +294,11 @@ impl Attachment {
             {
                 break code;
             }
-            assert!(Instant::now() < deadline, "TUI detach deadline: {}", self.text());
+            assert!(
+                Instant::now() < deadline,
+                "TUI detach deadline: {}",
+                self.text()
+            );
             std::thread::sleep(Duration::from_millis(5));
         };
         assert_eq!(code, 0, "TUI detach failed: {}", self.text());
@@ -309,15 +315,25 @@ impl Attachment {
             restored.c_cc, self.original.c_cc,
             "terminal control characters"
         );
-        assert!(self.child.try_wait().unwrap().is_none(), "host must pin the controlling PTY");
+        assert!(
+            self.child.try_wait().unwrap().is_none(),
+            "host must pin the controlling PTY"
+        );
         self.send(b"finish\n");
         let deadline = Instant::now() + DEADLINE;
         loop {
             if let Some(status) = self.child.try_wait().unwrap() {
-                assert!(status.success(), "controlling host exit: {status}: {}", self.text());
+                assert!(
+                    status.success(),
+                    "controlling host exit: {status}: {}",
+                    self.text()
+                );
                 break;
             }
-            assert!(Instant::now() < deadline, "controlling host did not acknowledge finish");
+            assert!(
+                Instant::now() < deadline,
+                "controlling host did not acknowledge finish"
+            );
             std::thread::sleep(Duration::from_millis(5));
         }
         self.join_reader();
@@ -343,8 +359,8 @@ impl Drop for Attachment {
         unsafe {
             libc::tcsetattr(self.slave.as_raw_fd(), libc::TCSANOW, &self.original);
         }
-        // Never signal a group after reaping its original leader.
-        if self.child.try_wait().ok().flatten().is_none() {
+        // Signal only a known-running original leader; an observation error is not a pin.
+        if self.child.try_wait().is_ok_and(|status| status.is_none()) {
             unsafe {
                 libc::kill(-(self.child.id() as i32), libc::SIGKILL);
             }
@@ -400,20 +416,25 @@ fn native_prompt(host: &Host, agent: &Agent, native: &mut Attachment, text: &str
     native.paste(text);
     native.send(b"\r");
     let deadline = Instant::now() + DEADLINE;
-    host.until(&format!("deliberate native prompt {text:?} admitted"), || {
-        let projection = host.inspect(agent);
-        let admitted = projection["work"]
-            .as_array()?
-            .iter()
-            .find(|work| work["op"] == "acp-prompt" && !previous.contains(&work["work_id"]))
-            .cloned();
-        assert!(
-            admitted.is_some() || Instant::now() < deadline,
-            "native prompt {text:?} was not admitted; work: {}; ownership: {}; surface:\n{}",
-            projection["work"], ownership(host, agent), native.text()
-        );
-        admitted
-    })
+    host.until(
+        &format!("deliberate native prompt {text:?} admitted"),
+        || {
+            let projection = host.inspect(agent);
+            let admitted = projection["work"]
+                .as_array()?
+                .iter()
+                .find(|work| work["op"] == "acp-prompt" && !previous.contains(&work["work_id"]))
+                .cloned();
+            assert!(
+                admitted.is_some() || Instant::now() < deadline,
+                "native prompt {text:?} was not admitted; work: {}; ownership: {}; surface:\n{}",
+                projection["work"],
+                ownership(host, agent),
+                native.text()
+            );
+            admitted
+        },
+    )
 }
 fn finish(mut host: Host, agent: &mut Agent, native: &mut Attachment, sentinel: &mut Sentinel) {
     native.detach();
@@ -561,16 +582,24 @@ fn e04s03_native_cooperative_question_handoff_discards_old_form_draft_on_reacqui
     // A deliberate claim may leave its ownership panel open. Dismiss it before
     // application input; the original-connection activity receipt fences Escape
     // parsing so the following F9 cannot be interpreted as Alt-F9.
-    let activity = ownership(&host, &agent)["activity_revision"].as_u64().unwrap();
+    let activity = ownership(&host, &agent)["activity_revision"]
+        .as_u64()
+        .unwrap();
     native.send(b"\x1b");
     host.until("fresh owner dismisses ownership panel", || {
         let text = native.text();
-        (ownership(&host, &agent)["activity_revision"].as_u64().unwrap() > activity
+        (ownership(&host, &agent)["activity_revision"]
+            .as_u64()
+            .unwrap()
+            > activity
             && !text.contains("Control owned here")
             && !text.contains("Control requested"))
-            .then_some(())
+        .then_some(())
     });
     native.send(b"\x1b[20~"); // F9 leaves the selected old interaction for the prompt editor
+    // Authority can arrive before the editor's next canonical refresh. A fresh
+    // human prompt waits for rendered readiness; busy input is never replayed.
+    native.wait("Foreground: none");
     let second = native_prompt(&host, &agent, &mut native, "add 1 2");
     let next = pending(&host, &agent, "form");
     assert_ne!(next["interaction_id"], form["interaction_id"]);
