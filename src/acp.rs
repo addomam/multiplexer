@@ -10,8 +10,9 @@ use parking_lot::{Condvar, Mutex};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -1209,50 +1210,48 @@ fn reap_uncaptured(mut child: std::process::Child) -> std::io::Result<std::proce
     child.wait()
 }
 
-// Dropping the owner's wake sender interrupts every poll independently of peer
-// EOF. A cancelled endpoint that is still held keeps process cleanup uncertain.
+// Keep the original endpoints owned until final cleanup classification, even
+// when an idle or failed worker exits before cancellation. Dropping the wake
+// sender interrupts every poll independently of peer EOF.
 struct PipeCancellation {
     wake: UnixStream,
     stopped: AtomicBool,
-    retained: AtomicBool,
+    files: [File; 3],
+}
+
+#[derive(Clone, Copy)]
+enum PipeEnd {
+    Stdin,
+    Stdout,
+    Stderr,
+}
+
+impl PipeEnd {
+    fn events(self) -> i16 {
+        match self {
+            Self::Stdin => libc::POLLOUT,
+            Self::Stdout | Self::Stderr => libc::POLLIN,
+        }
+    }
 }
 
 impl PipeCancellation {
-    fn new() -> io::Result<(Arc<Self>, UnixStream)> {
-        let (wake, sender) = UnixStream::pair()?;
-        Ok((
-            Arc::new(Self {
-                wake,
-                stopped: AtomicBool::new(false),
-                retained: AtomicBool::new(false),
-            }),
-            sender,
-        ))
-    }
-}
-
-struct PipeIo<T> {
-    inner: T,
-    cancellation: Arc<PipeCancellation>,
-}
-
-impl<T: AsRawFd> PipeIo<T> {
-    fn new(inner: T, cancellation: Arc<PipeCancellation>) -> io::Result<Self> {
-        let fd = inner.as_raw_fd();
-        let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
-        if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
-            return Err(io::Error::last_os_error());
+    fn nonblocking(&self) -> io::Result<()> {
+        for file in &self.files {
+            let fd = file.as_raw_fd();
+            let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+            if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0
+            {
+                return Err(io::Error::last_os_error());
+            }
         }
-        Ok(Self {
-            inner,
-            cancellation,
-        })
+        Ok(())
     }
 
-    fn hung_up(&self, events: i16) -> io::Result<bool> {
+    fn hung_up(&self, end: PipeEnd) -> io::Result<bool> {
         let mut fd = libc::pollfd {
-            fd: self.inner.as_raw_fd(),
-            events,
+            fd: self.files[end as usize].as_raw_fd(),
+            events: end.events(),
             revents: 0,
         };
         loop {
@@ -1265,40 +1264,37 @@ impl<T: AsRawFd> PipeIo<T> {
             }
         }
     }
+}
 
+struct PipeIo {
+    cancellation: Arc<PipeCancellation>,
+    end: PipeEnd,
+}
+
+impl PipeIo {
     fn transfer(
         &mut self,
-        events: i16,
-        mut operation: impl FnMut(&mut T) -> io::Result<usize>,
+        mut operation: impl FnMut(&File) -> io::Result<usize>,
     ) -> io::Result<usize> {
         loop {
-            let result = operation(&mut self.inner);
-            match &result {
-                Ok(0) => return result,
-                Err(error)
-                    if !matches!(
-                        error.kind(),
-                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                    ) =>
-                {
-                    return result;
-                }
-                _ => {}
-            }
-            if self.cancellation.stopped.load(Ordering::Acquire) && !self.hung_up(events)? {
-                self.cancellation.retained.store(true, Ordering::Release);
+            if self.cancellation.stopped.load(Ordering::Acquire)
+                && !self.cancellation.hung_up(self.end)?
+            {
                 // Interrupted would be retried by write_all, defeating cancellation.
                 return Err(io::ErrorKind::ConnectionAborted.into());
             }
-            match result {
+            // A completed syscall remains completed even if stop races with it.
+            // Check cancellation before the next syscall, not after delivery.
+            match operation(&self.cancellation.files[self.end as usize]) {
                 Ok(count) => return Ok(count),
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(error) if error.kind() != io::ErrorKind::WouldBlock => return Err(error),
                 Err(_) => {}
             }
             let mut fds = [
                 libc::pollfd {
-                    fd: self.inner.as_raw_fd(),
-                    events,
+                    fd: self.cancellation.files[self.end as usize].as_raw_fd(),
+                    events: self.end.events(),
                     revents: 0,
                 },
                 libc::pollfd {
@@ -1317,19 +1313,19 @@ impl<T: AsRawFd> PipeIo<T> {
     }
 }
 
-impl<T: Read + AsRawFd> Read for PipeIo<T> {
+impl Read for PipeIo {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-        self.transfer(libc::POLLIN, |inner| inner.read(buffer))
+        self.transfer(|mut file| file.read(buffer))
     }
 }
 
-impl<T: Write + AsRawFd> Write for PipeIo<T> {
+impl Write for PipeIo {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.transfer(libc::POLLOUT, |inner| inner.write(buffer))
+        self.transfer(|mut file| file.write(buffer))
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        (&self.cancellation.files[self.end as usize]).flush()
     }
 }
 
@@ -1369,7 +1365,7 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         finish(&instance);
         return;
     }
-    let (cancellation, wake_sender) = match PipeCancellation::new() {
+    let (wake, wake_sender) = match UnixStream::pair() {
         Ok(pair) => pair,
         Err(_) => {
             lifetime.end(|| instance.state.lock().close(Some("stdio")));
@@ -1394,6 +1390,24 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         finish(&instance);
         return;
     };
+    let cancellation = match (child.stdin.take(), child.stdout.take(), child.stderr.take()) {
+        (Some(stdin), Some(stdout), Some(stderr)) => Some(Arc::new(PipeCancellation {
+            wake,
+            stopped: AtomicBool::new(false),
+            files: [
+                File::from(OwnedFd::from(stdin)),
+                File::from(OwnedFd::from(stdout)),
+                File::from(OwnedFd::from(stderr)),
+            ],
+        })),
+        _ => None,
+    };
+    if !cancellation
+        .as_ref()
+        .is_some_and(|pipes| pipes.nonblocking().is_ok())
+    {
+        lifetime.end(|| instance.state.lock().close(Some("stdio")));
+    }
     let mut threads = [None, None, None];
     let publication = lifetime.with_live(|| {
         let mut state = instance.state.lock();
@@ -1413,44 +1427,40 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         state.changed();
         Ok(())
     });
-    if publication.is_ok() {
-        let stdin = child
-            .stdin
-            .take()
-            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
-        let stdout = child
-            .stdout
-            .take()
-            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
-        let stderr = child
-            .stderr
-            .take()
-            .and_then(|io| PipeIo::new(io, cancellation.clone()).ok());
-        if let (Some(stdin), Some(stdout), Some(stderr)) = (stdin, stdout, stderr) {
-            let jobs = [
-                thread::Builder::new().name("acp-writer".into()).spawn({
-                    let instance = instance.clone();
-                    move || writer(instance, stdin)
-                }),
-                thread::Builder::new().name("acp-reader".into()).spawn({
-                    let instance = instance.clone();
-                    move || reader(instance, stdout)
-                }),
-                thread::Builder::new().name("acp-stderr".into()).spawn({
-                    let instance = instance.clone();
-                    move || drain_stderr(instance, stderr)
-                }),
-            ];
-            for (slot, job) in threads.iter_mut().zip(jobs) {
-                match job {
-                    Ok(handle) => *slot = Some(handle),
-                    Err(_) => instance.transport_failed("worker-start"),
-                }
+    if let (Ok(()), Some(cancellation)) = (publication, &cancellation) {
+        let stdin = PipeIo {
+            cancellation: cancellation.clone(),
+            end: PipeEnd::Stdin,
+        };
+        let stdout = PipeIo {
+            cancellation: cancellation.clone(),
+            end: PipeEnd::Stdout,
+        };
+        let stderr = PipeIo {
+            cancellation: cancellation.clone(),
+            end: PipeEnd::Stderr,
+        };
+        let jobs = [
+            thread::Builder::new().name("acp-writer".into()).spawn({
+                let instance = instance.clone();
+                move || writer(instance, stdin)
+            }),
+            thread::Builder::new().name("acp-reader".into()).spawn({
+                let instance = instance.clone();
+                move || reader(instance, stdout)
+            }),
+            thread::Builder::new().name("acp-stderr".into()).spawn({
+                let instance = instance.clone();
+                move || drain_stderr(instance, stderr)
+            }),
+        ];
+        for (slot, job) in threads.iter_mut().zip(jobs) {
+            match job {
+                Ok(handle) => *slot = Some(handle),
+                Err(_) => instance.transport_failed("worker-start"),
             }
-            consume(&instance, &lifetime);
-        } else {
-            lifetime.end(|| instance.state.lock().close(Some("stdio")));
         }
+        consume(&instance, &lifetime);
     }
     // No process identity is published until capture succeeds. This owner alone
     // terminates descendants, then reaps, then joins pipes; no post-reap killpg.
@@ -1461,14 +1471,21 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
         thread::sleep(Duration::from_millis(5));
     }
     let terminated = tree.terminated();
-    cancellation.stopped.store(true, Ordering::Release);
+    if let Some(cancellation) = &cancellation {
+        cancellation.stopped.store(true, Ordering::Release);
+    }
     drop(wake_sender);
     instance.wake.notify_all();
     let mut workers_joined = true;
     for handle in threads.into_iter().flatten() {
         workers_joined &= handle.join().is_ok();
     }
-    if !reaped || !terminated || !workers_joined || cancellation.retained.load(Ordering::Acquire) {
+    let endpoints_closed = cancellation.as_ref().is_some_and(|pipes| {
+        [PipeEnd::Stdin, PipeEnd::Stdout, PipeEnd::Stderr]
+            .into_iter()
+            .all(|end| pipes.hung_up(end).unwrap_or(false))
+    });
+    if !reaped || !terminated || !workers_joined || !endpoints_closed {
         let mut state = instance.state.lock();
         state.failure = Some("cleanup");
         state.lifecycle = "failed";

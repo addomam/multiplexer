@@ -20,6 +20,7 @@
 - Verify canonical gap/category retention and inert hostile rendering through a real controlling PTY. Keep actual cleanup observations separate from fixture fallback; pin the native test host until post-TUI termios observation and deliberately type fresh answers rather than asserting incidental defaults.
 - Exercise the complete local ACP broker with same-session API/native questions and allow/deny, exact reused-wire responders, owned descendants, stalled input, hostile frames and concurrent close/shutdown. Keep genuine real-adapter acceptance separate; terminal-only settlement remains best-effort and unknown blocks safe grants.
 - Cancel and join owned ACP pipe workers independently of peer EOF, including a reparented different-session process retaining stdin/stdout/stderr. Keep observed retained endpoints cleanup-failed and capacity-charged; do not detach workers or signal unknown processes.
+- Retain original ACP pipe endpoints through final cleanup classification, even when an idle writer or failed frame reader returns early. Probe endpoint closure independently of workers and keep unresolved targets charged; check cancellation before I/O without rewriting completed byte counts.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 
