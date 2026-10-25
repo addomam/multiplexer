@@ -1,93 +1,96 @@
-initiative: e04-acp-agent-interaction
-core_value: Share one authoritative agent session between humans and local automation without terminal-input ambiguity.
+initiative: e05-thin-tool-integration
+status: scoped-not-implementation-approved
+core_value: Let a tool share its real semantic interactions between a human and local automation through a thin integration, without implementing ACP or relying on terminal-input guesses.
 summary: >-
-  Add local ACP-backed agent sessions with an amux-owned conversation and
-  interaction view. Human and API actions enter the same daemon-owned input
-  admission boundary; already-admitted agent work remains visible across handoff.
-  The interface distinguishes amux acceptance, transport delivery, agent outcome,
-  turn completion and external task acceptance.
+  Provide a supported local integration contract for tools that cannot or do not
+  implement ACP. An integration connects the tool's actual live instance and
+  genuine interactions to amux's human and automation surfaces. Tool authors
+  should not need an ACP implementation, terminal scraping, a second agent or
+  their own ownership arbiter to participate.
 
-  Keep native terminals, stock Zsh, OMP and the delivered Codex terminal route.
-  Terminal-only agents are the explicit best-effort fallback, not proof of the
-  ACP guarantees. A thin integration API for non-ACP tools is a later milestone.
+  Reuse the delivered ownership, input-admission, canonical interaction and
+  outcome semantics rather than establishing weaker parallel guarantees. This
+  initiative covers cooperating tools with a supported semantic delivery path.
+  Unmodified terminal-only tools remain explicitly best-effort: a new API cannot
+  acknowledge application input that the tool itself cannot identify or control.
 authorization:
-  source: explicit-user-start-ACP-after-current-delivery-publication
-  human_surface: user-selected-amux-owned-ACP-view
-  handoff_boundary: user-selected-amux-input-admission
-  current_delivery: signed-main-a46eaddeb79a9a42628d9cb39cd60945ece27fbb
-  new_live_model_runs: separately-approved-only
+  source: user-requested-thin-non-ACP-API-after-solid-ACP-and-subsequent-merge-and-keep-going
+  current_step: scope-and-investigation-on-isolated-feature-branch
+  branch: feat/thin-integration-api
+  worktree: /Users/addomam/projects/amux-integration-api
+  delivered_baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
+  implementation: requires-refined-contract-and-reviewed-plan
+  new_live_provider_runs: separately-approved-only
   global_daemon_config_auth_changes: not-authorized
-  release: not-requested
+  merge_push_tag_release: not-authorized-for-this-new-initiative
 scope_deltas:
   - tag: ADDED
-    requirement: Local ACP sessions with shared human/API prompts, genuine form questions, permission decisions, explicit cancellation and owned cleanup.
+    requirement: A thin public tool-integration contract independent of ACP implementation obligations.
   - tag: MODIFIED
-    before: The structured agent workflow must preserve its upstream native TUI and cannot introduce ACP or a replacement agent view.
-    after: ACP sessions use an amux-owned view and one ACP client; stock upstream TUIs remain the separate best-effort terminal fallback.
-  - tag: MODIFIED
-    before: A safe ownership grant requires provider-application settlement of every forwarded interaction.
-    after: ACP handoff seals amux input admission and rejects stale submissions; already-admitted agent work remains inspectable and may continue after transfer. Provider application is a separately reported outcome, not implied by admission.
-  - tag: MODIFIED
-    before: The current initiative excludes ACP.
-    after: Local stdio ACP is in scope; remote services and other deferred protocols remain excluded.
-  - tag: ADDED
-    requirement: Preserve historical e03s08/all-four failing acceptance and exhausted e03 review records; ACP is new evidence, not a retroactive PASS.
+    before: Thin non-ACP integration is deferred until ACP acceptance.
+    after: ACP is locally landed after actual runtime verification and explicit post-cap human acceptance; scope the previously requested next initiative without reopening its settled contracts.
+  - tag: PRESERVED
+    requirement: ACP remains supported; existing terminal/Zsh/OMP behavior and unresolved historical native-fence acceptance retain their actual status.
 delivered_baseline:
-  - {epic: e01, requirement: Native local Zsh terminals, projects, shared CLI API, OMP reports, detach and process cleanup}
-  - {epic: e02, requirement: Independent terminal capability explorer and compatibility regressions}
-  - {stories: e03s01-e03s07, requirement: Exclusive ownership, handoff, force/cancel/recovery, native ownership UX and limited Codex structured interactions}
+  - {epic: e04, requirement: Same-instance ACP human/API interaction, genuine forms and permission decisions, admission-fenced ownership, bounded cleanup and actual Codex/Grok evidence}
+  - {stories: e03s01-e03s07, requirement: Existing native terminal ownership and limited native-Codex structured operations}
+  - {integration: OMP, requirement: Existing lifecycle reporting is observation-only, not a structured responder or application-input fence}
 in_scope:
-  - {story: e04s01, requirement: Open and converse with one local ACP agent through the API and amux view on the same live session}
-  - {story: e04s02, requirement: Answer genuine form questions and select offered permission decisions through the shared authoritative interaction state}
-  - {story: e04s03, requirement: Transfer ACP input authority, retain running work, reject stale drafts/actions and recover truthful cancellation or connection loss}
-  - {story: e04s04, requirement: Verify complete ACP interaction with real maintained agent adapters, truthful fallback tiers and owned resource cleanup}
+  - story: e05s01
+    requirement: A tool author can identify one live integration/session, advertise only supported capabilities and distinguish replacement or disconnection from continuity.
+  - story: e05s02
+    requirement: Human and automation prompts, output and work outcomes address that same live tool instance, with admission, delivery, application, turn completion and task acceptance remaining distinct.
+  - story: e05s03
+    requirement: Genuine pending questions and offered permission allow/deny decisions can be resolved on either surface under exact current authority, with one canonical decision and explicit unsupported operations.
+  - story: e05s04
+    requirement: An independently implemented thin integration proves same-instance two-surface effects, ownership transitions, stale-action rejection, bounded resource cleanup and unchanged ACP/terminal regressions using the documented public contract.
 out_of_scope:
-  - {item: New project-wide lifecycle API or UX, reason: User chose existing explicit ACP close and daemon shutdown; broader lifecycle handling follows hands-on use}
-  - {item: Thin non-ACP integration API and generic plugin infrastructure, reason: User explicitly places this after a solid ACP implementation}
-  - {item: Simultaneous upstream native TUI and ACP writer on the same session, reason: User selected the amux-owned ACP view; reviewed Codex adapter rejects an active competing writer}
-  - {item: Remote control services, containers, VMs and relay protocols, reason: Preserve local execution scope}
-  - {item: Autonomous orchestration, retries, automatic answers, acceptance or reacquisition policy, reason: Remains external orchestration responsibility}
-  - {item: Crash restoration, persisted runtime sessions or durable task ledgers, reason: Preserve memory-only runtime state}
-  - {item: Unstable ACP v2, steering and provider-specific extensions, reason: Start from stable ACP v1 and individually negotiated capabilities}
-  - {item: Client filesystem/terminal delegation and URL elicitation, reason: Do not advertise unimplemented delegation or browser/auth flows; agent-owned tools remain explicit}
-  - {item: Automatic adapter installation, npx latest, upstream forks or global auth/configuration rewrites, reason: Explicit pinned launch and separately authorized live prerequisites only}
+  - item: Repairing opaque upstream native TUI buffers or claiming a generic terminal application fence
+    reason: Without tool cooperation amux cannot know which application work remains; unknown safe grant must still fail closed.
+  - item: A second ownership arbiter or weaker integration-specific handoff policy
+    reason: The existing broker semantics must remain authoritative across interaction surfaces.
+  - item: Automatic retries, answer selection, task acceptance, scheduling or reacquisition policy
+    reason: These remain external orchestration responsibilities, not integration primitives.
+  - item: Generic plugin infrastructure, remote control services, containers or virtual machines
+    reason: Preserve the project's explicit local integration boundary and conventions.
+  - item: Persisted runtime sessions, crash restoration or durable conversation/task storage
+    reason: Runtime state remains in memory; uncertain continuity must not be manufactured.
+  - item: Replacing ACP or changing existing ACP CLI/API contracts merely for symmetry
+    reason: Preserve the verified delivered consumer behavior; any necessary migration must be separately justified in the implementation plan.
+  - item: A universal provider compatibility matrix, new live-model usage or authentication/configuration rewrites
+    reason: A public tool contract is not proof of every provider; live checks and global changes require separate approval.
+  - item: Arbitrary language SDKs, package publishing or mandatory third-party framework dependencies
+    reason: First establish a small usable public contract and one independent consumer before expanding distribution or tooling.
 constraints:
-  - Preserve stock Zsh/OMP behavior and current PTY ownership rules unchanged.
-  - A terminal remains a PTY/emulator/process; an ACP conversation view must not be represented by a dummy shell or fake PTY.
-  - Runtime ownership, transcripts, pending interactions and work receipts remain memory-only.
-  - Atomically order ownership revocation with amux admission; accepted work and unaccepted/stale input are distinct.
-  - Force takeover never cancels a turn, abandons its outstanding request/outcome tracking or kills a process.
-  - Ordinary takeover cancellation grants nobody, invalidates prior authority and retains admitted work; conditional keep/withdraw preserves human control.
-  - Reacquisition policy remains external. Every human/API mutation is gated; intercepted input and stale drafts are never replayed.
-  - Preserve separate instance, connection, ACP session, prompt, interaction and ownership identities.
-  - Never present local acceptance, a pipe write, a callback response or silence as confirmed agent application.
-  - Only one foreground prompt at a time for stable v1; unsupported steering must not become a second prompt.
-  - Questions are real elicitation forms, not screen text, synthetic approval prompts or a second shadow agent.
-  - Permission responses use exact offered option IDs and preserve once/always and reject/cancel distinctions.
-  - Prompts, answers, credentials and raw agent output must not leak into public metadata events or committed evidence.
-  - No network/model/auth probing is disguised as an initialize or session/new smoke; use deterministic local peers until live approval.
+  - Reuse the established daemon ownership and canonical interaction invariants; force never implicitly interrupts or kills, and ordinary pending cancellation grants nobody while retaining admitted work.
+  - Conditional keep/withdraw preserves human control; reacquisition policy stays external.
+  - Gate every mutating human/API/integration route, reject stale identities and generations, and never replay intercepted or uncertain input.
+  - Preserve separate live instance, connection/session, work/call, interaction/revision and ownership identities.
+  - Never infer genuine questions, permissions, application success or settlement from terminal text, silence, a pipe write or a lifecycle notification.
+  - A declared capability needs a real tool-side delivery/responder path; unsupported or unknown capability fails explicitly rather than falling back to keystrokes.
+  - Definite non-admission may permit a new deliberate correction; transport ambiguity cannot justify automatic retry or optimistic accepted history.
+  - Keep content private and opt-in; bound retained data, observers, traffic and owned processes, and never expose credentials or raw user/model content in public evidence.
+  - Preserve stock Zsh/OMP, current native terminal ownership, ACP behavior and unrelated process/sentinel boundaries.
+  - Preserve all historical e03/e04 runtime failures, source attribution and exhausted review caps; this initiative does not reset or relabel them.
 success_criteria:
-  - One real ACP session serves both amux human interaction and local API calls with matching identities and authoritative admission receipts.
-  - Nonowners, revoked generations, stale interaction revisions and obsolete connection/session targets cannot admit an action.
-  - A handoff cut prevents any unaccepted old UI/API action from becoming accepted afterward; admitted running work remains visible without implicit cancellation.
-  - A stopped or stale human view cannot submit an old draft after transfer, and all views show the same committed interaction decision without optimistic losing-answer history.
-  - Genuine choice/free-text forms and explicit offered permission allow/deny work end-to-end through both human and API surfaces.
-  - Explicit cancellation targets the current amux prompt and is not reported confirmed until its original ACP response supplies the outcome.
-  - Disconnects and lost replies retain inspectable state, reject stale identities and never trigger hidden replay or duplicate process launch.
-  - Close, exit, failed startup and shutdown clean only owned processes/private resources, with bounded streams and no effect on unrelated sentinels.
-  - Existing workspace, terminal, ownership, OMP and independent-showcase regressions remain passing.
-  - Real-adapter acceptance requires separate approval, exact versions/models/auth isolation, redacted evidence and cleanup; fixtures alone cannot close acceptance.
+  - A tool author can implement the documented contract without implementing ACP, parsing terminal output, importing broker internals or launching a shadow tool instance.
+  - One independently implemented cooperating tool demonstrates real continued work after genuine question answers and exact permission allow/deny, with matching live identities on both surfaces.
+  - Competing, revoked, duplicate and stale responses cannot become a second canonical decision; handoff retains admitted work without implicit interruption, and cancellation/reacquisition keep their existing distinctions.
+  - Lost connections and lost replies remain inspectable and uncertain where appropriate; no hidden replay, optimistic success or fabricated application acknowledgement occurs.
+  - Explicit close, failed startup, connection failure and shutdown prove bounded owned cleanup and do not affect unrelated processes or the existing ACP/terminal consumers.
+  - Public documentation states exactly which cooperating-tool guarantees are exercised and why terminal-only fallback remains best-effort.
 prior_art:
-  - {candidate: amux ownership registry and local API, fit: extend, evidence: src/control.rs and src/daemon.rs}
-  - {candidate: agent-client-protocol-schema 1.12.0, fit: adopt, classification: OK, source: 'https://docs.rs/agent-client-protocol-schema/1.12.0/agent_client_protocol_schema/'}
-  - {candidate: agent-client-protocol 3.5.0 runtime, fit: evaluated-not-selected, reason: Unbounded internal transport and task queues do not satisfy the required resource boundary, source: 'https://github.com/agentclientprotocol/rust-sdk/tree/v3.5.0'}
-  - {candidate: Maintained Codex ACP adapter 2.2.2, fit: compose, classification: OK, source: 'https://github.com/agentclientprotocol/codex-acp/tree/202e66e63343ec4f5a5e35ab590251d813d129ca'}
-  - {candidate: Maintained Claude Agent ACP adapter 0.94.0, fit: portability-validation, classification: OK, source: 'https://github.com/agentclientprotocol/claude-agent-acp/tree/7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1'}
-  - {candidate: Existing ACP-specific bigpowers skill, fit: none-found, evidence: 'Mounted lexical search ACP returned zero matches'}
+  - {candidate: Existing amux ACP broker and shared human/API view, fit: reuse-established-semantics, evidence: 'specs/product/SCOPE_E04.yaml and specs/adr/0004-acp-authoritative-input.md'}
+  - {candidate: Existing native ownership and local CLI API, fit: reuse-authority-not-terminal-settlement-guesses, evidence: 'README.md ownership and native fallback contracts'}
+  - {candidate: Existing OMP extension, fit: preserve-and-investigate-as-consumer-not-assume-full-support, evidence: 'integrations/omp/amux.ts reports lifecycle; integrations/omp/lifecycle.ts is explicitly notification-only'}
+open_design_questions:
+  - Define the smallest tool-facing contract by comparing the existing ACP broker invariants with a non-ACP tool's supported semantic operations; do not settle transport/API spelling in this scope document.
+  - Select and inspect the first independent consumer's supported hooks during Elaborate; lifecycle observation alone does not establish answer, permission or mutation support.
+  - Define how integrations declare unavailable application acknowledgement without overstating amux admission or opaque native TUI guarantees.
 references:
+  - VISION_LATEST.yaml
+  - SCOPE_E04.yaml
   - ../adr/0004-acp-authoritative-input.md
-  - ../epics/archive/e04-acp-agent-interaction/context.yaml
-  - ../epics/archive/e04-acp-agent-interaction/epic.yaml
-  - ../IMPACT_LATEST.md
+  - ../verifications/e04-main-landing.json
   - ../bugs/BUG-e03-native-settlement.md
-  - ../verifications/e03-publication.json
+  - ../epics/archive/e04-acp-agent-interaction/epic.yaml

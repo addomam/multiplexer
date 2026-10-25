@@ -1,13 +1,13 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/acp-agent-interaction, signing: configured-1password-ssh, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: release_branch
-active_epic: e04
+vcs: {kind: git, branch: feat/thin-integration-api, signing: unsigned-authorized-command-scoped-fallback, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: scope_work
+active_epic: e05
 project_cycle:
-  current_phase: 6
-  completed_phases: [1, 2, 3, 4, 5]
+  current_phase: 1
+  completed_phases: []
   mode: standard
-  scope: acp-agent-interaction
-  previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}
+  scope: thin-tool-integration
+  previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
 elaborate_review:
   scope: same-instance-agent-interaction-specification
   authorization: user-approved-new-specification-only-cycle
@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: release-branch
+  next_skill: elaborate-spec
   blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
@@ -91,8 +91,12 @@ handoff:
     Authorized supplemental1/global6 is complete. Full blind A/B each100/100 independently match22/22 and all three reviewers clear the original reply-budget defect. Specialist operational must-fix E04S04-OPS-S1-01 fails the combined gate: definite asynchronous retained-content rejection leaves native capture without correlated recovery. Parent actual CLI confirms six valid pending interactions retain4162387bytes, leaving31917bytes; valid40960-byte notes receive capacity-exceeded before work/wire publication, then a new same-grant smaller answer completes the original RPC. Native latch remains source-supported, not runtime-reproduced by this CLI probe. Fresh existing native2/Grok5/reply-budget CLI pass; source22 hashes unchanged/full1760 reused, no provider use. All four tasks stay failing. Supplemental allowance1/1 consumed; original5/5 preserved, no automatic pass7 or acceptance/publication. Next repair needs actual-native RED and identity-correlated definite non-admission recovery, never replay or ambiguity-based unlock.
     User's direct-repair request is complete without another reproduction/review cycle. Existing native FIFO replies now return owned captured action identity only after typed definite daemon non-admission; answer values are removed, exact pending call/revision/target/control/generation guards retain deliberate correction/cancel and ambiguous transport failure stays fail-closed. One focused actual controlling-PTY case passes correction49 and F7 cancel32 on original owner/PID/session/RPC with complete cleanup,6.35s. Initial default-parallel full1799 passes ACP66/1ignored then fails unrelated shell_races openpty Os-6; preserve it, no product PTY fix claimed. Resource-bounded full bg260/artifact1803 now PASS402workspace/291default, strict workspace/default Rust/fmt, OMP8/49, Zsh/Node, actual cursor showcase1 and final native guards2,618.33s. Suite test-threads1 leaves each test's internal races enabled. No provider/auth/global/publication action or fresh RED. All reachable repair/verification complete; changed-source independent/human acceptance remains separate with original5/5 and supplemental1/1 exhausted, no automatic further review. Evidence is e04s04-rejection-recovery.json.
     Current user decision supersedes the preceding pending-delivery snapshots: "ok sick. this looks great. Let's merge this and keep going" explicitly accepts local main integration of repair66b5293 after actual runtime proof. The22 runtime hashes still match full1803, all four S04 tasks now pass with this human post-cap decision, and the completed e04 capsule is archived. Original5/5 and supplemental1/1 FAIL reports/caps stay unchanged; no new independent PASS, provider run, push, tag, release or global change. Land by safe fast-forward in the clean /Users/addomam/projects/amux-acp main worktree, preserve the dirty original checkout, then start the previously requested thin non-ACP integration API scope on a new feature branch. Authorization is specs/verifications/e04-main-landing.json.
-  last_step_completed: e04-runtime-verified-user-accepted-postcap-and-capsule-archived
+    ACP is now actually fast-forwarded onto local main af745cdf4045af76a7a34a8bb4260e24057461ce. Its clean parent worktree is safely repurposed and moved to /Users/addomam/projects/amux-integration-api on feat/thin-integration-api; the merged ACP branch is retained and no unmerged work is discarded. Post-relocation smoke initially fails before daemon spawn because the reused test binary embeds the old CARGO_BIN_EXE path; rebuilding only amux-owned artifacts then passes the actual native recovery case1/1 with original RPC/effects and cleanup,6.58s (bg262). The unstarted fixture root has no holders and is removed; no production change or provider call. The next thin-tool API scope and planning context are complete; elaborate its minimal semantic contract and real consumer before a reviewed Build plan. The API cannot make an uncooperative terminal reliable. No new initiative implementation, merge/push/release or global changes are claimed.
+  last_step_completed: e04-main-landed-and-actual-smoke-PASS-e05-scope-complete
   required_reading:
+    - specs/planning-context.yaml
+    - specs/product/SCOPE_LATEST.yaml
+    - specs/product/SCOPE_E04.yaml
     - specs/verifications/e04-main-landing.json
     - specs/verifications/e04s04-live-codex-grok.json
     - specs/verifications/e04s04-grok-codec-cli.json
@@ -679,7 +683,7 @@ e04s03_completed_cycle:
   owned_sessions:
     - {agent: e04-s03-backend, workspace: w1V, tab: 'w1V:t1', pane: 'w1V:p1', branch: feat/acp-s03-backend, worktree: /Users/addomam/projects/amux-acp-s03-backend, base: 31b167d, files: [src/acp.rs, tests/acp.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: 62874f299f112e70fb02a7a8a206badba878b52f, integration: 9638f68, completion_job: bg_196, worker_verification: prohibited-parent-only}
     - {agent: e04-s03-native, workspace: w1W, tab: 'w1W:t1', pane: 'w1W:p1', branch: feat/acp-s03-native, worktree: /Users/addomam/projects/amux-acp-s03-native, base: 31b167d, files: [tests/acp/native.rs], first_delivery: tests-only-no-production-repair, commit: 61812ca700de54abd1975f47ca05db0652e9ab8b, repair_commit: a71cc1e6454256973258e0ee30dffebbd8af427a, integration_base: 9638f68, model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, completion_job: bg_201, worker_verification: prohibited-parent-only}
-epic_cycle:
+e04s04_completed_cycle:
   scope: e04-acp-agent-interaction
   story: e04s04
   story_bcps: 8
@@ -705,3 +709,14 @@ epic_cycle:
     - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}
   human_delivery_decision: {status: accepted, source: specs/verifications/e04-main-landing.json, source_commit: 66b5293, review_caps_reset: false, independent_post_repair_PASS: false}
+e05_discovery:
+  status: scope-complete-contract-elaboration-next
+  scope: specs/product/SCOPE_LATEST.yaml
+  planning_context: specs/planning-context.yaml
+  branch: feat/thin-integration-api
+  worktree: /Users/addomam/projects/amux-integration-api
+  baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
+  provisional_story_ids: [e05s01, e05s02, e05s03, e05s04]
+  implementation_started: false
+  authorization: user-keep-going-on-previously-requested-thin-API-scope
+  post_landing_native_smoke: {job: bg_262, executed: 1, passed: 1, seconds: 6.58, provider_calls: 0, relocation_cache_failure: bg_261, source_changed: false}

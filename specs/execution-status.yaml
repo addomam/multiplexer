@@ -132,8 +132,8 @@ e03_receipt_publication:
   verification: {artifact: 'artifact://731', rust_passed: 308, suites: 29, ignored: 10, omp_tests: 8}
   source_branch: retained
 e04_cycle:
-  phase: release-local-integration
-  status: runtime-verified-user-accepted-postcap
+  phase: locally-landed-no-tag-release
+  status: user-accepted-local-main-af745cd
   branch: feat/acp-agent-interaction
   worktree: /Users/addomam/projects/amux-acp-build
   context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
@@ -184,5 +184,26 @@ stories:
   e04s04:
     started_at: "2026-10-24T07:12:52.595+00:00"
     status: done
-    completed_at: user-local-merge-authorization-after-full1803
+    completion_basis: user-local-merge-authorization-after-full1803
     delivery_authorization: specs/verifications/e04-main-landing.json
+e04_landing:
+  status: complete-local-only
+  commit: af745cdf4045af76a7a34a8bb4260e24057461ce
+  source_commit: 66b52933ff6dbd35fb1ebe929d5d98c46eed8fb1
+  method: fast-forward
+  evidence: specs/verifications/e04-main-landing.json
+  post_landing_native_smoke: {job: bg_262, passed: 1, failed: 0, seconds: 6.58, source_unchanged: true, provider_calls: 0}
+  initial_relocation_cache_probe: {job: bg_261, result: failed-before-daemon-spawn-old-compiled-CARGO_BIN_EXE-path, remediation: rebuild-amux-package-artifacts-only, production_change: false, leftover_root: removed-after-no-holder-proof}
+  prior_feature_worktree: safely-repurposed-and-moved-no-unmerged-discard-branch-retained
+  push_tag_release_CI: not-requested-not-claimed
+e05_cycle:
+  phase: discover
+  status: scope-complete-awaiting-contract-elaboration-and-reviewed-plan
+  scope: specs/product/SCOPE_LATEST.yaml
+  planning_context: specs/planning-context.yaml
+  branch: feat/thin-integration-api
+  worktree: /Users/addomam/projects/amux-integration-api
+  baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
+  implementation_started: false
+  new_provider_runs: not-authorized
+  main_integration: not-authorized-for-new-initiative
