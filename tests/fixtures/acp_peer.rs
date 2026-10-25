@@ -731,6 +731,18 @@ fn main() -> Result<()> {
                     let response = receive(&mut reader)?.ok_or("live anchor response missing")?;
                     startup_bonus += form_bonus(&response, &json!("live-anchor"), false)?;
                 }
+                if mode == "s04-grok-capacity" && commands == 0 {
+                    for index in 0..5 {
+                        send_form(
+                            json!(format!("capacity-{index}")),
+                            json!({"sessionId":session}),
+                            json!({"type":"object","description":"x".repeat(832_000),
+                                "properties":{"value":{"type":"string"}},"required":["value"]}),
+                            "Retained capacity reservation",
+                        )?;
+                        barrier(&root, &format!("capacity-{index}"))?;
+                    }
+                }
                 let bonus = if mode == "s04-complete" {
                     send_form(
                         json!("reusable-form"),
@@ -763,7 +775,10 @@ fn main() -> Result<()> {
                         serde_json::to_vec(&response)?,
                     )?;
                     0
-                } else if matches!(mode.as_str(), "s04-grok-other" | "s04-grok-large") {
+                } else if matches!(
+                    mode.as_str(),
+                    "s04-grok-other" | "s04-grok-large" | "s04-grok-capacity"
+                ) {
                     emit(
                         json!({"jsonrpc":"2.0","id":"grok-other","method":"_x.ai/ask_user_question","params":{
                         "sessionId":session,"toolCallId":"grok-other-tool","mode":"default",

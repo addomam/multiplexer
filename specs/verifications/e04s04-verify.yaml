@@ -1,11 +1,11 @@
 type: verification
 context: specs/epics/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
-verified_at: final-full1760-and-actual-native-CLI-reply-budget-proof-observed
-status: runtime-and-full-gates-PASS-story-blocked-human-review-cap5-exhausted
-source: specs/verifications/e04s04-reply-budget-source.json
-source_commit: working-tree-after-2891de4
-terminal_verdict:
+verified_at: direct-rejection-repair-actual-native-and-resource-bounded-full1803-observed
+status: local-rejection-repair-and-full-PASS-story-pending-changed-source-independent-human-decision
+source: specs/verifications/e04s04-rejection-recovery.json
+source_commit: working-tree-after-741fe4a
+previous_terminal_verdict:
   command: cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
   exit_code: 0
   artifact: artifact://1760
@@ -40,6 +40,17 @@ terminal_verdict:
   - acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes
   - native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable
   - native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering
+terminal_verdict:
+  command: cargo test --workspace -- --test-threads=1 && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test -- --test-threads=1 && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
+  exit_code: 0
+  artifact: artifact://1803
+  job: bg_260
+  wall_seconds: 618.33
+  note: Resource-bounded suite concurrency only; internal race concurrency unchanged. Initial default-parallel1799 FAIL retained. Counts overlap; source binding and focused actual-PTY cleanup proof are in rejection recovery.
+  counts: {focused_native: 1, workspace: 402, workspace_suites: 30, workspace_ignored: 11, default: 291, default_suites: 12, default_ignored: 8, showcase_exact: 1, native_exact_guards: 2, omp: 8, omp_assertions: 49}
+  new_native_case: native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel
+  source_and_focused_evidence: specs/verifications/e04s04-rejection-recovery.json
+  previous_parallel_failure: {artifact: 'artifact://1799', exit_code: 101, failing_case: concurrent_first_opens_publish_one_main_and_valid_default_parents, observed: macOS-openpty-Os-minus6, product_PTY_fix_claimed: false}
 outside_test:
   repair_actual_CLI:
     passed: true
@@ -79,15 +90,15 @@ security:
   self_audit: specs/verifications/AUDIT-e04s04.md
   previous_round1: specs/security/epics/e04/e04s04-review-round1.json
   previous_operational_must_fix: 1
-  current_independent: final-round5-FAIL-operational-must-fix-locally-repaired-not-independently-cleared
-  current_operational_must_fix: E04S04-OPS-R5-01
-  AND_gate: FAIL-cap5-exhausted-human-review-required
+  current_independent: supplemental1-FAIL-finding-locally-repaired-not-independently-cleared
+  current_operational_must_fix: E04S04-OPS-S1-01-locally-fixed-and-verified
+  AND_gate: pending-changed-source-independent-human-decision-original-FAIL-preserved
   actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
   previous_round2: specs/security/epics/e04/e04s04-review-round2.json
   supported_security_findings: 0
-  build_review: specs/verifications/e04s04-build-review-round5.json
-  independent_clearance_round: none-final5-of5-failed
-  next_changed_source_round: none-cap5-exhausted-human-review-required
+  build_review: specs/verifications/e04s04-build-review-supplemental1.json
+  independent_clearance_round: none-supplemental1-failed-new-must-fix
+  next_changed_source_round: none-original5-of5-and-extra1-of1-consumed-human-decision-required
 nfr: specs/verifications/NFR-e04s04.json
 worker_retirement: specs/verifications/e04s04-worker-retirement.json
 historical_failures:
@@ -110,7 +121,7 @@ live_task:
   private_OAuth_runtime: removed-after-owned-absence-and-no-open-holder-proof
   Claude_execution: false
 all_task_ledgers: all-four-failing-current-source-not-independently-cleared
-whole_story: failing-human-review-required-cap5-exhausted
+whole_story: failing-pending-changed-source-independent-human-decision
 historical_e03_and_review_caps: unchanged
 ACP_main_merge_push_release: not-authorized-not-run
 endpoint_truth_RCA: specs/verifications/e04s04-endpoint-truth-before-after.json
@@ -123,4 +134,8 @@ previous_local_baseline: {source: 6a5d9af, artifact: 'artifact://1515', review: 
 Other_recovery: specs/verifications/e04s04-other-recovery.json
 previous_round4: specs/verifications/e04s04-build-review-round4.json
 reply_budget_repair: specs/verifications/e04s04-reply-budget-recovery.json
-review_disposition: Locally reproduced and repaired; actual native/CLI/full proof passes. Final independent review cap exhausted, no round6 or automatic waiver.
+review_disposition: Original supplemental1/global6 FAIL is preserved. E04S04-OPS-S1-01 is now locally fixed; actual native correction49/cancel32 and resource-bounded full1803 PASS. No further reproduction/review/provider cycle; all tasks remain failing pending changed-source independent/human decision.
+supplemental_review: {authorization: specs/verifications/e04s04-supplemental-review-authorization.json, evidence: specs/verifications/e04s04-build-review-supplemental1.json, original_cycle: exhausted5-of5-preserved, additional_used: 1, additional_allowed: 1, cap_reset: false, code_scores: [100, 100], specialist_score: 96.875, supported_security_findings: 0, operational_must: 1}
+fresh_supplemental_runtime: {evidence: specs/verifications/e04s04-supplemental1-runtime.json, native: 2, Grok_library: 5, reply_budget_CLI: PASS, full1760: reused-unchanged22-source-hashes-not-rerun, provider_calls: 0}
+retained_admission_CLI: {evidence: specs/verifications/e04s04-retained-admission-cli.json, pending: 6, retained_bytes: 4162387, remaining_bytes: 31917, rejected_notes_bytes: 40960, rejected_call_no_work_or_wire: true, deliberate_same_grant_smaller_answer: PASS, native_latch: static-only-no-native-runtime-claim, owned_cleanup_before_fallback: PASS}
+rejection_recovery: {evidence: specs/verifications/e04s04-rejection-recovery.json, status: locally-fixed-native-and-full-PASS-not-independently-cleared, provider_calls: 0, further_review: none-original5-of5-and-extra1-of1-preserved}

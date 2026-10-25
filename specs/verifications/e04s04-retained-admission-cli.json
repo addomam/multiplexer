@@ -1,0 +1,58 @@
+{
+  "scope": "E04S04-OPS-S1-01-parent-actual-CLI-trigger-validation",
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "source_hashes_matched": 22,
+  "method": "Outside-test actual target/debug/amux API, private daemon/socket/HOME/config/projects, cleared environment, synthetic stdio ACP peer; no source changes or provider calls.",
+  "construction": {
+    "standard_elicitation": "Five individually in-frame elicitation/create requests, mode form, live sessionId, object schema with description of832000 ASCII bytes and one required string property. Each publication acknowledged from canonical inspect before the next request.",
+    "final_question": "One small genuine _x.ai/ask_user_question, mode default, original session/tool id, One plus synthesized Other.",
+    "large_answer": "Deliberate API accept, q0=Other and q0_notes=40960 ASCII bytes; below local64KiB and wire1MiB limits.",
+    "correction": "New deliberate call id on identical target/control/generation with q0_notes=7; no automatic retry or replay."
+  },
+  "observed": {
+    "actual_CLI": "PASS-capacity-rejection-and-explicit-smaller-answer",
+    "pending_interactions": 6,
+    "retained_detail_bytes": 4162387,
+    "remaining_detail_budget": 31917,
+    "reservation_description_bytes_each": 832000,
+    "large_notes_bytes": 40960,
+    "definite_rejection": "capacity-exceeded",
+    "rejected_call_no_work_or_wire": true,
+    "same_grant_smaller_answer_exact_original_RPC": true,
+    "original_prompt_completed": true,
+    "native_latch": "static-trace-only-not-exercised-by-this-CLI-probe",
+    "provider_calls": 0,
+    "cleanup": {
+      "peer_absent": true,
+      "workers_joined": true,
+      "daemon_exit": 0,
+      "socket_and_root_absent": true,
+      "sentinel_alive_before_own_reap": true,
+      "fallback": false
+    }
+  },
+  "proof_limit": "Capacity rejection, zero rejected work/wire effect, pending responder, and same-grant deliberate correction/original prompt completion are runtime-confirmed. The captured native editor latch is source-supported only; this CLI probe does not claim a native reproduction or arithmetic-effect oracle.",
+  "preparation_failures": [
+    {
+      "attempt": 1,
+      "cause": "Throwaway peer omitted standard form mode; first reservation never admitted.",
+      "product_defect": false
+    },
+    {
+      "attempt": 2,
+      "cause": "Throwaway peer omitted required Grok mode; five reservations admitted but final question rejected correctly.",
+      "product_defect": false
+    },
+    {
+      "attempt": 3,
+      "cause": "Parent probe expected a detail wrapper; canonical content correctly flattens fields.",
+      "product_defect": false
+    }
+  ],
+  "preparation_cleanup": "All three failed preparation roots were removed and owned private daemons/sentinels reaped by finally cleanup; no production RED or pre-fallback complete-cleanup PASS is attributed to these failed setups.",
+  "new_permanent_tests": 0,
+  "production_edits": 0,
+  "new_provider_calls": 0,
+  "privacy": "No credentials, live prompts, raw handles, private paths, PIDs, UUIDs or private transcripts retained."
+}

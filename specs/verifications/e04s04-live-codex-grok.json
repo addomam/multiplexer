@@ -1,6 +1,6 @@
 {
   "scope": "e04s04-user-authorized-Codex-Grok-existing-OAuth-low-cost-live-acceptance",
-  "status": "complete-real-matrix-and-final-local-full-PASS-story-blocked-human-review-cap5-exhausted",
+  "status": "complete-real-matrix-and-local-full-PASS-story-FAIL-supplemental1-new-operational-must-fix",
   "branch": "feat/acp-agent-interaction",
   "integration_owner": "parent",
   "Claude_execution": false,
@@ -214,8 +214,21 @@
     "status": "final-round5-FAIL-operational-must-fix-locally-repaired-not-independently-cleared",
     "report": "specs/verifications/e04s04-build-review-round5.json",
     "next_round": null,
-    "gate": "cap5-exhausted-human-review-required"
+    "gate": "cap5-exhausted-human-review-required",
+    "historical_original_cycle_only": true
   },
+  "current_source_review": {
+    "pass": "supplemental1/global6-explicitly-user-authorized",
+    "status": "FAIL-new-operational-must-fix-E04S04-OPS-S1-01",
+    "report": "specs/verifications/e04s04-build-review-supplemental1.json",
+    "original_reply_budget_defect": "independently-cleared",
+    "original5_of5_preserved": true,
+    "additional1_of1_consumed": true,
+    "cap_reset": false,
+    "new_live_provider_calls": 0,
+    "next_automatic_round": null
+  },
+  "post_live_native_rejection_repair": {"status":"local-native-and-resource-bounded-full-PASS","evidence":"specs/verifications/e04s04-rejection-recovery.json","artifact":"artifact://1803","workspace":402,"default":291,"post_local_repair_model_rerun":false,"whole_story":"pending-changed-source-independent-human-decision"},
   "sources": [
     "https://raw.githubusercontent.com/agentclientprotocol/codex-acp/202e66e63343ec4f5a5e35ab590251d813d129ca/README.md",
     "https://learn.chatgpt.com/docs/models",

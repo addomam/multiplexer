@@ -85,3 +85,23 @@ Actual outside-test CLI reproduces capacity-exceeded with tiny Other7, pending o
 | Acceptance / deferrals | BLOCKED: local PASS does not clear independent review. All four tasks stay failing, no review-cap reset, no ACP merge/push/release. No Linux/MSRV/RSS/latency/universal-provider or historical terminal-fence repair claimed. |
 
 Caught rationalizations: dual100/100 and live1659 do not override the specialist must-fix; a self-verified fix is not a new independent PASS. Local repair does not justify another subscription run or a sixth review. Latest source/proof are e04s04-reply-budget-source.json and e04s04-reply-budget-recovery.json; human review/decision is the only remaining gate.
+
+## Current authorized supplemental1: reply bound cleared, new operational gate FAIL
+
+The user explicitly authorized one additional review, global6; original5/5 and its failed gate remain historical. Full independent A/B reports each100/100,22/22 computed hashes, and specialist report are read and preserved. All three clear the allocation-free reply bound. Specialist0 supported vulnerabilities does not waive new operational must-fix E04S04-OPS-S1-01; combined gate **FAIL**.
+
+Parent [actual CLI validation](e04s04-retained-admission-cli.json) observes six valid pending interactions,4162387 retained bytes/31917 headroom, definite capacity-exceeded for40960-byte notes before work/wire publication, then exact original-RPC completion after a new deliberate same-grant small answer. Native capture recovery deficiency is a source trace, not a claimed new physical-PTY reproduction. Error-only refresh cannot clear the exact old capture; uncorrelated/ambiguous unlock or replay is not an acceptable fix.
+
+Fresh native2/Grok5/reply-budget CLI pass; full1760 is reused on identical22 source hashes, not rerun. No production source/dependency change or provider/auth/global/publication action this pass. Successful CLI cleanup observes peer absence/workers joined/daemon0/socket+root absence/sentinel survival before fallback. Failed private probe preparation attempts are attributed honestly and removed. All task ledgers remain failing; supplemental1/1 consumed and no automatic further review. Current result: e04s04-build-review-supplemental1.json.
+
+
+## Current direct rejection-recovery repair: local PASS
+
+E04S04-OPS-S1-01 is fixed in the existing owned-envelope/FIFO path. Typed daemon rejection is pre-admission; timeout/EOF/framing/I/O is still ambiguous and produces no restoration receipt. Answer text is removed from feedback. Existing exact pending call/revision/target/control/generation guards govern deliberate editing, never replay or grant substitution. Sibling sweep finds2 capture sites (forms and permissions), both handled; no provider abstraction, duplicate rule, queue, answer clone, dependency or global/auth change.
+
+One actual controlling-PTY regression passes in6.35s with arithmetic49/32, exact original accept/cancel/RPC, owner/PID/session preservation and complete finish/cleanup assertions. The test is isolated, bounded, readiness-driven and consumer-effect based; it first ran after the fix per the user's no-more-reproduction direction, not a claimed new RED. Public changed-source/docs/repair credential scan finds0 provider keys/JWT/private keys.
+
+Initial parallel full1799 FAIL is preserved: ACP66 passes, shell_races openpty Os-6 fails. No product PTY-allocation repair inferred. Resource-bounded contiguous full1803 PASS:402workspace/291default, strict workspace/default Rust/fmt, OMP8/49, Zsh/Node syntax, actual cursor showcase1 and final native guards2,618.33s. Test-threads1 changes suite concurrency only; internal race checks remain enabled. Counts overlap.
+
+Local audit PASS; independent changed-source clearance is not claimed. Original review5/5 plus supplemental1/1 history stays intact, no automatic further review or acceptance waiver. No extra model call, commit/merge/push/release or historical native-fence repair. Full binding/evidence: e04s04-rejection-recovery.json.
+

@@ -1,25 +1,27 @@
 {
   "scope": "e04s04-complete-Codex-Grok-live-integration",
-  "status": "runtime-and-full-gates-PASS-story-blocked-human-review-cap5-exhausted",
-  "source": "specs/verifications/e04s04-reply-budget-source.json",
-  "source_commit": "working-tree-after-2891de4",
+  "status": "local-rejection-repair-and-resource-bounded-full-PASS-story-pending-independent-human-decision",
+  "source": "specs/verifications/e04s04-rejection-recovery.json",
+  "source_commit": "working-tree-after-741fe4a",
   "production_changes": [
     "src/acp.rs",
     "src/acp/grok.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
     "src/tui/agent.rs"
   ],
   "dependency_changes": false,
-  "current_contiguous_verification": "artifact://1760",
-  "current_independent_review": "final-round5-FAIL-operational-must-fix-locally-repaired-not-cleared",
-  "current_operational_must_fix": "E04S04-OPS-R5-01-locally-repaired-and-verified-not-independently-cleared",
+  "current_contiguous_verification": "artifact://1803",
+  "current_independent_review": "supplemental1-FAIL-finding-locally-repaired-not-independently-cleared",
+  "current_operational_must_fix": "E04S04-OPS-S1-01-locally-fixed-verified-pending-changed-source-decision",
   "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
-  "wall_seconds": 210.40,
+  "wall_seconds": 618.33,
   "counts": {
-    "selected": 12,
-    "workspace": 401,
+    "selected": 1,
+    "workspace": 402,
     "workspace_suites": 30,
     "workspace_ignored": 11,
-    "default": 290,
+    "default": 291,
     "default_suites": 12,
     "default_ignored": 8,
     "showcase_exact": 1,
@@ -39,7 +41,8 @@
     "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
     "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes",
     "native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable",
-    "native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering"
+    "native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering",
+    "native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel"
   ],
   "previous_review": {
     "evidence": "specs/verifications/e04s04-build-review-round1.json",
@@ -136,16 +139,20 @@
     "3": "failing-pending-current-independent-clearance",
     "4": "failing"
   },
-  "independent_clearance_round": "none-final5-of5-failed",
-  "next_changed_source_round": "none-cap5-exhausted-human-review-required",
+  "independent_clearance_round": "none-supplemental1-failed-new-must-fix",
+  "next_changed_source_round": "none-original5-of5-and-extra1-of1-consumed-human-decision-required",
   "private_setup_scope": "Historical setup-only evidence retained; later user explicitly authorized private Codex/Grok OAuth/cheap live execution, not global changes or publication.",
   "previous_local_baseline": {"source":"6a5d9af","artifact":"artifact://1515","review":"specs/verifications/e04s04-build-review-round3.json"},
   "current_CLI_smoke": "specs/verifications/e04s04-grok-codec-cli.json",
-  "final_native_guard_job": "bg_257",
+  "final_native_guard_job": "bg_260",
   "current_Other_recovery": "specs/verifications/e04s04-other-recovery.json",
   "actual_final_binary_CLI": "specs/verifications/e04s04-reply-budget-recovery.json",
   "previous_round4": {"evidence":"specs/verifications/e04s04-build-review-round4.json","numeric_AND":"PASS","acceptance":"FAIL-pending-native-Other-repair","scores":[96.875,96.875],"disposition":"accepted same consumer defect from both reviewers; actual RED, pre-capture repair and current full/native/CLI proof; fresh final review required"},
-  "live_source_binding": "Real1659 ran on round4 source; no further model call for local validation/reply-budget repairs. Current native/CLI/full proof is1754/1760 and linked recovery evidence; never relabelled a provider rerun.",
+  "live_source_binding": "Real1659 ran on round4 source; no new provider call. Current actual-native recovery/full1803 proof is local and never relabelled a model rerun.",
   "reply_budget_repair": "specs/verifications/e04s04-reply-budget-recovery.json",
-  "final_review": "specs/verifications/e04s04-build-review-round5.json"
+  "final_review": "specs/verifications/e04s04-build-review-supplemental1.json",
+  "supplemental_review": {"code_scores":[100,100],"specialist_score":96.875,"supported_security_findings":0,"operational_must":1,"original_reply_budget_defect":"independently-cleared","original_cycle":"exhausted5-of5-preserved","additional_used":1,"additional_allowed":1,"cap_reset":false},
+  "supplemental_runtime": "specs/verifications/e04s04-supplemental1-runtime.json",
+  "retained_admission_CLI": {"evidence":"specs/verifications/e04s04-retained-admission-cli.json","pending":6,"retained_bytes":4162387,"remaining_bytes":31917,"rejected_notes_bytes":40960,"rejected_call_no_work_or_wire":true,"same_grant_smaller_answer":"PASS","original_RPC_completed":true,"native_latch":"original-CLI-static-trace-only-new-native-repair-proof-is-separate","owned_cleanup_before_fallback":"PASS","provider_calls":0},
+  "native_rejection_recovery": {"evidence":"specs/verifications/e04s04-rejection-recovery.json","status":"locally-fixed-actual-native-and-resource-bounded-full-PASS","focused_native":1,"continuations":["correction49","cancel32"],"full":"artifact://1803","initial_parallel_failure":"artifact://1799","suite_test_threads":1,"internal_race_concurrency":"unchanged","provider_calls":0,"new_independent_clearance":false}
 }

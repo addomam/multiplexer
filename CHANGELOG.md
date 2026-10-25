@@ -25,6 +25,7 @@
 - Add opt-in real Codex/Grok OAuth acceptance through the actual daemon and controlling PTY, with a transparent private wire observer, bounded low-effort model use and explicit cleanup. Keep failed attempts and historical native-fence/review boundaries; compatibility is claimed only by the recorded exercised rows.
 - Validate Grok Other notes before native review/capture as well as API admission, retaining deliberate correction/cancellation on the original grant. Verify omitted/explicitly empty notes through real controlling-PTY arithmetic effects and exact original responses, without replay or additional model calls.
 - Reject Grok question metadata before publication when its conservatively bounded answers/annotations could exceed the existing wire-frame limit. Preserve the original RPC error and subsequent same-session native work instead of capturing an answer that cannot be represented; no truncation, replay or authority substitution.
+- Recover the exact native form/permission editor after definite asynchronous daemon non-admission, including retained-content backpressure. Preserve values and current authority for deliberate correction/cancel; strip answer text from rejection feedback and never replay, unlock a different captured call or reinterpret timeout/disconnect as rejection.
 
 ## Unreleased — e03 ownership and agent interaction (Build)
 

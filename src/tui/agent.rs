@@ -738,16 +738,16 @@ impl AgentView {
         Some(action)
     }
 
-    /// Only a synchronous local queue rejection may return the owned envelope.
+    /// Proven non-admission only: local queue rejection or definite daemon error.
     /// Restore its original binding, never a new grant or an automatic retry.
-    pub(super) fn restore_unqueued(&mut self, mut action: Value) {
-        self.notice = "Action not queued; no automatic retry.";
+    pub(super) fn restore_unadmitted(&mut self, mut action: Value) {
+        self.notice = "Action not admitted; deliberate new action required. No automatic retry.";
         if matches!(action["op"].as_str(), Some("acp-answer" | "acp-permission")) {
             if let Some(interaction) = self.interactions.iter_mut().find(|item| {
                 action["interaction_id"].as_str() == Some(item.id.as_str())
                     && action["revision"].as_u64() == Some(item.revision)
             }) {
-                interaction.restore_unqueued(&action, self.binding.as_ref());
+                interaction.restore_unadmitted(&action, self.binding.as_ref());
             }
             return;
         }
@@ -1726,7 +1726,7 @@ impl Interaction {
             "Deliberate interaction action captured; no optimistic history or automatic retry.";
     }
 
-    fn restore_unqueued(&mut self, action: &Value, current: Option<&Binding>) {
+    fn restore_unadmitted(&mut self, action: &Value, current: Option<&Binding>) {
         let Some(binding) = &self.binding else { return };
         if self.pending()
             && self.binding.as_ref() == current
@@ -1740,7 +1740,7 @@ impl Interaction {
         {
             self.captured = None;
             self.reviewed = false;
-            self.status = "Synchronous local queue rejection: original values/highlight retained. Deliberate new action required.".to_owned();
+            self.status = "Action not admitted: original values/highlight retained. Deliberate new action required.".to_owned();
             self.dirty = true;
         }
     }

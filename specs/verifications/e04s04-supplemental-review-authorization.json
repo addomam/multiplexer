@@ -1,0 +1,18 @@
+{
+  "scope": "e04s04-repaired-source-one-additional-review-pass",
+  "authorization": "explicit-user-request",
+  "user_request": "Ok great. Do another review pass now that the reply-budget defect is fixed and let's see if it works.",
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "historical_review_cycle": {"rounds_used":5,"configured_cap":5,"status":"exhausted-preserved","final_gate":"FAIL-operational-must-fix-locally-repaired-not-cleared","report":"specs/verifications/e04s04-build-review-round5.json"},
+  "additional_authorized_passes": 1,
+  "global_pass_number": 6,
+  "supplemental_pass_number": 1,
+  "cap_reset": false,
+  "automatic_further_review_loop": false,
+  "review_shape": "fresh dual-blind A/B plus separate security/operational specialist; source read-only; parent owns checks/integration",
+  "allowed_runtime": "private deterministic native/CLI verification only, no provider/auth/global changes",
+  "new_live_model_runs": false,
+  "merge_push_release": false,
+  "historical_native_application_fence": "unchanged; no force-only substitute or false repair claim"
+}

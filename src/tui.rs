@@ -815,7 +815,10 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut frame_at = Instant::now() - FRAME;
     loop {
         authority.sync_agent_targets(&snapshot);
-        let authority_changed = authority.poll(&active, &mut status);
+        let authority_changed = authority.poll(&active, &mut status, |action, grant| {
+            agent.sync(&agent_projection, grant);
+            agent.restore_unadmitted(action);
+        });
         dirty |= authority_changed;
         let is_agent = agent_view(&snapshot, &active).is_some();
         if is_agent && agent_id != active {
@@ -1062,7 +1065,7 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                         && let Err(rejected) = authority.acp_action(request, &mut status)
                     {
                         agent.sync(&agent_projection, authority.acp_grant(&active));
-                        agent.restore_unqueued(rejected);
+                        agent.restore_unadmitted(rejected);
                     }
                 }
             }

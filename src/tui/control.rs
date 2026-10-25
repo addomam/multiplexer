@@ -78,6 +78,7 @@ struct Reply {
     target: Arc<str>,
     op: Op,
     result: Result<Value>,
+    rejected_action: Option<Value>,
 }
 
 #[derive(Clone)]
@@ -150,7 +151,7 @@ impl NativeControl {
         let mut connection = crate::client::Connection::connect(path)?;
         let created = rpc(
             &mut connection,
-            json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
+            &mut json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
         )?;
         let (tx, work) = mpsc::sync_channel(128);
         let (reply, rx) = mpsc::channel();
@@ -158,14 +159,29 @@ impl NativeControl {
             .name("amux-native-control".into())
             .spawn(move || {
                 while let Ok(work) = work.recv() {
+                    let mut rejected_action = None;
                     let (target, op, result) = match work {
                         Work::Rpc {
                             target,
                             op,
-                            request,
+                            mut request,
                         } => {
                             let serial = request["view"]["serial"].as_u64();
-                            let mut result = rpc(&mut connection, request);
+                            let mut result = rpc(&mut connection, &mut request);
+                            if op == Op::Acp
+                                && matches!(
+                                    request["op"].as_str(),
+                                    Some("acp-answer" | "acp-permission")
+                                )
+                                && result.as_ref().err().is_some_and(|error| {
+                                    error.downcast_ref::<crate::client::DaemonError>().is_some()
+                                })
+                            {
+                                // Daemon errors precede admission; transport failures
+                                // remain ambiguous. Return identity, never answer text.
+                                request.as_object_mut().unwrap().remove("values");
+                                rejected_action = Some(request);
+                            }
                             if let (Op::View, Some(serial), Ok(value)) = (op, serial, &mut result) {
                                 value["native_view_serial"] = json!(serial);
                             }
@@ -186,18 +202,18 @@ impl NativeControl {
                         } => {
                             // One deliberate claim, not replayed application input.
                             let state = if acp {
-                                rpc(&mut connection, json!({"op":"snapshot"}))
+                                rpc(&mut connection, &mut json!({"op":"snapshot"}))
                                     .and_then(|snapshot| agent_state(&snapshot, &target))
                             } else {
                                 rpc(
                                     &mut connection,
-                                    json!({"op":"state","terminal":target.as_ref()}),
+                                    &mut json!({"op":"state","terminal":target.as_ref()}),
                                 )
                             };
                             let result = state.and_then(|state| {
                                 rpc(
                                     &mut connection,
-                                    addressed(
+                                    &mut addressed(
                                         json!({"op":"ownership-claim","controller":controller,
                                     "observed":state["ownership"]["observed"],
                                     "mode":"cooperative","when":{"kind":"now"}}),
@@ -243,7 +259,16 @@ impl NativeControl {
                         .as_ref()
                         .err()
                         .is_some_and(|e| e.downcast_ref::<crate::client::DaemonError>().is_none());
-                    if reply.send(Reply { target, op, result }).is_err() || transport_failed {
+                    if reply
+                        .send(Reply {
+                            target,
+                            op,
+                            result,
+                            rejected_action,
+                        })
+                        .is_err()
+                        || transport_failed
+                    {
                         break;
                     }
                 }
@@ -401,7 +426,12 @@ impl NativeControl {
         }
     }
 
-    pub(super) fn poll(&mut self, active: &str, status: &mut String) -> bool {
+    pub(super) fn poll(
+        &mut self,
+        active: &str,
+        status: &mut String,
+        mut rejected: impl FnMut(Value, Option<&Value>),
+    ) -> bool {
         let controlled_before = self.can_input(active);
         let mut changed = false;
         loop {
@@ -444,6 +474,11 @@ impl NativeControl {
                                 }
                                 if reply.op == Op::Consent {
                                     self.warnings.remove(terminal);
+                                }
+                                if terminal == active
+                                    && let Some(action) = reply.rejected_action
+                                {
+                                    rejected(action, self.acp_grant(terminal));
                                 }
                                 self.refreshed = Instant::now() - REFRESH_INTERVAL;
                             } else {
@@ -1630,10 +1665,10 @@ fn safe(text: &str, max: usize) -> String {
         .collect()
 }
 
-fn rpc(connection: &mut crate::client::Connection, mut request: Value) -> Result<Value> {
+fn rpc(connection: &mut crate::client::Connection, request: &mut Value) -> Result<Value> {
     request["version"] = json!(1);
     request["persistent"] = json!(true);
-    connection.request(&request, RPC_TIMEOUT)
+    connection.request(request, RPC_TIMEOUT)
 }
 
 fn refresh(
@@ -1643,7 +1678,7 @@ fn refresh(
 ) -> Result<Value> {
     let private = rpc(
         connection,
-        json!({"op":"control-handle","handle":controller,"method":"read"}),
+        &mut json!({"op":"control-handle","handle":controller,"method":"read"}),
     )?;
     let mut targets: std::collections::BTreeMap<_, _> = targets.into_iter().collect();
     let mut claims = Vec::new();
@@ -1661,7 +1696,7 @@ fn refresh(
             }
             let state = rpc(
                 connection,
-                json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
+                &mut json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
             )?;
             claims.push(state);
         }
@@ -1678,7 +1713,7 @@ fn refresh(
         }
     }
     let agents = if targets.values().any(|acp| *acp) {
-        Some(rpc(connection, json!({"op":"snapshot"}))?)
+        Some(rpc(connection, &mut json!({"op":"snapshot"}))?)
     } else {
         None
     };
@@ -1690,7 +1725,7 @@ fn refresh(
                 &target,
             )
         } else {
-            rpc(connection, json!({"op":"state","terminal":target}))
+            rpc(connection, &mut json!({"op":"state","terminal":target}))
         };
         match result {
             Ok(state) => states.push(state),

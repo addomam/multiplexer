@@ -698,3 +698,111 @@ fn e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering() {
     assert!(!agent.root.join("unexpected-cancel").exists());
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
+
+#[test]
+fn e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel() {
+    let host = Host::new();
+    let mut sentinel = Sentinel::new();
+    let mut agent = host.open("s04-grok-capacity");
+    host.ready(&mut agent);
+    let pid = fs::read(agent.root.join("peer.pid")).unwrap();
+    let mut native = native_attachment(&host, &agent);
+    dismiss_ownership(&host, &agent, &mut native);
+    let owner = ownership(&host, &agent)["owner"].clone();
+    for (index, text, total) in [(1, "add 17 25", 49), (2, "add 1 2", 32)] {
+        show_interaction(&host, &agent, &mut native, None);
+        native.wait("Foreground: none");
+        let prompt = native_prompt(&host, &agent, &mut native, text);
+        if index == 1 {
+            for reservation in 0..5 {
+                let barrier = format!("capacity-{reservation}");
+                host.barrier(&agent, &barrier);
+                host.until(
+                    "reservation canonically retained before next publication",
+                    || {
+                        (host.inspect(&agent)["interactions"].as_array()?.len() == reservation + 1)
+                            .then_some(())
+                    },
+                );
+                agent.release(&barrier);
+            }
+        }
+        let form = host.until("small Grok question after retained reservations", || {
+            host.inspect(&agent)["content"]["interactions"]
+                .as_array()?
+                .iter()
+                .find(|item| {
+                    item["state"] == "pending" && item["schema"]["properties"]["q0"].is_object()
+                })
+                .cloned()
+        });
+        show_interaction(&host, &agent, &mut native, Some(&form));
+        native.send(b"\x1b[B"); // Other.
+        native.send(b"\t");
+        native.paste(&"9".repeat(40_960));
+        native.send(ACCEPT_FORM);
+        native.wait("REVIEW: F5 accepts");
+        native.send(ACCEPT_FORM);
+        native.wait("capacity-exceeded");
+        let rejected = host.inspect(&agent);
+        let pending = rejected["interactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["interaction_id"] == form["interaction_id"])
+            .unwrap();
+        assert_eq!(pending["state"], "pending");
+        assert!(pending["selected_work_id"].is_null());
+        assert_eq!(
+            rejected["work"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|work| work["op"] == "acp-answer")
+                .count(),
+            index as usize - 1
+        );
+        assert!(
+            !agent
+                .root
+                .join(format!("grok-response-{index}.json"))
+                .exists()
+        );
+        assert_eq!(ownership(&host, &agent)["owner"], owner);
+        if index == 1 {
+            native.send(b"\x1b[14~"); // Deliberately unset retained notes, not replay.
+            native.paste("7");
+            native.send(ACCEPT_FORM);
+            native.wait("REVIEW: F5 accepts");
+            native.send(ACCEPT_FORM);
+        } else {
+            native.send(b"\x1b[18~"); // F7 deliberately cancels after definite rejection.
+        }
+        completed_turn(&host, &agent, &prompt, total, index);
+        let response: Value = serde_json::from_slice(
+            &fs::read(agent.root.join(format!("grok-response-{index}.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            response,
+            if index == 1 {
+                json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"accepted",
+                "answers":{"Arithmetic adjustment":["Other"]},
+                "annotations":{"Arithmetic adjustment":{"notes":"7"}}}})
+            } else {
+                json!({"jsonrpc":"2.0","id":"grok-other","result":{"outcome":"cancelled"}})
+            }
+        );
+        assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
+        assert_eq!(ownership(&host, &agent)["owner"], owner);
+    }
+    assert!(
+        !host.inspect(&agent)["work"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|work| work["op"] == "acp-interrupt")
+    );
+    assert!(!agent.root.join("unexpected-cancel").exists());
+    finish(host, &mut agent, &mut native, &mut sentinel);
+}

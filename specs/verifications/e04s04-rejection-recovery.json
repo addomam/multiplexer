@@ -1,0 +1,137 @@
+{
+  "scope": "E04S04-OPS-S1-01-direct-local-repair",
+  "status": "locally-fixed-actual-native-and-resource-bounded-full-PASS-not-independently-cleared",
+  "user_direction": "Fix directly using existing review/CLI evidence; no further reproduction cycle.",
+  "source": {
+    "base_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+    "state": "working-tree-after-base-commit",
+    "prior_inventory": "specs/verifications/e04s04-reply-budget-source.json",
+    "changed_paths": [
+      "src/tui.rs",
+      "src/tui/control.rs",
+      "src/tui/agent.rs",
+      "tests/acp/native/acceptance.rs",
+      "tests/fixtures/acp_peer.rs",
+      "README.md",
+      "CHANGELOG.md"
+    ],
+    "sha256": {
+      "src/acp.rs": "4d364a20c565154c6357b8a30e12197dde68b5e4779f66b8c3f9bab300d657c8",
+      "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+      "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+      "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+      "src/tui.rs": "ef6f4db89035ed4571d9c8be81d57d1fa73c5ef886d4448a63ef286393984c5f",
+      "src/tui/control.rs": "1eb96c74f7e01e9d0dc1e4c3c0e2178967e9945c4b1edc8accea8fb683685d5e",
+      "src/tui/agent.rs": "47414edb1dc93c9ffcae84a2ef09e30648f33f6eb4936583ccc619781f7d9514",
+      "src/runtime.rs": "89f9a66729954e9e4f4308a128018abde0662a66cf9d8761360b0141dd930ba1",
+      "tests/acp.rs": "1348b6fc4406e305cea14d2aee423c16436a3f4fd5aeac8f9a1b0a945a47bd47",
+      "tests/acp/native.rs": "e3a7042f3f9b38f0c2c1265cab6e9de334195f72d3dd6b9ec5aa1551ce77eac3",
+      "tests/acp/acceptance.rs": "2d968ad37a889704ba3b7ffc6e59a969bc715ec7c41c76d702d03f8fb2aa61c5",
+      "tests/acp/native/acceptance.rs": "397733a7873cb99492a4c79cd0127fc22b11e7ce41dfb4591c41aa6388eddc8f",
+      "tests/fixtures/acp_peer.rs": "a740bddefd361470174e29dc04e227766a68c4111ee190ddb7f8224682401667",
+      "README.md": "221a3100bee3a418a420ff5de08e99e689edb7893f43d7642d381339e5b0cefe",
+      "CHANGELOG.md": "85ba1bdf1957e398c7f62496f27bdb87a69027cf90ee776ff67078d67dada1fb",
+      "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+      "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+      "specs/bugs/BUG-e03-native-settlement.md": "7760fed1078fe739ca4a2a41f3adacbe48968931ea85ccc349aa1987000543c2",
+      "specs/bugs/BUG-e04-acp-retained-pipes.md": "29ebadc6f5892db9a70e9eaec4434282d378ca83c85ba3ba90f4fc325df218c5",
+      "src/acp/grok.rs": "92f2d855720a2fd0077544811bf24266eec696b2e83e8fb5313cfce0d6713d2a",
+      "tests/acp/native/live.rs": "245de76657a0b05b628da062102e69e6886c1ecaf2e42277367ce9e44dcf482f",
+      "tests/fixtures/acp_live_observer.mjs": "fb7dc53cf1f9d0360be353b795b7601236adc9b9456892cda427dc3dfd919ae7"
+    }
+  },
+  "finding": "E04S04-OPS-S1-01",
+  "resolution": {
+    "class": "Definite asynchronous non-admission loses identity-correlated feedback to captured native interaction.",
+    "worker": "Borrow original request during RPC; only typed DaemonError for acp-answer/acp-permission returns owned action identity on the existing FIFO reply. Remove answer values before feedback; no answer copy or new retry/queue.",
+    "editor": "Sync exact current grant then reuse pending/call/interaction/revision/full-target/control/generation guards to restore local editing/review. Never automatically resubmit.",
+    "ambiguous_failure": "Timeout, EOF, malformed response and I/O failures remain transport uncertainty; no rejected_action feedback is produced. Existing disconnect/control invalidation behavior unchanged. This is a source-bound safety trace, not a new injected-disconnect runtime claim.",
+    "scope": "Both capture paths (forms and permissions), not only Grok or capacity error; prompt local-queue restoration unchanged."
+  },
+  "focused_runtime": {
+    "command": "cargo fmt && cargo build --example acp_fixture && cargo test --test acp native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel -- --exact --nocapture",
+    "executed": 1,
+    "passed": 1,
+    "case_seconds": 6.35,
+    "wall_seconds": 14.97,
+    "actual_surface": "Real controlling-PTY native TUI, private daemon and genuine stdio ACP form/Grok requests, not direct editor mocks.",
+    "rows": [
+      {
+        "continuation": "New deliberate F4/unset then Other notes7 and two-step F5 accept",
+        "cumulative_effect": 49,
+        "commands": 1
+      },
+      {
+        "continuation": "New deliberate F7 cancellation after next definite rejection",
+        "cumulative_effect": 32,
+        "commands": 2
+      }
+    ],
+    "oracles": [
+      "No rejected answer work, selection or wire response",
+      "Exact original Grok accept/cancel response",
+      "Same owner, peer PID, full session tuple and original work/RPC completion",
+      "No acp-interrupt or session/cancel",
+      "Existing finish oracle asserts TUI/host exit0, termios, drainer join, peer/workers/daemon/socket/root cleanup and sentinel survival before fallback"
+    ],
+    "new_permanent_cases": 1,
+    "new_RED_run": false,
+    "provider_calls": 0
+  },
+  "initial_full_gate": {
+    "job": "bg_259",
+    "artifact": "artifact://1799",
+    "exit_code": 101,
+    "wall_seconds": 92.01,
+    "ACP_suite": {
+      "passed": 66,
+      "ignored": 1,
+      "failed": 0
+    },
+    "failure": "tests/shell_races.rs:253 concurrent_first_opens_publish_one_main_and_valid_default_parents: macOS openpty returned Os code -6.",
+    "classification": "Unrelated PTY-open failure; resource saturation suspected, not established as root cause. No product change or global limit/process/config change made.",
+    "not_claimed": "No full-gate PASS or strict/check/build completion from this aborted chain."
+  },
+  "full_gate": {
+    "job": "bg_260",
+    "status": "PASS",
+    "artifact": "artifact://1803",
+    "exit_code": 0,
+    "wall_seconds": 618.33,
+    "test_policy": "cargo test --workspace -- --test-threads=1 and cargo test -- --test-threads=1; all tests still selected, internal race concurrency unchanged.",
+    "counts": {"workspace":402,"workspace_suites":30,"workspace_ignored":11,"default":291,"default_suites":12,"default_ignored":8,"counts_overlap":true},
+    "strict_workspace_default_Clippy_check_build_fmt": "PASS",
+    "OMP": {"passed":8,"assertions":49},
+    "Zsh_Node_syntax": "PASS",
+    "actual_independent_cursor_showcase": 1,
+    "final_native_unknown_settlement_guards": 2,
+    "note": "Resource-bounded complete chain passes. Initial default-parallel failure remains recorded; no product PTY-allocation fix or legacy native-settlement acceptance claimed."
+  },
+  "generalize_sweep": {
+    "defect_class": "Captured native interaction lacks definite asynchronous non-admission recovery",
+    "grep_pattern": "self\\.capture\\(",
+    "match_count": 2,
+    "sweep_scope": "src/tui/agent.rs",
+    "patched_in_pr": [
+      "form answer capture",
+      "permission selection capture"
+    ],
+    "tracked_issues": [],
+    "bundled_validator": "Not present in this project; actual project checks used."
+  },
+  "audit": {
+    "correctness": "Exact pending identity guard reused; definite errors are pre-admission in daemon acp_action; no fallible mutation path is reinterpreted as a lost reply.",
+    "security_privacy": "No auth/network/provider change; original authority only, answer text removed from feedback, no tracing added.",
+    "performance": "Original envelope moves through existing reply; sizing/state budgets unchanged; no full answer clone or extra queue.",
+    "design": "Existing worker, editor and callback; no provider trait, forwarding alias or speculative retry abstraction.",
+    "conventions": "Actual12-line project conventions; runtime state in memory, stock Zsh/OMP unaffected, regression asserts consumer effects/cleanup.",
+    "rationalizations": "Do not call a focused PASS a full PASS or relabel reduced test concurrency as a production PTY fix. No fresh RED per user direction; new native test first ran after the fix.",
+    "public_credential_scan": {"changed_source_docs_plus_repair_record":8,"private_key":0,"provider_key":0,"JWT":0}
+  },
+  "historical_caps": "Original5/5 and supplemental1/1 preserved; no additional independent review or acceptance claimed.",
+  "acceptance": "All4 story tasks remain failing pending changed-source independent/human decision; local fix does not waive historical gate.",
+  "live_attribution": "Existing actual OAuth1659 is round4-source evidence, not a current-source rerun.",
+  "provider_calls_this_repair": 0,
+  "global_changes": false,
+  "publication": "No commit/merge/push/release in this repair."
+}
