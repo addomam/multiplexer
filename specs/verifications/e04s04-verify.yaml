@@ -1,10 +1,10 @@
 type: verification
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
 verified_at: direct-rejection-repair-actual-native-and-resource-bounded-full1803-observed
-status: local-rejection-repair-and-full-PASS-story-pending-changed-source-independent-human-decision
+status: runtime-PASS-user-accepted-postcap-local-delivery-not-new-independent-PASS
 source: specs/verifications/e04s04-rejection-recovery.json
-source_commit: working-tree-after-741fe4a
+source_commit: 66b5293
 previous_terminal_verdict:
   command: cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
   exit_code: 0
@@ -92,13 +92,13 @@ security:
   previous_operational_must_fix: 1
   current_independent: supplemental1-FAIL-finding-locally-repaired-not-independently-cleared
   current_operational_must_fix: E04S04-OPS-S1-01-locally-fixed-and-verified
-  AND_gate: pending-changed-source-independent-human-decision-original-FAIL-preserved
+  AND_gate: historical-independent-FAIL-preserved-local-repair-runtime-PASS-user-accepted-delivery
   actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
   previous_round2: specs/security/epics/e04/e04s04-review-round2.json
   supported_security_findings: 0
   build_review: specs/verifications/e04s04-build-review-supplemental1.json
   independent_clearance_round: none-supplemental1-failed-new-must-fix
-  next_changed_source_round: none-original5-of5-and-extra1-of1-consumed-human-decision-required
+  next_changed_source_round: none-original5-of5-and-extra1-of1-consumed-human-local-delivery-decision-accepted
 nfr: specs/verifications/NFR-e04s04.json
 worker_retirement: specs/verifications/e04s04-worker-retirement.json
 historical_failures:
@@ -110,7 +110,7 @@ historical_failures:
   record: specs/verifications/e04s04-build.md
   production_RED_endpoint_truth: 1498
 live_task:
-  status: actual-Codex-Grok-complete-matrix-PASS-source-review-blocked-cap5-exhausted
+  status: actual-Codex-Grok-complete-matrix-PASS-on-round4-source-user-accepted-local-delivery
   required_test: e04s04_live_adapters
   prerequisites: specs/verifications/e04s04-live-prerequisites.json
   zero_case_command: never-counts-as-PASS
@@ -120,22 +120,23 @@ live_task:
   actual_artifact: artifact://1659
   private_OAuth_runtime: removed-after-owned-absence-and-no-open-holder-proof
   Claude_execution: false
-all_task_ledgers: all-four-failing-current-source-not-independently-cleared
-whole_story: failing-pending-changed-source-independent-human-decision
+all_task_ledgers: all-four-runtime-passing-user-accepted-postcap
+whole_story: done-user-accepted-not-independently-recleared
 historical_e03_and_review_caps: unchanged
-ACP_main_merge_push_release: not-authorized-not-run
+ACP_main_merge_push_release: local-main-authorized-push-tag-release-not-requested
 endpoint_truth_RCA: specs/verifications/e04s04-endpoint-truth-before-after.json
 local_tasks:
-  1: failing
-  2: failing
-  3: failing
-  4: failing
+  1: passing
+  2: passing
+  3: passing
+  4: passing
 previous_local_baseline: {source: 6a5d9af, artifact: 'artifact://1515', review: specs/verifications/e04s04-build-review-round3.json}
 Other_recovery: specs/verifications/e04s04-other-recovery.json
 previous_round4: specs/verifications/e04s04-build-review-round4.json
 reply_budget_repair: specs/verifications/e04s04-reply-budget-recovery.json
-review_disposition: Original supplemental1/global6 FAIL is preserved. E04S04-OPS-S1-01 is now locally fixed; actual native correction49/cancel32 and resource-bounded full1803 PASS. No further reproduction/review/provider cycle; all tasks remain failing pending changed-source independent/human decision.
+review_disposition: Original supplemental1/global6 FAIL is preserved. E04S04-OPS-S1-01 is locally fixed; actual native correction49/cancel32 and resource-bounded full1803 PASS. The user subsequently accepts local main integration. No fresh independent PASS, cap reset, reproduction/review/provider cycle, push/tag/release or global change is claimed.
 supplemental_review: {authorization: specs/verifications/e04s04-supplemental-review-authorization.json, evidence: specs/verifications/e04s04-build-review-supplemental1.json, original_cycle: exhausted5-of5-preserved, additional_used: 1, additional_allowed: 1, cap_reset: false, code_scores: [100, 100], specialist_score: 96.875, supported_security_findings: 0, operational_must: 1}
 fresh_supplemental_runtime: {evidence: specs/verifications/e04s04-supplemental1-runtime.json, native: 2, Grok_library: 5, reply_budget_CLI: PASS, full1760: reused-unchanged22-source-hashes-not-rerun, provider_calls: 0}
 retained_admission_CLI: {evidence: specs/verifications/e04s04-retained-admission-cli.json, pending: 6, retained_bytes: 4162387, remaining_bytes: 31917, rejected_notes_bytes: 40960, rejected_call_no_work_or_wire: true, deliberate_same_grant_smaller_answer: PASS, native_latch: static-only-no-native-runtime-claim, owned_cleanup_before_fallback: PASS}
 rejection_recovery: {evidence: specs/verifications/e04s04-rejection-recovery.json, status: locally-fixed-native-and-full-PASS-not-independently-cleared, provider_calls: 0, further_review: none-original5-of5-and-extra1-of1-preserved}
+human_delivery_authorization: specs/verifications/e04-main-landing.json

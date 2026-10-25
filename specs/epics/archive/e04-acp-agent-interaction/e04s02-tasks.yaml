@@ -1,5 +1,5 @@
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 story_id: e04s02
 title: Genuine forms and permission decisions
 spec: e04s02-story.md

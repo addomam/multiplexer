@@ -10,7 +10,7 @@ Deliver one owned ACP adapter/connection/session shared by the local API and an 
 
 Preserve stock Zsh/OMP/native terminal APIs, their closed request variants, shell readiness and native-input settlement. Existing `agent-*` operations remain the delivered native-Codex broker. `agent-settled` remains OMP-specific. e03s08 and BUG-e03-native-settlement remain failing/open; e03's exhausted five-review cap is unchanged. ACP proves its separate explicit admission cut and never retroactively repairs the PTY application fence. Terminal-only tools are labelled best-effort, never silently substituted for ACP. The thin non-ACP integration API is deferred.
 
-Normative inputs: `context.yaml`, `../../adr/0004-acp-authoritative-input.md` (including post-round2 clarifications), `../../IMPACT_LATEST.md`, `build-integration-contract.md`, `../../tech-architecture/e04-TEST_PLAN_LATEST.md`, `../../security/epics/e04/THREAT_MODEL.md`, and all four countable story/task pairs.
+Normative inputs: `context.yaml`, `../../../adr/0004-acp-authoritative-input.md` (including post-round2 clarifications), `../../../IMPACT_LATEST.md`, `build-integration-contract.md`, `../../../tech-architecture/e04-TEST_PLAN_LATEST.md`, `../../../security/epics/e04/THREAT_MODEL.md`, and all four countable story/task pairs.
 
 ## Research and package choice
 

@@ -1,9 +1,9 @@
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 story_id: e04s04
 title: Complete ACP acceptance and truthful fallback
 spec: e04s04-story.md
-status: failing
+status: passing
 bcps: 8
 risk: P0
 tasks:
@@ -12,7 +12,7 @@ tasks:
     stale-input rejection with observed cleanup; write redacted complete local matrix.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s04-P0-01
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -28,7 +28,7 @@ tasks:
     snapshot/ownership/shutdown; no false settlement or unrelated cleanup.
   verify: "cargo build --example acp_fixture && cargo test --test acp e04s04_ -- --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s04-P1-04
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -44,7 +44,7 @@ tasks:
     fence; document best-effort terminal fallback without altering historical e03 failure/caps.
   verify: "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture"
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s04-P0-03
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -61,7 +61,7 @@ tasks:
     evidence and owned cleanup. A failed/unsupported row remains failing, never skipped-to-pass; no API-key or premium-model fallback.
   verify: cargo test --test acp e04s04_live_adapters -- --ignored --exact --nocapture
   risk: P0
-  status: failing
+  status: passing
   scenarios:
   - SC-e04s04-P0-02
   completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
@@ -74,3 +74,5 @@ tasks:
     - Security Review
 evidence: specs/verifications/e04s04-build.md
 revalidation: E04S04-OPS-S1-01 is locally repaired at the user's direct-fix request, without another reproduction/review cycle. One focused actual controlling-PTY regression proves same-grant correction49 and explicit F7 cancel32, exact original wire/RPC effects and complete cleanup. Resource-bounded full bg260/artifact1803 PASS402workspace/291default, strict workspace/default Rust/fmt, OMP8/49/Zsh/Node, actual cursor showcase1 and final native guards2; suite test-threads1 preserves internal test races. Initial default-parallel full1799 fails unrelated macOS openpty Os-6 after ACP66 passes; failure retained, no product PTY fix claimed. New source is not independently cleared; original5/5 and supplemental1/1 remain consumed, all four tasks/story failing pending human decision. No provider/auth/global changes, automatic further review, merge/push/release. See specs/verifications/e04s04-rejection-recovery.json.
+delivery_decision: User explicitly accepts verified repair and local main integration after full1803; earlier live1659 remains round4-source evidence. Historical review FAIL reports and exhausted caps are preserved, not independently recleared.
+delivery_authorization: specs/verifications/e04-main-landing.json

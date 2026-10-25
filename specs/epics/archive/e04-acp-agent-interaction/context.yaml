@@ -105,9 +105,9 @@ research:
   claude_adapter: {package: '@agentclientprotocol/claude-agent-acp', version: 0.94.0, commit: 7bcbfc7a5ca7ab9c7eece4f0749ccaf49c7ba7e1, agent_SDK: 0.3.303, native_cli: 2.1.303, Node_minimum: '22'}
   runtime_installs_or_launches: none
 plan_contracts:
-  exact_API_and_launch: specs/epics/e04-acp-agent-interaction/build-integration-contract.md
-  schema_and_validation: specs/epics/e04-acp-agent-interaction/PLAN.md
-  resource_and_lifecycle: specs/epics/e04-acp-agent-interaction/PLAN.md
+  exact_API_and_launch: specs/epics/archive/e04-acp-agent-interaction/build-integration-contract.md
+  schema_and_validation: specs/epics/archive/e04-acp-agent-interaction/PLAN.md
+  resource_and_lifecycle: specs/epics/archive/e04-acp-agent-interaction/PLAN.md
   story_and_risk_matrix: specs/tech-architecture/e04-TEST_PLAN_LATEST.md
   status: reviewed-Plan-round3-100-100
 user_lifecycle_decision:

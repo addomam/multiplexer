@@ -1,0 +1,49 @@
+{
+  "scope": "e04 ACP local main integration",
+  "status": "authorized-not-yet-landed",
+  "authorization": {
+    "user_message": "ok sick. this looks great. Let's merge this and keep going",
+    "decision": "Accept the verified repair for local main integration after exhausted independent review caps.",
+    "independent_post_repair_PASS": false,
+    "source_inspection_by_user_claimed": false,
+    "original_review_rounds_used": 5,
+    "supplemental_passes_used": 1,
+    "review_caps_reset": false,
+    "new_provider_runs": false,
+    "push_tag_release_deployment": "not requested in this instruction",
+    "global_daemon_config_auth_changes": false
+  },
+  "candidate": {
+    "branch": "feat/acp-agent-interaction",
+    "base": "741fe4a188397223d063073ddf919c7123a1586a",
+    "source_inventory": "specs/verifications/e04s04-rejection-recovery.json",
+    "verified_source_hashes_unchanged": 22,
+    "full_gate": "artifact://1803",
+    "workspace_passed": 402,
+    "default_passed": 291,
+    "counts_overlap": true,
+    "suite_test_threads": 1,
+    "internal_race_concurrency": "unchanged",
+    "actual_native_recovery": "same-grant correction49 and explicit cancellation32, original RPC and owned cleanup",
+    "real_Codex_Grok": "artifact://1659 on round4 source, not a new-source provider rerun",
+    "initial_parallel_failure": "artifact://1799; unrelated openpty Os-6 retained, no production PTY fix claimed"
+  },
+  "repair_commit": "66b5293",
+  "gates": {
+    "runtime": "approved Plan gates passed; source-bound full1803 and real adapter evidence retain their exact provenance",
+    "independent_review": "historical FAIL reports preserved; post-cap local delivery explicitly accepted by user, not an independent PASS",
+    "security": "zero supported security findings in latest specialist report; operational must-fix repaired and locally verified, not independently recleared",
+    "traceability": "WAIVED: no traceability matrix or blind-spot input exists in specs",
+    "coverage": "no new percentage measurement claimed; use approved Plan gates, retaining the recorded delivery workflow exception",
+    "CI": "not run: local integration only, no push/release requested",
+    "archival": "Completed capsule moved to specs/epics/archive/e04-acp-agent-interaction; current pointers updated. Immutable historical reports retain paths at their recorded commits."
+  },
+  "preservation": {
+    "original_checkout": "/Users/addomam/projects/multiplexer",
+    "original_checkout_branch": "fix/substrate-defects",
+    "original_checkout_changes": "untouched; nine tracked and 48 untracked paths observed before landing",
+    "main_worktree": "/Users/addomam/projects/amux-acp",
+    "main_before": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+    "historical_e03_native_acceptance": "failing and unresolved application fence preserved; terminal-only remains best-effort and unknown safe grant remains blocked"
+  }
+}

@@ -1,5 +1,5 @@
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 story_id: e04s03
 title: Admission-fenced ownership and retained work
 spec: e04s03-story.md

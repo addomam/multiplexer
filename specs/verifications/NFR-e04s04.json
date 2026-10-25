@@ -1,8 +1,8 @@
 {
   "scope": "e04s04-complete-Codex-Grok-live-integration",
-  "status": "local-rejection-repair-and-resource-bounded-full-PASS-story-pending-independent-human-decision",
+  "status": "runtime-PASS-user-accepted-postcap-local-delivery-not-new-independent-PASS",
   "source": "specs/verifications/e04s04-rejection-recovery.json",
-  "source_commit": "working-tree-after-741fe4a",
+  "source_commit": "66b5293",
   "production_changes": [
     "src/acp.rs",
     "src/acp/grok.rs",
@@ -13,7 +13,7 @@
   "dependency_changes": false,
   "current_contiguous_verification": "artifact://1803",
   "current_independent_review": "supplemental1-FAIL-finding-locally-repaired-not-independently-cleared",
-  "current_operational_must_fix": "E04S04-OPS-S1-01-locally-fixed-verified-pending-changed-source-decision",
+  "current_operational_must_fix": "E04S04-OPS-S1-01-locally-fixed-verified-user-accepted-not-independently-recleared",
   "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
   "wall_seconds": 618.33,
   "counts": {
@@ -108,7 +108,7 @@
     "ACP publication"
   ],
   "live_task": {
-    "status": "complete-real-matrix-PASS-story-review-blocked-cap5-exhausted",
+    "status": "complete-real-matrix-PASS-on-round4-source-user-accepted-local-delivery",
     "required_test": "e04s04_live_adapters",
     "command_available_or_executed": true,
     "prerequisites": "specs/verifications/e04s04-live-prerequisites.json",
@@ -134,13 +134,13 @@
   },
   "current_supported_security_findings": 0,
   "local_tasks": {
-    "1": "failing-pending-current-independent-clearance",
-    "2": "failing-pending-current-independent-clearance",
-    "3": "failing-pending-current-independent-clearance",
-    "4": "failing"
+    "1": "passing-runtime-and-user-postcap-delivery-decision",
+    "2": "passing-runtime-and-user-postcap-delivery-decision",
+    "3": "passing-runtime-and-user-postcap-delivery-decision",
+    "4": "passing-real-Codex-Grok-on-round4-source-no-provider-rerun"
   },
   "independent_clearance_round": "none-supplemental1-failed-new-must-fix",
-  "next_changed_source_round": "none-original5-of5-and-extra1-of1-consumed-human-decision-required",
+  "next_changed_source_round": "none-caps-preserved-human-local-delivery-decision-accepted",
   "private_setup_scope": "Historical setup-only evidence retained; later user explicitly authorized private Codex/Grok OAuth/cheap live execution, not global changes or publication.",
   "previous_local_baseline": {"source":"6a5d9af","artifact":"artifact://1515","review":"specs/verifications/e04s04-build-review-round3.json"},
   "current_CLI_smoke": "specs/verifications/e04s04-grok-codec-cli.json",
@@ -154,5 +154,6 @@
   "supplemental_review": {"code_scores":[100,100],"specialist_score":96.875,"supported_security_findings":0,"operational_must":1,"original_reply_budget_defect":"independently-cleared","original_cycle":"exhausted5-of5-preserved","additional_used":1,"additional_allowed":1,"cap_reset":false},
   "supplemental_runtime": "specs/verifications/e04s04-supplemental1-runtime.json",
   "retained_admission_CLI": {"evidence":"specs/verifications/e04s04-retained-admission-cli.json","pending":6,"retained_bytes":4162387,"remaining_bytes":31917,"rejected_notes_bytes":40960,"rejected_call_no_work_or_wire":true,"same_grant_smaller_answer":"PASS","original_RPC_completed":true,"native_latch":"original-CLI-static-trace-only-new-native-repair-proof-is-separate","owned_cleanup_before_fallback":"PASS","provider_calls":0},
-  "native_rejection_recovery": {"evidence":"specs/verifications/e04s04-rejection-recovery.json","status":"locally-fixed-actual-native-and-resource-bounded-full-PASS","focused_native":1,"continuations":["correction49","cancel32"],"full":"artifact://1803","initial_parallel_failure":"artifact://1799","suite_test_threads":1,"internal_race_concurrency":"unchanged","provider_calls":0,"new_independent_clearance":false}
+  "native_rejection_recovery": {"evidence":"specs/verifications/e04s04-rejection-recovery.json","status":"locally-fixed-actual-native-and-resource-bounded-full-PASS","focused_native":1,"continuations":["correction49","cancel32"],"full":"artifact://1803","initial_parallel_failure":"artifact://1799","suite_test_threads":1,"internal_race_concurrency":"unchanged","provider_calls":0,"new_independent_clearance":false},
+  "human_delivery_authorization": "specs/verifications/e04-main-landing.json"
 }

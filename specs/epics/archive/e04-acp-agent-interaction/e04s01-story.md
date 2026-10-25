@@ -3,7 +3,7 @@ story_id: e04s01
 title: Shared ACP session and conversation view
 maturity: 3
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 risk: P0
 bcps: 8
 status: done

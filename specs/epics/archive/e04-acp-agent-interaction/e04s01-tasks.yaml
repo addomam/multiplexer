@@ -1,5 +1,5 @@
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 story_id: e04s01
 title: Shared ACP session and conversation view
 spec: e04s01-story.md

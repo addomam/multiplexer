@@ -86,8 +86,8 @@ prior_art:
   - {candidate: Existing ACP-specific bigpowers skill, fit: none-found, evidence: 'Mounted lexical search ACP returned zero matches'}
 references:
   - ../adr/0004-acp-authoritative-input.md
-  - ../epics/e04-acp-agent-interaction/context.yaml
-  - ../epics/e04-acp-agent-interaction/epic.yaml
+  - ../epics/archive/e04-acp-agent-interaction/context.yaml
+  - ../epics/archive/e04-acp-agent-interaction/epic.yaml
   - ../IMPACT_LATEST.md
   - ../bugs/BUG-e03-native-settlement.md
   - ../verifications/e03-publication.json

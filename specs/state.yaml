@@ -1,10 +1,10 @@
 workflow_mode: solo-git
 vcs: {kind: git, branch: feat/acp-agent-interaction, signing: configured-1password-ssh, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: build_epic
+active_flow: release_branch
 active_epic: e04
 project_cycle:
-  current_phase: 4
-  completed_phases: [1, 2, 3]
+  current_phase: 6
+  completed_phases: [1, 2, 3, 4, 5]
   mode: standard
   scope: acp-agent-interaction
   previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}
@@ -32,8 +32,8 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: orchestrate-project
-  blocked: true
+  next_skill: release-branch
+  blocked: false
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -90,8 +90,10 @@ handoff:
     User explicitly requests another review after the reply-budget fix. Authorize exactly one supplemental pass1/global pass6 on frozen741fe4a; preserve the original exhausted5/5 cycle and reports, no cap reset or automatic extra loop. Fresh blind A/B plus security/operational review and parent deterministic native/CLI checks only; no provider/auth/global changes or merge/push/release. Source22 hashes still match the repaired snapshot and full1760 remains source-bound. Authorization is e04s04-supplemental-review-authorization.json.
     Authorized supplemental1/global6 is complete. Full blind A/B each100/100 independently match22/22 and all three reviewers clear the original reply-budget defect. Specialist operational must-fix E04S04-OPS-S1-01 fails the combined gate: definite asynchronous retained-content rejection leaves native capture without correlated recovery. Parent actual CLI confirms six valid pending interactions retain4162387bytes, leaving31917bytes; valid40960-byte notes receive capacity-exceeded before work/wire publication, then a new same-grant smaller answer completes the original RPC. Native latch remains source-supported, not runtime-reproduced by this CLI probe. Fresh existing native2/Grok5/reply-budget CLI pass; source22 hashes unchanged/full1760 reused, no provider use. All four tasks stay failing. Supplemental allowance1/1 consumed; original5/5 preserved, no automatic pass7 or acceptance/publication. Next repair needs actual-native RED and identity-correlated definite non-admission recovery, never replay or ambiguity-based unlock.
     User's direct-repair request is complete without another reproduction/review cycle. Existing native FIFO replies now return owned captured action identity only after typed definite daemon non-admission; answer values are removed, exact pending call/revision/target/control/generation guards retain deliberate correction/cancel and ambiguous transport failure stays fail-closed. One focused actual controlling-PTY case passes correction49 and F7 cancel32 on original owner/PID/session/RPC with complete cleanup,6.35s. Initial default-parallel full1799 passes ACP66/1ignored then fails unrelated shell_races openpty Os-6; preserve it, no product PTY fix claimed. Resource-bounded full bg260/artifact1803 now PASS402workspace/291default, strict workspace/default Rust/fmt, OMP8/49, Zsh/Node, actual cursor showcase1 and final native guards2,618.33s. Suite test-threads1 leaves each test's internal races enabled. No provider/auth/global/publication action or fresh RED. All reachable repair/verification complete; changed-source independent/human acceptance remains separate with original5/5 and supplemental1/1 exhausted, no automatic further review. Evidence is e04s04-rejection-recovery.json.
-  last_step_completed: e04s04-definite-nonadmission-repair-actual-native-and-full1803-PASS
+    Current user decision supersedes the preceding pending-delivery snapshots: "ok sick. this looks great. Let's merge this and keep going" explicitly accepts local main integration of repair66b5293 after actual runtime proof. The22 runtime hashes still match full1803, all four S04 tasks now pass with this human post-cap decision, and the completed e04 capsule is archived. Original5/5 and supplemental1/1 FAIL reports/caps stay unchanged; no new independent PASS, provider run, push, tag, release or global change. Land by safe fast-forward in the clean /Users/addomam/projects/amux-acp main worktree, preserve the dirty original checkout, then start the previously requested thin non-ACP integration API scope on a new feature branch. Authorization is specs/verifications/e04-main-landing.json.
+  last_step_completed: e04-runtime-verified-user-accepted-postcap-and-capsule-archived
   required_reading:
+    - specs/verifications/e04-main-landing.json
     - specs/verifications/e04s04-live-codex-grok.json
     - specs/verifications/e04s04-grok-codec-cli.json
     - specs/verifications/e04s04-round4-source.json
@@ -155,17 +157,17 @@ handoff:
     - specs/verifications/e04s02-round1-source.json
     - specs/verifications/e04s02-security-review-round1.json
     - specs/verifications/e04s01-build.md
-    - specs/epics/e04-acp-agent-interaction/PLAN.md
-    - specs/epics/e04-acp-agent-interaction/build-integration-contract.md
-    - specs/epics/e04-acp-agent-interaction/epic.yaml
-    - specs/epics/e04-acp-agent-interaction/e04s01-story.md
-    - specs/epics/e04-acp-agent-interaction/e04s01-tasks.yaml
-    - specs/epics/e04-acp-agent-interaction/e04s02-story.md
-    - specs/epics/e04-acp-agent-interaction/e04s02-tasks.yaml
-    - specs/epics/e04-acp-agent-interaction/e04s03-story.md
-    - specs/epics/e04-acp-agent-interaction/e04s03-tasks.yaml
-    - specs/epics/e04-acp-agent-interaction/e04s04-story.md
-    - specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/PLAN.md
+    - specs/epics/archive/e04-acp-agent-interaction/build-integration-contract.md
+    - specs/epics/archive/e04-acp-agent-interaction/epic.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/e04s01-story.md
+    - specs/epics/archive/e04-acp-agent-interaction/e04s01-tasks.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/e04s02-story.md
+    - specs/epics/archive/e04-acp-agent-interaction/e04s02-tasks.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/e04s03-story.md
+    - specs/epics/archive/e04-acp-agent-interaction/e04s03-tasks.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/e04s04-story.md
+    - specs/epics/archive/e04-acp-agent-interaction/e04s04-tasks.yaml
     - specs/tech-architecture/e04-TEST_PLAN_LATEST.md
     - specs/security/epics/e04/THREAT_MODEL.md
     - specs/verifications/e04-plan-review-round1.json
@@ -173,9 +175,9 @@ handoff:
     - specs/verifications/e04-plan-static-round3.json
     - specs/verifications/AUDIT-e04-plan.md
     - specs/verifications/e04-plan-static.json
-    - specs/epics/e04-acp-agent-interaction/context.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/context.yaml
     - specs/adr/0004-acp-authoritative-input.md
-    - specs/epics/e04-acp-agent-interaction/epic.yaml
+    - specs/epics/archive/e04-acp-agent-interaction/epic.yaml
     - specs/product/GLOSSARY_LATEST.yaml
     - specs/execution-status.yaml
     - specs/verifications/e04-architecture-review-round1.json
@@ -250,7 +252,7 @@ handoff:
   open_decisions:
     - "New ACP live-model/auth checks require separate approval; previous e03 harness/model permissions are not a blanket ACP authorization."
     - "Historical e03 native/application settlement remains unresolved and its acceptance failing; ACP admission is a separately approved boundary, not a native-fence repair."
-    - "E04 Plan round3 passed 100/100; conditional Build authorization is active. New live checks and ACP publication remain separate."
+    - "Current E04 local main integration is explicitly user-approved after runtime verification; further live runs, global changes, push/tag/release remain separate."
 decisions:
   - User requirements supply product decisions; routine choices resolved without interview.
   - Repository initialized on feat/amux-mvp after user authorization; local signing disabled.
@@ -563,7 +565,7 @@ e04_plan_review:
   minimum_score_each: 94
   e03_counters: preserved
   architecture_post_review_clarifications: mandatory-review-input
-  plan: specs/epics/e04-acp-agent-interaction/PLAN.md
+  plan: specs/epics/archive/e04-acp-agent-interaction/PLAN.md
   reviewers: [E04PlanA3, E04PlanB3]
   round_1: {verdict: FAIL, scores: [93.75, 100], must_fix: 0, should_fix: 2, evidence: specs/verifications/e04-plan-review-round1.json}
   round_2: {verdict: FAIL, scores: [96.875, 96.875], must_fix_each: 1, evidence: specs/verifications/e04-plan-review-round2.json}
@@ -681,17 +683,17 @@ epic_cycle:
   scope: e04-acp-agent-interaction
   story: e04s04
   story_bcps: 8
-  step: 6
-  completed_steps: [0, 1, 2, 3, 4, 5]
+  step: 8
+  completed_steps: [0, 1, 2, 3, 4, 5, 6, 7]
   started_at: "2026-10-24T07:12:52.595+00:00"
   baseline: {commit: 5311409, source_commit: eb2d0b2, source: specs/verifications/e04s03-round1-source.json, artifact: 'artifact://1346', workspace_passed: 384, exact_admission: 1, exact_integration: 11, native_pty: 19, pty_control: 34, strict_rust_OMP_Zsh: passed, source_unchanged_since_actual_baseline: true}
   integration_owner: parent
   implementation_started: true
   approved_plan_reopened: false
-  audit_result: local-definite-nonadmission-repair-native-and-full1803-PASS-independent-decision-pending
-  runtime_acceptance: local-current-rejection-recovery-and-full1803-PASS-earlier-real1659-on-round4-story-review-gate-not-waived
+  audit_result: local-definite-nonadmission-repair-native-and-full1803-PASS-human-delivery-accepted-not-independently-recleared
+  runtime_acceptance: local-current-recovery-full1803-PASS-earlier-real1659-on-round4-user-accepted-postcap
   live_approval: user-approved-Codex-Grok-existing-OAuth-cheap-supported-models-private-runtime-no-Claude
-  ACP_publication: not-authorized
+  ACP_publication: local-main-integration-explicitly-authorized-no-push-tag-release
   historical_native_failure_and_review_caps: unchanged
   current_local_verification: {source_commit: working-tree-after-741fe4a, artifact: 'artifact://1803', job: bg_260, standalone_focused_native: 1, workspace: 402, workspace_suites: 30, default: 291, default_suites: 12, counts_overlap: true, strict_Rust_OMP_Zsh_Node: passed, showcase: 1, native_unknown_guards: 2, source: specs/verifications/e04s04-rejection-recovery.json, audit: specs/verifications/AUDIT-e04s04.md, suite_test_threads: 1, internal_race_concurrency: unchanged, prior_parallel_failure: 'artifact://1799', previous_full: 'artifact://1760'}
   build_review: {scope: e04s04-complete-Codex-Grok-integration-native-Other-repair, round: 5, max_rounds: 5, status: FAIL-operational-must-fix-locally-repaired-not-independently-cleared, scores: [100, 100], must_fix: E04S04-OPS-R5-01, source: specs/verifications/e04s04-round5-source.json, evidence: specs/verifications/e04s04-build-review-round5.json, latest_repair: specs/verifications/e04s04-reply-budget-recovery.json, whole_story: failing, next_round: none-cap5-exhausted-human-review-required, historical_caps: unchanged}
@@ -702,3 +704,4 @@ epic_cycle:
   owned_sessions:
     - {agent: e04-s04-backend, workspace: w1X, tab: 'w1X:t1', pane: 'w1X:p1', worktree: /Users/addomam/projects/amux-acp-s04-backend, branch: feat/acp-s04-backend, base: 5311409, files: [tests/acp/acceptance.rs, tests/fixtures/acp_peer.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: c1f4694ef9e42ffb7866f901a574753d19ba505a, integration: 5862083, completion_job: bg_206, worker_checks: prohibited-parent-only}
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}
+  human_delivery_decision: {status: accepted, source: specs/verifications/e04-main-landing.json, source_commit: 66b5293, review_caps_reset: false, independent_post_repair_PASS: false}

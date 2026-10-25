@@ -2,11 +2,11 @@ id: e04
 type: epic
 context: context.yaml
 title: ACP-first agent interaction
-status: building-e04s04
-scope: ../../product/SCOPE_LATEST.yaml
-architecture: ../../adr/0004-acp-authoritative-input.md
-impact: ../../IMPACT_LATEST.md
-historical_native_epic: ../e03-agent-interaction/epic.yaml
+status: done-user-accepted-local-integration
+scope: ../../../product/SCOPE_E04.yaml
+architecture: ../../../adr/0004-acp-authoritative-input.md
+impact: ../../../IMPACT_LATEST.md
+historical_native_epic: ../../e03-agent-interaction/epic.yaml
 historical_native_acceptance: failing-preserved
 priority: explicit-user-next-initiative-after-e03-publication
 phase_gates:
@@ -45,9 +45,10 @@ stories:
     bcps: 8
     risk: P0
     delta: MODIFIED
-    status: failing
+    status: done
     spec: e04s04-story.md
     tasks: e04s04-tasks.yaml
 plan_status: passed-independent-round3-100-100
 plan: PLAN.md
-runtime_implementation: e04s01-e04s03-locally-complete-e04s04-native-rejection-repair-and-resource-bounded-full1803-PASS-earlier-live1659-PASS-changed-source-review-decision-pending
+runtime_implementation: all-four-stories-runtime-verified-user-accepted-for-local-main-integration-original-independent-FAILs-and-caps-preserved
+delivery_authorization: ../../../verifications/e04-main-landing.json

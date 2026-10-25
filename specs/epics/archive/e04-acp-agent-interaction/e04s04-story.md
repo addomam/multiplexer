@@ -3,10 +3,10 @@ story_id: e04s04
 title: Complete ACP acceptance and truthful fallback
 maturity: 3
 type: feat
-context: specs/epics/e04-acp-agent-interaction/context.yaml
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
 risk: P0
 bcps: 8
-status: failing
+status: done
 ---
 
 ## 1 Identity
@@ -80,3 +80,5 @@ Evidence destination: specs/verifications/e04s04-build.md (created only with act
 Current gate: authorized supplemental1/global6 on741fe4a clears the prior reply-budget defect but fails on E04S04-OPS-S1-01, definite retained-content non-admission without correlated native capture recovery. Fresh existing native2/Grok5/CLI checks pass; a separate actual CLI confirms this new rejection trigger and same-grant deliberate correction, not the native latch itself. See specs/verifications/e04s04-build-review-supplemental1.json and e04s04-retained-admission-cli.json. All tasks/story remain failing. Original5/5 and supplemental1/1 are consumed without reset; no automatic extra review or publication.
 
 Subsequent direct repair: E04S04-OPS-S1-01 is locally fixed and verified without another reproduction/review cycle. Actual controlling-PTY correction49/F7 cancel32 pass on the original grant/session/RPC with cleanup. Resource-bounded full1803 passes402workspace/291default and strict/runtime gates; initial parallel openpty failure1799 is retained. See specs/verifications/e04s04-rejection-recovery.json. Historical review outcomes remain unchanged; all tasks/story still await changed-source independent/human decision, with no additional live calls or publication.
+
+Current delivery decision: the user explicitly accepts the verified repair and directs local main integration. Actual runtime evidence above remains source-attributed; the historical independent FAIL reports and original5/5 plus supplemental1/1 caps are unchanged. All four tasks now pass their actual runtime gates with this post-cap human delivery decision, not an invented independent PASS. See specs/verifications/e04-main-landing.json. No new live call, push, tag, release or global change is authorized.
