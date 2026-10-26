@@ -66,6 +66,58 @@ Build and test all packages with `cargo build --workspace` and `cargo test --wor
 
 An ACP view is a separate live agent target, not a terminal or a replacement stock-agent TUI. amux owns one stdio adapter connection and its session; the human editor and structured API address that same instance. Native terminal interaction remains a separate best-effort path: ACP does not repair the unresolved native input/application fence.
 
+### Launch an installed agent
+
+```sh
+amux acp profiles
+amux acp start omp --project "$PROJECT_ID"
+amux acp start codex --project "$PROJECT_ID" --model "$ACP_MODEL_ID" --effort low
+amux acp start grok --project "$PROJECT_ID" --mode "$ACP_MODE_ID"
+```
+
+`start` opens the human conversation and launches **once on that native attachment's original connection**. Project IDs or unambiguous project names are accepted. Builtins run installed `omp acp`, `codex-acp`, and `grok --no-auto-update agent stdio`; missing executables fail explicitly, with no automatic installation or substitute agent. Executables resolve through the daemon's PATH, without a shell. Existing `acp open` remains the raw absolute-argv API.
+Symlinked executables retain their resolved invocation pathname, including virtual-environment and basename-selected launchers; validation follows metadata without substituting the canonical target.
+Profile `available` means an executable was found, not that authentication or a particular account/model is usable.
+
+In the window picker, **Ctrl-A** opens the ACP launch dialog. Choose project/profile, then optional name, model, mode, effort or an **Options JSON** object such as `{"option-id":"choice-id"}`. Tab/BackTab moves fields, arrows change selectors, Ctrl-U clears a text field, Enter launches once and Escape cancels. If Ctrl-A is your prefix, navigate once after opening the picker before pressing Ctrl-A; prefix twice keeps its existing literal-prefix behavior.
+
+Optional `acp_profiles` configuration adds or overrides named profiles:
+
+```json
+{
+  "acp_profiles": {
+    "omp-low": {
+      "label": "OMP · low effort",
+      "command": ["omp", "acp"],
+      "defaults": {"effort": "low"}
+    }
+  }
+}
+```
+
+Profiles are credential-free argv/settings, not plugins. Explicit launch settings override profile defaults; `--option ID=VALUE` may be repeated for distinct advertised option IDs. Clearing a dialog setting returns to its selected profile default, shown as an inherited placeholder; option overrides merge with profile options, so deleting an option ID does not remove its profile default. Settings absent from both the request and the profile use agent defaults. Model/mode/effort IDs must actually be offered by that agent. amux waits for acknowledged, confirmed settings before admitting prompts; unsupported or unconfirmed requests fail rather than silently choosing another model. Inspect/snapshot `configuration` separates `requested` from actual `reported` values and marks unreported defaults or later agent-side changes. **Agent defaults are not a cheap-model or permission-policy guarantee.** Permission policy remains unreported unless the agent genuinely exposes it; a mode label alone is not proof.
+For complete option identities, use `--options-json '{"fixture,detail=level":"brief,exact=value"}'`; the JSON object preserves commas, equals signs, backslashes and whitespace within quoted IDs and choices. The `--option ID=VALUE` shorthand splits at the first `=` and is only for IDs without `=`. Distinct shorthand entries may accompany the JSON object; duplicate explicit IDs, including duplicate JSON keys, are rejected rather than silently overwritten. CLI/native Options JSON is bounded to64KiB; advertised identity/count and total-settings bounds still apply.
+Structured option selections retain exact advertised IDs even when independent options share a category; ambiguous semantic effort is rejected. Untouched native Options inherit profile JSON directly. Explicit native overrides use the same lossless JSON-object parser as the CLI; omitted IDs retain profile defaults.
+Native launch edits are accepted or rejected in full. Oversized edits and control-containing scalar text leave the backing value unchanged and mark that field rejected; Enter stays blocked until each rejected field is deliberately corrected or reset. Editing another text field does not acknowledge it. Formatted Options JSON retains legal whitespace, with inert display rather than terminal control output.
+Legacy `session/set_mode` accepts its protocol-valid empty `null` acknowledgement. Config-option setters still require a complete, value-confirming `configOptions` response; notifications alone do not confirm the requested setting.
+
+The native settings view wraps and scrolls the same inert settings summary, so long model IDs do not hide current/requested mode or effort. Option metadata retains its explicit `[clipped]` display bound. While open, application gestures—including typing, paste, prompt submission, authentication and interruption—are discarded locally, never drafted or replayed; close the view before those actions. Navigation preserves existing prompt/interaction drafts and never requests control.
+
+For a deliberate noninteractive launch, pass an explicit `--controller "$CONTROLLER_JSON"` to `acp start`; it returns the same JSON receipt instead of attaching. No temporary external controller is invented.
+
+### Detach, reconnect and authority
+
+Detach leaves the live ACP process/session and admitted work running. `amux acp attach "$ACP_VIEW_ID"` returns to that exact surviving view; it does not start another agent. A disconnected or sleep-paused attachment fences application input, discards drafts/queued mutations and old consent/control, then resynchronizes only through an existing daemon socket. It never replays input, automatically forces/reacquires control or resurrects a daemon. Another owner's authority stays intact; reacquisition is deliberate through the normal control UI.
+
+Recovery verifies the daemon's runtime `daemon_id` and the original agent tuple. Initial session establishment may fill a previously null session ID on that exact instance/connection, including while disconnected; an established session never follows a reset. An acknowledged launch becomes the recovery target before further observation. If the UI loses a connection before consuming a parsed launch reply, teardown joins the old worker and retains only that successful target identity, never its authority or queued actions. Recovery neither repeats the launch nor returns to the previous agent. It observes and validates continuity before registering a new native controller; stopped recovered observers attempt guarded idle-controller cleanup, without releasing owners or cancelling pending claims. An unavailable daemon leaves cleanup retained rather than claiming reclamation. If the daemon was replaced or the target ended/disappeared, the UI says so rather than substituting a same-name session. Ctrl-Q/Escape can detach while disconnected. This is same-process reattachment, **not crash recovery or session restoration**.
+An explicit keyboard or mouse selection becomes the recovery target before a fallible resize or subsequent observation, so recovery cannot silently return to the previous view.
+Recovery drains events queued through registration and the first observer paint before announcing Reconnected. Stale control shortcuts are discarded too; Escape/Ctrl-Q can still detach, and a queue that cannot drain stays fenced. The current terminal geometry is reconciled before readiness; a changed size triggers another observer paint/input drain rather than replaying discarded events.
+Ordinary native painting also reconciles the application PTY against the actual painted viewport if a resize notification is lost or coalesced. A changed viewport invalidates Force readiness and requires another paint/input-drain fence before confirmation becomes available.
+The native worker checks its original observation and authority connections before dispatching queued work, and again after a claim's observation read. A fresh UI heartbeat alone cannot authorize a queued launch after observation loss; already admitted work is not implicitly interrupted. Its shutdown-handle allocation completes before creating the native controller, so that allocation failure cannot orphan a new registration.
+The Force action is advertised only after the full warning has been painted and queued input drained. An early confirmation is consumed, never saved for later.
+
+### Structured control
+
 Register an external controller through `amux api '{"op":"controller-create","role":"external","label":"ACP operator"}'`. Use an exact project ID from `amux snapshot` and the returned private controller handle:
 
 ```sh
@@ -83,6 +135,8 @@ Genuine ACP forms and tool permissions appear in this same conversation, includi
 
 | Interaction action | Key |
 |---|---|
+| Open/close read-only settings / return | F10 / F10 or Esc |
+| Scroll settings while open | PgUp/PgDn, arrows, Home/End, mouse wheel |
 | Cycle questions, permissions and history | F9 |
 | Select form field | Tab / Shift-Tab |
 | Edit text or numeric field | Typing / bracketed paste |
@@ -125,6 +179,7 @@ The Ratatui interface has a **three-row title/tab bar**, a **Switch** button at 
 | Select / open | Up/Down, Enter |
 | New shell from current captured context | Ctrl-N |
 | New terminal running OMP | Ctrl-O |
+| New ACP conversation | Ctrl-A |
 | Promote | Ctrl-P |
 | Reparent / demote: choose a parent row next | Ctrl-R / Ctrl-D |
 | Close running terminal / remove exited window | Ctrl-X |
@@ -309,6 +364,10 @@ zsh -n integrations/zsh/adapter.zsh
 ```
 
 [Architecture and API ownership](specs/tech-architecture/DESIGN_PLAN_LATEST.md), [implementation plan](specs/epics/e01-native-terminal/epic.yaml), and [verification evidence](specs/verifications/) record the installed bigpowers workflow and observations.
+
+`vendor/crossterm` retains the pinned MIT-licensed 0.29.0 release with a local native-input repair: preserve pending input/resize readiness and descriptor flags shared with the parent shell. Safety-critical view/recovery/consent checks use an explicit Empty/Pending/Inconclusive probe, not filtered zero-time `poll(false)`. Internal terminal replies cannot hide queued human events; incomplete sequences and bounded reader yields keep authority fenced while resize/disconnect handling progresses. [Repair/provenance evidence](specs/verifications/e06-native-input-diagnosis.json) and [input-boundary verification](specs/verifications/e06-review-round10-repairs.json) explain the released-source patch rather than an unrelated upstream upgrade or the alternate zero-timeout-broken backend.
+
+Current [ACP daily-use verification](specs/verifications/e06-daily-use-verify.json) includes451 workspace tests,44 distinct nonlive E06 cases, three fresh100/100 source/security reviews and [one genuine installed-OMP subscription run](specs/verifications/e06-omp-live-final.json). Native question answering, API handoff with exact permission deny/allow effects and original session/process/work continuity passed with normal owned cleanup. The live check used four MAI Flash/low requests, not synthetic model responses; this does not waive the separate terminal-only unknown-settlement limitation.
 
 Latest [substrate verification](specs/verifications/substrate-reliability.md): **210 Rust tests and 8 OMP tests pass**, plus the explicit strict independent-showcase check, workspace Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle smokes. The report retains an earlier queued-execution timeout whose cause was not established; the instrumented acceptance suite, final workspace suite and 24 cancellation probes passed without weakening tests. [Earlier latency/UI measurements](specs/verifications/immediate-input.md) and [MVP evidence](specs/verifications/MVP-e01.md) remain historical baselines, not fresh performance results. **The e01 independent-review cap remains exhausted (5/5); no new independent PASS or landing authorization is claimed for this fix branch.**
 

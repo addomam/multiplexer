@@ -1,0 +1,55 @@
+{
+  "kind": "actual-built-human-CLI-and-controlling-PTY-outside-tests",
+  "status": "passed",
+  "provider_calls": 0,
+  "binary_sha256": "54ef38a32da8efc04d067333f7702dae0bc974b0cfa97cf44c464c391f558d7f",
+  "target": {
+    "id": "acp-9efea4f2a1bb462190a7528b3045186e",
+    "instance_id": "instance-cb82b1fd1aaa43fca9b366565765193b",
+    "connection_generation": 1,
+    "session_id": "arithmetic-31566",
+    "kind": "acp"
+  },
+  "native_effect": 42,
+  "reattached_API_effect": 57,
+  "original_peer_pid": 31566,
+  "original_agent_retained": true,
+  "duplicate_agents": false,
+  "stale_draft_replayed": false,
+  "automatic_reacquisition": false,
+  "termios_restored": true,
+  "TUI_exits": [
+    0,
+    0
+  ],
+  "host_exits": [
+    0,
+    0
+  ],
+  "drainers_joined": true,
+  "peer_reaped": true,
+  "daemon_exit": 0,
+  "socket_absent": true,
+  "sentinel_survived": true,
+  "fallback_used": false,
+  "private_root_removed": true,
+  "source_stage": "after round7 explicit-options lossless JSON repair",
+  "source": "specs/verifications/e06-post-round7-source.json",
+  "actual_provider_aggregate": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "surface_observed": {
+    "ready": true,
+    "locked": true,
+    "observer_read_only": true,
+    "settings_state": "applied",
+    "requested_options": {
+      "fixture-detail": "brief"
+    },
+    "permission_guarantee_not_inferred": true
+  },
+  "changed_path": "actual human acp start launched once with --options-json; harness-only argument insertion restored afterward, no mocked daemon or provider responses",
+  "scope_limit": "credential-free deterministic peer; delimiter ID/value cases additionally exercised through real built CLI/controlling PTY regressions; not live installed OMP acceptance"
+}

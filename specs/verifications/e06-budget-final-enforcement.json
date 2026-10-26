@@ -1,0 +1,27 @@
+{
+  "status": "passed-offline-only",
+  "guard_sha256": "1c6d48209fb0ed76e501f37ec72daffe7d35e29208b03b77d1151a5e8f63df08",
+  "actual_provider_requests": 0,
+  "OS_network": "denied",
+  "fake_fetch_admitted": 4,
+  "declared_and_enforced_maximum": 4,
+  "output_caps": [
+    2000,
+    2000,
+    512,
+    2000
+  ],
+  "fifth_blocked": true,
+  "wrong_model_blocked": true,
+  "higher_effort_blocked": true,
+  "wrong_host_blocked": true,
+  "deadline": {
+    "seconds": 1,
+    "observed_exit": 137,
+    "wall_seconds": 1.13,
+    "expired": true,
+    "actual_model_requests": 0,
+    "mechanism": "owned original process-group SIGKILL; fallback exit124 not used"
+  },
+  "live_acceptance": "separate-still-failing;no-new-real-request-authorized"
+}

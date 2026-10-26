@@ -12,12 +12,15 @@ use ratatui::{
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet},
+    net::Shutdown,
+    os::unix::net::UnixStream,
     path::Path,
     sync::{
         Arc,
+        atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, SyncSender, TrySendError},
     },
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -39,6 +42,7 @@ enum Op {
     Activity,
     Input,
     Acp,
+    Launch,
 }
 
 struct Grant {
@@ -54,6 +58,7 @@ pub(super) enum Input {
 }
 
 enum Work {
+    Stop,
     Rpc {
         target: Arc<str>,
         op: Op,
@@ -144,23 +149,57 @@ pub(super) struct NativeControl {
     refresh_pending: bool,
     refreshed: Instant,
     connected: bool,
+    stop: Arc<AtomicBool>,
+    heartbeat: Arc<parking_lot::Mutex<SystemTime>>,
+    stream: UnixStream,
+    socket: std::path::PathBuf,
+    worker: Option<std::thread::JoinHandle<()>>,
+    auto_acquire: bool,
+    launched: Option<Value>,
 }
 
 impl NativeControl {
-    pub(super) fn register(path: &Path) -> Result<Self> {
+    pub(super) fn register(path: &Path, daemon: &Value, observation: UnixStream) -> Result<Self> {
         let mut connection = crate::client::Connection::connect(path)?;
+        let observed = rpc(&mut connection, &mut json!({"op":"snapshot"}))?;
+        if !daemon.is_string() || observed["daemon_id"] != *daemon {
+            return Err(crate::client::connection_lost(
+                "daemon changed before native registration",
+            ));
+        }
+        if !connection.connected() || !crate::client::stream_connected(&observation) {
+            return Err(crate::client::connection_lost(
+                "native registration lost its active attachment",
+            ));
+        }
+        let stream = connection.shutdown_handle()?;
         let created = rpc(
             &mut connection,
             &mut json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
         )?;
+        let stop = Arc::new(AtomicBool::new(false));
+        let worker_stop = stop.clone();
+        let heartbeat = Arc::new(parking_lot::Mutex::new(SystemTime::now()));
+        let worker_heartbeat = heartbeat.clone();
         let (tx, work) = mpsc::sync_channel(128);
         let (reply, rx) = mpsc::channel();
-        std::thread::Builder::new()
+        let worker = std::thread::Builder::new()
             .name("amux-native-control".into())
             .spawn(move || {
                 while let Ok(work) = work.recv() {
+                    // A sleeping UI cannot lend stale queued authority to a
+                    // worker which happens to resume first.
+                    if worker_stop.load(Ordering::Acquire)
+                        || super::pause_expired(*worker_heartbeat.lock())
+                        || !connection.connected()
+                        || !crate::client::stream_connected(&observation)
+                    {
+                        worker_stop.store(true, Ordering::Release);
+                        break;
+                    }
                     let mut rejected_action = None;
                     let (target, op, result) = match work {
+                        Work::Stop => break,
                         Work::Rpc {
                             target,
                             op,
@@ -211,6 +250,19 @@ impl NativeControl {
                                 )
                             };
                             let result = state.and_then(|state| {
+                                // Observation can span a suspend or shutdown.
+                                // Recheck immediately before lending authority,
+                                // not only when dequeuing this compound work.
+                                if worker_stop.load(Ordering::Acquire)
+                                    || super::pause_expired(*worker_heartbeat.lock())
+                                    || !connection.connected()
+                                    || !crate::client::stream_connected(&observation)
+                                {
+                                    worker_stop.store(true, Ordering::Release);
+                                    return Err(crate::client::connection_lost(
+                                        "native claim observation outlived its active attachment",
+                                    ));
+                                }
                                 rpc(
                                     &mut connection,
                                     &mut addressed(
@@ -300,11 +352,83 @@ impl NativeControl {
             refresh_pending: false,
             refreshed: Instant::now() - REFRESH_INTERVAL,
             connected: true,
+            stop,
+            heartbeat,
+            stream,
+            socket: path.to_owned(),
+            worker: Some(worker),
+            auto_acquire: true,
+            launched: None,
         })
     }
 
+    pub(super) fn recovered(&mut self) {
+        self.auto_acquire = false;
+    }
+
+    pub(super) fn connected(&self) -> bool {
+        self.connected
+            && !self.stop.load(Ordering::Acquire)
+            && crate::client::stream_connected(&self.stream)
+    }
+
+    pub(super) fn heartbeat(&self) {
+        *self.heartbeat.lock() = SystemTime::now();
+    }
+
+    pub(super) fn stop(&mut self) {
+        self.connected = false;
+        self.stop.store(true, Ordering::Release);
+        let _ = self.stream.shutdown(Shutdown::Both);
+        let _ = self.tx.try_send(Work::Stop);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+            // Joining fences all old work. Retain only an already parsed
+            // successful launch receipt as identity, never process replies as
+            // live authority or restore a draft during teardown.
+            for reply in self.rx.try_iter() {
+                if reply.op == Op::Launch
+                    && let Ok(opened) = reply.result
+                {
+                    self.launched = Some(opened);
+                }
+            }
+            if !self.auto_acquire
+                && let Ok(mut connection) = crate::client::Connection::connect(&self.socket)
+            {
+                // Existing close guards refuse owners and pending claims.
+                // Cleanup never releases authority or cancels a claim; an
+                // unavailable daemon leaves the registration retained.
+                let _ = rpc(
+                    &mut connection,
+                    &mut json!({"op":"control-handle","handle":self.controller,"method":"close"}),
+                );
+            }
+        }
+        self.controls.clear();
+        self.claims.clear();
+        self.warnings.clear();
+        self.panel = None;
+    }
+
+    pub(super) fn launch(&mut self, mut request: Value, status: &mut String) {
+        request["op"] = json!("acp-open");
+        request["controller"] = self.controller.clone();
+        if self.submit("", Op::Launch, request, status).is_ok() {
+            *status = "Launching ACP agent once on this original native connection".into();
+        }
+    }
+
+    pub(super) fn take_launched(&mut self) -> Option<Value> {
+        self.launched.take()
+    }
+
+    pub(super) fn launching(&self) -> bool {
+        self.busy.contains("")
+    }
+
     fn enqueue(&mut self, work: Work, status: &mut String) -> Result<(), Work> {
-        if !self.connected {
+        if !self.connected() {
             *status =
                 "Unknown/resynchronizing: native connection lost; detach and attach afresh".into();
             return Err(work);
@@ -324,6 +448,11 @@ impl NativeControl {
 
     fn disconnected(&mut self, status: &mut String) {
         self.connected = false;
+        self.stop.store(true, Ordering::Release);
+        let _ = self.stream.shutdown(Shutdown::Both);
+        self.claims.clear();
+        self.warnings.clear();
+        self.panel = None;
         self.controls.clear();
         self.uncertain.extend(self.ownership.keys().cloned());
         *status =
@@ -533,6 +662,15 @@ impl NativeControl {
         if op == Op::Input {
             return;
         }
+        if op == Op::Launch {
+            if let Some(id) = value["target"]["id"].as_str() {
+                self.agent_targets.insert(id.to_owned());
+                self.attempted.insert(id.to_owned());
+                self.cache_grant(&value);
+                self.launched = Some(value);
+            }
+            return;
+        }
         if op == Op::Refresh {
             if let Some(controls) = value["private"]["controls"].as_array() {
                 self.controls.retain(|target, _| {
@@ -596,7 +734,9 @@ impl NativeControl {
                 .as_ref()
                 .map(|(selected, _)| selected)
                 .filter(|selected| {
-                    !selected.is_empty() && !self.attempted.contains(selected.as_str())
+                    self.auto_acquire
+                        && !selected.is_empty()
+                        && !self.attempted.contains(selected.as_str())
                 })
                 .filter(|selected| self.ownership.contains_key(selected.as_str()))
                 .cloned();
@@ -744,7 +884,9 @@ impl NativeControl {
     }
 
     fn can_input(&self, terminal: &str) -> bool {
-        self.connected && !self.uncertain.contains(terminal) && self.controls.contains_key(terminal)
+        self.connected()
+            && !self.uncertain.contains(terminal)
+            && self.controls.contains_key(terminal)
     }
 
     pub(super) fn input(&mut self, terminal: &str, input: Input, status: &mut String) {
@@ -961,7 +1103,7 @@ impl NativeControl {
                                 kind: PanelKind::Progress,
                             });
                         } else if !matches!(presentation, ForcePresentation::Confirmable) {
-                            *status = "Force confirmation blocked: read the full warning; enlarge if needed, then press Enter again".into();
+                            *status = "Force confirmation blocked: wait for Enter Force control, or enlarge a clipped warning".into();
                         } else {
                             let _ = self.submit(
                                 &target,
@@ -1115,8 +1257,9 @@ impl NativeControl {
         (consume, kept || keeping)
     }
 
-    pub(super) fn after_draw(&mut self, status: &mut String) {
+    pub(super) fn after_draw(&mut self, status: &mut String) -> bool {
         // The caller reaches this only after a successful frame and drained input.
+        let mut repaint = false;
         if let Some(Panel {
             kind: PanelKind::Force { presentation, .. },
             ..
@@ -1124,6 +1267,7 @@ impl NativeControl {
             && matches!(presentation, ForcePresentation::Drawn)
         {
             *presentation = ForcePresentation::Confirmable;
+            repaint = true;
         }
         let ready: Vec<_> = self
             .warnings
@@ -1164,6 +1308,7 @@ impl NativeControl {
                 warning.pending = true;
             }
         }
+        repaint
     }
 
     fn remember_gesture(&mut self, kind: MouseEventKind) {
@@ -1443,7 +1588,16 @@ impl NativeControl {
                 lines.push(format!("Reservation: {reservation}"));
                 lines.push("Prior calls may still apply. Turn/process keeps running.".into());
                 self.call_lines(target, &mut lines, call_limit);
-                lines.push("Enter Force control · Esc Keep viewing".into());
+                // Never advertise an enabled action before its full paint and
+                // input-drain fence. A title arriving is not that receipt.
+                lines.push(
+                    if was_confirmable {
+                        "Enter Force control · Esc Keep viewing"
+                    } else {
+                        "Preparing force confirmation · Esc Keep viewing"
+                    }
+                    .into(),
+                );
                 "Force control?"
             }
         };
@@ -1597,6 +1751,12 @@ impl NativeControl {
                 ));
             }
         }
+    }
+}
+
+impl Drop for NativeControl {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
 
@@ -1762,4 +1922,92 @@ struct PasteInput<'a> {
     control: &'a Value,
     text: &'a str,
     paste: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{BufRead, BufReader, Write};
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::UnixListener;
+
+    #[test]
+    fn e06s03_queued_native_launch_is_fenced_by_observation_loss() {
+        struct Root(std::path::PathBuf);
+        impl Drop for Root {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        fn read(connection: &mut BufReader<UnixStream>) -> Option<Value> {
+            let mut line = String::new();
+            (connection.read_line(&mut line).unwrap() != 0)
+                .then(|| serde_json::from_str(&line).unwrap())
+        }
+        fn respond(connection: &mut BufReader<UnixStream>, value: Value) {
+            serde_json::to_writer(
+                connection.get_mut(),
+                &json!({"version":1,"ok":true,"result":value}),
+            )
+            .unwrap();
+            connection.get_mut().write_all(b"\n").unwrap();
+        }
+        let root = Root(std::path::PathBuf::from("/tmp").join(format!(
+            "amux-worker-loss-{}",
+            uuid::Uuid::new_v4().simple()
+        )));
+        std::fs::create_dir(&root.0).unwrap();
+        std::fs::set_permissions(&root.0, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let path = root.0.join("control.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        let (held, observed) = mpsc::channel();
+        let (release, waiting) = mpsc::channel();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(RPC_TIMEOUT)).unwrap();
+            stream.set_write_timeout(Some(RPC_TIMEOUT)).unwrap();
+            let mut connection = BufReader::new(stream);
+            assert_eq!(read(&mut connection).unwrap()["op"], "snapshot");
+            respond(&mut connection, json!({"daemon_id":"worker-loss-test"}));
+            assert_eq!(read(&mut connection).unwrap()["op"], "controller-create");
+            respond(
+                &mut connection,
+                json!({"controller":"private-test-controller","controller_id":"native-test"}),
+            );
+            assert_eq!(read(&mut connection).unwrap()["method"], "read");
+            held.send(()).unwrap();
+            waiting.recv_timeout(RPC_TIMEOUT).unwrap();
+            respond(&mut connection, json!({"controls":[],"claims":[]}));
+            let dispatched = read(&mut connection);
+            if dispatched.is_some() {
+                respond(&mut connection, json!({}));
+            }
+            dispatched.is_some_and(|request| request["op"] == "acp-open")
+        });
+        let (observation, observation_peer) = UnixStream::pair().unwrap();
+        let mut native =
+            NativeControl::register(&path, &json!("worker-loss-test"), observation).unwrap();
+        let mut status = String::new();
+        native.poll("", &mut status, |_, _| {});
+        observed.recv_timeout(RPC_TIMEOUT).unwrap();
+        native.launch(
+            json!({"op":"acp-open","project":"selected-project","agent":"selected-profile"}),
+            &mut status,
+        );
+        assert!(
+            native.launching(),
+            "the deliberate launch must already be queued"
+        );
+        // No UI poll/teardown runs while the older worker read is held. A
+        // fresh heartbeat cannot stand in for the lost observation socket.
+        native.heartbeat();
+        observation_peer.shutdown(Shutdown::Both).unwrap();
+        release.send(()).unwrap();
+        let launched_after_loss = server.join().unwrap();
+        native.stop();
+        assert!(
+            !launched_after_loss,
+            "queued launch crossed the original observation-loss fence"
+        );
+    }
 }

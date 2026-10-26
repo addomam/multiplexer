@@ -1,0 +1,56 @@
+{
+  "verdict": "FAIL",
+  "scope": "E06-only source/security",
+  "round": 6,
+  "max_rounds": 10,
+  "source": "specs/verifications/e06-review-round6-source.json",
+  "source_files": 32,
+  "source_unchanged_at_verdict": true,
+  "reports": {
+    "A": "specs/verifications/e06-review-round6-A.json",
+    "B": "specs/verifications/e06-review-round6-B.json",
+    "security": "specs/verifications/e06-review-round6-security.json"
+  },
+  "scores": {
+    "A": 96.875,
+    "B": 91.66666666666667,
+    "security": 100
+  },
+  "findings": [
+    {
+      "review": "A",
+      "id": "E06-R1",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui.rs",
+      "line": 1046,
+      "title": "Capture target continuity when selection changes, before fallible work",
+      "impact": "A disconnect or pause immediately after a deliberate picker switch can reconnect to the previous view, not the newly selected surviving target. If the previous target ended meanwhile, recovery instead declares the attachment ended even though the selected target is still alive.",
+      "evidence": "The keyboard picker assigns active = id at line 1584, then calls resize_native at line 1662; mouse selection assigns active at line 1816 and resizes at line 1822. Resume is not updated at either selection point. Its only general selection update is at lines 1046–1051, after the loop's pause and both-connection checks at lines 1033–1044. Thus a failed selected-PTY resize returns before capture, and an ACP selection followed by connection loss or pause also returns before capture. Teardown only salvages launch receipts, while attached subsequently validates and selects resume.active at lines 933–941, causally restoring the stale previous identity.",
+      "fix": "Commit Resume::capture from the current snapshot at every deliberate active-target selection before resize or other fallible work, covering keyboard and mouse paths and shared active-changing helpers. Keep acknowledged ACP-launch receipt handling intact. Add a transparent-relay regression that switches from A to surviving B and drops the observation connection at the following resize/read boundary; recovery must validate and select B without replay, relaunch or acquisition."
+    },
+    {
+      "review": "B",
+      "id": "E06-R6-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp/settings.rs",
+      "line": 403,
+      "title": "Accept null acknowledgements for the legacy mode setter",
+      "impact": "Starting an agent with an advertised mode fails and terminates its newly owned ACP process when session/set_mode successfully returns result:null, even though the pinned ACP response decoder accepts that acknowledgement. The requested mode therefore cannot complete startup on that supported response shape.",
+      "evidence": "Configuration::resolve can choose Setting::Mode from advertised legacy modes, and Setting::request sends session/set_mode. Configuration::acknowledge rejects null at lines403–404 before reaching the Mode branch. src/acp.rs:1947–1949 propagates that error; consume ends the lifetime on apply failure, and run performs process teardown. In the pinned agent-client-protocol-schema1.12.0 source, v1/agent.rs:2120–2143 declares SetSessionModeResponse through default_on_null!, and serde_util.rs explicitly includes SetSessionModeResponse in tests accepting both null and {}. Existing tests exercise {} but not null.",
+      "fix": "Validate acknowledgements according to the active setter instead of applying the object-only check globally. For Setting::Mode, use the pinned SetSessionModeResponse decoding semantics, accepting null or an object as the empty success acknowledgement. Keep the full confirmed configOptions requirement for Setting::Config, and add a regression where an advertised mode receives result:null and startup reaches ready without weakening configuration-value confirmation."
+    }
+  ],
+  "all_full_reports_read_before_new_source_edits": true,
+  "runtime": "specs/verifications/e06-post-round5-regressions.json",
+  "authorization": "user explicitly raised E06-only source/security cap5 to10",
+  "historical_review_caps": "unchanged",
+  "provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1,
+    "new_calls": 0
+  },
+  "live_or_publication_authorization": false
+}

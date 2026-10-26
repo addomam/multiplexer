@@ -8,7 +8,7 @@ use alacritty_terminal::vte::ansi::Processor;
 use std::os::fd::{FromRawFd, OwnedFd};
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 const OUTER_OUTPUT_LIMIT: usize = 16 * 1024 * 1024;
@@ -117,6 +117,15 @@ impl Attachment {
         Self::on_socket(h, terminal, name, &h.socket)
     }
     fn on_socket(h: &Host, terminal: &str, name: &str, socket: &Path) -> Self {
+        Self::on_socket_with_resize_signal(h, terminal, name, socket, false)
+    }
+    fn on_socket_with_resize_signal(
+        h: &Host,
+        terminal: &str,
+        name: &str,
+        socket: &Path,
+        suppress_resize_signal: bool,
+    ) -> Self {
         let mut master = -1;
         let mut slave = -1;
         let mut size = libc::winsize {
@@ -170,12 +179,22 @@ impl Attachment {
             .stdout(Stdio::from(output))
             .stderr(Stdio::from(error));
         unsafe {
-            command.pre_exec(|| {
+            command.pre_exec(move || {
                 if libc::setsid() == -1 {
                     return Err(io::Error::last_os_error());
                 }
                 if libc::ioctl(0, libc::TIOCSCTTY as _, 0) == -1 {
                     return Err(io::Error::last_os_error());
+                }
+                if suppress_resize_signal {
+                    // Model a lost/coalesced notification without changing the
+                    // real kernel window size or injecting application events.
+                    let mut mask: libc::sigset_t = std::mem::zeroed();
+                    libc::sigemptyset(&mut mask);
+                    libc::sigaddset(&mut mask, libc::SIGWINCH);
+                    if libc::sigprocmask(libc::SIG_BLOCK, &mask, std::ptr::null_mut()) == -1 {
+                        return Err(io::Error::last_os_error());
+                    }
                 }
                 Ok(())
             });
@@ -307,6 +326,9 @@ impl Attachment {
         }
     }
     fn send_queued(&mut self, bytes: &[u8]) {
+        self.with_stopped(|native| native.send(bytes));
+    }
+    fn with_stopped(&mut self, drive: impl FnOnce(&mut Self)) {
         // Keep this owned, unreaped child stopped until every encoded key is queued.
         struct Resume(libc::pid_t);
         impl Drop for Resume {
@@ -339,7 +361,7 @@ impl Attachment {
             assert!(Instant::now() < deadline, "attachment did not stop");
             std::thread::sleep(Duration::from_millis(5));
         }
-        self.send(bytes);
+        drive(self);
         drop(resume);
     }
     fn resize(&mut self, h: &Host, terminal: &str, cols: usize, rows: usize) {
@@ -495,6 +517,130 @@ impl Drop for Attachment {
     }
 }
 
+// This writer owns only a clone of the already-nonblocking outer PTY master.
+// Cancellation, a finite deadline and a byte ceiling bound every failure path;
+// poll is only a cancellable readiness wait, never an input-timing oracle.
+struct IncompleteInput {
+    stop: Arc<AtomicBool>,
+    written: Arc<AtomicUsize>,
+    backpressured: Arc<AtomicBool>,
+    error: Arc<parking_lot::Mutex<Option<String>>>,
+    worker: Option<std::thread::JoinHandle<()>>,
+}
+impl IncompleteInput {
+    fn new(native: &Attachment) -> Self {
+        let mut master = native.master.try_clone().unwrap();
+        let flags = unsafe { libc::fcntl(master.as_raw_fd(), libc::F_GETFL) };
+        assert!(flags >= 0 && flags & libc::O_NONBLOCK != 0);
+        let stop = Arc::new(AtomicBool::new(false));
+        let written = Arc::new(AtomicUsize::new(0));
+        let backpressured = Arc::new(AtomicBool::new(false));
+        let error = Arc::new(parking_lot::Mutex::new(None));
+        let (stopping, progress, blocked, failure) = (
+            stop.clone(),
+            written.clone(),
+            backpressured.clone(),
+            error.clone(),
+        );
+        let worker = std::thread::spawn(move || {
+            let deadline = Instant::now() + DEADLINE.saturating_mul(3);
+            let payload = [b'x'; 4096];
+            let mut pending: &[u8] = b"\x1b[200~";
+            while !stopping.load(Ordering::Acquire) {
+                if Instant::now() >= deadline {
+                    *failure.lock() = Some("incomplete-input producer deadline".into());
+                    break;
+                }
+                match master.write(pending) {
+                    Ok(0) => {
+                        *failure.lock() = Some("zero incomplete-input write".into());
+                        break;
+                    }
+                    Ok(n) => {
+                        let total = progress.fetch_add(n, Ordering::AcqRel) + n;
+                        if total >= 16 * 1024 * 1024 {
+                            *failure.lock() =
+                                Some("incomplete-input producer exceeded 16 MiB".into());
+                            break;
+                        }
+                        pending = &pending[n..];
+                        if pending.is_empty() {
+                            pending = &payload;
+                        }
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+                    Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                        blocked.store(true, Ordering::Release);
+                        let mut ready = libc::pollfd {
+                            fd: master.as_raw_fd(),
+                            events: libc::POLLOUT,
+                            revents: 0,
+                        };
+                        if unsafe { libc::poll(&mut ready, 1, 10) } < 0 {
+                            let error = io::Error::last_os_error();
+                            if error.kind() != io::ErrorKind::Interrupted {
+                                *failure.lock() = Some(format!("incomplete-input poll: {error}"));
+                                break;
+                            }
+                        } else if ready.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL)
+                            != 0
+                        {
+                            *failure.lock() = Some("incomplete-input PTY closed".into());
+                            break;
+                        }
+                    }
+                    Err(error) => {
+                        *failure.lock() = Some(format!("incomplete-input write: {error}"));
+                        break;
+                    }
+                }
+            }
+        });
+        Self {
+            stop,
+            written,
+            backpressured,
+            error,
+            worker: Some(worker),
+        }
+    }
+    fn active_bytes(&self) -> usize {
+        {
+            let error = self.error.lock();
+            assert!(error.is_none(), "{error:?}");
+        }
+        assert!(
+            !self.worker.as_ref().unwrap().is_finished(),
+            "incomplete-input producer stopped before the consumer fence"
+        );
+        self.written.load(Ordering::Acquire)
+    }
+    fn finish(mut self) -> usize {
+        let written = self.active_bytes();
+        self.join();
+        let error = self.error.lock();
+        assert!(error.is_none(), "{error:?}");
+        written
+    }
+    fn join(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        if let Some(worker) = self.worker.take()
+            && !join_until(worker, Instant::now() + CLEANUP_TIMEOUT)
+        {
+            if std::thread::panicking() {
+                eprintln!("incomplete-input producer cleanup deadline");
+            } else {
+                panic!("incomplete-input producer cleanup deadline");
+            }
+        }
+    }
+}
+impl Drop for IncompleteInput {
+    fn drop(&mut self) {
+        self.join();
+    }
+}
+
 fn configured_host() -> Host {
     let h = Host::new();
     h.call(json!({"op":"config","config":{"prefix":"Ctrl-a"}}));
@@ -614,7 +760,7 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
         "yield must revoke, not fabricate settlement"
     );
     observer.action(6);
-    observer.wait("Force control?");
+    observer.wait("Enter Force control");
     observer.capture("force-risk");
     observer.send(b"\r");
     observer.wait("Controlled here");
@@ -658,7 +804,7 @@ fn observer_physical_keys_repeat_literal_prefix_paste_mouse_never_replay_after_f
     observer.wait("Waiting");
     observer.capture("input-confirmation-consumed");
     observer.action(6);
-    observer.wait("Force control?");
+    observer.wait("Enter Force control");
     observer.send(b"\r");
     observer.wait("Controlled here");
     observer.send(b"\x1b[<32;13;8M\x1b[<0;13;8m");
@@ -733,7 +879,7 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
     }
     observer.hide_panel();
     observer.action(6);
-    observer.wait("Force control?");
+    observer.wait("Enter Force control");
     let winner = h.controller("newest-owner");
     h.call(h.claim_request(&terminal, &winner["controller"], "force"));
     observer.send(b"\r");
@@ -755,7 +901,7 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
         "stale confirmation was reused"
     );
     observer.action(6);
-    observer.wait("Force control?");
+    observer.wait("Enter Force control");
     observer.send(b"\r");
     observer.wait("Controlled here");
     assert_ne!(
@@ -763,6 +909,119 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
         winner["controller_id"]
     );
     assert!(bytes(&h).is_empty());
+}
+
+#[test]
+fn e06s03_native_filtered_terminal_replies_cannot_confirm_queued_force_enter() {
+    let h = configured_host();
+    let terminal = recording_target(&h);
+    let external = h.controller("filtered-reply-owner");
+    h.acquire(&terminal, &external["controller"]);
+    let generation = h.ownership(&terminal)["observed"]["generation"].clone();
+    let pid = h.state(&terminal)["pid"].clone();
+    let gate = ConsentGate::new(&h);
+    let mut observer = Attachment::on_socket(&h, &terminal, "filtered-force-enter", &gate.socket);
+    observer.wait("Locked");
+    observer.send(b"\x1b[I");
+    let observer_id = h.until("observer reports focused before queued Force input", || {
+        h.ownership(&terminal)["views"]
+            .as_array()?
+            .iter()
+            .find(|view| {
+                view["connected"] == true && view["reported"] == true && view["focused"] == true
+            })
+            .map(|view| view["controller_id"].clone())
+    });
+    // The stopped, unreaped real client cannot draw between these encodings.
+    // Three genuine internal replies precede an Enter that predates the first
+    // Force warning; filtering them must not promote that warning to ready.
+    observer.send_queued(b"\x01\x06\x1b[20;10R\x1b[?1;2c\x1b[?0u\r\x1b[O");
+    h.until(
+        "focus report causally fences the queued old Force Enter",
+        || {
+            h.ownership(&terminal)["views"]
+                .as_array()?
+                .iter()
+                .any(|view| {
+                    view["controller_id"] == observer_id
+                        && view["connected"] == true
+                        && view["reported"] == true
+                        && view["focused"] == false
+                })
+                .then_some(())
+        },
+    );
+    assert_owner(&h, &terminal, &external);
+    assert_eq!(h.ownership(&terminal)["observed"]["generation"], generation);
+    assert!(h.ownership(&terminal)["reservation"].is_null());
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert!(
+        bytes(&h).is_empty(),
+        "queued confirmation reached the target"
+    );
+    {
+        let methods = gate.methods.lock();
+        assert!(!methods.iter().any(|method| method == "ownership-claim"));
+        assert!(!methods.iter().any(|method| method == "consent-to"));
+    }
+    observer.wait("Force confirmation blocked");
+    observer.capture("filtered-replies-old-enter-rejected");
+    observer.hide_panel();
+    observer.action(6);
+    observer.wait("Enter Force control · Esc Keep viewing");
+    observer.send(b"\r"); // A separately entered, actually presented confirmation.
+    observer.wait("Controlled here");
+    assert_eq!(
+        h.ownership(&terminal)["owner"]["controller_id"],
+        observer_id
+    );
+    assert_eq!(
+        gate.methods
+            .lock()
+            .iter()
+            .filter(|method| method.as_str() == "ownership-claim")
+            .count(),
+        1
+    );
+    observer.send(b"AFTER_FRESH_FORCE");
+    wait_bytes(&h, b"AFTER_FRESH_FORCE");
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    observer.action(12);
+    observer.wait("Control owned here");
+    observer.send(b"r");
+    wait_unowned(&h, &terminal);
+    observer.detach();
+}
+
+#[test]
+fn e06s03_native_resize_without_notification_reconciles_before_force_consent() {
+    let h = configured_host();
+    let terminal = recording_target(&h);
+    let external = h.controller("resize-owner");
+    h.acquire(&terminal, &external["controller"]);
+    let pid = h.state(&terminal)["pid"].clone();
+    let mut observer = Attachment::on_socket_with_resize_signal(
+        &h,
+        &terminal,
+        "coalesced-resize",
+        &h.socket,
+        true,
+    );
+    observer.wait("Locked");
+    observer.action(6);
+    observer.wait("Enter Force control");
+    observer.resize(&h, &terminal, 80, 7);
+    observer.send_queued(b"\r");
+    observer.wait("Force confirmation blocked");
+    assert_owner(&h, &terminal, &external);
+    observer.resize(&h, &terminal, COLS, ROWS);
+    observer.wait("Enter Force control");
+    assert_owner(&h, &terminal, &external);
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert!(bytes(&h).is_empty(), "resize replayed intercepted input");
+    observer.capture("reconciled-without-resize-notification");
+    observer.hide_panel();
+    observer.detach();
 }
 
 #[test]
@@ -1706,10 +1965,20 @@ fn actual_native_pending_consent_ack_keeps_before_paste_without_rotating_or_repl
     native.capture("pending-ack-same-authority");
     let pid = h.state(&terminal)["pid"].clone();
     gate.disconnect_native();
-    native.wait("Unknown/resynchronizing");
-    native.capture("disconnected-unknown-gated");
+    h.until("fresh observer connection after transport loss", || {
+        native.drain();
+        h.ownership(&terminal)["views"]
+            .as_array()?
+            .iter()
+            .any(|view| {
+                view["connected"] == true && view["controller_id"] != identity["controller_id"]
+            })
+            .then_some(())
+    });
+    native.wait("Locked");
+    native.capture("disconnected-fresh-observer-gated");
     native.send(b"NEVER_REPLAY_UNKNOWN");
-    std::thread::sleep(Duration::from_millis(200));
+    native.wait("Locked terminal");
     assert_eq!(bytes(&h), b"\x1b[200~ACK_WINDOW_PASTE\x1b[201~");
     assert_owner(&h, &terminal, &identity);
     assert_eq!(h.state(&terminal)["pid"], pid);
@@ -1939,4 +2208,177 @@ fn actual_native_deliberate_request_observes_withdrawal_before_one_claim() {
     )
     .unwrap();
     observer.capture("fresh-request-after-withdrawal");
+}
+
+#[test]
+fn e06s03_native_recovery_registration_resize_reconciles_surviving_geometry() {
+    let h = configured_host();
+    let terminal = recording_target(&h);
+    let gate = ConsentGate::new(&h);
+    let mut native = Attachment::on_socket(&h, &terminal, "recovery-resize", &gate.socket);
+    native.wait("Controlled here");
+    let owner = native_owner(&h, &terminal);
+    let generation = h.ownership(&terminal)["observed"]["generation"].clone();
+    let pid = h.state(&terminal)["pid"].clone();
+    let recorded = bytes(&h);
+    gate.pause_next("controller-create");
+    gate.disconnect_native();
+    h.until("fresh recovery registration response withheld", || {
+        gate.seen.load(Ordering::SeqCst).then_some(())
+    });
+    // Real outer window change, while setup still waits for its registration.
+    let (cols, rows) = (134, 36);
+    native.output.lock().term.resize(Geometry { cols, rows });
+    let size = libc::winsize {
+        ws_row: rows as u16,
+        ws_col: cols as u16,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    assert_eq!(
+        unsafe { libc::ioctl(native.master.as_raw_fd(), libc::TIOCSWINSZ, &size) },
+        0
+    );
+    gate.release();
+    native.wait("Reconnected");
+    let screen = h.call(json!({"op":"screen","terminal":terminal,"offset":0,"limit":rows - 3}));
+    assert_eq!(
+        screen["cols"], cols,
+        "ready recovery retained stale PTY width"
+    );
+    assert_eq!(
+        screen["rows"],
+        rows - 3,
+        "ready recovery retained stale PTY height"
+    );
+    assert_owner(&h, &terminal, &owner);
+    assert_eq!(h.ownership(&terminal)["observed"]["generation"], generation);
+    assert!(h.ownership(&terminal)["reservation"].is_null());
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert_eq!(
+        bytes(&h),
+        recorded,
+        "structural resize became application input"
+    );
+    native.capture("recovered-live-geometry");
+    native.detach();
+}
+
+#[test]
+fn e06s03_native_sustained_incomplete_paste_yields_to_resize_and_disconnect() {
+    let h = configured_host();
+    let terminal = recording_target(&h);
+    let external = h.controller("incomplete-input-owner");
+    h.acquire(&terminal, &external["controller"]);
+    let generation = h.ownership(&terminal)["observed"]["generation"].clone();
+    let pid = h.state(&terminal)["pid"].clone();
+    let gate = ConsentGate::new(&h);
+    let mut native =
+        Attachment::on_socket(&h, &terminal, "sustained-incomplete-input", &gate.socket);
+    native.wait("Locked");
+    let original = h.until("original observer has a connected view", || {
+        h.ownership(&terminal)["views"]
+            .as_array()?
+            .iter()
+            .find(|view| view["connected"] == true && view["reported"] == true)
+            .map(|view| view["controller_id"].clone())
+    });
+    let mut producer = None;
+    let mut queued_while_stopped = 0;
+    native.with_stopped(|native| {
+        let writer = IncompleteInput::new(native);
+        h.until(
+            "unterminated paste fills the stopped client's real PTY",
+            || {
+                writer.active_bytes();
+                writer.backpressured.load(Ordering::Acquire).then_some(())
+            },
+        );
+        queued_while_stopped = writer.active_bytes();
+        producer = Some(writer);
+    });
+    let producer = producer.unwrap();
+    h.until(
+        "consumer reads incomplete input while producer stays active",
+        || (producer.active_bytes() > queued_while_stopped + 4096).then_some(()),
+    );
+    // The writer never sends a paste terminator. Its continued progress beyond
+    // the stopped-client queue proves that the real reader entered the stream
+    // before SIGWINCH, rather than handling resize before seeing any input.
+    let before_resize = producer.active_bytes();
+    let (cols, rows) = (132, 35);
+    native.resize(&h, &terminal, cols, rows);
+    h.until(
+        "producer remains active across actual resize observation",
+        || (producer.active_bytes() > before_resize).then_some(()),
+    );
+    assert_owner(&h, &terminal, &external);
+    assert_eq!(h.ownership(&terminal)["observed"]["generation"], generation);
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert!(
+        bytes(&h).is_empty(),
+        "unterminated paste reached the application"
+    );
+
+    // A held, real replacement-registration reply is a causal witness that the
+    // UI observed disconnection while the same unterminated producer was live.
+    gate.pause_next("controller-create");
+    gate.disconnect_native();
+    h.until(
+        "client reaches recovery registration during sustained input",
+        || {
+            producer.active_bytes();
+            gate.seen.load(Ordering::SeqCst).then_some(())
+        },
+    );
+    let fresh = gate.held_reply.lock()["result"]["controller_id"].clone();
+    assert!(fresh.is_string());
+    assert_ne!(fresh, original);
+    assert_owner(&h, &terminal, &external);
+    assert!(h.ownership(&terminal)["reservation"].is_null());
+    assert!(bytes(&h).is_empty());
+    let written = producer.finish(); // Cancels and joins before any later input.
+    assert!(written > queued_while_stopped + 4096);
+    gate.release();
+    // Complete the old physical paste only after stopping its sole writer.
+    // Recovery must consume it, not release it to this or a later owner.
+    native.send(b"\x1b[201~");
+    native.wait("Reconnected");
+    native.wait("Locked");
+    native.send(b"\x1b[I");
+    h.until(
+        "fresh post-discard focus proves the consumer is responsive",
+        || {
+            h.ownership(&terminal)["views"]
+                .as_array()?
+                .iter()
+                .any(|view| {
+                    view["controller_id"] == fresh
+                        && view["connected"] == true
+                        && view["reported"] == true
+                        && view["focused"] == true
+                })
+                .then_some(())
+        },
+    );
+    assert_owner(&h, &terminal, &external);
+    assert_eq!(h.ownership(&terminal)["observed"]["generation"], generation);
+    assert!(h.ownership(&terminal)["reservation"].is_null());
+    assert_eq!(h.state(&terminal)["pid"], pid);
+    assert!(
+        bytes(&h).is_empty(),
+        "old paste was replayed after recovery"
+    );
+    assert!(
+        !gate
+            .methods
+            .lock()
+            .iter()
+            .any(|method| method == "ownership-claim" || method == "consent-to")
+    );
+    let screen = h.call(json!({"op":"screen","terminal":terminal,"offset":0,"limit":rows - 3}));
+    assert_eq!(screen["cols"], cols);
+    assert_eq!(screen["rows"], rows - 3);
+    native.capture("sustained-input-resize-disconnect-no-replay");
+    native.detach();
 }

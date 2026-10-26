@@ -1,0 +1,120 @@
+{
+  "scope": "e06-only",
+  "round": 2,
+  "source": "specs/verifications/e06-review-round2-source.json",
+  "agent": "E06BlindB2",
+  "report": {
+    "verdict": "FAIL",
+    "score": 87.5,
+    "total_items": 16,
+    "passed_items": 14,
+    "checklist": [
+      {
+        "area": "Profile configuration and persistence",
+        "result": "PASS",
+        "evidence": "Reviewed src/projects.rs and src/acp_profiles.rs: optional profiles use the existing configuration transaction, closed profile records, bounded argv/defaults, and rollback on rejected configuration."
+      },
+      {
+        "area": "Executable resolution and launch admission",
+        "result": "PASS",
+        "evidence": "Traced profile selection and shell-free executable resolution into daemon::acp_open and Broker::reserve/start; raw argv retains its absolute-path requirement and missing profiles/executables fail explicitly."
+      },
+      {
+        "area": "Human CLI launch and controller provenance",
+        "result": "PASS",
+        "evidence": "Traced AcpStart through request_for, tui::start, NativeControl::launch, daemon dispatch and ownership admission. Interactive launch uses its actual attachment controller; the noninteractive path requires an explicit controller."
+      },
+      {
+        "area": "Native picker and settings submission",
+        "result": "PASS",
+        "evidence": "Reviewed launch::Dialog and its event consumers in tui.rs, including deliberate submission, project/profile selection, inherited-default presentation, and one launch request on the existing worker."
+      },
+      {
+        "area": "Requested-settings validation",
+        "result": "PASS",
+        "evidence": "settings::validate_requested closes fields and bounds identifiers, options and total content before reservation; profile merges are revalidated."
+      },
+      {
+        "area": "Capability-backed settings RPC lifecycle",
+        "result": "PASS",
+        "evidence": "Traced RpcKind::Configure from configure_next through the original writer/outstanding-RPC map and apply dispatch to acknowledge/next. Prompt admission remains unavailable until configuration completes; unsupported, rejected, unconfirmed and conflicting settings fail explicitly."
+      },
+      {
+        "area": "Requested/reported configuration projection",
+        "result": "PASS",
+        "evidence": "Reviewed configuration projection, agent-default/unreported states, acknowledgement checks, later displacement detection, daemon snapshot forwarding and AgentView rendering. No supported correctness defect found in these paths."
+      },
+      {
+        "area": "Opaque tool identity preservation",
+        "result": "PASS",
+        "evidence": "Traced the distinct 4-KiB tool-ID validator through tool notifications, form scope and permission parsing, with original interaction/RPC identity retained by admission and response encoding. Local setting/session/RPC bounds remain separate."
+      },
+      {
+        "area": "OMP-shaped cancellation and admitted-winner ordering",
+        "result": "PASS",
+        "evidence": "Traced $/cancel_request dispatch into cancel_incoming, exact typed wire-ID matching, responder-to-interaction checks, queued error response and writer completion. Already selected/admitted interactions cannot be overwritten by later withdrawal."
+      },
+      {
+        "area": "Force, pending cancellation and conditional ownership",
+        "result": "PASS",
+        "evidence": "Reviewed affected native dispatch against existing registry/admission consumers: force remains an authority operation, application cancellation remains explicit, and consent/activity/claim handling stays on original-attachment provenance."
+      },
+      {
+        "area": "Paused/disconnected input and draft fencing",
+        "result": "PASS",
+        "evidence": "Reviewed wall-clock pause detection, worker heartbeat checks including compound claim observation, stream shutdown, worker joining, recovery input draining and fresh observer mode. No automatic application replay or control reacquisition is added."
+      },
+      {
+        "area": "Daemon and exact target/session continuity",
+        "result": "PASS",
+        "evidence": "Reviewed Resume capture/validate, daemon_id production, exact instance/connection comparisons, null-to-first-session reconciliation and stale-target read handling. Known sessions do not follow replacements; recovery does not ensure or spawn a daemon."
+      },
+      {
+        "area": "Acknowledged launch continuity on concurrent failure",
+        "result": "FAIL",
+        "evidence": "Finding E06-B-01: successful launch replies can remain in the worker reply channel while an observation read fails, or be processed immediately before the authority-connected check fails; teardown discards them before updating Resume."
+      },
+      {
+        "area": "Automatic recovery registration cleanup",
+        "result": "FAIL",
+        "evidence": "Finding E06-B-02: each recovery attempt registers before observation setup, but dropping the attempt only disconnects that registration. Registry::depart_at retains it, and the 4096-controller admission limit is eventually exhausted."
+      },
+      {
+        "area": "Transport/resource teardown and native separation",
+        "result": "PASS",
+        "evidence": "Reviewed Connection shutdown ownership, NativeControl stop/Drop, ACP reserved/in-flight budgets and cleanup consumers, and affected native/PTY harness changes. Existing owned-process cleanup and terminal/ACP separation are retained; the registration-lifetime defect is counted separately."
+      },
+      {
+        "area": "Documentation and evidence boundaries",
+        "result": "PASS",
+        "evidence": "Reviewed frozen README, CHANGELOG, conventions, manifests, scope, threat model and settled plan contracts against source. Source-shaped fixtures and the ignored live harness are not treated as completed real-provider acceptance; historical native settlement limitations remain explicit."
+      }
+    ],
+    "findings": [
+      {
+        "id": "E06-B-01",
+        "category": "Must-fix",
+        "priority": "P1",
+        "file": "src/tui.rs",
+        "line": 1889,
+        "title": "Preserve received launch receipts before tearing down the attachment",
+        "impact": "A successfully launched agent can be left running while recovery attaches to the previous agent, or reports an ended empty attachment for CLI start. This violates the acknowledged-launch continuity contract without requiring the launch reply itself to be lost.",
+        "evidence": "NativeControl's worker sends the successful Op::Launch result through rx; only poll/received transfers that target into launched (src/tui/control.rs:284-300, 627-635). While that reply arrives, the UI can already be blocked in acp-inspect or snapshot on the independent observation socket (src/tui.rs:1124-1139, 1192-1193). If that observation fails, execution reaches authority.stop at line1889 without another poll; stop clears launched and the receiver is subsequently dropped. Resume therefore still names the previous target. There is also a direct variant at lines1062-1067: poll can receive the successful launch and then a transport failure, but connected() is checked before take_launched(), so the known receipt is discarded there too. The existing LaunchObservation regression cuts the receipt-following snapshot, not an already-in-flight observation whose failure races the successful receipt.",
+        "fix": "Fence and join the old worker without replaying queued work, then retain any already received successful launch result solely as recovery continuity before dropping its reply channel. Update Resume from that exact acknowledged target even when either socket has failed, and consume known launch continuity before the connected() early return. Add fault coverage for an observation already in flight when the launch acknowledgement arrives, plus launch success followed by authority failure before UI consumption."
+      },
+      {
+        "id": "E06-B-02",
+        "category": "Should-fix",
+        "priority": "P2",
+        "file": "src/tui.rs",
+        "line": 917,
+        "title": "Reclaim idle registrations created by failed automatic recovery attempts",
+        "impact": "Repeated recovery failures consume the daemon's finite controller registry until new native attachments and controller registrations fail with controller-busy. The abandoned recovery controllers' private handles are lost, preventing normal caller cleanup.",
+        "evidence": "attached registers a new NativeControl at line917 before connecting the observation socket, obtaining its snapshot or validating continuity (lines921-924). supervise retries connection failures automatically after recovery_wait. Every failed attempt drops/stops NativeControl, but stop only shuts down its stream and joins the worker (src/tui/control.rs:361-374). Daemon connection departure calls Registry::depart; depart_at only sets view.connected=false and retains the controller (src/control.rs:855-869). Controller registration rejects once self.controllers.len() reaches4096 (src/control.rs:447-449), and removal requires explicit close_controller. Thus even attempts that never established an observation or acquired any authority permanently spend registrations; automatic retry introduces an unbounded producer against that retained limit.",
+        "fix": "Avoid spending a controller registration before a fresh observation and continuity check where possible, and provide bounded cleanup for disconnected recovery registrations proven to have no ownership or pending claims. Preserve original owners, retained claims/work and fresh-connection provenance; do not release authority or cancel claims merely to reclaim registrations. Add a source-derived recovery fault regression that confirms repeated failed observer setup does not monotonically consume controller admission capacity."
+      }
+    ],
+    "summary": "FAIL: 14 of 16 applicable control areas passed source review (87.5%). One must-fix launch-receipt recovery race and one should-fix automatic-recovery registration leak remain; both are introduced by the new native launch/recovery lifecycle and traced through their consuming paths.",
+    "limits": "Independent, read-only source review of the frozen E06 manifest, base2195b05 patch and relevant existing consumers. No files edited; no builds, tests, lint, formatting, runtime/CLI/version probes, browser or provider calls executed. No prior review reports, dispositions or self-audits read. No credential/auth databases, prohibited private runtime directory, raw provider/session/wire output or unrelated worktrees inspected. Findings are source-proven causal paths, not runtime reproductions. Parent runtime receipts were not substituted for code reasoning; complete installed-OMP live acceptance and remaining authorization were not exercised or independently certified."
+  }
+}

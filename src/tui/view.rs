@@ -353,9 +353,9 @@ pub(super) fn draw(
     let hint = if !status.is_empty() {
         status
     } else if picker && empty {
-        "N / Enter new · Esc / Q exit"
+        "^A ACP agent · N / Enter terminal · Esc / Q exit"
     } else if picker {
-        "^Q detach · Esc return · Enter open · ^N new · ^O OMP · ^X close"
+        "^Q detach · Esc return · Enter open · ^A ACP · ^N terminal · ^O OMP · ^X close"
     } else if !failure.is_empty() {
         &failure
     } else if offset > 0 {

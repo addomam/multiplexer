@@ -125,6 +125,13 @@ pub(super) struct AgentView {
     projection_seq: u64,
     lifecycle: &'static str,
     agent: String,
+    configuration: Value,
+    settings: String,
+    settings_open: bool,
+    settings_rows: Vec<Range<usize>>,
+    settings_width: usize,
+    settings_scroll: usize,
+    settings_page: usize,
     foreground: Option<String>,
     foreground_state: String,
     authentication: Vec<AuthMethod>,
@@ -162,6 +169,13 @@ impl AgentView {
             projection_seq: 0,
             lifecycle: "starting",
             agent: String::new(),
+            configuration: Value::Null,
+            settings: String::new(),
+            settings_open: false,
+            settings_rows: Vec::new(),
+            settings_width: 0,
+            settings_scroll: 0,
+            settings_page: 1,
             foreground: None,
             foreground_state: String::new(),
             authentication: Vec::new(),
@@ -241,6 +255,11 @@ impl AgentView {
             self.interactions.clear();
             self.interaction = None;
             self.projection_seq = 0;
+            self.configuration = Value::Null;
+            self.settings.clear();
+            self.settings_open = false;
+            self.settings_rows.clear();
+            self.settings_scroll = 0;
         }
         if self.target.is_none() {
             self.lifecycle = "unavailable";
@@ -250,6 +269,9 @@ impl AgentView {
             self.authentication.clear();
             self.work.clear();
             self.resource.clear();
+            if self.settings.is_empty() {
+                self.settings = "Settings unreported · model: unreported · mode: unreported · effort: unreported\nNo confirmed configuration for this exact target.\nMode metadata is not a permission guarantee.".to_owned();
+            }
             return;
         }
         // A delayed inspection cannot roll canonical lifecycle/content backwards.
@@ -259,6 +281,41 @@ impl AgentView {
             return;
         }
         let refresh_interactions = changed || seq != self.projection_seq;
+        if self.configuration != projection["configuration"] || self.settings.is_empty() {
+            self.configuration = projection["configuration"].clone();
+            self.settings_rows.clear();
+            self.settings_scroll = 0;
+            let configuration = &self.configuration;
+            let reported = &configuration["reported"];
+            let current = |key: &str| {
+                reported[key]["current"]
+                    .as_str()
+                    .map(|value| inert(value, 256))
+                    .unwrap_or_else(|| "unreported".to_owned())
+            };
+            let requested = |key: &str| {
+                configuration["requested"][key]
+                    .as_str()
+                    .map(|value| inert(value, 256))
+                    .unwrap_or_else(|| "agent default".to_owned())
+            };
+            self.settings = format!(
+                "Settings [{}] · model: {} · mode: {} · effort: {}\nRequested · model: {} · mode: {} · effort: {} · options: {}\nMode metadata is not a permission guarantee. Reported options: {}{}",
+                configuration["state"].as_str().unwrap_or("unreported"),
+                current("model"),
+                current("mode"),
+                current("effort"),
+                requested("model"),
+                requested("mode"),
+                requested("effort"),
+                display_value(&configuration["requested"]["options"], 512),
+                display_value(&reported["options"], 512),
+                configuration["failure"]
+                    .as_str()
+                    .map(|failure| format!(" · failure: {} (no fallback)", inert(failure, 256)))
+                    .unwrap_or_default(),
+            );
+        }
         self.projection_seq = seq;
         self.lifecycle = match projection["lifecycle"].as_str() {
             Some("starting") => "starting",
@@ -534,8 +591,18 @@ impl AgentView {
     /// None always means consumed/local, never permission for native forwarding.
     pub(super) fn event(&mut self, event: &Event) -> Option<Value> {
         if matches!(event, Event::Key(key) if key.kind == KeyEventKind::Press
+            && key.code == KeyCode::F(10) && key.modifiers.is_empty())
+        {
+            self.settings_open = !self.settings_open;
+            if self.settings_open {
+                self.settings_scroll = 0;
+            }
+            return None;
+        }
+        if matches!(event, Event::Key(key) if key.kind == KeyEventKind::Press
             && key.code == KeyCode::F(9) && key.modifiers.is_empty())
         {
+            self.settings_open = false;
             self.interaction = match self.interaction {
                 Some(index) if index + 1 < self.interactions.len() => Some(index + 1),
                 Some(_) => None,
@@ -543,6 +610,39 @@ impl AgentView {
                 None => None,
             };
             self.notice = "F9 cycles canonical interactions and the prompt/history; navigation never answers.";
+            return None;
+        }
+        if self.settings_open {
+            match event {
+                Event::Key(key) if key.kind != KeyEventKind::Release => match key.code {
+                    KeyCode::Esc if key.modifiers.is_empty() => self.settings_open = false,
+                    KeyCode::PageUp => {
+                        self.settings_scroll =
+                            self.settings_scroll.saturating_sub(self.settings_page);
+                    }
+                    KeyCode::PageDown => {
+                        self.settings_scroll =
+                            self.settings_scroll.saturating_add(self.settings_page);
+                    }
+                    KeyCode::Up => self.settings_scroll = self.settings_scroll.saturating_sub(1),
+                    KeyCode::Down => self.settings_scroll = self.settings_scroll.saturating_add(1),
+                    KeyCode::Home => self.settings_scroll = 0,
+                    KeyCode::End => self.settings_scroll = self.settings_rows.len(),
+                    _ => {}
+                },
+                Event::Mouse(mouse) => match mouse.kind {
+                    MouseEventKind::ScrollUp => {
+                        self.settings_scroll = self.settings_scroll.saturating_sub(3);
+                    }
+                    MouseEventKind::ScrollDown => {
+                        self.settings_scroll = self.settings_scroll.saturating_add(3);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+            // This read-only surface never edits/replays a draft, authenticates,
+            // interrupts, answers an interaction or requests control.
             return None;
         }
         // Auth and explicit interrupt remain available even during bootstrap
@@ -895,6 +995,10 @@ impl AgentView {
         if area.width == 0 || area.height == 0 {
             return;
         }
+        if self.settings_open {
+            self.draw_settings(frame, area);
+            return;
+        }
         let mut remaining = area;
         let owner = if self.binding.is_some() {
             "owner (input-admission)"
@@ -926,6 +1030,10 @@ impl AgentView {
         frame.render_widget(
             Paragraph::new(header).style(Style::default().fg(ACCENT)),
             take_top(&mut remaining, 4),
+        );
+        frame.render_widget(
+            Paragraph::new(self.settings.as_str()).style(Style::default().fg(MUTED)),
+            take_top(&mut remaining, 3),
         );
         let gap = format!(
             "Cursor {} | {}{}{}{}",
@@ -1021,9 +1129,58 @@ impl AgentView {
         self.draw_editor(frame, editor);
         frame.render_widget(Paragraph::new(vec![
             Line::raw(self.notice),
-            Line::styled("F9 questions/history | Tab fields | F4 unset | F5 review/accept F6 decline (if offered) F7 cancel | Enter prompt/permission | F8 auth | Ctrl-C interrupt | PgUp/PgDn scroll",
+            Line::styled("F10 settings | F9 questions/history | Tab fields | F4 unset | F5 review/accept F6 decline (if offered) F7 cancel | Enter prompt/permission | F8 auth | Ctrl-C interrupt | PgUp/PgDn scroll",
                 Style::default().fg(MUTED)),
         ]), footer);
+    }
+
+    fn draw_settings(&mut self, frame: &mut Frame<'_>, area: Rect) {
+        let mut body = area;
+        let footer = take_bottom(&mut body, 1);
+        frame.render_widget(
+            Paragraph::new("ACP settings (read-only)\nPgUp/PgDn, arrows, Home/End, wheel | F10/Esc back | F9 interactions")
+                .style(Style::default().fg(ACCENT)),
+            take_top(&mut body, 2),
+        );
+        if self.settings_width != body.width as usize || self.settings_rows.is_empty() {
+            self.settings_width = body.width as usize;
+            self.settings_rows = wrap_rows(&self.settings, self.settings_width);
+        }
+        self.settings_page = (body.height as usize).max(1);
+        self.settings_scroll = self.settings_scroll.min(
+            self.settings_rows
+                .len()
+                .saturating_sub(body.height as usize),
+        );
+        for (offset, range) in self
+            .settings_rows
+            .iter()
+            .skip(self.settings_scroll)
+            .take(body.height as usize)
+            .enumerate()
+        {
+            frame.buffer_mut().set_stringn(
+                body.x,
+                body.y + offset as u16,
+                &self.settings[range.clone()],
+                body.width as usize,
+                Style::default().fg(MUTED),
+            );
+        }
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Settings rows {}-{}/{} | Application input discarded",
+                if body.height == 0 {
+                    0
+                } else {
+                    self.settings_scroll + 1
+                },
+                (self.settings_scroll + body.height as usize).min(self.settings_rows.len()),
+                self.settings_rows.len(),
+            ))
+            .style(Style::default().fg(MUTED)),
+            footer,
+        );
     }
 
     fn draw_history(&mut self, frame: &mut Frame<'_>, area: Rect) {

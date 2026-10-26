@@ -1,0 +1,41 @@
+{
+  "type": "independent-source-security-gate",
+  "context": "E06 only; all complete reports read before source edits",
+  "round": 9,
+  "max_rounds": 10,
+  "status": "FAIL",
+  "scores": {
+    "A": 96.875,
+    "B": 100,
+    "security": 100
+  },
+  "reports": {
+    "A": "specs/verifications/e06-review-round9-A.json",
+    "B": "specs/verifications/e06-review-round9-B.json",
+    "security": "specs/verifications/e06-review-round9-security.json"
+  },
+  "source": "specs/verifications/e06-review-round9-source.json",
+  "frozen_files": 32,
+  "all_hashes_matched_at_verdict": true,
+  "findings": [
+    {
+      "id": "E06-R9-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui/launch.rs",
+      "line": 179,
+      "title": "Reject invalid launch edits instead of substituting a truncated ID",
+      "impact": "A native profile launch can apply a different advertised model/mode/effort identity from the invalid value supplied by the user, bypassing the intended explicit rejection before startup settings are applied.",
+      "evidence": "Event::Paste calls Dialog::append, whose lines 179–183 remove control characters and stop appending at the byte limit, then clear the error. For an advertised valid 256-byte model ID M, pasting M followed by another byte stores only M. Dialog::request submits that substituted value; tui.rs routes it through NativeControl::launch, daemon profile preparation validates the already-rewritten string, and Configuration::resolve/next dispatches the genuine setter for M. The supplied 257-byte identity would otherwise fail valid_id. PLAN lines 17–23 requires exact advertised identities and explicit unsupported-setting failure, not silent model substitution. The file is new relative to base 2195b05adf23ae26a80065ecdd6d9196e2915998, confirmed by git show reporting it absent from that base.",
+      "fix": "Validate the complete proposed edit before mutating the backing field. Reject over-budget scalar/Options JSON edits in full with a visible error rather than keeping a prefix; reject control-containing scalar setting IDs rather than rewriting them. Preserve legal JSON bytes for the existing parser. Ensure rejected input cannot silently produce a launch, and add a native dialog regression using an offered 256-byte ID and an invalid 257-byte ID sharing that prefix."
+    }
+  ],
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "historical_caps": "unchanged",
+  "task_status": "all seven remain failing"
+}

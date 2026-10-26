@@ -1,0 +1,88 @@
+{
+  "type": "runtime-verification",
+  "context": "E06 round10 repaired-source nonlive acceptance, not installed-provider or fresh-source acceptance",
+  "job": "bg_359",
+  "status": "passed",
+  "exit": 0,
+  "wall_seconds": 259.63,
+  "raw": "artifact://2632",
+  "workspace": {
+    "passed": 451,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default": {
+    "passed": 340,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "checks": [
+    "cargo fmt --all",
+    "cargo build --example acp_fixture",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test --workspace",
+    "cargo test",
+    "cargo check --workspace --all-targets",
+    "cargo check --all-targets",
+    "cargo build --workspace",
+    "cargo fmt --all -- --check",
+    "rustfmt --edition 2021 --check vendor/crossterm/src/event/read.rs vendor/crossterm/src/event/source/unix/mio.rs"
+  ],
+  "actual_cursor_showcase": {
+    "passed": 1,
+    "seconds": 3.82
+  },
+  "preserved_unknown_native_settlement_guards": {
+    "passed": 2,
+    "seconds": [
+      0.86,
+      0.83
+    ],
+    "safe_grant_unknown": "blocked"
+  },
+  "e06": {
+    "groups": [
+      13,
+      13,
+      13
+    ],
+    "extra_worker_native": 5,
+    "unique_nonlive": 44,
+    "exact_profile_and_reconnect_overlap": true,
+    "live_ignored": 1,
+    "live_acceptance": "failing"
+  },
+  "independent_final_binary": {
+    "evidence": "specs/verifications/e06-native-cli-smoke-post-round10.json",
+    "sha256": "784097aaca1549afa9bbf40b3b9236d5365154dc8a7f8267c1c250aaf7f02278",
+    "provider_calls": 0
+  },
+  "historical_failures_preserved": [
+    "bg_354 actual stale ownership-claim RED before native cutover",
+    "bg_355 passed recovery, failed fresh-Force fixture readiness oracle; not production RED",
+    "bg_357 offline released-test dependency missing; not production RED"
+  ],
+  "intermediate_proofs": [
+    "bg_356 all3 actual native boundary cases GREEN",
+    "bg_358 three boundary units GREEN in default and event-stream"
+  ],
+  "provider_accounting": {
+    "requests": 8,
+    "cap": 9,
+    "remaining": 1,
+    "new_requests": 0
+  },
+  "source_review": "awaiting fresh round11/max12; all task gates still failing",
+  "historical_caps": "unchanged",
+  "dependency_boundary_units": {
+    "job": "bg_358",
+    "raw": "artifact://2630",
+    "default": 3,
+    "event_stream": 3,
+    "unique": 3,
+    "overlap_configurations": true,
+    "owned_standalone_lockfile": "removed after proof"
+  }
+}

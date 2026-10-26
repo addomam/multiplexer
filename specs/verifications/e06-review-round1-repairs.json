@@ -1,0 +1,36 @@
+{
+  "review": "specs/verifications/e06-review-round1.json",
+  "status": "focused-runtime-passed-full-gate-and-round2-pending",
+  "job": "bg_302",
+  "exit": 0,
+  "wall_seconds": 7.22,
+  "commands": [
+    {
+      "command": "cargo test --test acp native::recovery_edges:: -- --nocapture",
+      "selected": 3,
+      "passed": 3,
+      "seconds": 3.6
+    },
+    {
+      "command": "cargo test --test acp native::daily_use::e06s02_native_profile_launch -- --exact --nocapture",
+      "selected": 1,
+      "passed": 1,
+      "seconds": 1.36
+    }
+  ],
+  "repairs": {
+    "E06-A01": "Post-observation stop/wall-clock check prevents claim emission; owning Connection shuts down cloned handles on drop. Real paused original worker disconnects while UI observation remains held; daemon receives zero stale claims, original external owner and null reservation survive, same peer later computes42 exactly once.",
+    "E06-A02/B-01": "One mutable identity reconciliation permits only first null-to-established session on exact daemon/view/instance/connection. Actual native attachment loses both transports while session/new is held; original peer establishes session while client is stopped, then fresh observer recovers and observes42 without duplicate.",
+    "E06-A03": "Preserve approved profile inheritance; show inherited placeholders, explicit blank/option-merge help and README. Actual native launch deliberately types then clears high effort, confirms inherited low and real reported low before computing42.",
+    "E06-A04/B-02": "Record exact acknowledged target before follow-up observation. Transparent real-protocol relay distinguishes earlier periodic snapshot from receipt-following snapshot, drops the latter; original surviving new view recovers as observer, one acp-open, same PID, original name/target and real42."
+  },
+  "first_fixture_failure": {
+    "job": "bg_301",
+    "raw": "artifact://2158",
+    "cause": "New test driver mistakenly waited for an incidental Total colon marker; all three actual surfaces already showed original peer Total=42 and completed work. Removed copy-marker dependency, fence canonical render cursor and assert independent numerical effect/command count instead.",
+    "production_RED_claimed": false
+  },
+  "cleanup": "all four cases completed existing real controlling-PTY normal detach/termios/reap/drainer, peer, daemon, socket/root and unrelated-sentinel checks before fallback",
+  "provider_requests": 0,
+  "historical_review_caps": "unchanged"
+}

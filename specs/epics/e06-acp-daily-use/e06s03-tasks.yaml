@@ -1,0 +1,30 @@
+story_id: e06s03
+spec: e06s03-story.md
+title: Truthful same-session reattachment
+status: passing
+bcps: 5
+tasks:
+  - id: e06s03-T1
+    description: "Recover attachment transport without mutation replay or automatic reacquisition"
+    verify: "cargo test --test acp e06s03_ -- --nocapture"
+    risk: P0
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: critical, categories: [ACP, daily-use, Security Review]}
+  - id: e06s03-T2
+    description: "Actual native loss/pause/reattach/ended-target and no-duplicate-agent smoke"
+    verify: "cargo test --test acp native::daily_use::e06s03_native_reconnect -- --exact --nocapture"
+    risk: P0
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: critical, categories: [ACP, daily-use, Security Review]}
+  - id: e06s03-T3
+    description: "Integrated runtime regressions and fresh source review"
+    verify: "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --all -- --check"
+    risk: P0
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: critical, categories: [ACP, daily-use, Security Review]}

@@ -1,0 +1,60 @@
+{
+  "scope": "e05 language-neutral tool integration contract research",
+  "status": "source-researched-not-runtime-acceptance",
+  "user_decision": {
+    "question": "What should tool authors integrate with first?",
+    "selected": "Language-neutral local API",
+    "meaning": "A small versioned local message contract usable from Python, Rust, JS or another language; tool authors do not implement ACP. Reuse the established broker internally rather than a second ownership arbiter."
+  },
+  "baseline": "af745cdf4045af76a7a34a8bb4260e24057461ce",
+  "installed_OMP": {
+    "entrypoint": "/opt/homebrew/bin/omp",
+    "resolved": "/opt/homebrew/Cellar/omp/18.12.6/bin/omp",
+    "observed_version": "omp/18.12.6",
+    "offline_probe": "local://e05-omp-offline-cli.json",
+    "version_exit": 0,
+    "help_exit": 0,
+    "network": "OS sandbox denied",
+    "user_home_reads": "OS sandbox denied",
+    "environment": "cleared; private HOME/cwd; no ambient auth/config",
+    "temporary_root_removed": true,
+    "provider_execution": false,
+    "SDK_bootstrap_or_prompt_execution": false
+  },
+  "sources": {
+    "OMP_commit": "45c35e40c46166dc726ccc52f5d27f40f2449f99",
+    "OMP_tag": "v18.12.6",
+    "registry": "https://registry.npmjs.org/@oh-my-pi%2Fpi-coding-agent/18.12.6",
+    "npm_tarball_sha1": "7762bf3888fa4a841545ea2e13f6e22e74f24792",
+    "SDK": "https://github.com/can1357/oh-my-pi/blob/45c35e40c46166dc726ccc52f5d27f40f2449f99/docs/sdk.md",
+    "UI_types": "https://github.com/can1357/oh-my-pi/blob/45c35e40c46166dc726ccc52f5d27f40f2449f99/packages/coding-agent/src/extensibility/extensions/types.ts",
+    "approval": "https://github.com/can1357/oh-my-pi/blob/45c35e40c46166dc726ccc52f5d27f40f2449f99/packages/coding-agent/src/tools/approval.ts",
+    "runtime_init": "https://github.com/can1357/oh-my-pi/blob/45c35e40c46166dc726ccc52f5d27f40f2449f99/packages/coding-agent/src/modes/runtime-init.ts",
+    "RPC": "https://github.com/can1357/oh-my-pi/blob/45c35e40c46166dc726ccc52f5d27f40f2449f99/docs/rpc.md"
+  },
+  "consumer_findings": [
+    {"capability":"one real embedded session","evidence":"SDK createAgentSession(options) returns session; SessionManager.inMemory(), session.subscribe(), prompt(), abort(), beginDispose()/dispose() are documented","status":"source-supported-not-executed"},
+    {"capability":"genuine questions","evidence":"createAgentSession interactivePrompts:true plus setToolUIContext(uiContext,true); typed askDialog/select/editor callbacks","status":"source-supported-not-executed"},
+    {"capability":"genuine permissions","evidence":"tools/approval.ts requestApproval invokes ui.approve when supplied; types.ts returns once/session/deny or an offered grant; initializeExtensions(session,{uiContext,...}) installs the extension runner UI","status":"source-supported-not-executed"},
+    {"capability":"simple first permission profile","evidence":"ExtensionApprovalPrompt grants explicitly permits hosts that omit remembered choices to answer once/session/deny; initial adapter will advertise only once/deny and return actual once/deny values","status":"planned-explicit-restriction-not-runtime-PASS"},
+    {"capability":"plain RPC as full permission adapter","evidence":"RPC UI has no typed approve implementation, so requestApproval falls back to generic select; generic menu text is not an authoritative permission discriminator","status":"not-selected-no-prose-classification"},
+    {"capability":"existing native OMP lifecycle adapter","evidence":"integrations/omp/amux.ts and lifecycle.ts report lifecycle only; no responder or input fence","status":"preserve-unchanged-not-proof-of-new-contract"},
+    {"capability":"SDK bootstrap without provider effects","evidence":"docs/sdk.md startup section documents model-origin connection prewarm; disposal source also mentions paid warming; initialization alone must not be treated as an offline smoke","status":"must-network-sandbox-or-obtain-separate-approval"}
+  ],
+  "broker_findings": {
+    "authority": "src/control.rs:1194-1213 locks target, checks authority and commits before releasing; no child I/O in transaction",
+    "closed_routing": "src/daemon.rs:1237-1268 separates ACP and native operations; new target kind must not become native PTY input",
+    "launch": "src/acp.rs:540-605 reserves target;1350-1455 owns child and captured ProcessTree and retains original endpoints",
+    "forms": "src/acp.rs:2113-2170 validates exactly one session/request scope and an actually outstanding parent request",
+    "permissions": "src/acp.rs:2173-2211 preserves exact offered IDs and four supported allow/reject once/always kinds",
+    "view": "src/tui/agent.rs uses canonical target/control/generation binding and bounded interaction/history; reuse this editor instead of duplicating it",
+    "reuse_recommendation": "An in-process concrete ToolV1 codec in the existing structured broker, not a second daemon arbiter or an extra bridge child. One daemon-owned tool integration child retains existing endpoint/worker/process cleanup observability. Preserve ACP wire/API behavior unchanged.",
+    "LSP": "Ready rust-analyzer returned no references for the known cross-worktree Broker symbol. Tool issue reported; direct source-observed callers above are not a complete fan-out count. Repair workspace navigation before symbol migration during Build."
+  },
+  "research_limitations": {
+    "Context7": "UNAVAILABLE: not mounted; version-pinned primary source used, not training-data API claims",
+    "opensrc": "No installed opensrc command; no npx auto-install attempted",
+    "delegation": "Two read-only scouts hit configured Grok402 quota before final reports. Parent recovered their source locations and performed direct source inspection. No independent review PASS claimed.",
+    "runtime_claim": "Only sandboxed installed CLI --version/--help ran. No new integration implementation, SDK execution, auth inspection, provider inference or compatibility acceptance."
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 26,
+  "passed_items": 26,
+  "checklist": [
+    {
+      "area": "Scope, requirements and threat-model coverage",
+      "result": "PASS — static",
+      "evidence": "Reviewed all 32 manifest-listed paths against CONVENTIONS.md, SCOPE_LATEST.yaml, THREAT_MODEL.md and only PLAN.md lines 1–45. E05 remained out of scope; prior review/runtime/audit/handoff reports were not opened."
+    },
+    {
+      "area": "Profile validation and persistence",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs validates bounded, closed profile data; src/projects.rs validates configuration before persistence, separates saved configuration from runtime state, and uses guarded atomic configuration replacement."
+    },
+    {
+      "area": "Executable resolution and symlink semantics",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs:117–183 resolves executable basenames through absolute daemon PATH entries, requires an executable regular-file target, and preserves the invocation path rather than canonicalizing away executable symlink identity. tests/acp/profiles.rs covers absolute and PATH-based symlink invocation."
+    },
+    {
+      "area": "Shell-free process invocation",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs:1370 onward launches the validated executable using Command and separate argv elements, not shell interpolation. Wrapper/hook-related inherited environment variables are removed. Profile discovery and preparation do not install software or perform authentication."
+    },
+    {
+      "area": "Explicit CLI launch",
+      "result": "PASS — static",
+      "evidence": "src/cli.rs provides explicit profile/project/settings selection, rejects conflicting or duplicate option inputs, and separates native-owned launch from explicit-controller JSON operation. Nested target session_id:null is preserved for exact starting-instance addressing."
+    },
+    {
+      "area": "Explicit native launch",
+      "result": "PASS — static",
+      "evidence": "src/tui/launch.rs presents profile and settings choices without exposing raw command/environment data. Defaults remain structured, option identities are lossless, and deliberate submission uses the original authority worker rather than a separate implicit owner."
+    },
+    {
+      "area": "Closed settings inputs and exact option identities",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs:12–53 rejects duplicate JSON keys, non-string option values and oversized input. src/acp/settings.rs validates the closed requested-settings shape and retains exact advertised IDs, including distinct options sharing a category."
+    },
+    {
+      "area": "Settings negotiation and acknowledgements",
+      "result": "PASS — static",
+      "evidence": "src/acp/settings.rs selects advertised setters, rejects ambiguous semantic mappings and conflicting aliases, recomputes against returned catalogs, and verifies applied choices before readiness. tests/acp/omp.rs covers changing catalogs, unsupported settings and malformed acknowledgements."
+    },
+    {
+      "area": "Truthful settings and policy presentation",
+      "result": "PASS — static",
+      "evidence": "src/acp/settings.rs distinguishes requested, reported, unreported and agent-default values and marks displaced startup choices changed. src/tui/agent.rs renders these distinctions and does not represent model/mode metadata as proof of an effective approval policy."
+    },
+    {
+      "area": "Exclusive authority and atomic admission",
+      "result": "PASS — static",
+      "evidence": "src/daemon.rs authorizes ACP actions before broker commit; src/acp.rs:667 onward validates exact target/control/generation and commits under the admitted lifetime. Narrow src/control.rs references confirm generation-checked admission and that force ownership changes do not implicitly interrupt or kill ACP work."
+    },
+    {
+      "area": "Application-input route gating",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs and src/tui/control.rs route native keys, repeats, literal prefixes, paste, application mouse and focus reports through authority checks. ACP views consume their own events instead of falling through to PTY input. Daemon dispatch rejects native operations directed at ACP targets."
+    },
+    {
+      "area": "Captured controls, drafts and response restoration",
+      "result": "PASS — static",
+      "evidence": "src/tui/agent.rs binds drafts to exact instance/connection/session and owner generation; identity or grant changes discard drafts. src/tui/control.rs restores an editable response only after a definite daemon rejection, not an ambiguous transport failure, and does not rebind queued mutations to a new control."
+    },
+    {
+      "area": "Genuine question responders",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs retains original request identities and exact request/session scope, validates bounded supported schemas and typed answers, and admits one winning response. Defaults are not automatic submissions. tests/acp.rs and tests/acp/native/acceptance.rs exercise original-responder and stale-revision behavior in source."
+    },
+    {
+      "area": "Permission allow, deny and peer cancellation",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs permits only the exact offered permission option on the retained interaction. Peer cancellation correlates the typed original request ID and preserves an already admitted winner. tests/acp/omp.rs and native acceptance sources cover allow/deny, cancellation and wire-ID reuse without synthesizing a second agent."
+    },
+    {
+      "area": "Same-instance OMP interoperability design",
+      "result": "PASS — static only; live acceptance not established",
+      "evidence": "The built-in OMP profile is omp acp. tests/acp/native/omp_live.rs checks process executable and daemon/agent/connection/session/work continuity, genuine question completion, permission denial and allowance, and absence of implicit interruption. This ignored opt-in driver and synthetic tests are not treated as an executed installed-OMP PASS."
+    },
+    {
+      "area": "Untrusted protocol and resource bounds",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs:34–48 and its reader/writer paths bound frames, queues, RPCs, history, interactions, local content and stderr. Tool-call IDs have a separate 4 KiB bound. Invalid framing, unsupported requests and capacity exhaustion produce explicit dispositions rather than unlimited buffering or implicit capability support."
+    },
+    {
+      "area": "Retained work and delivery uncertainty",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs separates admission, transport delivery and application outcome; application remains unknown where no agent acknowledgement proves it. tests/acp.rs covers lost caller replies, force transfers, cancelled claims, submitted responses followed by EOF, and original work/RPC retention without replay."
+    },
+    {
+      "area": "Owned-process and original-pipe cleanup",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs retains original pipe endpoints, cancels and joins transport workers, and retains uncertain cleanup against capacity. Narrow src/runtime.rs:589–827 references confirm birth-qualified process tracking and bounded freeze/rescan termination. Cleanup tests assert owned-process disappearance and unrelated-sentinel survival before fallback cleanup."
+    },
+    {
+      "area": "Inert untrusted rendering",
+      "result": "PASS — static",
+      "evidence": "src/tui/agent.rs escapes terminal controls and directional formatting at display boundaries while preserving opaque protocol identities. src/tui.rs:491–505 sanitizes chrome labels; src/tui/view.rs uses bounded structural geometry. Native rendering tests include hostile title/clipboard/control content without introducing executable rendering actions."
+    },
+    {
+      "area": "Content and credential privacy",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs:1039 onward makes conversation/interaction content an explicit inspect opt-in and excludes raw provider errors, stderr, argv and answer content from ordinary metadata. Profile listings expose safe metadata only. The live-driver source uses sanitized fixed diagnostics instead of publishing raw prompts, answers, provider messages or private configuration."
+    },
+    {
+      "area": "Both native connection lifetimes and paused UI",
+      "result": "PASS — static",
+      "evidence": "src/client.rs shuts down connection clones on drop. src/tui.rs detects wall-clock pauses; src/tui/control.rs checks the heartbeat, original authority connection and observation connection before dequeuing work, including between the read and mutation of compound claim operations."
+    },
+    {
+      "area": "Exact surviving attachment recovery",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs reconnects through Connection::connect rather than ensure_daemon, validates daemon and exact agent identity, permits only initial null-to-established session continuity, and starts a fresh observer with automatic acquisition disabled. tests/acp/native/daily_use.rs covers independent socket loss, pause, ended targets and daemon replacement without relaunch or same-name substitution."
+    },
+    {
+      "area": "Acknowledged launch continuity",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs consumes acknowledged launch identity before fallible follow-up observation and salvages only that identity during authority teardown. tests/acp/native/recovery_edges.rs covers both consumed and queued launch receipts across observation loss and checks a single launch with no replay or acquisition."
+    },
+    {
+      "area": "Recovery geometry, old controls and bounded observer cleanup",
+      "result": "PASS — static",
+      "evidence": "Recovery completes structural resize and reconciles actual paint geometry before readiness, drains old input/control gestures, and discards old consent and drafts. src/tui/control.rs performs bounded guarded cleanup of recovered idle observers without closing owners or pending claimants. Recovery-edge and tests/pty_control/native.rs sources cover held registration and resize races."
+    },
+    {
+      "area": "Human control, stock shell and unknown native settlement",
+      "result": "PASS — static; historical limitation preserved",
+      "evidence": "Native/control tests retain cancellation-grants-nobody and keep/withdraw semantics without silently rearming external policy. tests/pty_control/native.rs explicitly preserves unknown native-input settlement as a blocker; tests/shell_races.rs retains stock Zsh context and input-ordering boundaries. Force-only paths are not treated as resolution of native application settlement."
+    },
+    {
+      "area": "Dependencies, documentation and evidence integrity",
+      "result": "PASS — static",
+      "evidence": "Reviewed src/lib.rs, Cargo.toml, Cargo.lock, README.md and CHANGELOG.md alongside all 11 frozen test/fixture paths. ACP schema dependency is pinned to =1.12.0 with default features disabled. Documentation retains privacy, recovery and settlement limitations. No synthetic fixture, ignored test, historical report or parent assertion was promoted into runtime proof."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the read-only static security review: 26/26 checklist items, score 100. Reviewed all 32 frozen manifest paths and narrowly related unchanged authority/process-cleanup code. No supported Must-fix, Should-fix or optional security finding survived source-to-sink tracing and inspection of nearby controls. This result is not E06 end-to-end acceptance, installed-OMP runtime proof, landing authorization or a resolution of historically unknown native application settlement.",
+  "limits": "Static source analysis only. No edits, payload execution, builds, tests, lint, formatters, provider/network calls, auth/private-fixture reads, daemon/config/global operations or commits were performed. Prior review/audit/repair/runtime reports and saved handoff/execution logs were not read; PLAN access was restricted to lines 1–45. Manifest paths were used as the supplied review scope; their hashes and the branch/base identity were not independently recomputed. Test sources describe intended checks, not observed successful execution. Actual installed OMP interoperability, live allow/deny effects, platform behavior, runtime cleanup and recovery gates remain for the parent integration owner; dependency advisory status was not checked online."
+}

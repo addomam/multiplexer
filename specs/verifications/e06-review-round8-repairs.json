@@ -1,0 +1,57 @@
+{
+  "type": "source-review-finding-repair",
+  "context": "E06 round8 visibility P2; complete source gate still required",
+  "finding": "E06-B8-01",
+  "review": "specs/verifications/e06-review-round8.json",
+  "status": "runtime-verified-awaiting-fresh-source-gate",
+  "decision": "F10 wraps and scrolls the same bounded inert settings summary; no input/control mutation, draft changes or replay; cached UTF-8 row ranges change only with content/width",
+  "red": {
+    "job": "bg_338",
+    "raw": "artifact://2492",
+    "passed": 0,
+    "failed": 1,
+    "seconds": 12.94,
+    "actual_native_clipping": true
+  },
+  "non_production_failures": [
+    {
+      "job": "bg_337",
+      "raw": "artifact://2488",
+      "reason": "new fixture resize requires owned Geometry rather than a reference; compile error is not production RED"
+    },
+    {
+      "job": "bg_339",
+      "raw": "artifact://2494",
+      "reason": "new test incorrectly requires field/value on one physical wrapped line"
+    },
+    {
+      "job": "bg_341",
+      "raw": "artifact://2498",
+      "reason": "full gate fails waiting for settings close after restore; marker-only fence cannot distinguish reflow from restored paint; missed-close production cause not established; stronger fixture footer fence required"
+    }
+  ],
+  "green": {
+    "job": "bg_340",
+    "passed": 1,
+    "seconds": 1.36,
+    "actual_native_long_model": true,
+    "physical_resize_and_paging": true,
+    "same_tuple_PID": true,
+    "application_input_inert": true,
+    "arithmetic": 42,
+    "normal_cleanup": true
+  },
+  "actual_changed_path": "specs/verifications/e06-native-cli-smoke-post-round8.json",
+  "source": "specs/verifications/e06-post-round8-source.json",
+  "full_gate": "specs/verifications/e06-post-round8-regressions.json",
+  "next_source_round": 9,
+  "max_rounds": 10,
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "task_status": "all seven remain failing pending source and live gates",
+  "historical_caps": "unchanged"
+}

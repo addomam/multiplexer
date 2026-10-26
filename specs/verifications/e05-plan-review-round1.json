@@ -1,0 +1,26 @@
+{
+  "scope": "e05-only-contract-and-Build-plan",
+  "round": 1,
+  "max_rounds": 5,
+  "status": "FAIL",
+  "scores": [
+    100,
+    93.75
+  ],
+  "findings": {
+    "must_fix": [
+      "B-01: Exact OMP approval event-to-callback toolCallId correlation missing"
+    ],
+    "should_fix": [
+      "B-02: Isolated effective asking policy missing; SDK default yolo auto-approves"
+    ]
+  },
+  "reports": {
+    "A": "specs/verifications/e05-plan-review-round1-A.json",
+    "B": "specs/verifications/e05-plan-review-round1-B.json"
+  },
+  "source": "specs/verifications/e05-plan-round1-source.json",
+  "report_recovery": "B structured generic object arrays lost finding details; exact substantive same-round findings recovered through parent message and complete summary string. B summary is authoritative: one must-fix and one should-fix, not zero. Initial incomplete payload retained. No new review or other reviewer disclosure.",
+  "runtime_acceptance": false,
+  "historical_caps": "unchanged"
+}

@@ -1,0 +1,103 @@
+{
+  "status": "passed",
+  "job": "bg_320",
+  "raw": "artifact://2307",
+  "exit": 0,
+  "wall_seconds": 246.75,
+  "workspace": {
+    "passed": 441,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_package": {
+    "passed": 330,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "fixture_example_build": "passed-before-filtered-selections",
+  "queued_wake_completed_effect": {
+    "passed": 1,
+    "seconds": 2.7,
+    "prior_failure": "bg_319/artifact://2301 preserved in repair receipt; no production shell change"
+  },
+  "clippy": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "check_all_targets": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "build_workspace": "passed",
+  "fmt": "passed",
+  "independent_cursor_showcase": {
+    "passed": 1,
+    "seconds": 3.83
+  },
+  "native_unknown_settlement_guards": [
+    {
+      "selector": "native::conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_and_withdraw_keeps_token",
+      "passed": 1,
+      "seconds": 0.83
+    },
+    {
+      "selector": "native::background_all_scope_includes_new_unknown_foreground_and_departed_views_at_acceptance",
+      "passed": 1,
+      "seconds": 0.92
+    }
+  ],
+  "task_selections": {
+    "e06s01": {
+      "passed": 12,
+      "live_ignored": 1,
+      "seconds": 7.16
+    },
+    "e06s02": {
+      "passed": 9,
+      "seconds": 2.3
+    },
+    "e06s03": {
+      "passed": 11,
+      "seconds": 3.82
+    },
+    "exact_native_profile": {
+      "passed": 1,
+      "seconds": 1.36
+    },
+    "exact_native_reconnect": {
+      "passed": 1,
+      "seconds": 1.9
+    },
+    "queued_launch_worker_unit": {
+      "passed": 1,
+      "seconds": 0
+    },
+    "actual_native_registration_resize": {
+      "passed": 1,
+      "seconds": 1.85
+    },
+    "unique_nonlive": 34,
+    "groups_exact_and_full_suites_overlap": true
+  },
+  "prior_unchanged_OMP_Bun_Zsh": {
+    "job": "bg_304",
+    "passed": 8,
+    "expect_calls": 49,
+    "zsh": "passed",
+    "integration_source_changed_since": false
+  },
+  "outside_actual_human_cli_native": "specs/verifications/e06-native-cli-smoke-round5.json",
+  "causal_failures_and_repairs": "specs/verifications/e06-review-round4-repairs.json",
+  "source": "specs/verifications/e06-review-round5-source.json",
+  "provider_calls": 0,
+  "actual_provider_aggregate": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "live_acceptance": "still failing; no fresh live run authorized",
+  "private_auth_and_raw_fixture": "retired; public counters/failure evidence preserved",
+  "physical_suspend_Linux_minimum_toolchain": "not exercised",
+  "historical_review_caps": "unchanged"
+}

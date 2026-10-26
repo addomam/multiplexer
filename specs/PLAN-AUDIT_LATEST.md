@@ -1,4 +1,30 @@
-# Current Plan audit — e04 ACP
+# Current Plan audit — e06 ACP daily use
+
+**E06 source/runtime/genuine installed-OMP acceptance PASS; all seven tasks and three stories pass.** Fresh round11 A100/B100/security100 has zero findings and92 hashes matched at verdict. Complete bg_359 passes451 workspace/340 default tests (overlap), strict checks and44 nonlive E06 cases. One separately authorized live OMP run passes1/1 in10.06 seconds: genuine native question answer, API handoff preserving the original pending permission, exact deny/allow effects, same tuple/PID/work/RPC, normal completion and owned cleanup. Four actual cheap subscription requests bring usage to12/cap12/0; no further live calls. Private auth/raw root removed with no holders and unchanged global subscription credential. See `verifications/e06-omp-live-final.json` and `verifications/e06-daily-use-verify.json`. No global changes or commit/merge/push/release authorization.
+
+Final round10 FAIL: A94.444444/B100/security92. All complete reports are archived in `verifications/e06-review-round10.json`;92 sealed hashes match before any source edit. A:F1/security:R10-S1 identifies a P1 filtered-zero-poll false-empty boundary that can let queued old ownership input cross recovery/consent/Force presentation. Security:R10-S2 identifies a P2 unbounded inner reader loop under continuously ready incomplete input. These are supported static paths, not observed exploits or a new runtime RED. Final bg_353 passes449 workspace/338 default tests (overlap), strict checks and42 nonlive E06 cases; actual CLI/nativec211a2cc proves owner/observer settings resize/one-key-close and42→57 with normal cleanup. Those proofs do not cover or waive the newly identified paths. Keep the feature worktree and all evidence; provider8/cap9/1 and historical caps remain unchanged.
+
+Current repaired-source bg_359 passes451 workspace/340 default tests (overlap), strict checks,44 nonlive E06 cases and both preserved native unknown-settlement guards. Three dependency boundary units pass in default/event-stream configurations. Actual CLI/native784097aa exercises real replies and unterminated paste across owner/observer settings resizes, one-key close and42→57 on original tuple/PID2966 with normal cleanup, sentinel survival and fallbackfalse. Round10's supported P1 has causal native RED bg_354→GREEN bg_356; new Force readiness-oracle failure bg_355 and offline dependency prerequisite bg_357 are explicitly not production RED. Fresh A11/B11/security11 review92 sealed paths (54 unchanged vendor/6 changed) without prior reports/runtime input. Provider8/cap9/1 and historical caps unchanged.
+
+Fresh blind reviewers covered all92 sealed paths independently and returned40/40,30/30 and32/32 source checklist passes. Parent read and archived every complete report and rehashed every sealed path before closing the six nonlive gates. Source approval does not establish provider acceptance, waive native unknown settlement or reset any historical review cap. The feature worktree remains unmerged and retained.
+
+Final live acceptance is separate from the earlier source-only gate and its still-failing live snapshot above: explicit “Run complete acceptance, cap12” approved one fresh max4-request run. The actual server passed with exactly4 requests and no blocked model generation; six unapproved read-only requests were blocked before transport and consumed no model request. Each generation requested≤2000 output tokens at MAI flash/low under110 seconds. Complete normal cleanup and subsequent no-holder/removal checks retired copied auth, raw sessions, stderr, launcher and run spec. Historical failures, ignored-default-live behavior and native unknown-settlement limits remain preserved.
+
+The following audits are archived records, not current Build/runtime acceptance. E03/e04 exhausted review caps, unresolved terminal-only fence and E05's two100/100 Plan scores remain unchanged.
+
+---
+
+# Archived Plan audit — e05 thin tool integration
+
+**Verdict: QUALITY GATE READY — both independent contract/Plan reviewers passed round2 at100/100, zero findings. Build awaits explicit user approval.** `verifications/e05-plan-review-round2.json` links full reports, all26 matched frozen planning hashes, self-audit and static validation. B-01 genuine approval correlation and B-02 isolated effective asking policy are cleared at specification level. Four20-section stories,17 failing tasks,21 scenarios; no implementation/runtime/SDK/provider acceptance. Round1 FAIL100/93.75 and historical e03/e04 caps/native failure remain preserved.
+
+User selected language-neutral local API. Proposed in-process codec reuses one structured broker/transport/owned child; no extra bridge, second arbiter or ACP public contract replacement. Baseline/LSP workspace repair, exact nonzero case selection, actual CLI/API/controlling-PTY effects and original endpoint/process/worker cleanup are Build prerequisites/proof obligations. Separate live and main-publication gates remain closed.
+
+The e04/e03 audits below are preserved historical records, not e05 authorization or runtime evidence. Their exhausted caps and unknown native fence remain unchanged.
+
+---
+
+# Archived Plan audit — e04 ACP
 
 **Verdict: READY FOR BUILD — e04 Plan round3 passed independently 100/100 with zero findings.** User's conditional Plan-to-Build authorization is active. Current packet: `epics/e04-acp-agent-interaction/PLAN.md`, integration contract, four 20-section stories/22 failing tasks, test plan and threat model. Rounds1–2 failures and all historical e03 caps/acceptance remain preserved. Full current gate: `verifications/e04-plan-review-round3.json`; no runtime acceptance is implied.
 

@@ -1,0 +1,91 @@
+{
+  "status": "passed",
+  "job": "bg_315",
+  "raw": "artifact://2261",
+  "exit": 0,
+  "wall_seconds": 241.28,
+  "workspace": {
+    "passed": 439,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_package": {
+    "passed": 328,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "fixture_example_build": "passed-before-filtered-selections",
+  "clippy": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "check_all_targets": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "build_workspace": "passed",
+  "fmt": "passed",
+  "independent_cursor_showcase": {
+    "selector": "independent_showcase_runs_inside_amux_and_checks_real_cursor_replies",
+    "passed": 1,
+    "seconds": 3.86
+  },
+  "native_unknown_settlement_guards": [
+    {
+      "selector": "native::conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_and_withdraw_keeps_token",
+      "passed": 1,
+      "seconds": 0.89
+    },
+    {
+      "selector": "native::background_all_scope_includes_new_unknown_foreground_and_departed_views_at_acceptance",
+      "passed": 1,
+      "seconds": 0.89
+    }
+  ],
+  "task_selections": {
+    "e06s01": {
+      "passed": 12,
+      "live_ignored": 1,
+      "seconds": 7.12
+    },
+    "e06s02": {
+      "passed": 9,
+      "seconds": 2.26
+    },
+    "e06s03": {
+      "passed": 11,
+      "seconds": 3.85
+    },
+    "exact_native_profile": {
+      "passed": 1,
+      "seconds": 1.41
+    },
+    "exact_native_reconnect": {
+      "passed": 1,
+      "seconds": 1.95
+    },
+    "unique_nonlive": 32,
+    "groups_and_exact_selections_overlap": true
+  },
+  "prior_unchanged_OMP_Bun_Zsh": {
+    "job": "bg_304",
+    "passed": 8,
+    "expect_calls": 49,
+    "zsh": "passed",
+    "integration_source_changed_since": false
+  },
+  "outside_actual_human_cli_native": "specs/verifications/e06-native-cli-smoke-round4.json",
+  "causal_failures_and_repairs": "specs/verifications/e06-review-round3-repairs.json",
+  "source": "specs/verifications/e06-review-round4-source.json",
+  "provider_calls": 0,
+  "actual_provider_aggregate": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "live_acceptance": "still failing; no fresh live run authorized",
+  "private_auth_and_raw_fixture": "retired; public counters/failure evidence preserved",
+  "physical_suspend_Linux_minimum_toolchain": "not exercised",
+  "historical_review_caps": "unchanged"
+}

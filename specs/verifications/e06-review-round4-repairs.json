@@ -1,0 +1,80 @@
+{
+  "status": "passed-current-full-runtime-awaiting-fresh-source-review",
+  "findings": [
+    "E06-R4-01",
+    "E06-R4-02"
+  ],
+  "red": [
+    {
+      "job": "bg_316",
+      "raw": "artifact://2290",
+      "exit": 101,
+      "passed": 0,
+      "failed": 1,
+      "seconds": 0,
+      "observed": "queued launch crossed original observation-loss fence; server joined and native worker stopped before assertion"
+    },
+    {
+      "job": "bg_317",
+      "raw": "artifact://2291",
+      "exit": 101,
+      "passed": 0,
+      "failed": 1,
+      "seconds": 1.54,
+      "observed": "actual native recovery announced ready with PTY width110 instead of134"
+    }
+  ],
+  "green": {
+    "job": "bg_318",
+    "raw": "artifact://2293",
+    "exit": 0,
+    "wall_seconds": 23.47,
+    "worker_unit": {
+      "passed": 1,
+      "seconds": 0.01,
+      "limit": "protocol/lifetime concurrency fixture, not a real-agent spawn claim"
+    },
+    "actual_native_registration_resize": {
+      "passed": 1,
+      "seconds": 1.83,
+      "width": 134,
+      "height": 33,
+      "unchanged_owner_generation_pid": true,
+      "application_input_unchanged": true
+    },
+    "existing_e06": {
+      "s01": 12,
+      "s02": 9,
+      "s03": 11,
+      "live_ignored": 1
+    },
+    "unique_nonlive": 34,
+    "fixture_example_explicitly_rebuilt": true
+  },
+  "actual_built_cli_native": "specs/verifications/e06-native-cli-smoke-round5.json",
+  "full_gate_job": "bg_320",
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "live_acceptance": "still failing; no fresh live execution authorized",
+  "review_round": 5,
+  "max_review_rounds": 5,
+  "historical_review_caps": "unchanged",
+  "full_gate_intermediate": {
+    "job": "bg_319",
+    "raw": "artifact://2301",
+    "exit": 101,
+    "wall_seconds": 219.99,
+    "workspace_passed": 441,
+    "default_failed": "queued_wake_cannot_follow_typeahead_into_foreground_application",
+    "observed": "queued-done file existed but contents were still empty",
+    "cause": "fixture awaited redirection-created file existence instead of completed builtin effect; no production shell change",
+    "repair": "retain private-wake rejection; await exact QUEUED_DONE newline content through existing bounded fixture deadline",
+    "later_commands": "not reached"
+  },
+  "full_gate_status": "passed",
+  "full_gate": "specs/verifications/e06-round5-regressions.json"
+}

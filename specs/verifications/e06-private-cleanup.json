@@ -1,0 +1,37 @@
+{
+  "status": "completed",
+  "scope": "only the owned E06 private copied-auth/offline/live harness root; no global auth or project checkout/worktree removed",
+  "before": {
+    "owner": "addomam",
+    "mode": "0700",
+    "type": "directory",
+    "lsof_recursive": {
+      "exit": 1,
+      "stdout": "empty",
+      "holders": 0
+    }
+  },
+  "removed": [
+    "selected private OAuth DB copy",
+    "private raw provider/wire/session material",
+    "owned throwaway offline/native/budget/deadline harnesses and ledgers"
+  ],
+  "after": {
+    "owned_root_absent": true,
+    "remove_and_absence_check_exit": 0
+  },
+  "retained": [
+    "auth-free public accounting and source/runtime/failure receipts",
+    "credential-free guard/launcher source copies for static review",
+    "all unmerged feature and parked E05 work"
+  ],
+  "provider_accounting": {
+    "actual_requests_spent": 8,
+    "aggregate_cap": 9,
+    "remaining": 1,
+    "reset": false
+  },
+  "process_evidence": "each actual live attempt and final native smoke has separate owned peer/daemon/worker cleanup receipts; recursive lsof found no remaining holder before root retirement",
+  "memory": "mutable copied credential token fields cleared best-effort; secure RAM erasure is not claimed",
+  "new_live_run": "not authorized; would require fresh separately approved budget and new private fixture"
+}

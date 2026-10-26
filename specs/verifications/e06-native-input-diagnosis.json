@@ -1,0 +1,370 @@
+{
+  "scope": "E06 credential-free native launch/settings input integration; not a source approval round or native-application settlement spike",
+  "provider_requests": 0,
+  "current_full_gate": {
+    "job": "bg_349",
+    "status": "failed",
+    "passed": 104,
+    "failed": 1,
+    "ignored": 2,
+    "raw": "artifact://2550",
+    "failure": "native::daily_use::e06s02_native_long_model_settings_remain_readable_and_input_is_inert",
+    "pending_kernel_input_bytes": 5
+  },
+  "launch_readiness": {
+    "focused_job": "bg_348",
+    "passed": 13,
+    "raw": "artifact://2548",
+    "repair": "Fence the newly launched rendered ready view id and session before using per-instance cursor/ownership; old-anchor cursors are not global"
+  },
+  "read_only_investigations": [
+    {
+      "name": "E06InputParserProbe",
+      "report": "Scope and evidence\n\nRead-only source diagnosis only. No commands, execution, builds, tests, probes, changes, source approval or scoring. No runtime cause is established. References below use C = /Users/addomam/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/crossterm-0.29.0; M = the same registry root/mio-1.2.4; S = the same root/signal-hook-0.3.18; SM = the same root/signal-hook-mio-0.2.5.\n\n1. Concrete active path\n\n• The caller Cargo.toml:19 declares crossterm = \"0.29\" without disabling defaults; Cargo.lock:380-394 pins 0.29.0, with Mio and signal-hook 0.3.18; Cargo.lock:1002-1004 pins Mio 1.2.4. C/Cargo.toml:45-70 enables bracketed-paste and events by default. C/src/event/source/unix.rs:1-11 chooses mio unless use-dev-tty is enabled. The locked crossterm dependency list does not include filedescriptor, supporting selection of the default Mio path rather than the alternate use-dev-tty implementation.\n• C/src/event.rs:149-163 holds one lazily initialized reader under a mutex. poll_internal at :258-273 acquires it with the requested timeout and can return false on lock timeout; read_internal at :276-282 locks and reads. A poll/read pair is not one atomic critical section: another consumer could read between them. This is a generic competing-consumer possibility, not evidence that such a consumer exists in the failing run.\n• C/src/event/read.rs:42-95 first checks its event queue, otherwise obtains one source event. A matching event is put into the reader queue and poll returns true; it is not discarded. read at :97-125 removes a matching event. C/src/event/filter.rs:53-55 accepts every InternalEvent::Event, including Resize, Paste and Key; it does not filter key kinds.\n• C/src/event/source/unix/mio.rs:40-60 registers TTY_TOKEN plus a distinct SIGNAL_TOKEN, subscribing only to SIGWINCH. try_read at :68-71 drains already-parsed events before polling. Its parser has persistent raw buffer and FIFO internal_events (:168-194); advance at :198-220 appends bytes, queues completed events and clears only the completed/error sequence. next at :225-230 pops the FIFO.\n\n2. Strongest conditional causal path: abandoned edge-readiness notifications\n\nObserved source facts:\n• C/src/event/source/unix/mio.rs:75-93 polls a batch and iterates its tokens. Both a parsed TTY event (:117-119) and a SIGWINCH Resize (:122-135) return immediately, abandoning the rest of that readiness batch. There is no saved token index or pending-token work queue. The next call checks parsed events, then polls again.\n• M/src/sys/unix/selector/kqueue.rs:98-123 clears the events vector before each kevent call. register at :126-145 uses EV_CLEAR | EV_RECEIPT | EV_ADD, including read readiness.\n• M/src/poll.rs:109-116 explicitly requires repeating the corresponding operation until WouldBlock; otherwise it gives no guarantee of another notification, even if further data arrives.\n\n[INFERENCE] Conditional Resize → missed TTY notification path:\n1. One kevent batch contains SIGNAL_TOKEN and TTY_TOKEN, in that order.\n2. Crossterm consumes the signal and returns Resize without reading the ready TTY.\n3. The next source poll replaces that batch. The old TTY notification is not replayed in user space, while EV_CLEAR means relying on another notification is not guaranteed by Mio.\n4. Physical bytes can remain unread in the kernel rather than being dropped or misclassified by the parser. This can look like an ignored key or paste.\n\nThe reverse order also matters: a TTY return can abandon a ready signal token. A rendered restored body/footer therefore does not, by itself, demonstrate that crossterm's signal pipe/readiness work has been completely handled. This is an inference about the fence's coverage, not evidence of the failure's ordering.\n\n[INFERENCE] A second drain-contract exposure exists without simultaneous signals: after a TTY read queues any event, try_read returns before reading to WouldBlock. Remaining parsed events are safe in the parser FIFO, but unread kernel bytes are not represented there. For an input burst exceeding its 1024-byte read buffer, or bytes arriving around the early return, a later poll again relies on fresh readiness. The 1024 constant is at C/src/event/source/unix/mio.rs:22 and advance/read/early-return are at :96-119.\n\nLimits: these are source-supported susceptibility paths, not proof of an actual stall on this PTY or of the observed F10 failure. The restored render/final-row fence does not establish whether the close key shared a readiness batch with a pending signal. If the close F10 arrived only after signal readiness was fully drained and its own new notification was processed, the simultaneous-token explanation does not account for it. The source alone does not establish batch order or OS re-notification behavior in the failing run.\n\nNarrow action for the parent: retain the readiness-batch/TTY-draining boundary as a targeted hypothesis, rather than treating Resize as clearing the key parser. Distinguish bytes never read from bytes parsed into unexpected events. A library change would need to preserve outstanding readiness work or satisfy draining semantics; changing F10 routing or adding another rendering fence is not evidence of fixing this boundary. No production edit is justified solely by this static diagnosis.\n\n3. Legacy F10/F8 and event kinds: counter-evidence to Repeat/Release misclassification\n\n• C/src/event/sys/unix/parse.rs:137-209 sends numeric CSI ending '~' to parse_csi_special_key_code.\n• parse_csi_special_key_code at :619-660 parses the first number and maps 17..=21 to F(v - 11), so ESC[19~ is F8 and ESC[21~ is F10. Without modifier parameters it explicitly chooses NONE, Press, NONE (:631-639).\n• Explicit event types require encoded parameters: modifier_and_kind_parsed at :225-239 reads a colon subparameter, defaulting kind to 1; parse_key_event_kind at :339-345 maps 1/2/3 to Press/Repeat/Release. There is no timing-based repeat detection, prior-key memory or Resize-dependent change in this mapping.\n• Parser.advance clears after each complete event and continues byte-by-byte, so back-to-back ESC[21~ESC[19~ESC[21~ produces independently parsed events when the leading escapes are retained. Identical successive F10 sequences are not deduplicated.\n• The caller src/tui/agent.rs:592-600 toggles settings only for unmodified F10 Press. The exact prescribed legacy bytes satisfy that guard if delivered and parsed normally. Claiming that a legacy close F10 became Repeat merely because it followed another F10 or Resize is contradicted by this parser.\n\n4. Real parser read-boundary sensitivity: standalone leading ESC\n\n• C/src/event/source/unix/mio.rs:99-102 passes more = (read_count == 1024) into advance. advance at :198-205 considers input available only when another byte is already in that same supplied chunk or that more flag is set.\n• C/src/event/sys/unix/parse.rs:35-42 immediately emits KeyCode::Esc when the raw buffer contains only ESC and input_available is false. There is no escape timeout or deferred re-evaluation here.\n\n[INFERENCE] If a short TTY read ends exactly after the leading ESC of F10/F8/paste, that ESC is emitted separately; the next chunk beginning '[21~', '[19~', or '[200~' becomes ordinary characters rather than that CSI event. This is sensitive to read segmentation, not total write count. Once ESC[ is buffered, ordinary partial CSI remains buffered, including across Resize. A single complete five-byte F10 in one short read does not have this issue: all bytes are considered together until '~'.\n\nThis provides a supported misclassification route, but there is no evidence that the native failing run actually split a leading ESC this way. For the missed-paste case, a lost opening ESC would normally expose literal wrapper/payload key events, not silently produce no input. That limits its fit unless the caller's current state separately consumed/ignored those events. For the settings-close case, the split Esc itself could close settings if it reaches the local settings handler, so this is not automatically a good explanation of remaining open.\n\n5. Bracketed paste and Ctrl-C\n\n• C/src/event/sys/unix/parse.rs:184-205 recognizes a buffer beginning ESC[200~ and invokes paste parsing on final-byte candidates. parse_csi_bracketed_paste at :812-825 returns None until the buffer ends with ESC[201~, then creates exactly one Paste using lossy UTF-8 decoding. Existing source tests at :1054-1072 expressly cover incomplete paste and embedded CSI staying inside paste; these tests were read, not run.\n• Complete paste followed by Enter/F10 in the same read is separated by Parser.advance: the closing delimiter completes/clears the paste buffer, and later bytes start new events. Resize does not inspect or clear either buffer or FIFO.\n• While a paste is incomplete, subsequent F10, F8, Ctrl-C and Enter bytes are paste payload, not independent events, until a closing delimiter appears. There is no Ctrl-C cancellation/reset of paste assembly. An absent closing delimiter can therefore absorb later commands indefinitely; a literal closing delimiter in payload terminates it early. These are protocol behavior/conditional explanations, not findings that the fixture emitted malformed paste.\n• Outside paste, byte 03 matches C/src/event/sys/unix/parse.rs:102-105 and becomes KeyEvent::new(Char('c'), CONTROL). C/src/event.rs:955-962 gives that constructor kind Press. It does not flush the parser, drop queued events, or involve a crossterm SIGINT queue.\n• C/src/terminal/sys/unix.rs:126-139 calls make_raw and sets terminal attributes; :178-180 uses OptionalActions::Now, not an input-flushing action. This supports a normal raw-input path, not a deliberate crossterm flush at resize or Ctrl-C. If some other actor changed terminal signal processing, OS Ctrl-C behavior would be outside this parser's byte-03 handling; no evidence establishes that here.\n\nAn indefinitely incomplete paste is counter-evidence for interpreting a later Enter as an independently processed Enter: that Enter would also be swallowed as paste content unless the paste later closed/reset. Thus it does not by itself explain the observed missed-paste-but-processed-Enter sequence.\n\n6. Signal consumer: what it can and cannot consume\n\n• SM/src/lib.rs:159-175 implements the active v1_0 Signals adapter using mio::net::UnixStream and delegates registration to the signal delivery object's read end.\n• S/src/iterator/backend.rs:119-146 installs an action that stores a pending slot and wakes that signal pipe. pending at :328-337 first calls flush; flush at :302-325 recv-drains the object's own self-pipe, not the TTY descriptor.\n• Pending::next at :391-407 loads signal slots. SignalOnly storage/load at S/src/iterator/exfiltrator/mod.rs:139-160 uses one AtomicBool per signal, coalescing repeated signal arrivals. Crossterm subscribes only to SIGWINCH, so pending().next() is not accidentally taking a competing SIGINT or another registered signal ahead of WINCH.\n• Resize generation calls terminal::size and returns Resize, with no parser reset, terminal-byte read or key-kind manipulation in that branch (C/src/event/source/unix/mio.rs:122-135). Consecutive resizes may coalesce; resulting size reflects query time rather than a serialized original size for each signal.\n\nConclusion: no source evidence supports signal pending/drain directly eating physical key or paste bytes. Any relationship is through readiness scheduling/early returns, or caller state when a preserved event is eventually dispatched—not a shared signal/key byte queue.\n\n7. Reader filtering and practical conclusion\n\nThe ordinary EventFilter path preserves all public events through poll/read. Special internal filters can temporarily skip public events, but read.rs:85-89 restores skipped events on its normal completion path and :106-111 restores local skips when read finds a match. They can reorder work around the requested internal response; they are not a Resize-triggered key purge. No cursor-query investigation was repeated.\n\nMost actionable result: the boundary has a concrete edge-readiness handling concern worth isolating and an explicit ESC segmentation sensitivity, while complete legacy sequences and complete paste already in parser queues have strong preservation counter-evidence. Neither observed native failure is diagnosed to a confirmed production cause by this source-only investigation. Parent retains integration/edit ownership; no verification was exercised."
+    },
+    {
+      "name": "E06ResizeEmulatorProbe",
+      "report": "READ-ONLY FINDINGS\n\n1. Exact resize → text relationship\n\nnative.rs:271-285 acquires the Output mutex, calls Term::resize, then performs TIOCSWINSZ on the slave while retaining that mutex. text(), at 258-268, takes the same mutex and enumerates the active grid over its CURRENT screen_lines() and columns(). Thus it cannot see an emulator half-resize, nor can the parser interleave a cell update inside the resize operation. It can see a completely resized emulator before the application has reacted to SIGWINCH or emitted any new output. A completed ioctl is not a draw acknowledgment.\n\nThe worker reads master bytes BEFORE taking Output.lock() (native.rs:222-236). Consequently an output chunk already read from the old viewport can wait for the resize lock and then be parsed at the new geometry. Kernel-buffered old output can likewise be read later. The lock serializes emulator mutation; it does not establish application-output freshness.\n\n2. Why old UI can survive, but not by resurrecting the original full footer at row 39\n\nThe application enters alternate screen once (tui.rs:43-54) and leaves on Restore drop (57-69). F10 changes settings_open in application state (agent.rs:591-601); it does not switch terminal screens.\n\nTerm initializes primary with configured history and alternate with max history zero (registry term/mod.rs:410-416). Term::resize computes is_alt and resizes active alternate with reflow=false and inactive primary with reflow=true (676-678). No swap_alt occurs in resize. swap_alt is a separate operation (714-735), and entering it resets the alternate contents.\n\nGrid::resize changes height BEFORE width (grid/resize.rs:22-32). On 12→40 growth, grow_lines first expands storage, computes from_history=min(history_size,28), and invokes scroll_up over the whole expanded region for all rows not supplied by history (43-68). Active alternate has no history, so the full 28-row addition is cleared by scroll_up's final reset loop (grid/mod.rs:303-306). Existing 12 rows remain in the upper 12 rows; new rows 12..39 become blank. Width growth with reflow=false does not move upper rows into row 39 (resize.rs:100-123); Row::grow defaults newly added columns (row.rs:60-66).\n\nStorage does cache physically allocated rows after shrink (storage.rs:96-114), but that alone is not visible-history restoration. Growth explicitly clears its new bottom rows as above. Additionally this particular shrink also changes width: column resize calls raw.take_all(), which truncates invisible cached rows before rebuilding storage (resize.rs:257-258; storage.rs:206-223).\n\nConclusion from source: immediately after a pure active-alternate 80×12→120×40 resize, before ANY subsequently parsed application bytes, the last row cannot contain a recovered original Settings rows 1-N/N footer. The original full footer from before the shrink cannot satisfy the current .lines().last() fence merely through cached row exposure. This rules out that specific library-only explanation under the normal alternate-screen lifetime.\n\nGeneric contains() checks are weaker: content retained in the old 12 visible rows remains visible after growth. In particular an old small footer can survive at its old upper-screen row until overwritten. Full body/title text can therefore look partially stale without indicating history resurrection.\n\nPrimary-screen counterexample: in the primary grid, history_size may be nonzero and grow_lines intentionally pulls rows from history (resize.rs:54-65), so old content can become visible without new output there. That behavior is real but does not apply to this application's normal active alternate screen. text() directly indexes active positive grid coordinates (grid/mod.rs:453-475); it does not render a display_offset scrollback viewport.\n\n3. What the last-row fence proves, and what it does not\n\nThe exact fence is daily_use.rs:341-356: after restore it requires the physical final row to begin Settings rows and requires start=1 and end=total. agent.rs:1136-1188 reserves its own final settings row and calculates that footer from current wrapped settings_rows, body height, and scroll position.\n\nTogether with section 2, a passing fence is evidence of output parsed AFTER emulator growth, not simple rediscovery of its original row-39 cells. It does not prove that those bytes were GENERATED after TIOCSWINSZ: old in-flight output remains possible. Nor does it prove completion of the application's draw, processing of every queued input event, or readiness to consume the next physical key. Output is parsed chunk-by-chunk, not frame-by-frame. A footer is ordinary screen content, not a protocol acknowledgment.\n\n[INFERENCE] Pending old output is a possible route to a misleading repaint observation, but no examined evidence demonstrates that a pre-restore frame actually supplied the passing full footer in either failing run. In particular one must not equate that theoretical route with an established cause of the F10 failure.\n\nThe application's draw path also has a second stage: if painted_size differs from remembered size, it updates size, schedules another urgent dirty frame, and continues (tui.rs:1267-1281). A first fully painted restored-sized frame is therefore not necessarily the end of structural handling. The conditional recovery-input drain at 1284-1320 is not shown to be active in the reported scenario; its existence is not evidence that the close key was drained.\n\n4. Safe existing observable synchronization options\n\nA. Retain the restored LAST-PHYSICAL-ROW/full-range predicate. It already excludes a stronger class of stale-emulator false positives than title/body/footer-anywhere matching. Tightening it to exact expected total/body geometry can improve diagnostics but does not create an input-readiness acknowledgment.\n\nB. Before opening settings, use the existing Attachment::projected(host, seq) (native.rs:304-321), anchored to a fresh canonical inspection as the current scenario does at daily_use.rs:304-306. This fences rendered canonical sequence rather than ownership alone. It cannot directly acknowledge restoration while settings hides the normal Cursor row.\n\nC. For closing, observe a real state transition: settings title/footer absent AND the expected owner/editor or canonical Cursor surface present. owner() alone is a positive substring match (native.rs:333-337), not a frame-generation check. Send exactly the intended single F10 and diagnose failure rather than retrying a toggle that could reopen settings. This strengthens the observation without changing what is being tested.\n\nD. If the driver is extended by the parent, its existing Output.raw and shared parser boundary can record an output offset at resize and retain the subsequent bytes, ideally with per-read and per-resize metadata. A footer plus nonempty post-offset bytes distinguishes pure emulator mutation from received output and supports locating where the footer was painted. This still does NOT prove the producer generated those bytes after resize; bytes could already have been pending. Do not label a raw-length increment or a quiet interval as an acknowledgment.\n\nE. Existing settings navigation provides observable local acknowledgments only when it changes the view: for example PageDown followed by observing a different range, then Home followed by observing range start 1. The small-viewport case already exercises that. On the restored viewport where all rows fit, Home/End/PgDown can be visually idempotent, so sending them cannot establish a fresh acknowledgment from text alone. Esc is an idempotent close alternative but substituting it would not validate the requested single-F10 toggle behavior.\n\nNo examined existing surface exposes a general terminal frame ID or an application-input-queue-drained acknowledgment. A strict proof of such readiness would require an explicit application-level acknowledgment, not a different alacritty grid lookup. This is a limitation of available evidence, not an established requirement to modify production code.\n\n5. Bounded reply/input-write concurrency\n\nListener routes Event::PtyWrite through mpsc (native.rs:54-65). During parser.advance the callback only sends into that channel; it does not recursively write the PTY while holding Output. The worker drains replies after leaving the read/parse block (247-253), so there is no shown Output-lock/reply-write cycle. resize ioctl and text locking do not protect physical master writes.\n\nThe worker and test thread have cloned master handles and independent write_pty loops (native.rs:78-92,215-218,247-253,323-324). No common write mutex serializes complete multi-write byte strings. [INFERENCE] If either physical input or a generated reply is short-written, the other writer can insert bytes between its fragments. The code does not prove whole-sequence atomicity. There is no evidence that such a partial write or overlap occurred for the six-byte F10 sequence in these failures.\n\nThe worker uses the same write retry routine for replies; WouldBlock sleeps/retries until DEADLINE. While it is inside that reply write, it is not reading output. Thus 'continuous drainer' has this bounded write-side pause. This is a possible backpressure consideration, not proof of a deadlock or this failure. DEADLINE is checked on WouldBlock; it is not an unconditional timer on successful partial writes or repeated Interrupted errors.\n\nRegistry term/mod.rs:1332-1343 shows status/cursor replies arise from parsed device-status queries; 1257-1268 and 2046-2150 also emit other PtyWrite replies. Listener forwards all PtyWrite events, not just cursor reports. Term::resize itself emits no PtyWrite and performs no PTY I/O, so resize alone does not introduce a generated reply competing with F10. No reply/input interleaving cause is established.\n\nVerification: source inspection only. No builds, tests, runtime probes, git commands, credential/private-root inspection, or source approval/review performed."
+    }
+  ],
+  "prior_art": [
+    {
+      "url": "https://github.com/crossterm-rs/crossterm/pull/1154",
+      "finding": "Upstream proposes preserving all readiness tokens; its current head also includes unrelated release-to-head changes, so do not upgrade wholesale"
+    },
+    {
+      "url": "https://github.com/crossterm-rs/crossterm/issues/1142",
+      "finding": "Default Mio reader returns before WouldBlock; buffered physical input can remain unread until another edge"
+    },
+    {
+      "url": "https://github.com/crossterm-rs/crossterm/pull/840",
+      "finding": "use-dev-tty zero-timeout polls skip buffered/native events; unsuitable for consent-draining boundaries without another repair"
+    }
+  ],
+  "decision": "Extend unchanged released crossterm0.29.0 locally: retain the bounded readiness batch/current token across event returns, and use a stack-only zero-time Rustix poll before revisiting potentially blocking inherited stdin. Do not change descriptor flags shared with the parent shell, add sleeps/key retries/new threads or upgrade unrelated upstream changes. Preserve parser FIFO and public zero-time consent/recovery probes; propagate actual EOF/read errors.",
+  "release_source": {
+    "version": "0.29.0",
+    "revision": "36d95b26a26e64b0f8c12edfe11f410a6d56a812",
+    "path": "vendor/crossterm",
+    "file_count": 60,
+    "bytes": 428065,
+    "all_60_exact_release_hashes_matched_before_repair": true,
+    "files": [
+      {
+        "relative": "examples/event-match-modifiers.rs",
+        "bytes": 1916,
+        "sha256": "6543025581b200f1faff5edb32391eb26b889c9b48a9b3d8ec172901317d8441"
+      },
+      {
+        "relative": "examples/event-poll-read.rs",
+        "bytes": 1609,
+        "sha256": "24966ed38172a13c4c0ea3c19583341769059970d1f30c300028c1206c884f4b"
+      },
+      {
+        "relative": "examples/copy-to-clipboard.rs",
+        "bytes": 1624,
+        "sha256": "dd83781150ebf24b0c7a3ce8dc41c57af861bb265f23ec15e1140f02224a67d6"
+      },
+      {
+        "relative": "examples/event-read-char-line.rs",
+        "bytes": 1445,
+        "sha256": "e6e3b792bf2fada5047dc9de0bf500f7aec9053a8ef86872c85692fc4599845b"
+      },
+      {
+        "relative": "examples/event-read.rs",
+        "bytes": 3015,
+        "sha256": "4fff1254c699acde7053a09718309239ec92a10a7ccdf7ef0684ca558fabc90e"
+      },
+      {
+        "relative": "examples/event-stream-tokio.rs",
+        "bytes": 1962,
+        "sha256": "f48f4b5cb8bcaa6af5d402e380d609ac930cd4c0b7498aae84f7349ee52699d1"
+      },
+      {
+        "relative": "examples/event-stream-async-std.rs",
+        "bytes": 1981,
+        "sha256": "69df926c39191c481910b9fecbb5d53a2fbf65dcfd986cadd71cd0be3cf66bb5"
+      },
+      {
+        "relative": "examples/is_tty.rs",
+        "bytes": 396,
+        "sha256": "ce663372b6ccca58bb291dc5723b350283fe7a2729de91a414c64834966dac49"
+      },
+      {
+        "relative": "examples/key-display.rs",
+        "bytes": 1224,
+        "sha256": "52d8e34082a399f7c056a215b7e7e00b8e4d33349d5725674b8201a9b2d1f101"
+      },
+      {
+        "relative": "examples/stderr.rs",
+        "bytes": 2265,
+        "sha256": "21cfd50ba139521c8606e0bdd8ce0a47a39cce3235eb848e613faf7eb50033ef"
+      },
+      {
+        "relative": "src/ansi_support.rs",
+        "bytes": 1834,
+        "sha256": "36b902490d60259d99f88a2b45555d2d9d13f2c344cb3693c6a81442670f632b"
+      },
+      {
+        "relative": "src/command.rs",
+        "bytes": 10943,
+        "sha256": "0cefa31bc00f5e1f11fdae16c6031fe46d397bb8c1990cf55dc3b9e83d29e3ce"
+      },
+      {
+        "relative": "src/cursor/sys.rs",
+        "bytes": 551,
+        "sha256": "447f839bb2968a808f8d5bd763516a1bff9024e38fe4d852c57f3cdb4ee070e1"
+      },
+      {
+        "relative": "src/cursor/sys/unix.rs",
+        "bytes": 1711,
+        "sha256": "e048206557e41c2090437d2b2b30c0485d17db9bb90e726e44d2e8d3ec5d5d63"
+      },
+      {
+        "relative": "src/event/filter.rs",
+        "bytes": 3786,
+        "sha256": "092515c0939799af80768e7b87d2ea4ffc5b1bcda021982f6f02922378809df5"
+      },
+      {
+        "relative": "src/event/source.rs",
+        "bytes": 925,
+        "sha256": "f606a124266b6d86b58969348bb713f7f89fb09886f51bfb6fe16b766e113bb7"
+      },
+      {
+        "relative": "src/event/source/unix.rs",
+        "bytes": 294,
+        "sha256": "253ed074fbe63e7270fc19e5c85186407c3a91454f43291c29cf5717575c74a6"
+      },
+      {
+        "relative": "src/event/source/unix/mio.rs",
+        "bytes": 9026,
+        "sha256": "57f4a90b828444fcc6dd7199a73907bbbccf2df4b7808f9e8a0a4b0771e12e39"
+      },
+      {
+        "relative": "src/event/source/unix/tty.rs",
+        "bytes": 10162,
+        "sha256": "453e854ca82cd2d37e57494d9766a9eea728883a8a1c5fec186f7c6b83dbd64e"
+      },
+      {
+        "relative": "src/event/source/windows.rs",
+        "bytes": 3656,
+        "sha256": "e25bdd13432dfda96401a76f3e2d6aa2a404fbaa4f1b99b55bb0bdec2ac75336"
+      },
+      {
+        "relative": "src/event/stream.rs",
+        "bytes": 5092,
+        "sha256": "1df7f35a1842d54b6a8d2b82c96661305d7bd87bbdf123ce6670c62fec5f3cb1"
+      },
+      {
+        "relative": "src/event/sys.rs",
+        "bytes": 248,
+        "sha256": "3ec336b2d4c36cfc895fc7cf586e92f7763473130ca99e8168bead1ba3918d1a"
+      },
+      {
+        "relative": "src/event/sys/unix.rs",
+        "bytes": 110,
+        "sha256": "d651928295213cd12a4df7edeb0c8be5a4e4487345fc9f2c2ff59d6411047cf2"
+      },
+      {
+        "relative": "src/event/sys/unix/waker.rs",
+        "bytes": 258,
+        "sha256": "fe7a1e77718306e9f84b77337f4e9ea9990bed4cf533036228508316363add0e"
+      },
+      {
+        "relative": "src/event/sys/unix/waker/mio.rs",
+        "bytes": 1026,
+        "sha256": "cbc89c146a004ad689db7f17e3cfc9ce6198c115f31e519d25c68a441db3ecb4"
+      },
+      {
+        "relative": "src/event/sys/unix/waker/tty.rs",
+        "bytes": 685,
+        "sha256": "49132cd71d20b7cc27b79d28a490743da77241bed24a178e22d9ad6e5e98e185"
+      },
+      {
+        "relative": "src/event/sys/windows.rs",
+        "bytes": 1707,
+        "sha256": "130d7da62a0af8b1cf7c55bd8bf78fa0272a9a44803704dac6416db993d30d81"
+      },
+      {
+        "relative": "src/event/sys/windows/poll.rs",
+        "bytes": 2545,
+        "sha256": "232c69f9c9aa058189a418cdaee82134feaf6ef91f89cea8eaaeb5b4cfd722fc"
+      },
+      {
+        "relative": "src/event/sys/windows/waker.rs",
+        "bytes": 1156,
+        "sha256": "a145d8ccf6b7747eb4e9499bdade2616a997539da4f4691f4c14bd4c4d6a472b"
+      },
+      {
+        "relative": "src/lib.rs",
+        "bytes": 10739,
+        "sha256": "ec896da229e4b9b02da3cf444bf1d89e0bc8dc900a29ded2b2a1df086d92b6aa"
+      },
+      {
+        "relative": "src/event/timeout.rs",
+        "bytes": 2662,
+        "sha256": "cbe518ad2cb666b588f593b4b84704eb4480e49d9bd3f28c72d696dae6e7b5e7"
+      },
+      {
+        "relative": "src/style/attributes.rs",
+        "bytes": 4105,
+        "sha256": "627da6384421a713b91c2a818de7ac60061f912439da3ef7723a509f94b3f7e4"
+      },
+      {
+        "relative": "src/style/content_style.rs",
+        "bytes": 1158,
+        "sha256": "d24e77a730db29e2ce977a7e183988304b6177831d4798fd4c54161ddd331324"
+      },
+      {
+        "relative": "src/style/styled_content.rs",
+        "bytes": 1957,
+        "sha256": "05365bbcfb62321680854ba7dda0f70e6d8ff3107119630065b53eafb9e7d8f9"
+      },
+      {
+        "relative": "src/style/stylize.rs",
+        "bytes": 6933,
+        "sha256": "aed3f94e18d9ac7f43d463e11c42d3ba1e6a5900bb554b4bca3385787fb16503"
+      },
+      {
+        "relative": "src/style/sys.rs",
+        "bytes": 42,
+        "sha256": "0a54100dd55febb0d5922f23c8946f77d8197c5be5e82124836649fdc1426a70"
+      },
+      {
+        "relative": "src/style/sys/windows.rs",
+        "bytes": 8610,
+        "sha256": "6b7f7b269c22ddd5e7b7a3c69886c78001509c2cc97a37a4da1d9ed0fadb5f3d"
+      },
+      {
+        "relative": "src/style/types.rs",
+        "bytes": 144,
+        "sha256": "94921c5588fcffc51d43ccb2826a31a26678ce8582c2772e6ff9d5a72b90f065"
+      },
+      {
+        "relative": "src/style/types/attribute.rs",
+        "bytes": 6340,
+        "sha256": "0ed8fe99f63167c2103a856f81cbf4164b3e092196387969fb160bad1c191727"
+      },
+      {
+        "relative": "src/style/types/colors.rs",
+        "bytes": 6350,
+        "sha256": "2657c90f74bb7f4478d75feeea9dfab64c9d4dca095238f6fa13baf2833fb7cb"
+      },
+      {
+        "relative": "Cargo.toml",
+        "bytes": 4455,
+        "sha256": "78b5e8b5cd6660067195979533e61d4b33c375c74613f24180efd94c86f7d295"
+      },
+      {
+        "relative": "LICENSE",
+        "bytes": 1083,
+        "sha256": "aca4760f2a5eba9ce9d4448fe7cd3fcf98245a8315ede59ebd0c6085dd542e61"
+      },
+      {
+        "relative": "README.md",
+        "bytes": 8818,
+        "sha256": "7c812f101532cf858f43e8abe2bd2fcc4d76cd0599db9f90722d493ef0049eff"
+      },
+      {
+        "relative": "src/terminal/sys.rs",
+        "bytes": 755,
+        "sha256": "b77c654d581eb939b00e77d565d950c2f6045eb9b64480b21c1b20538665bb14"
+      },
+      {
+        "relative": "src/terminal/sys/file_descriptor.rs",
+        "bytes": 4249,
+        "sha256": "d215ff60394ec2150c2df6340343d84a3922570c1feba813663742d0eb85d13f"
+      },
+      {
+        "relative": "src/tty.rs",
+        "bytes": 1594,
+        "sha256": "9452b86a2dbaa35eadab5615aa9eed131954bcf2ed9e1f83e7c5b73e57a9bdc8"
+      },
+      {
+        "relative": "src/cursor/sys/windows.rs",
+        "bytes": 9462,
+        "sha256": "2ddbe710b5c51665b576a89c4a7dcdd19672e0c1fba6826d5223a182dd2cc86a"
+      },
+      {
+        "relative": "src/clipboard.rs",
+        "bytes": 10749,
+        "sha256": "bb47416561fcf82b8f6429d93e08908cd203ce351ca1da8d48cb659f2c302745"
+      },
+      {
+        "relative": "src/cursor.rs",
+        "bytes": 15481,
+        "sha256": "0d4ed77fca1b318d0c954cc01fb6694d72b0fa3e09bc24dd88b69ab565616007"
+      },
+      {
+        "relative": "src/event.rs",
+        "bytes": 62267,
+        "sha256": "0d7c9506d5dc0033bf357c255e6d44bfe765cb7db5f503cbe62cd66094aaf34f"
+      },
+      {
+        "relative": "src/event/read.rs",
+        "bytes": 14606,
+        "sha256": "704eb054bff7408e7591e7b5869cf4606794a43b69dc7a1edef67fa7e26ccb8a"
+      },
+      {
+        "relative": "src/event/sys/unix/parse.rs",
+        "bytes": 55081,
+        "sha256": "689b765d67be62703f7935abfa1475d98994987461e413836b54c7936966ce2b"
+      },
+      {
+        "relative": "src/event/sys/windows/parse.rs",
+        "bytes": 15566,
+        "sha256": "15afbd3b84edfa2a72f9587f591ce9f7dfe99f1cb85db8b45037c0b70c0346ae"
+      },
+      {
+        "relative": "src/macros.rs",
+        "bytes": 12627,
+        "sha256": "cb09a33ea7affaad7171b5f2325bbc78aad041cd719450a1b6d44e07793c215e"
+      },
+      {
+        "relative": "src/style.rs",
+        "bytes": 18745,
+        "sha256": "0abc11eb6f593dfce73f15516419e25fbbc99b8856ac7e28c73cd8a412ae2a2e"
+      },
+      {
+        "relative": "src/style/types/color.rs",
+        "bytes": 16938,
+        "sha256": "847959159bf2cf3efe0f4a54b62b9a21691971672eddcc5a5bdae3a66e7a9344"
+      },
+      {
+        "relative": "src/style/types/colored.rs",
+        "bytes": 10190,
+        "sha256": "f1f5462e0dcb469aff5cf8737b7f9196b7217778113d68ec8f8297ecad5af73d"
+      },
+      {
+        "relative": "src/terminal/sys/unix.rs",
+        "bytes": 10684,
+        "sha256": "db066f11aa75d6c06515fd600ee38336f230d0f8f9d307663debb6ba835b334b"
+      },
+      {
+        "relative": "src/terminal.rs",
+        "bytes": 18102,
+        "sha256": "01af7ff59a6a21090da0316b2688d41dc8dd99425413e1eacd3494065b0449d8"
+      },
+      {
+        "relative": "src/terminal/sys/windows.rs",
+        "bytes": 14421,
+        "sha256": "60b47ae9b6a9c3185c8820906df43c21c0329e8f444409bb6fc68f97a6946061"
+      }
+    ]
+  },
+  "repair_status": "Corrected bg_351 passes13 launch cases; clean full bg_353 passes449 workspace/338 default and42 unique nonlive cases. Actual final binary c211a2cc passes real owner/observer settings resize/one-key-close,42-to57 and normal cleanup. See e06-post-round9-regressions.json and e06-native-cli-smoke-final.json. Exactly three vendored files changed, including redundant-parentheses warning cleanup;57 remain released-source-identical.",
+  "review_round10": "FAIL A94.444444/B100/security92; all full reports archived and92 hashes matched. Two supported static findings: filtered-zero-poll false empty boundary and unbounded incomplete-input inner loop. Cap10/10 exhausted; human decision required, all task gates failing; no runtime exploit or new RED claimed.",
+  "historical_caps": "unchanged",
+  "repair_attempts": [
+    {
+      "job": "bg_350",
+      "status": "failed-candidate",
+      "passed": 84,
+      "failed": 21,
+      "ignored": 2,
+      "raw": "artifact://2565",
+      "test_raw": "artifact://2567",
+      "cause": "The initial retained-token candidate revisited inherited blocking stdin without a new level-readiness check. This introduced input/draw stalls; it is not evidence of21 original defects or a GREEN."
+    }
+  ]
+}

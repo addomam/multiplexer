@@ -1,0 +1,55 @@
+{
+  "kind": "actual-built-human-CLI-and-controlling-PTY-outside-tests",
+  "status": "passed",
+  "provider_calls": 0,
+  "binary_sha256": "c78a51666bbb67c95dff87b15b3844f87418c5a4952a4b7fa40606bbce29f411",
+  "target": {
+    "id": "acp-e1f1c57f63e14534ae38caccaea8e1ed",
+    "instance_id": "instance-b8ef8fdd3c284af7ba884da68843a9eb",
+    "connection_generation": 1,
+    "session_id": "arithmetic-84898",
+    "kind": "acp"
+  },
+  "native_effect": 42,
+  "reattached_API_effect": 57,
+  "original_peer_pid": 84898,
+  "original_agent_retained": true,
+  "duplicate_agents": false,
+  "stale_draft_replayed": false,
+  "automatic_reacquisition": false,
+  "termios_restored": true,
+  "TUI_exits": [
+    0,
+    0
+  ],
+  "host_exits": [
+    0,
+    0
+  ],
+  "drainers_joined": true,
+  "peer_reaped": true,
+  "daemon_exit": 0,
+  "socket_absent": true,
+  "sentinel_survived": true,
+  "fallback_used": false,
+  "private_root_removed": true,
+  "source_stage": "after round6 supported selection-continuity and valid-null-mode repairs; Clippy boolean simplification applied",
+  "source": "specs/verifications/e06-post-round6-source.json",
+  "actual_provider_aggregate": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "surface_observed": {
+    "ready": true,
+    "locked": true,
+    "observer_read_only": true,
+    "model": "fixture/cheap",
+    "mode": "plan",
+    "effort": "low",
+    "native_total": 42,
+    "API_total": 57,
+    "permission_guarantee_not_inferred": true
+  },
+  "scope_limit": "deterministic credential-free stdio peer; not real installed OMP provider acceptance; no physical machine suspension claimed"
+}

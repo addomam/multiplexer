@@ -1,0 +1,203 @@
+{
+  "verdict": "FAIL",
+  "score": 91.66666666666667,
+  "total_items": 36,
+  "passed_items": 33,
+  "checklist": [
+    {
+      "area": "src/acp.rs — bootstrap, dispatch and retained identities",
+      "result": "PASS — static",
+      "evidence": "Traced reserve/start, RpcKind::Configure production and response dispatch, configure_next, notification routing, incoming_request, original responders and transport teardown. Prompt admission requires ready; startup configuration completes before ready. Exact wire-ID types and admitted response winners remain retained."
+    },
+    {
+      "area": "src/acp/settings.rs — setter acknowledgements",
+      "result": "FAIL — Should-fix E06-R6-01",
+      "evidence": "acknowledge rejects every non-object reply at lines403–404, including null acknowledgements explicitly accepted by the pinned SetSessionModeResponse decoder. The resulting error propagates into lifetime termination rather than completing startup."
+    },
+    {
+      "area": "src/acp_profiles.rs — bounded, shell-free profile resolution",
+      "result": "PASS — static",
+      "evidence": "Reviewed all profile validation, selection, catalog and prepare paths. Defaults and overrides undergo closed settings validation; options merge structurally. Executable resolution follows file metadata but preserves the absolute invocation/symlink pathname. Catalog entries exclude command argv."
+    },
+    {
+      "area": "src/cli.rs — explicit human and automation launch",
+      "result": "PASS — static",
+      "evidence": "AcpStart constructs exact settings and rejects duplicate option IDs. start without --controller enters tui::start; an explicit controller uses the JSON API path. Optional null arguments are omitted by request_for; raw open and exact-view attach remain distinct."
+    },
+    {
+      "area": "src/client.rs — transport classification and owning connection lifetime",
+      "result": "PASS — static",
+      "evidence": "Reviewed ConnectionError versus DaemonError, framed request/reply handling, connected/shutdown_handle, and Connection::drop. Owning connection drop shuts down surviving clones; ambiguous transport failures remain distinguishable from definite daemon rejection."
+    },
+    {
+      "area": "src/daemon.rs — launch and snapshot consumers",
+      "result": "PASS — static",
+      "evidence": "Reviewed acp_open profile/raw-command exclusivity, project resolution, cwd validation, reserve/publish/start rollback and original ownership grant. daemon_id and configuration reach snapshot consumers. acp-profiles has an explicit dispatch branch; application mutations retain authority admission."
+    },
+    {
+      "area": "src/lib.rs — module integration",
+      "result": "PASS — static",
+      "evidence": "The private acp_profiles module is registered and its daemon/projects callers resolve through the existing library module structure; no replacement public protocol or compatibility shim is introduced."
+    },
+    {
+      "area": "src/projects.rs — configuration-only persistence",
+      "result": "PASS — static",
+      "evidence": "AcpProfile denies unknown fields and defaults settings to an object. Config loading/global updates validate profiles; failed persistence restores the previous configuration. Runtime agent/session/ownership state is not added to the disk schema."
+    },
+    {
+      "area": "src/tui.rs — attachment supervision and event routing",
+      "result": "PASS — static",
+      "evidence": "Reviewed Resume capture/validation, supervise, recovery_wait and attached through teardown. Recovery checks daemon and exact original ACP tuple, allows only first-session establishment, drains stale events, retains acknowledged launch identity and does not call ensure_daemon. Keyboard, paste, mouse and ACP events have explicit consumers."
+    },
+    {
+      "area": "src/tui/agent.rs — settings and genuine interaction UI",
+      "result": "PASS — static",
+      "evidence": "Reviewed changed configuration projection/rendering in context with identity-bound draft synchronization and interaction capture. Requested values remain separate from reported/unreported values; mode is explicitly not presented as a permission guarantee. Agent events do not fall back to raw PTY input."
+    },
+    {
+      "area": "src/tui/control.rs — worker dispatch and authority fencing",
+      "result": "PASS — static",
+      "evidence": "Reviewed Work/Op dispatch, launch reply consumption, stop/join salvage, recovered observer behavior, control caching, claims, consent, force presentation and application input. Both original sockets and UI heartbeat gate queued dispatch; compound claims recheck after observation. Shutdown-handle allocation precedes controller creation."
+    },
+    {
+      "area": "src/tui/launch.rs — deliberate project/profile/settings dialog",
+      "result": "PASS — static",
+      "evidence": "Reviewed the complete dialog. Project comes from the actual selected view or visible project selection; profile availability is explicit. Structured inherited options avoid delimiter round trips. Submit returns one acp-open request, while cancel does not launch or acquire authority."
+    },
+    {
+      "area": "src/tui/view.rs — structural native geometry",
+      "result": "PASS — static",
+      "evidence": "Reviewed header/body geometry, native surface projection and changed picker labels. Structural resize remains separate from application input. Recovery reconciles kernel terminal size and repaints/drains again before announcing readiness."
+    },
+    {
+      "area": "tests/acp.rs — registrations and shared cleanup support",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed new OMP/profile/native module registration, explicitly ignored live entry point, bounded reap helper and changed Host/Sentinel cleanup in context. Ignored live tests are not counted as executed acceptance."
+    },
+    {
+      "area": "tests/acp/native.rs — controlling-PTY harness",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed native module registration, canonical projection barrier and changed cleanup. Harness retains the controlling host for termios observation, drains output independently and joins its reader. No execution result is inferred."
+    },
+    {
+      "area": "tests/acp/native/acceptance.rs — retained interaction acceptance",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed the projection-barrier change and surrounding same-instance form/permission/handoff scenarios. Assertions retain original work/RPC/session identities, distinguish allow from deny effects and preserve human keep/withdraw semantics."
+    },
+    {
+      "area": "tests/acp/native/daily_use.rs — launch and recovery scenarios",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed complete source, including profile launch, structured inherited options, independent observation/authority cuts, paused drafts, missing/replaced targets, daemon loss and old-claim isolation. Tests assert effects and tuple/PID continuity rather than only visible labels."
+    },
+    {
+      "area": "tests/acp/native/omp_live.rs — genuine OMP acceptance driver",
+      "result": "PASS — static driver review only",
+      "evidence": "Reviewed complete opt-in driver. It requires a private explicit specification, observes the owned executable, answers a genuine form, selects exact offered reject/allow options, checks causal file effects and original work/PID, and separately checks budget evidence and cleanup. This is not proof that the driver has passed."
+    },
+    {
+      "area": "tests/acp/omp.rs — deterministic protocol and settings boundaries",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed complete source. Coverage includes configuration before prompt admission, exact option aliases/categories, unsupported/unconfirmed settings, peer cancellation and retained admitted winners. Fixtures are explicitly identified as source-shaped, not provider evidence. Null mode acknowledgement is not covered."
+    },
+    {
+      "area": "tests/acp/profiles.rs — profile and invocation regressions",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed complete source. Tests exercise explicit-controller CLI overrides, safe catalog fields, unavailable/conflicting profiles, failed configuration rollback and absolute/PATH symlink basename preservation."
+    },
+    {
+      "area": "tests/fixtures/acp_peer.rs — protocol fixture producers and consumers",
+      "result": "PASS — static fixture review",
+      "evidence": "Reviewed E06 settings advertisements/setters, form and permission callbacks, long tool IDs, typed cancellation, effect production and surrounding dispatcher/cleanup contracts. Synthetic responses are not substituted for genuine installed OMP acceptance."
+    },
+    {
+      "area": "tests/pty_control/native.rs — preserved native controls and recovery geometry",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed changed force-readiness assertions, fresh observer gating and registration-time resize regression with related harness/conditional-control context. Existing unknown native settlement remains explicitly blocking; recovery assertions do not substitute a safe grant with force-only acceptance."
+    },
+    {
+      "area": "tests/acp/native/recovery_edges.rs — causal recovery races",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed complete relay and scenarios. Real requests/replies are delayed or cut without manufacturing responses. Cases cover compound claim pause, queued/acknowledged launch salvage, first-session establishment, failed recovery setup, idle observer reclamation and registration-time stale shortcuts."
+    },
+    {
+      "area": "tests/shell_races.rs — stock-shell race assertion",
+      "result": "PASS — static test-source review",
+      "evidence": "Reviewed the complete file and changed assertion. The queued-wake test now waits for actual completed file contents rather than file existence; shell readiness, explicit acquisition and foreground-input leakage checks remain intact."
+    },
+    {
+      "area": "README.md — user-facing contracts",
+      "result": "PASS — static documentation review",
+      "evidence": "Reviewed launch/profile/settings and detach/recovery instructions against implementation. Documentation distinguishes availability from authentication, requested from reported settings, unknown policy and native settlement, and deliberate reacquisition from automatic recovery. Linked runtime/review reports were not opened."
+    },
+    {
+      "area": "CHANGELOG.md — change claims",
+      "result": "PASS — static documentation review",
+      "evidence": "Reviewed the E06 changes against source. Entries preserve E05 parking, historical native limitations, exact identities, no replay, shell-free invocation and separate provider acceptance. Historical evidence references were not used as proof."
+    },
+    {
+      "area": "CONVENTIONS.md — repository constraints",
+      "result": "PASS — static",
+      "evidence": "Reviewed repository conventions. The patch retains memory-only runtime state, configuration-only persistence, stable IDs, explicit errors and separate native Zsh/OMP interaction; no restoration, remote protocol or generic plugin system is introduced."
+    },
+    {
+      "area": "Cargo.toml — dependency and target scope",
+      "result": "PASS — static",
+      "evidence": "Reviewed manifest and base diff. No E06 dependency/version change is present. The implementation reuses the pinned ACP schema and existing Rust/Clap/Ratatui/Crossterm dependencies; fixture target registration remains available."
+    },
+    {
+      "area": "Cargo.lock — dependency delta",
+      "result": "PASS — static",
+      "evidence": "Inspected locked package context and compared against the supplied base: no Cargo.lock delta is present. No new E06 supply-chain change is introduced; this is not a dependency vulnerability scan or build result."
+    },
+    {
+      "area": "specs/epics/e06-acp-daily-use/PLAN.md — allowed planning contract",
+      "result": "PASS — static",
+      "evidence": "Read only lines1–45 as required, plus the three story requirement files. Review followed the explicit interfaces and three E06 outcomes without reopening E05 or reading later execution amendments."
+    },
+    {
+      "area": "specs/product/SCOPE_LATEST.yaml — scope boundaries",
+      "result": "PASS — static",
+      "evidence": "Reviewed complete scope document. It parks E05, keeps runtime state memory-only and excludes relaunch/restoration, implicit choices and native fence repair. Historical authorization numbers were not treated as permission for additional execution."
+    },
+    {
+      "area": "specs/security/epics/e06/THREAT_MODEL.md — security contract",
+      "result": "PASS — static",
+      "evidence": "Reviewed complete threat model and traced launch, original capability/responder identity, recovery fencing and retained cleanup paths. Its historical/live statements were not adopted as independent runtime evidence."
+    },
+    {
+      "area": "Cross-boundary ownership and no-replay invariants",
+      "result": "PASS — static",
+      "evidence": "Followed new configuration requests/replies, cancel notifications, native Launch work/replies, daemon_id and profile requests to their consuming dispatch points. Reviewed related unchanged Registry close/claim and ACP admission contracts. No additional supported authority bypass, silent dispatch drop, implicit interrupt or mutation replay was identified."
+    },
+    {
+      "area": "Security, resource failure and maintainability assessment",
+      "result": "PASS — static, with limits",
+      "evidence": "No additional supported patch-introduced injection, auth disclosure or unsafe shell invocation was identified. Reviewed bounded settings/profile content, original endpoint/worker cleanup, unknown cleanup retention, shutdown-handle failure ordering and observer close guards. Existing large TUI/control methods were not reported as correctness defects merely for size."
+    },
+    {
+      "area": "Actual installed OMP same-instance offline/live acceptance",
+      "result": "NOT VERIFIED — execution prohibited",
+      "evidence": "No installed agent, provider, private specification, auth material or prior runtime report was executed/read. Static fixture and ignored live-driver source cannot establish genuine question/permission allow+deny effects or completed owned cleanup on the installed OMP."
+    },
+    {
+      "area": "Actual built CLI/native recovery and regression gates",
+      "result": "NOT VERIFIED — execution prohibited",
+      "evidence": "No build, tests, lint, formatter, shell/source execution, daemon operation or controlling-PTY smoke was run. Parent retains the runtime gates for real CLI/native launch, detach/disconnect/pause continuity and cleanup; historical native unknown settlement remains unresolved."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R6-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp/settings.rs",
+      "line": 403,
+      "title": "Accept null acknowledgements for the legacy mode setter",
+      "impact": "Starting an agent with an advertised mode fails and terminates its newly owned ACP process when session/set_mode successfully returns result:null, even though the pinned ACP response decoder accepts that acknowledgement. The requested mode therefore cannot complete startup on that supported response shape.",
+      "evidence": "Configuration::resolve can choose Setting::Mode from advertised legacy modes, and Setting::request sends session/set_mode. Configuration::acknowledge rejects null at lines403–404 before reaching the Mode branch. src/acp.rs:1947–1949 propagates that error; consume ends the lifetime on apply failure, and run performs process teardown. In the pinned agent-client-protocol-schema1.12.0 source, v1/agent.rs:2120–2143 declares SetSessionModeResponse through default_on_null!, and serde_util.rs explicitly includes SetSessionModeResponse in tests accepting both null and {}. Existing tests exercise {} but not null.",
+      "fix": "Validate acknowledgements according to the active setter instead of applying the object-only check globally. For Setting::Mode, use the pinned SetSessionModeResponse decoding semantics, accepting null or an object as the empty success acknowledgement. Keep the full confirmed configOptions requirement for Setting::Config, and add a regression where an advertised mode receives result:null and startup reaches ready without weakening configuration-value confirmation."
+    }
+  ],
+  "summary": "Reviewed all32 frozen source/test/documentation paths and narrow related ownership, transport and pinned ACP contracts without execution or prior-review evidence. One supported P2 Should-fix remains: the new settings path rejects a null mode-setter acknowledgement accepted by the pinned ACP decoder and consequently tears down startup. The score is33/36×100; despite exceeding90, the supported Should-fix makes the verdict FAIL. Genuine installed OMP acceptance and actual CLI/native runtime gates remain unverified here, not passed.",
+  "limits": "Static, read-only review against base2195b05adf23ae26a80065ecdd6d9196e2915998 and the supplied sealed source manifest. No edits, builds, tests, lint, formatters, shell/source execution, provider calls, auth/config/daemon/global operations, commits, new agents or extra review rounds. No prior review/audit/repair/runtime reports, execution logs, saved handoffs, real auth or retired private fixtures were read; PLAN reading stopped at line45. Runtime claims in documentation/manifest were not independently certified. Allocation/resource failure paths were assessed from source, not fault-injected. No claim is made to resolve historical native application settlement or complete live acceptance."
+}

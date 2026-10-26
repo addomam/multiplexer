@@ -1,3 +1,13 @@
+# amux e06 verified-delivery security disposition
+
+Current source/security approval: `../verifications/e06-review-round11.json`, independent A100/B100/security100 with zero findings. All92 frozen paths matched at verdict; before the authorized commit, all86 production/test/vendor/Cargo-manifest paths still match that approved snapshot. Subsequent changes only record verified acceptance, status and landing authorization.
+
+Runtime and genuine installed-provider proof: `../verifications/e06-daily-use-verify.json` and `../verifications/e06-omp-live-final.json`. Complete regressions, native input-boundary fixes and one genuine OMP question/native-answer/API-permission deny+allow run pass. Model use is12/cap12/0; no further live calls. Copied auth/raw resources are removed, and the global subscription credential is unchanged.
+
+The user now explicitly authorizes commit and local-main merge only. No unresolved supported security finding is waived; prior failures, native unknown application settlement and all historical review caps remain preserved. No push, tag, release, global changes or new provider run is authorized.
+
+## Historical e04 security disposition
+
 # amux e04 current-delivery security disposition
 
 Current candidate: `66b5293`, based on main `a46eaddeb79a9a42628d9cb39cd60945ece27fbb`. Exact runtime-source binding: `specs/verifications/e04s04-rejection-recovery.json`; all 22 hashes still match full gate `artifact://1803`. This section supersedes the historical e03 delivery scope below.

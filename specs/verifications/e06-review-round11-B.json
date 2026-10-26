@@ -1,0 +1,161 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 30,
+  "passed_items": 30,
+  "checklist": [
+    {
+      "area": "Frozen scope and settled requirements",
+      "result": "PASS",
+      "evidence": "Reviewed the manifest-defined 92-path scope against E06 stories, THREAT_MODEL.md and PLAN.md lines 1–45. Distinguished the 24 first-party code/test paths, eight first-party documentation/manifest paths and 60 vendored paths; treated the manifest's 54 release-identical vendor files as baseline dependencies and scrutinized the six changed vendor files."
+    },
+    {
+      "area": "Project conventions and scope preservation",
+      "result": "PASS",
+      "evidence": "CONVENTIONS.md and the changed interfaces preserve memory-only runtime state, configuration-only persistence, explicit IDs/errors and stock Zsh/native OMP boundaries. The patch does not implement parked E05 or introduce restoration, automatic task policy or a replacement protocol."
+    },
+    {
+      "area": "Closed and bounded launch settings",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs::validate_requested rejects unknown fields, invalid identifiers, non-string choices and excessive option/content budgets. Broker::reserve validates settings before publishing a runtime instance."
+    },
+    {
+      "area": "Cross-module dispatch completeness",
+      "result": "PASS",
+      "evidence": "Traced profile catalog/open requests through CLI and daemon dispatch, Configure RPCs through ACP response handling, Launch/Stop work through NativeControl's worker and reply handling, and InputReadiness through native view/consent/recovery consumers. No newly introduced message or variant was found silently dropped."
+    },
+    {
+      "area": "Exact ACP identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs::parse_target and Instance::exact require the complete target tuple, including explicit session identity. Native Resume validation checks daemon, target, instance, connection generation and established session rather than following names."
+    },
+    {
+      "area": "Genuine question response routing",
+      "result": "PASS",
+      "evidence": "ACP incoming form requests retain the original wire RequestId, scope and responder. Answer admission validates interaction/revision and sends the response through the original instance writer; parent-RPC completion does not discard the retained inbound responder."
+    },
+    {
+      "area": "Permission allow and deny routing",
+      "result": "PASS",
+      "evidence": "parse_permission retains the original session, tool identity and offered option IDs. Action::Permission validates an exact offered option and produces the original RequestPermissionResponse; the native editor and API feed this same broker path."
+    },
+    {
+      "area": "Agent-side request withdrawal",
+      "result": "PASS",
+      "evidence": "src/acp.rs::cancel_incoming matches the original pending wire responder and serializes withdrawal with answer admission under the state lock. It does not grant permission, interrupt the prompt or modify ownership."
+    },
+    {
+      "area": "Exclusive ownership admission",
+      "result": "PASS",
+      "evidence": "daemon::acp_action authorizes the control capability and commits through Authority::admit_acp. The unchanged ownership consumer rechecks live authority while holding the target lock; Broker::commit additionally checks captured owner generation and exact instance tuple."
+    },
+    {
+      "area": "Force does not interrupt or kill",
+      "result": "PASS",
+      "evidence": "Native Force dispatch remains an ownership-claim operation. The unchanged registry Force branch grants authority without invoking ACP cancel/close; interruption and close remain separate explicit broker actions."
+    },
+    {
+      "area": "Pending claim cancellation retains work",
+      "result": "PASS",
+      "evidence": "Native cancellation sends the captured claim capability. The unchanged registry cancellation branch revokes the targeted prior owner and grants nobody; ACP admitted calls/work remain independently retained rather than being removed by ownership transitions."
+    },
+    {
+      "area": "Conditional keep and withdrawal preserve human control",
+      "result": "PASS",
+      "evidence": "Native warning handling queues keep on the original FIFO connection before forwarding applicable gestures. The unchanged consumer requires original native provenance and exact claim/source generation; conditional withdrawal uses its separate preservation path."
+    },
+    {
+      "area": "Application input routes remain gated",
+      "result": "PASS",
+      "evidence": "Native raw keys, repeat, literal prefix, paste and application mouse use NativeControl's grant-bearing input path. ACP events are consumed by AgentView and never fall back to PTY forwarding; visible ownership panels consume application gestures."
+    },
+    {
+      "area": "No ambiguous mutation replay",
+      "result": "PASS",
+      "evidence": "ConnectionError distinguishes uncertain transport outcomes from daemon rejections. Native workers stop after uncertain transport failure, and recovery rebuilds local state rather than retrying requests. Rejected ACP selection handling does not restore submitted answer text."
+    },
+    {
+      "area": "Settings applied before readiness",
+      "result": "PASS",
+      "evidence": "NewSession response handling initializes Configuration and calls configure_next. Lifecycle remains starting until each requested setter is acknowledged and all applied values are rechecked; prompt admission requires ready."
+    },
+    {
+      "area": "Truthful requested, reported and changed settings",
+      "result": "PASS",
+      "evidence": "Configuration projects requested settings separately from agent-reported current/offered values, explicitly represents unreported defaults and detects later displacement. Native settings presentation distinguishes those states and does not infer permission policy."
+    },
+    {
+      "area": "Exact setting IDs and alias conflicts",
+      "result": "PASS",
+      "evidence": "Configuration resolves advertised categories or explicit option IDs, preserves independent options in duplicate categories and rejects conflicting semantic/exact aliases. Unsupported or unconfirmed selections fail rather than falling back."
+    },
+    {
+      "area": "Lossless CLI and native option edits",
+      "result": "PASS",
+      "evidence": "parse_options_json preserves exact string IDs and rejects duplicate keys. CLI rejects duplicate --option IDs. The native launch dialog rejects oversized/control-containing edits in full and prevents submission while input remains rejected."
+    },
+    {
+      "area": "CLI launch ownership and routing",
+      "result": "PASS",
+      "evidence": "amux acp start uses tui::start for a real original native controller by default. The explicit --controller path returns API JSON; it does not silently invent a transient external owner. Optional request fields are omitted before daemon validation."
+    },
+    {
+      "area": "Native profile launch integration",
+      "result": "PASS",
+      "evidence": "The picker obtains safe catalog metadata, selects the actual source project and submits one launch through the existing NativeControl worker. Launch receipts are consumed into an exact Resume target, including receipts retained during teardown."
+    },
+    {
+      "area": "Profile persistence and public metadata",
+      "result": "PASS",
+      "evidence": "projects::Config persists validated acp_profiles, not sessions. acp-profiles exposes only ID, label, availability and default settings; executable argv and environment are not included in that catalog."
+    },
+    {
+      "area": "Shell-free executable and symlink handling",
+      "result": "PASS",
+      "evidence": "acp_profiles resolves a bare command through absolute daemon PATH entries or accepts an absolute executable path, then ACP launches via Command plus argv. It preserves symlink invocation identity rather than canonicalizing the executable into a different basename-sensitive entry point."
+    },
+    {
+      "area": "Either socket loss fences native authority",
+      "result": "PASS",
+      "evidence": "The UI checks observation and authority connectivity; the worker independently checks both before dequeuing work and rechecks compound claims after observation. stop shuts down the original socket before joining and clearing local authority."
+    },
+    {
+      "area": "Exact surviving-agent recovery",
+      "result": "PASS",
+      "evidence": "supervise/attached recover through Connection::connect to the existing socket. Resume rejects daemon replacement, missing targets and changed established tuples. Recovery does not call ensure_daemon, open a replacement agent or silently acquire control."
+    },
+    {
+      "area": "Pause, queued input and registration lifecycle",
+      "result": "PASS",
+      "evidence": "UI and worker use wall-clock pause fencing. Recovered attachments disable automatic acquisition, discard input until a painted observer frame and conclusive empty boundary, reconcile size, and use guarded close to reclaim idle recovered registrations without releasing owners or cancelling claims."
+    },
+    {
+      "area": "Filtered and internal event readiness",
+      "result": "PASS",
+      "evidence": "The changed crossterm reader introduces Empty/Pending/Inconclusive and a bounded internal-event probe. Public events remain queued, filtered replies do not certify emptiness, and unsupported or unreconciled source state remains inconclusive."
+    },
+    {
+      "area": "Parser fragments and finite or zero deadlines",
+      "result": "PASS",
+      "evidence": "The changed mio source retains parser/TTY readiness across calls, bounds poll/read visits and honors elapsed deadlines after the initial zero-time visit. Empty requires exhausted source and empty parser state; partial sequences are not treated as fresh-input boundaries."
+    },
+    {
+      "area": "Resize, wakeup and borrowed descriptor progress",
+      "result": "PASS",
+      "evidence": "The mio source processes the retained readiness batch before further TTY reads, allowing resize/wakeup progress during incomplete input. Every borrowed blocking-descriptor read is preceded by a level-readiness check; construction does not change the parent shell's descriptor flags."
+    },
+    {
+      "area": "Retained delivery evidence and owned cleanup",
+      "result": "PASS",
+      "evidence": "ACP response/work accounting retains unknown outcomes independently from write evidence. Original pipe endpoints, cancellation wakeups, joined workers and birth-qualified process-tree cleanup remain in the owner path; uncertain cleanup retains its resource charge."
+    },
+    {
+      "area": "Regression sources, vendor integration and acceptance boundaries",
+      "result": "PASS",
+      "evidence": "Reviewed source coverage for protocol/settings, profiles, native daily use, recovery edges, filtered replies, sustained incomplete input, resize and shell races. Cargo's local crossterm patch connects the changed backend to the application. Fixture and ignored live-harness code remain distinct from installed-provider acceptance; historical native settlement limitations are not replaced by Force or waived."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for this independent static source/security review: no supported patch-introduced Must-fix or Should-fix defect was found in the frozen scope. The source checklist passes 30/30 items. This is not installed-OMP/provider acceptance, a native-settlement waiver, or authorization to reset historical execution or review caps.",
+  "limits": "Read-only static inspection only. No edits, builds, tests, lint, formatting, source execution, providers, authentication access, daemon operations or additional reviews were performed. Did not inspect prior review/audit reports, runtime evidence, saved handoff/state, execution logs or real private fixtures. Vendor release identity and frozen SHA-256 values were taken from the sealed source manifest, not independently recomputed; the parent must separately establish that all frozen hashes remain unchanged. Test assertions and opt-in harnesses were inspected as source, not counted as exercised verification. Actual installed-provider same-instance effects, live budgets, process cleanup, terminal behavior and the historically unsafe native application-settlement boundary require their separate authorized acceptance evidence.\n\n[You have received this identical output 3 times. Re-reading 'agent://E06BlindB11/limits:raw' will not change it — use a narrower selector (path:A-B), or proceed with the edit.]"
+}

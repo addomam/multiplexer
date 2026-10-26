@@ -1,0 +1,48 @@
+{
+  "scope": "e06-only",
+  "round": 4,
+  "max_rounds": 5,
+  "status": "FAIL",
+  "source": "specs/verifications/e06-review-round4-source.json",
+  "scores": [
+    88.23529411764706,
+    100,
+    100
+  ],
+  "full_reports": [
+    "e06-review-round4-A.json",
+    "e06-review-round4-B.json",
+    "e06-review-round4-security.json"
+  ],
+  "unique_findings": [
+    {
+      "id": "E06-R4-01",
+      "category": "Must-fix",
+      "priority": "P1",
+      "file": "src/tui/control.rs",
+      "line": 187,
+      "title": "Fence queued launches against observation-stream loss",
+      "impact": "A queued native profile launch can still reach acp-open after its original observation socket has closed. For example, the authority worker can be awaiting an earlier refresh while the UI queues Launch; if the UI then blocks in terminal output or has not run its next liveness check, closing only the observation connection does not set worker_stop. Releasing the earlier refresh within the two-second heartbeat window lets the worker spawn the new agent rather than discard the queued mutation. This violates the stated either-socket loss fence and queued-authority discard contract.",
+      "evidence": "NativeControl::launch queues Op::Launch through submit at src/tui/control.rs:405–410. The consuming worker's guard at 187–192 checks only worker_stop and heartbeat, and Work::Rpc invokes rpc directly at 196–203. NativeControl receives no observation-stream handle. The observation check and subsequent stop are confined to the UI loop at src/tui.rs:1037–1043 and its teardown, so a blocked/not-yet-scheduled UI leaves the worker able to dispatch the newly introduced launch path. This is a source-derived race, not an executed runtime result.",
+      "fix": "Give the worker shared liveness access to the original observation connection and check both original streams, stop and heartbeat immediately before dispatching mutating work, including Launch and the mutation following a compound claim read. On observed loss, shut down the old authority connection and discard queued work. Add a deterministic regression that withholds an earlier worker read, queues a native launch, closes only observation while UI processing is held, then releases the worker and asserts that no acp-open is admitted."
+    },
+    {
+      "id": "E06-R4-02",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui.rs",
+      "line": 1261,
+      "title": "Reconcile terminal size after draining recovery events",
+      "impact": "Resizing the outer terminal during recovery registration or first-frame setup loses the only Resize event. The drain accepts only quit keys and silently consumes Resize, although size was sampled and the managed PTY resized before registration. After Reconnected, the normal path does not resize again without another resize or picker action, so a surviving Zsh/native application remains at the old PTY dimensions and can stay clipped or incorrectly laid out.",
+      "evidence": "src/tui.rs:981–986 samples terminal size and calls resize_native before the blocking native registration. The recovered-input drain at 1257–1269 reads and discards all events other than Escape/Ctrl-Q, and exits at 1275–1280 without resampling size. The ordinary Resize consumer at 1474–1479 is therefore bypassed. refresh_screen reads the existing PTY geometry; it does not reconcile it. This is introduced by the new recovery drain and is not covered by the fixed-size recovery PTY cases.",
+      "fix": "After recovery input has drained, resample the actual outer terminal dimensions, update size and reconcile the visible native PTY through resize_native before announcing recovery complete; alternatively retain and handle the latest Resize as structural metadata while still discarding all application/control gestures. Cover a resize performed while the recovery registration reply is withheld."
+    }
+  ],
+  "must_fix": 1,
+  "should_fix": 1,
+  "all_reports_read_before_any_source_edit": true,
+  "provider_spent": 8,
+  "aggregate_cap": 9,
+  "remaining": 1,
+  "historical_review_caps": "unchanged"
+}

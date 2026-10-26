@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased — ACP daily use
+
+- Park E05's custom non-ACP integration API without discarding its approved planning packet or resetting historical review caps.
+- Add installed OMP/Codex/Grok launch profiles, original-attachment `acp start`, an ACP picker dialog and explicit model/mode/effort/option overrides. Resolve argv without a shell; reject unavailable adapters and unsupported or unconfirmed settings rather than silently substituting.
+- Expose requested versus agent-reported configuration, including unreported defaults and later changes. Keep permission-policy uncertainty explicit.
+- Correlate OMP's genuine `$/cancel_request` with its original pending responder, preserving admitted winners and exact string/number wire identities.
+- Preserve opaque provider tool-call IDs up to4KiB across updates, questions and permissions instead of applying the256-byte local-ID limit. Keep complete identities and existing frame/content/queue bounds.
+- Fence disconnected or paused attachments, discard stale drafts/queued authority, and recover only the same live agent through the same daemon lifetime. Never replay input, implicitly reacquire control, relaunch an agent or resurrect a daemon.
+- Use conservative wall-clock pause detection on macOS, whose monotonic uptime excludes machine sleep; clock rollback also fences input. Advertise Force readiness only after the full-warning paint/input-drain fence, then repaint the enabled action without replaying an early Enter.
+- Prove profile CLI/native launch and same-instance detach/observer reattachment through actual controlling PTYs and independent built-CLI arithmetic effects. Keep real-provider acceptance separate from deterministic peers.
+- Recheck attachment liveness after a claim's observation RPC and before sending the ownership mutation; stopped workers shut down their owning connection even if the UI still holds a shutdown handle. Preserve the external owner with no stale reservation.
+- Reconcile initial null-to-established sessions consistently across ordinary polling and recovery. Capture an acknowledged new launch before its fallible follow-up snapshot; retain that exact surviving target without relaunch or prior-view substitution.
+- Show inherited profile values for cleared launch controls and state profile-option merge semantics honestly; keep the existing requested-setting/profile-default contract.
+- Preserve successful launch replies that arrive while the UI is blocked or loses either stream: fence/join first, salvage only acknowledged identity, and recover the exact new agent without queued authority or launch replay.
+- Validate observation/display setup before creating recovery controllers, and verify the expected daemon on the original authority connection. Reclaim idle recovered observers through existing guarded close; keep owned/pending registrations intact and leave unavailable cleanup retained.
+- Keep concrete advertised configuration IDs distinct even within one category; preserve semantic/exact alias conflicts and synchronize legacy mode updates only with a unique corresponding option.
+- Preserve symlinked executable invocation paths for virtual environments and basename-dispatch launchers. Inherit untouched native option defaults as structured JSON rather than a lossy comma/equals text round trip.
+- Drain registration/projection-time recovery input after the first observer paint, then repaint Reconnected. Queued control shortcuts cannot become authority requests on the fresh controller; safe quit and fail-closed overflow remain.
+- Fence native worker dispatch on both original connection lifetimes, including queued launches while the UI cannot poll; preserve already admitted work without implicit interruption.
+- Reconcile the actual native PTY geometry after recovery input drain, repaint and drain again before Reconnected, so registration-time resize is not discarded with stale application input.
+- Allocate the native shutdown handle before controller creation, so descriptor-clone failure cannot strand a new disconnected registration.
+- Accept the protocol-valid null acknowledgement for legacy ACP mode changes without relaxing config-option value confirmation.
+- Retain deliberate keyboard/mouse picker selections before fallible work, and reconcile native PTY geometry from the actual painted viewport when resize notification is lost. Preserve clipped-warning rejection and fresh Force confirmation.
+- Preserve complete advertised IDs/choices in explicit native Options JSON and CLI `--options-json`, including commas and equals signs. Keep planned `--option ID=VALUE` shorthand, structured profile inheritance, bounded input and duplicate-ID rejection.
+- Add a wrapped, scrollable F10 settings view so long model IDs cannot hide current/requested mode or effort. Keep settings inert/read-only, preserve prompt/interaction drafts and discard application gestures without replay or authority changes.
+- Reject complete oversized/control-containing native launch edits instead of silently filtering or truncating them into a different identity. Retain per-field rejection until deliberate correction, block launch while any rejection remains and preserve legal Options JSON whitespace.
+- Preserve pending native key/paste and resize readiness across event reads, including zero-time consent/recovery drains. Keep inherited stdin flags unchanged; do not require a wakeup key, retry or replay intercepted input.
+- Require an explicit bounded Empty/Pending/Inconclusive native-input proof before reporting view facts, finishing recovery or enabling consent/Force confirmation. Skip internal terminal replies without losing queued human events; keep incomplete/budget-exhausted drains fenced across frames without reconnect churn or replay.
+- Bound ready TTY read work and honor finite/zero deadlines even when no complete event is parsed. Retain partial input/edge readiness and allow resize/wakeup/disconnection progress without changing parent-shell fd flags.
+- Verify genuine installed-OMP native question answering and same-instance API handoff/permission deny+allow effects through normal turn completion and owned cleanup. Keep the four-request cheap subscription receipt separate from deterministic peers, historical failed runs and terminal-only settlement limitations.
+
 ## Unreleased — ACP conversation transport (Build)
 
 - Add explicit owned ACP views, CLI open/inspect/attach and current-control, generation-bound prompt/authenticate/interrupt/close admission using pinned official ACP v1 schema types. Keep native terminal/agent routes and stock Zsh/OMP distinct.

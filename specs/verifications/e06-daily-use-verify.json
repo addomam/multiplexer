@@ -1,0 +1,125 @@
+{
+  "epic": "e06",
+  "status": "PASS-verified-on-kept-feature-branch",
+  "user_items": {
+    "e05": "parked-with-all17-historical-tasks-failing-not-discarded",
+    "omp_acp": "PASS-genuine-installed-server-native-question-API-handoff-exact-deny-allow-effects-same-original-agent",
+    "launch": "PASS-explicit-human-CLI-native-picker-OMP-Codex-Grok-profiles-truthful-settings",
+    "reattachment": "PASS-exact-live-agent-disconnect-pause-sleep-fencing-no-duplicate-replay-implicit-acquisition-or-daemon-resurrection"
+  },
+  "branch": "feat/acp-daily-use",
+  "worktree": "/Users/addomam/projects/amux-integration-api",
+  "task_verification": "specs/verifications/e06-task-verification.json",
+  "tasks_passing": 7,
+  "stories_passing": 3,
+  "source_review": {
+    "round": 11,
+    "max_authorized": 12,
+    "A": 100,
+    "B": 100,
+    "security": 100,
+    "findings": 0,
+    "frozen_paths_matched_at_verdict": 92,
+    "report": "specs/verifications/e06-review-round11.json",
+    "post_verdict_changes": "Only verified-status/evidence metadata and additive README/CHANGELOG/PLAN acceptance notes; no production or test code changes."
+  },
+  "runtime": {
+    "job": "bg_359",
+    "workspace_passed": 451,
+    "workspace_suites": 30,
+    "workspace_ignored": 12,
+    "default_passed": 340,
+    "default_suites": 12,
+    "default_ignored": 9,
+    "counts_overlap": true,
+    "unique_nonlive_e06": 44,
+    "separate_unique_vendored_boundary_units": 3,
+    "vendor_unit_configurations": [
+      "default",
+      "event-stream"
+    ],
+    "strict_clippy": "PASS-workspace-and-default",
+    "check": "PASS-workspace-and-default",
+    "build": "PASS-workspace",
+    "fmt": "PASS",
+    "changed_vendor_reader_rustfmt": "PASS",
+    "actual_cursor_showcase": "PASS",
+    "unknown_native_settlement_guards": "PASS-both-preserved-not-waived",
+    "raw": "artifact://2632",
+    "report": "specs/verifications/e06-post-round10-regressions.json"
+  },
+  "actual_independent_cli_native_smoke": {
+    "report": "specs/verifications/e06-native-cli-smoke-post-round10.json",
+    "binary_sha256": "784097aaca1549afa9bbf40b3b9236d5365154dc8a7f8267c1c250aaf7f02278",
+    "proof": "Real built CLI/profile/settings owner and locked observer, physical resizes during unterminated paste, one-key close, discarded intercepted input, same original tuple/PID arithmetic42→57, normal owned cleanup and unrelated sentinel survival."
+  },
+  "genuine_omp": {
+    "status": "PASS",
+    "selected": 1,
+    "passed": 1,
+    "ignored": 0,
+    "seconds": 10.06,
+    "provider_requests": 4,
+    "model": "github-copilot/mai-code-1.1-flash",
+    "effort": "low",
+    "max_requested_output_tokens_each": 2000,
+    "guard_seconds": 110,
+    "report": "specs/verifications/e06-omp-live-final.json"
+  },
+  "provider_accounting": {
+    "aggregate_actual": 12,
+    "authorized_cap": 12,
+    "remaining": 0,
+    "no_further_live_calls_authorized": true
+  },
+  "nfr_evidence": {
+    "performance": "Complete live scenario10.06s within110s guard; no throughput or hard-realtime claim.",
+    "reliability": "Preserved runtime regressions, exact continuity, unknown delivery retained, no implicit interruption/replay/reacquisition, meaningful denied/allowed effects.",
+    "operability": "Normal native termios/reaping/drainer and agent/daemon/socket/workspace cleanup; no-holder private-auth-root retirement; global subscription credential row unchanged."
+  },
+  "resource_cleanup": {
+    "owned_live_processes_and_workers": "cleaned-before-test-PASS",
+    "private_auth_raw_sessions_stderr_spec_launcher_and_gate": "removed-after-no-holder-check",
+    "secure_erasure_claimed": false,
+    "new_herdr_sessions_tabs_or_worktrees": "none-created-by-this-resumption",
+    "feature_worktree": "retained-unmerged-never-discarded"
+  },
+  "historical_limits": {
+    "e05": "parked",
+    "prior_failures_and_caps": "preserved",
+    "native_unknown_application_settlement": "not-waived",
+    "new_codex_grok_claude_live_runs": "none",
+    "global_changes": "none",
+    "commit_merge_push_release": "not-authorized"
+  },
+  "next_action": "User may authorize commit/landing separately; implementation and all scoped acceptance gates are complete.",
+  "stock_regressions": {
+    "command": "bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
+    "execution": "single-contiguous-foreground-run",
+    "exit_code": 0,
+    "omp_tests_passed": 8,
+    "omp_tests_failed": 0,
+    "assertions": 49,
+    "zsh_syntax": "PASS",
+    "wall_seconds": 0.42,
+    "stdout_stderr": "bun test v1.4.3 (26aa4e1a9)\n\n 8 pass\n 0 fail\n 49 expect() calls\nRan 8 tests across 1 file. [320.00ms]\n",
+    "actual_provider_requests": 0
+  },
+  "verification_limits": [
+    "No new actual hardware suspend/resume cycle was performed; conservative clock/pause fencing is covered by source review and deterministic/native pause regressions.",
+    "No new Codex, Grok or Claude provider run was performed in this E06 acceptance.",
+    "No throughput, hard-realtime, secure-erasure or terminal-only safe-settlement claim."
+  ],
+  "privacy_scan": {
+    "paths": 4,
+    "matches": 1,
+    "credential_leaks": 0,
+    "classified_false_positives": [
+      {
+        "path": "specs/verifications/e06-task-verification.json",
+        "field": "review_status",
+        "reason": "High-entropy heuristic matched the long hyphenated all-seven-task-gates status label, not credential material."
+      }
+    ]
+  }
+}

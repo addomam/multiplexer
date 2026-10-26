@@ -1,0 +1,145 @@
+{
+  "verdict": "FAIL",
+  "score": 85,
+  "total_items": 20,
+  "passed_items": 17,
+  "checklist": [
+    {
+      "area": "OMP ACP bootstrap and protocol dispatch",
+      "result": "PASS",
+      "evidence": "Initialization, session creation and Configure response dispatch were source-reviewed. Configuration completion precedes readiness; actual provider acceptance is not inferred."
+    },
+    {
+      "area": "OMP responder withdrawal",
+      "result": "PASS",
+      "evidence": "$/cancel_request reaches the original retained responder, preserves typed wire identities and does not override admitted winners or change ownership."
+    },
+    {
+      "area": "Question, permission and work identity",
+      "result": "PASS",
+      "evidence": "Original request/session/tool scope, canonical interaction IDs/revisions and native/API admission consumers were traced."
+    },
+    {
+      "area": "Startup acknowledgement and prompt admission fence",
+      "result": "PASS",
+      "evidence": "Configure acknowledgements pass through acknowledge and configure_next; pending, rejected or unconfirmed settings do not admit prompts."
+    },
+    {
+      "area": "Exact advertised configuration-option bookkeeping",
+      "result": "FAIL",
+      "evidence": "E06-R3-01: distinct option IDs are collapsed into shared category keys."
+    },
+    {
+      "area": "Requested, reported and displaced setting projection",
+      "result": "PASS",
+      "evidence": "Configuration flows through inspect, snapshot and AgentView with explicit unreported defaults, failure and displacement states."
+    },
+    {
+      "area": "Opaque tool identities and resource bounds",
+      "result": "PASS",
+      "evidence": "The separate 4-KiB upstream tool-ID bound was traced through notifications/forms/permissions; local identity and existing content/queue budgets remain separate."
+    },
+    {
+      "area": "Profile schema and configuration transactions",
+      "result": "PASS",
+      "evidence": "Closed bounded profiles, default merging, catalog privacy and configuration validation/rollback consumers were reviewed."
+    },
+    {
+      "area": "Executable resolution and invocation identity",
+      "result": "FAIL",
+      "evidence": "E06-R3-02: canonicalized symlink targets replace configured executable invocation paths."
+    },
+    {
+      "area": "CLI profile, project and controller routing",
+      "result": "PASS",
+      "evidence": "Interactive start uses original native registration; noninteractive start requires an explicit controller. Profile/project selection and raw-command exclusivity were traced."
+    },
+    {
+      "area": "Native picker default-setting fidelity",
+      "result": "FAIL",
+      "evidence": "E06-R3-03: valid inherited option defaults undergo a lossy comma/equals-sign round trip."
+    },
+    {
+      "area": "Native launch authority and single dispatch",
+      "result": "PASS",
+      "evidence": "Dialog Submit, NativeControl launch, original worker RPC and daemon receipt consumers were traced; launch is busy-gated and not automatically retried."
+    },
+    {
+      "area": "Acknowledged launch continuity",
+      "result": "PASS",
+      "evidence": "Receipt identity is captured before follow-up observation, and teardown joins before salvaging parsed successful launch identity without restoring authority."
+    },
+    {
+      "area": "Exact daemon, instance, connection and session transitions",
+      "result": "PASS",
+      "evidence": "Resume validates daemon/view/instance/connection and known-session continuity; only initial null-to-established session progression is accepted."
+    },
+    {
+      "area": "Connection loss, pause and compound-claim fencing",
+      "result": "PASS",
+      "evidence": "Both sockets, wall-clock pause detection and worker stop/shutdown are checked; compound claims recheck liveness between observation and mutation."
+    },
+    {
+      "area": "Recovery admission and registration lifetime",
+      "result": "PASS",
+      "evidence": "Recovery uses only the existing socket, validates before registration, disables automatic acquisition and applies guarded idle-observer cleanup without releasing owners or cancelling claims."
+    },
+    {
+      "area": "Ownership force, cancellation and conditional control",
+      "result": "PASS",
+      "evidence": "Relevant Registry and native consumers preserve noninterrupting force, cancellation granting nobody, fresh force facts, draw-bound consent and FIFO keep."
+    },
+    {
+      "area": "Application routes and no-replay behavior",
+      "result": "PASS",
+      "evidence": "Key/repeat/paste/literal-prefix/mouse and ACP action routes were reviewed. Observer application input is consumed; recovery does not replay drafts, offers or captured actions."
+    },
+    {
+      "area": "Owned process, pipe and native-client cleanup",
+      "result": "PASS",
+      "evidence": "Process-tree/pipe consumers, worker joins, truthful incomplete cleanup and native termios/host/drainer test assertions were reviewed."
+    },
+    {
+      "area": "Consumer regressions, dependencies and documentation",
+      "result": "PASS",
+      "evidence": "Frozen test sources assert observable effects, identities and cleanup before fallback. Missing edge regressions are identified in findings. No dependency change or executed test result is claimed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R3-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp/settings.rs",
+      "line": 304,
+      "title": "Track configuration selections by their exact advertised option ID",
+      "impact": "An acknowledged explicit settings.options selection can terminate startup; independent options sharing a category can also collide or be skipped.",
+      "evidence": "Requested::Option resolves an exact ID, but config maps thought_level options to category:thought_level. Existing fixture mode e06-settings-ambiguous advertises thinking and other-thinking under that category. For {\"options\":{\"thinking\":\"low\"}}, the exact setter is acknowledged and verified, then next calls current(category:thought_level); duplicate-category lookup becomes None and triggers setting-mismatch. Configure failure ends the owned peer instead of reaching ready. Existing ambiguity coverage tests semantic effort, not this explicit-option path.",
+      "fix": "Key configuration-option bookkeeping/current checks by exact config ID, including semantic requests after concrete resolution. Detect conflicts only for aliases addressing the same underlying option; preserve legacy setter synchronization. Cover explicit selection and two independent same-category options while retaining ambiguous semantic-effort rejection."
+    },
+    {
+      "id": "E06-R3-02",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp_profiles.rs",
+      "line": 74,
+      "title": "Preserve the resolved executable pathname when following symlinks",
+      "impact": "Executable-path-dependent profiles can be reported available but launch the wrong runtime or fail before ACP initialization, including virtual-environment Python adapters.",
+      "evidence": "executable returns canonical at line79; prepare substitutes it into command[0] at lines141–144; Broker invokes that path at src/acp.rs:1371–1374. Canonicalizing venv/bin/python to the system interpreter loses the adjacent virtual-environment configuration/site-packages. Symlink-basename-selected multicall launchers likewise lose invocation identity. Existing profile tests use direct executable paths.",
+      "fix": "Resolve bare commands to absolute PATH candidates while retaining the candidate executable pathname. Validate metadata through symlinks without substituting their canonical targets into argv. Add a symlink-dependent launcher regression."
+    },
+    {
+      "id": "E06-R3-03",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui/launch.rs",
+      "line": 93,
+      "title": "Keep inherited option defaults out of the lossy text round trip",
+      "impact": "Selecting a valid profile and submitting untouched native options can fail locally or alter the requested option identity, although structured defaults remain usable.",
+      "evidence": "defaults formats ID=VALUE entries and joins them with commas at lines93–95; request splits commas and the first equals sign at lines114–117. Common validation permits these characters. A valid default {\"options\":{\"detail\":\"a,b\"}} becomes detail=a,b and fails parsing b before launch; an option ID containing '=' is split into another key/value. Clearing this field already uses the daemon's lossless structured inheritance.",
+      "fix": "Keep untouched defaults structured/inherited, such as initializing the override field empty with the existing inherited-default presentation. Alternatively use a lossless escaped representation. Add delimiter-containing default ID/value regressions."
+    }
+  ],
+  "summary": "FAIL: three source-supported P2 Should-fix defects; 17/20 applicable source areas passed (85%). No additional supported ownership, connection-race, launch-continuity or recovery defect was found. This is a frozen-source verdict, not runtime or real-provider acceptance.",
+  "limits": "Read-only review covered the frozen implementation/test manifest, documentation/manifests and relevant existing consumers, with two independent source slices. This reviewer obtained the base diff, inspected new modules as complete additions and validated each reported causal path. No edits, builds, tests, lint, formatting, runtime/CLI/browser/provider/network calls, credential/private-data reads or earlier review/disposition/self-audit consultations occurred. Parent runtime observations were not rerun. Actual installed OMP/provider behavior was not independently exercised. Complete real-provider acceptance remains unpassed: eight of nine requests are spent and no fresh run is authorized. Historical caps and native PTY unknown-settlement limitations remain unchanged. No merge, push, release, daemon resurrection or global auth/configuration change is authorized."
+}

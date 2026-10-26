@@ -6,6 +6,15 @@ mod acceptance;
 
 #[path = "native/live.rs"]
 pub(super) mod live;
+
+#[path = "native/daily_use.rs"]
+mod daily_use;
+
+#[path = "native/recovery_edges.rs"]
+mod recovery_edges;
+
+#[path = "native/omp_live.rs"]
+pub(super) mod omp_live;
 use alacritty_terminal::Term;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Dimensions;
@@ -26,16 +35,19 @@ const OUTPUT_LIMIT: usize = 16 * 1024 * 1024;
 const PREFIX: &[u8] = b"\x01";
 const ACCEPT_FORM: &[u8] = b"\x1b[15~";
 
-struct Geometry;
+struct Geometry {
+    columns: usize,
+    lines: usize,
+}
 impl Dimensions for Geometry {
     fn total_lines(&self) -> usize {
-        ROWS
+        self.lines
     }
     fn screen_lines(&self) -> usize {
-        ROWS
+        self.lines
     }
     fn columns(&self) -> usize {
-        COLS
+        self.columns
     }
 }
 
@@ -179,7 +191,10 @@ impl Attachment {
         let output = Arc::new(parking_lot::Mutex::new(Output {
             term: Term::new(
                 Config::default(),
-                &Geometry,
+                &Geometry {
+                    columns: COLS,
+                    lines: ROWS,
+                },
                 Listener {
                     replies,
                     effects: effects.clone(),
@@ -243,14 +258,31 @@ impl Attachment {
     fn text(&self) -> String {
         let output = self.output.lock();
         assert!(output.error.is_none(), "{:?}", output.error);
-        (0..ROWS)
+        (0..output.term.screen_lines())
             .map(|row| {
-                (0..COLS)
+                (0..output.term.columns())
                     .map(|col| output.term.grid()[Point::new(Line(row as i32), Column(col))].c)
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    fn resize(&mut self, columns: usize, lines: usize) {
+        let mut output = self.output.lock();
+        output.term.resize(Geometry { columns, lines });
+        let size = libc::winsize {
+            ws_row: lines.try_into().unwrap(),
+            ws_col: columns.try_into().unwrap(),
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        assert_eq!(
+            unsafe { libc::ioctl(self.slave.as_raw_fd(), libc::TIOCSWINSZ, &size) },
+            0,
+            "resize owned native PTY: {}",
+            io::Error::last_os_error()
+        );
     }
 
     fn wait(&mut self, marker: &str) {
@@ -264,9 +296,37 @@ impl Attachment {
                 self.child.try_wait().unwrap().is_none(),
                 "attachment exited: {text}"
             );
-            assert!(Instant::now() < deadline, "missing {marker:?}:\n{text}");
+            if Instant::now() >= deadline {
+                let mut queued = 0i32;
+                let available =
+                    unsafe { libc::ioctl(self.slave.as_raw_fd(), libc::FIONREAD, &mut queued) }
+                        == 0;
+                panic!(
+                    "missing {marker:?}; pending kernel input bytes: {:?}:\n{text}",
+                    available.then_some(queued)
+                );
+            }
             std::thread::sleep(Duration::from_millis(5));
         }
+    }
+
+    fn projected(&self, host: &Host, sequence: u64) {
+        // A new interaction can auto-select before a queued F9 is parsed. Fence
+        // the canonical inspection, not an incidental arrival/title transition.
+        host.until("canonical projection reaches the native renderer", || {
+            self.text()
+                .lines()
+                .filter_map(|line| {
+                    line.trim_start()
+                        .strip_prefix("Cursor ")?
+                        .split_whitespace()
+                        .next()?
+                        .parse::<u64>()
+                        .ok()
+                })
+                .any(|through| through >= sequence)
+                .then_some(())
+        });
     }
 
     fn send(&mut self, bytes: &[u8]) {
@@ -361,7 +421,7 @@ impl Attachment {
 }
 impl Drop for Attachment {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Release);
+        let mut cleanup_failed = false;
         unsafe {
             libc::tcsetattr(self.slave.as_raw_fd(), libc::TCSANOW, &self.original);
         }
@@ -371,14 +431,22 @@ impl Drop for Attachment {
                 libc::kill(-(self.child.id() as i32), libc::SIGKILL);
             }
             let _ = self.child.kill();
-            let _ = self.child.wait();
+            let reaped = reap_until(&mut self.child, Duration::from_secs(5));
+            if !reaped {
+                eprintln!("native PTY host {} was not reaped", self.child.id());
+                cleanup_failed = true;
+            }
         }
+        self.stop.store(true, Ordering::Release);
         // Reads are nonblocking; cursor-reply writes have a deadline. Join even
         // during unwinding, rather than detaching an owned worker on timeout.
         if let Some(reader) = self.reader.take()
             && reader.join().is_err()
         {
             eprintln!("native PTY drainer panicked during cleanup");
+        }
+        if cleanup_failed {
+            assert!(std::thread::panicking(), "native PTY host cleanup failed");
         }
     }
 }
@@ -499,7 +567,7 @@ fn e04s03_native_force_fences_prompt_draft_and_physical_routes_without_replay() 
     // A successful fresh ownership gesture is also the processing barrier for
     // all preceding input; do not use a sleep as proof of non-delivery.
     native.action(6);
-    native.wait("Force control?");
+    native.wait("Enter Force control");
     native.send(b"\r");
     native.owner();
     native.send(b"\r"); // old draft must not be rebound to the fresh grant

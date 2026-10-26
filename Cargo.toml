@@ -11,12 +11,13 @@ default-run = "amux"
 members = ["terminal-showcase"]
 default-members = ["."]
 resolver = "3"
+exclude = ["vendor/crossterm"]
 
 [dependencies]
 agent-client-protocol-schema = { version = "=1.12.0", default-features = false }
 alacritty_terminal = "=0.26.0"
 portable-pty = "=0.9.0"
-crossterm = "0.29"
+crossterm = "=0.29.0"
 ratatui = { version = "=0.30.0", default-features = false, features = ["crossterm_0_29", "unstable-rendered-line-info"] }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
@@ -36,3 +37,7 @@ path = "src/main.rs"
 [[example]]
 name = "acp_fixture"
 path = "tests/fixtures/acp_peer.rs"
+
+[patch.crates-io]
+# Retain pending input/SIGWINCH readiness without changing parent-shell fd flags.
+crossterm = { path = "vendor/crossterm" }

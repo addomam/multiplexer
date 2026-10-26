@@ -1,0 +1,22 @@
+story_id: e06s02
+spec: e06s02-story.md
+title: Convenient explicit ACP launch
+status: passing
+bcps: 4
+tasks:
+  - id: e06s02-T1
+    description: "Profile catalog, explicit human/automation CLI and safe settings validation"
+    verify: "cargo test --test acp e06s02_ -- --nocapture"
+    risk: P1
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: high, categories: [ACP, daily-use, Security Review]}
+  - id: e06s02-T2
+    description: "Actual native picker and built CLI launch/settings/effect/cleanup smoke"
+    verify: "cargo test --test acp native::daily_use::e06s02_native_profile_launch -- --exact --nocapture"
+    risk: P1
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: high, categories: [ACP, daily-use, Security Review]}

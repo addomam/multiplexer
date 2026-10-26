@@ -33,6 +33,19 @@ pub struct Hook {
     pub timeout_ms: u64,
 }
 
+fn empty_acp_defaults() -> Value {
+    json!({})
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AcpProfile {
+    pub label: String,
+    pub command: Vec<String>,
+    #[serde(default = "empty_acp_defaults")]
+    pub defaults: Value,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -42,6 +55,8 @@ pub struct Config {
     pub terminal_limit: usize,
     #[serde(default)]
     pub daemon_start_hooks: Vec<Hook>,
+    #[serde(default)]
+    pub acp_profiles: BTreeMap<String, AcpProfile>,
 }
 
 impl Default for Config {
@@ -54,6 +69,7 @@ impl Default for Config {
             prefix: "ctrl-b".into(),
             terminal_limit: default_terminal_limit(),
             daemon_start_hooks: Vec::new(),
+            acp_profiles: BTreeMap::new(),
         }
     }
 }
@@ -255,7 +271,8 @@ fn validate_config(config: &Config) -> Result<()> {
         letter.is_some_and(|key| key.len() == 1 && key.as_bytes()[0].is_ascii_alphabetic()),
         "prefix must be a Ctrl-letter chord (Ctrl-x, Control-x or C-x)"
     );
-    validate_hooks(&config.daemon_start_hooks)
+    validate_hooks(&config.daemon_start_hooks)?;
+    crate::acp_profiles::validate_profiles(&config.acp_profiles)
 }
 
 fn read_config_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
@@ -538,6 +555,10 @@ impl Store {
                 }
                 "daemon_start_hooks" => {
                     updated.daemon_start_hooks = serde_json::from_value(value.clone())?
+                }
+                "acp_profiles" => {
+                    updated.acp_profiles = serde_json::from_value(value.clone())
+                        .context("acp_profiles must be a map of bounded ACP launch profiles")?;
                 }
                 _ => bail!("unknown global setting: {field}"),
             }

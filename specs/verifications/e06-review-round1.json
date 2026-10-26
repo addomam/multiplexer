@@ -1,0 +1,58 @@
+{
+  "scope": "e06-only",
+  "round": 1,
+  "max_rounds": 5,
+  "verdict": "FAIL",
+  "scores": {
+    "A": 0,
+    "B": 0,
+    "security": 100
+  },
+  "reported_denominators": {
+    "A": "four actionable findings",
+    "B": "two actionable findings",
+    "security": "twelve control areas"
+  },
+  "must_fix": 1,
+  "unique_should_fix": 3,
+  "findings": [
+    {
+      "id": "E06-A01",
+      "category": "must-fix",
+      "severity": "P1",
+      "path": "src/tui/control.rs:180-185",
+      "cause": "One queued Claim performs an observation RPC then a mutating claim without rechecking pause/stop between RPCs.",
+      "disposition": "fix"
+    },
+    {
+      "id": "E06-A02",
+      "also": "B-01",
+      "category": "should-fix",
+      "severity": "P2",
+      "path": "src/tui.rs:794-796",
+      "cause": "Recovery rejects legitimate first null-to-established session transition of the same instance.",
+      "disposition": "unify one-time session establishment with exact identity validation"
+    },
+    {
+      "id": "E06-A03",
+      "category": "should-fix",
+      "severity": "P2",
+      "path": "src/tui/launch.rs:103-108,239",
+      "cause": "Blank controls claim agent defaults, but backend correctly reapplies selected profile defaults.",
+      "disposition": "preserve approved profile inheritance contract; make inherited values and blank/options semantics truthful in the dialog, without a second unset protocol"
+    },
+    {
+      "id": "E06-A04",
+      "also": "B-02",
+      "category": "should-fix",
+      "severity": "P2",
+      "path": "src/tui.rs:1063-1070",
+      "cause": "Acknowledged launch is not captured before fallible follow-up snapshot, so recovery can retarget the prior view.",
+      "disposition": "record acknowledged target immediately, before observation; never replay launch"
+    }
+  ],
+  "all_three_full_reports_read_before_source_edits": true,
+  "no_reviewer_checks_or_provider_calls": true,
+  "historical_review_caps": "unchanged",
+  "next": "repair four source issues with behavior regressions, rerun affected/full gates and fresh blind E06 round2"
+}

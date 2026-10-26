@@ -1,4 +1,5 @@
 mod acp;
+mod acp_profiles;
 pub mod cli;
 pub mod client;
 mod codex;

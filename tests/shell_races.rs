@@ -183,8 +183,9 @@ fn queued_wake_cannot_follow_typeahead_into_foreground_application() {
             .any(|window| window == b"\x1b[amux-"),
         "private wake leaked into foreground input: {bytes:?}"
     );
-    h.until(|| done.exists());
-    assert_eq!(fs::read_to_string(done).unwrap(), "QUEUED_DONE\n");
+    // Redirection creates the file before the queued builtin writes its effect.
+    // Existence alone cannot fence the subsequent content assertion.
+    h.until(|| fs::read_to_string(&done).is_ok_and(|text| text == "QUEUED_DONE\n"));
 }
 
 #[test]

@@ -1,0 +1,71 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 12,
+  "passed_items": 12,
+  "checklist": [
+    {
+      "area": "Scope, trust model and compatibility boundary",
+      "result": "PASS",
+      "evidence": "Reviewed CONVENTIONS.md, settled E06 PLAN.md lines 1–45 only, SCOPE_LATEST.yaml, E06 THREAT_MODEL.md, relevant README.md/CHANGELOG.md sections, Cargo.toml, the ACP dependency pin in Cargo.lock, and src/lib.rs. Reviewed execution as intentional same-user operator authority, not an unauthenticated argv boundary. No supported path was found that turns agent content into a new launch, shell command, filesystem operation or terminal service."
+    },
+    {
+      "area": "Explicit shell-free launch, bounded profiles and configuration persistence",
+      "result": "PASS",
+      "evidence": "Reviewed src/acp_profiles.rs:1–155, src/cli.rs:1–547, src/daemon.rs:294–515, src/projects.rs configuration validation/persistence through line 645, src/tui/launch.rs, and src/acp.rs:556–650,1370–1513; corroborating source in tests/acp/profiles.rs. Executables and argv reach Command::new/args without shell interpretation. Bare executables resolve through absolute daemon-PATH directories; invocation pathname is preserved. Closed, bounded profile/settings validation precedes reservation, and invalid configuration updates roll back rather than partially persist."
+    },
+    {
+      "area": "Exact offered settings and truthful configuration readiness",
+      "result": "PASS",
+      "evidence": "Reviewed all src/acp/settings.rs:1–664 and ACP initialization/new-session/configuration response handling in src/acp.rs:1776–2065, plus tests/acp/omp.rs. Semantic selection requires an unambiguous supported route; explicit options retain exact IDs. Conflicting aliases, unsupported choices, malformed metadata and unconfirmed configuration fail closed. Configuration-option acknowledgements must report the selected current value; legacy setters use their protocol acknowledgements. Requested, reported, unreported and later-changed settings remain distinguishable."
+    },
+    {
+      "area": "Exact target tuples, typed RPC IDs and original responder retention",
+      "result": "PASS",
+      "evidence": "Reviewed src/acp.rs target parsing, prepare/commit, typed dispatch, responder retention and scope parsing through line 2940, and unit tests through line 4239. Mutation admission checks the captured target tuple and owner generation. Numeric and string RPC IDs do not alias; wire IDs remain reserved through response transmission. Session-scoped and request-scoped callbacks retain their original session/RPC rather than borrowing the current foreground prompt. Long opaque tool IDs retain their separate 4-KiB bound."
+    },
+    {
+      "area": "Ownership transitions and original native provenance",
+      "result": "PASS",
+      "evidence": "Reviewed relevant src/control.rs registration, capability lookup, claim/offer/cancel/withdraw, original-connection view/activity/keep/consent, departure and ACP admission logic through line 2140; src/tui/control.rs:1–1916; and src/daemon.rs ACP admission. Force changes authority without a process-signal path. Ordinary pending cancellation grants nobody and retains accepted work; conditional withdrawal/keep preserves the human grant. Borrowable control capabilities do not manufacture original native connection provenance. Relevant assertions were inspected in tests/acp.rs and tests/pty_control/native.rs."
+    },
+    {
+      "area": "All application-input routes, stale authority and discarded drafts",
+      "result": "PASS",
+      "evidence": "Reviewed application key/repeat, paste, literal-prefix, mouse and local-selection routing in src/tui.rs; authority-worker queueing/stop in src/tui/control.rs; captured editor bindings in src/tui/agent.rs; daemon input routing; and src/runtime.rs input admission/write guards. Queued native application input is rechecked against retained authority before delivery. Ownership/binding loss discards local application drafts and stale interactions instead of rebinding them. Physical-route, force-confirmation and no-replay assertions were read in tests/acp/native.rs and tests/pty_control/native.rs; no tests were executed."
+    },
+    {
+      "area": "Deliberate original form/permission responses and first-winner semantics",
+      "result": "PASS",
+      "evidence": "Reviewed ACP form/schema/value validation, exact offered permission selection, peer cancellation and explicit interrupt handling; corresponding native editor/action paths in src/tui/agent.rs; tests/acp.rs; tests/acp/native/acceptance.rs; tests/acp/omp.rs; and tests/fixtures/acp_peer.rs. Responses require the original canonical interaction ID/revision and captured authority. Unsupported or invalid answers do not consume the responder. First valid admission wins; late peer cancellation does not overwrite an admitted human choice or create an interrupt. Defaults and permission highlights are not automatic submissions."
+    },
+    {
+      "area": "Exact surviving-agent recovery with a fresh observer and no replay",
+      "result": "PASS",
+      "evidence": "Reviewed src/tui.rs:743–1923, src/client.rs, original worker retirement/launch-receipt salvage in src/tui/control.rs, tests/acp/native/daily_use.rs and tests/acp/native/recovery_edges.rs. Recovery connects only to an existing daemon, validates daemon/target/instance/connection/session continuity and permits only initial null-to-established session advancement on the original tuple. It neither ensures/revives a daemon nor relaunches work, inherits old claims or automatically acquires ownership. Setup-time events are discarded; successful launch receipts identify the launched target without replaying an uncertain launch."
+    },
+    {
+      "area": "Hostile display surfaces, unsupported services and content privacy",
+      "result": "PASS",
+      "evidence": "Reviewed inert content conversion and unsupported-request dispatch in src/acp.rs, bounded rendering/editors in src/tui/agent.rs, chrome/labels in src/tui/view.rs and src/tui/launch.rs, and daemon public projections. Agent text remains display data: control/bidi sequences are neutralized, while protocol identities remain exact internally. Unadvertised filesystem/URL/terminal requests receive errors rather than execution. Detailed agent content requires explicit content inspection and is separated from public metadata/events. Hostile rendering, gap-resync and privacy assertions were inspected in tests/acp/native.rs and tests/acp.rs."
+    },
+    {
+      "area": "Bounded queues, identities, schemas, settings and retained history",
+      "result": "PASS",
+      "evidence": "Reviewed src/acp.rs frame/ingress/egress/RPC/interaction/history/call budgets, in-flight accounting, closed identity parsing and atomic capacity reservation; src/acp/settings.rs metadata/selection limits; profile/config bounds; native control-worker queues; and src/tui/agent.rs display/editor limits. Resource rejection precedes action publication, live responders are not silently evicted, and lifetime call tombstones survive ordinary completed-history eviction. Source tests cover UTF-8 byte boundaries, typed-ID reuse, response-write bookkeeping races, exhaustion and retained pending work."
+    },
+    {
+      "area": "Truthful unknown/ended state and cleanup confined to owned lifetimes",
+      "result": "PASS",
+      "evidence": "Reviewed ACP launch/publication, pipe workers, EOF/failure ordering, close/cleanup and uncertain identity handling in src/acp.rs; daemon connection departure/shutdown; src/runtime.rs original process-tree identity/cleanup consumers; and native attachment teardown. Failed delivery is not reported as agent application, and EOF does not confirm outstanding work. Cleanup joins owned workers and retains capacity for uncertain cleanup. Native PTY application settlement remains unknown/fail-closed; neither ACP completion nor force repairs it. Cleanup/sentinel/termios assertions were inspected in the frozen ACP/native tests and tests/pty_control/native.rs."
+    },
+    {
+      "area": "Opt-in live-harness source and credential-free private-run controls",
+      "result": "PASS",
+      "evidence": "Reviewed tests/acp/native/omp_live.rs and only the permitted local://e06-provider-gate.mjs and local://e06-live-launcher.sh copies. The harness checks original tuple/work/process identity and exact permission rawInput before deny/allow, attempts owned cleanup before acceptance, and bounds run parameters. The local guard checks provider/model/effort, request count, output and wall limits; the launcher uses isolated settings and explicit tools/permissions. These are static observations, not a claim that the live run passed or that a per-run cap authorizes another aggregate request."
+    }
+  ],
+  "findings": [],
+  "summary": "Fresh independent E06 round4 source-security review: no evidence-backed Must-fix, Should-fix or Consider finding survived source-to-control/sink analysis. Score is 12 passed applicable areas / 12 total × 100 = 100. Reviewed all 23 frozen code/test paths, the permitted portions of the eight listed documentation/manifests, relevant src/control.rs and src/runtime.rs consumers, and the two credential-free local harness copies. The PASS applies only to this read-only security-review scope; it does not establish complete real-OMP live acceptance or authorize integration, release or further provider execution.",
+  "limits": "Static inspection only. No edits, payload execution, commands, builds, tests, lint, formatting, runtime/CLI/version/browser/provider/network calls were performed. Supplied parent bg315 and native-smoke evidence was treated as supplied evidence, not reviewer-executed verification. Manifest hashes were read but not independently recomputed; unrelated baseline code/dependency bodies were not exhaustively audited. No earlier review reports, dispositions, self-audits, verdicts, PLAN execution amendments after line 45, credentials, auth databases, real raw wire/session/provider material, private temporary fixtures or unrelated worktrees were consulted. Complete live OMP acceptance remains NOT passed: supplied accounting is eight actual requests spent of aggregate nine, one remaining, with no fresh run authorized. This report changes no historical review caps, provider budget or parent integration authority."
+}

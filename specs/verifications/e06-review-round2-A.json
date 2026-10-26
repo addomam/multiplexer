@@ -1,0 +1,99 @@
+{
+  "scope": "e06-only",
+  "round": 2,
+  "source": "specs/verifications/e06-review-round2-source.json",
+  "agent": "E06BlindA2",
+  "report": {
+    "verdict": "FAIL",
+    "score": 92.85714285714286,
+    "total_items": 14,
+    "passed_items": 13,
+    "checklist": [
+      {
+        "area": "Ownership admission, force, cancellation and conditional handoff",
+        "result": "PASS",
+        "evidence": "Traced daemon ACP dispatch through Broker::prepare/commit and the existing control registry. Force remains authority-only; pending cancellation and conditional keep/withdraw retain their established semantics and admitted work."
+      },
+      {
+        "area": "Original native connection authority and physical input routing",
+        "result": "PASS",
+        "evidence": "Reviewed NativeControl worker routing, captured grants, application-input gates, warning/consent handling and original-connection checks in src/control.rs. ACP events are consumed without raw PTY fallback."
+      },
+      {
+        "area": "Compound claim liveness across pause and shutdown",
+        "result": "PASS",
+        "evidence": "src/tui/control.rs rechecks stop and heartbeat after claim observation and before ownership-claim. Connection::drop shuts down the owning socket. The controlling-PTY regression holds the actual compound observation and verifies no ownership mutation reaches the daemon."
+      },
+      {
+        "area": "Initial session establishment and strict target identity",
+        "result": "PASS",
+        "evidence": "Resume::validate permits only null-to-established session identity on the same daemon/view/instance/connection. The stale snapshot-to-inspect path refreshes observation without retrying a mutation; dedicated source regressions cover establishment both during disconnection and between snapshot and inspect."
+      },
+      {
+        "area": "Profile resolution, configuration and persistence",
+        "result": "PASS",
+        "evidence": "Reviewed src/acp_profiles.rs and projects configuration integration: bounded closed defaults, existing configuration persistence, shell-free executable resolution, explicit unavailable-profile rejection and argv-free profile discovery."
+      },
+      {
+        "area": "Human CLI and native picker launch routing",
+        "result": "PASS",
+        "evidence": "Traced AcpStart through request_for, tui::start, NativeControl::launch, daemon acp-open and broker reservation/start. Optional CLI fields are removed by request_for; the native worker supplies its original controller. Picker requests use actual project IDs."
+      },
+      {
+        "area": "Acknowledged launch failure-atomic continuity",
+        "result": "FAIL",
+        "evidence": "src/tui.rs exits on pause/socket loss before consuming a queued successful launch receipt, and also checks authority connectivity after poll but before take_launched. NativeControl::stop then clears the receipt. See E06-R2-01."
+      },
+      {
+        "area": "Capability-backed settings and prompt readiness",
+        "result": "PASS",
+        "evidence": "Reviewed settings validation, advertised-ID resolution, ordered original configuration RPCs, acknowledgement checks and mismatch/rejection handling. Prompt admission remains blocked until configuration reaches readiness; no fallback setter or unadvertised model is introduced."
+      },
+      {
+        "area": "Settings presentation and inheritance honesty",
+        "result": "PASS",
+        "evidence": "Configuration projections distinguish requested/reported values and unreported defaults, and track later displacement. The native editor disclaims permission guarantees; the launch dialog documents inherited values and option merging."
+      },
+      {
+        "area": "OMP cancellation and opaque tool identities",
+        "result": "PASS",
+        "evidence": "Traced Configure RPC dispatch/results, configuration notifications, $/cancel_request and enlarged tool-call IDs through tool updates, elicitation and permission consumers. Cancellation uses the exact typed responder ID and cannot replace an already admitted winner."
+      },
+      {
+        "area": "Reconnect, stale state disposal and no implicit reacquisition",
+        "result": "PASS",
+        "evidence": "Outside the launch-receipt defect, recovery stops the old worker, constructs fresh native provenance, drains intercepted events, resets local editor/control state, disables auto-acquisition and connects only to the existing socket. Tests address each original transport independently."
+      },
+      {
+        "area": "Ended/replaced target and daemon boundaries",
+        "result": "PASS",
+        "evidence": "Resume validation rejects changed daemon identity, known-session replacement, missing targets and ended original instances rather than selecting a same-name replacement. Recovery does not call ensure_daemon or launch another agent."
+      },
+      {
+        "area": "Budgets, cleanup and privacy",
+        "result": "PASS",
+        "evidence": "Reviewed new profile/settings limits against existing frame, interaction, RPC and process-lifecycle accounting; cancellation retains its original responder. Test cleanup retains explicit pre-fallback process/worker/termios/sentinel assertions, and the live driver avoids formatting private provider content."
+      },
+      {
+        "area": "Regression quality, documentation and applicability",
+        "result": "PASS",
+        "evidence": "Reviewed the frozen production/test paths and relevant README, changelog, conventions, manifests, scope, plan contracts and threat model. New tests drive actual client/daemon/PTY paths with observable effects. The launch-loss regression specifically cuts the receipt-following snapshot, leaving the earlier receipt-consumption window uncovered; that gap is included in E06-R2-01 rather than counted as another defect."
+      }
+    ],
+    "findings": [
+      {
+        "id": "E06-R2-01",
+        "category": "Must-fix",
+        "priority": "P1",
+        "file": "/Users/addomam/projects/amux-integration-api/src/tui.rs",
+        "line": 1068,
+        "title": "Preserve acknowledged launch receipts before fencing a lost connection",
+        "impact": "A successfully launched live agent can be abandoned by the attachment even though the native worker has already parsed its successful acp-open reply. Picker recovery returns to the previous view; the default human CLI launch can instead recover its empty pre-launch target and display Ended, while the newly created agent remains running under the departed controller.",
+        "evidence": "The worker sends successful Op::Launch results through its reply channel (src/tui/control.rs:298-305), and received stores the exact target in self.launched (lines 620-626). However, attached returns on pause or either socket failure before polling that channel (src/tui.rs:1039-1049). There is a second loss window at lines 1068-1073: poll can consume the launch success and then a subsequent transport error/channel disconnection, but the connectivity return occurs before take_launched at line 1074. In both cases Resume still describes the old/empty active view, and authority.stop clears self.launched at src/tui/control.rs:374. The existing launch-loss regression deliberately cuts only the snapshot sent after the UI has consumed the receipt, so it does not exercise either ordering.",
+        "fix": "Persist successfully acknowledged launch identity independently of usable authority, including on the pause/connection-loss teardown path, before stop discards local replies. Drain or retain only the launch receipt for continuity; do not process/replay queued authority or repeat acp-open. Add a causal regression that lets the worker publish launch success, then loses either transport before the UI consumes it, and verifies recovery selects that exact newly launched instance once."
+      }
+    ],
+    "summary": "Blind source review FAIL: one must-fix launch-continuity race remains. Thirteen of fourteen applicable control areas passed source inspection (92.86%); the failed area can lose a successful launch receipt during connection or pause fencing. No separate style, documentation-only or speculative findings are reported.",
+    "limits": "Read-only E06 round-2 source review against base 2195b05 and the frozen manifest, including relevant existing consumers. No edits, builds, tests, linters, formatters, runtime/version probes, browser activity or provider calls were performed. The finding is established by source-level ordering, not a newly executed reproduction. Supplied runtime results were not rerun or treated as independent verification; complete real-OMP/live acceptance remains unproved and no additional live request was consumed. Historical E03/E04/E05 gates and caps are unchanged. No prior review reports, repair dispositions or self-audits were used."
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "yaml": [
+    {
+      "path": "specs/state.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/execution-status.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/release-plan.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/product/SCOPE_LATEST.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e05-thin-tool-integration/epic.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e05-thin-tool-integration/context.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e06-acp-daily-use/epic.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e06-acp-daily-use/e06s01-tasks.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e06-acp-daily-use/e06s02-tasks.yaml",
+      "valid": true
+    },
+    {
+      "path": "specs/epics/e06-acp-daily-use/e06s03-tasks.yaml",
+      "valid": true
+    }
+  ],
+  "stories": [
+    {
+      "id": "e06s01",
+      "numbered_sections": 20
+    },
+    {
+      "id": "e06s02",
+      "numbered_sections": 20
+    },
+    {
+      "id": "e06s03",
+      "numbered_sections": 20
+    }
+  ],
+  "tasks": 7,
+  "runnable_syntax": [
+    "e06s01-T1",
+    "e06s01-T2",
+    "e06s02-T1",
+    "e06s02-T2",
+    "e06s03-T1",
+    "e06s03-T2",
+    "e06s03-T3"
+  ],
+  "installed_consistency": {
+    "exit": 0,
+    "critical": 0,
+    "high": 0,
+    "med": 0
+  },
+  "runtime_acceptance": false,
+  "lsp": "analyzerStatus confirms worktree file not in any crate; linked root is original dirty checkout; no caller count claim"
+}

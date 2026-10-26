@@ -24,8 +24,15 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 mod grok;
+mod settings;
+
+/// Validate launch/profile defaults without allocating a runtime session.
+pub(crate) fn validate_requested_settings(requested: &Value) -> Result<()> {
+    settings::validate_requested(requested)
+}
 
 const FRAME: usize = 1024 * 1024;
+const TOOL_CALL_ID: usize = 4 * 1024;
 const QUEUE_BYTES: usize = 4 * 1024 * 1024;
 const INGRESS: usize = 64;
 const EGRESS: usize = 128;
@@ -185,6 +192,7 @@ impl Interaction {
 enum RpcKind {
     Initialize,
     NewSession,
+    Configure,
     Authenticate,
     Prompt,
 }
@@ -258,12 +266,18 @@ struct State {
     auth: Vec<(String, &'static str)>,
     agent: Value,
     agent_content: Value,
+    configuration: settings::Configuration,
     stderr: Vec<u8>,
     stderr_truncated: bool,
 }
 
 impl State {
+    #[cfg(test)]
     fn new() -> Self {
+        Self::configured(settings::Configuration::default())
+    }
+
+    fn configured(configuration: settings::Configuration) -> Self {
         Self {
             lifecycle: "starting",
             started: false,
@@ -297,6 +311,7 @@ impl State {
             auth: Vec::new(),
             agent: Value::Null,
             agent_content: Value::Null,
+            configuration,
             stderr: Vec::new(),
             stderr_truncated: false,
         }
@@ -396,6 +411,7 @@ impl State {
             "closing"
         };
         self.failure = failure;
+        self.configuration.ended();
         self.foreground = None;
         for work in &mut self.work {
             if !work.done {
@@ -543,6 +559,7 @@ impl Broker {
         name: &str,
         cwd: &Path,
         command: Vec<String>,
+        settings: Value,
     ) -> Result<Value> {
         ensure!(
             cwd.is_absolute() && !command.is_empty() && Path::new(&command[0]).is_absolute(),
@@ -558,6 +575,7 @@ impl Broker {
             valid_id(project_id) && name.len() <= 256,
             "invalid-request: ACP descriptor budget"
         );
+        let configuration = settings::Configuration::new(settings)?;
         let mut inner = self.inner.lock();
         ensure!(!inner.stopped, "target-ended: ACP broker stopped");
         // Reserve event space for every concurrently finishing instance's eviction.
@@ -594,7 +612,7 @@ impl Broker {
             name: inert(name),
             cwd: cwd.to_owned(),
             command,
-            state: Mutex::new(State::new()),
+            state: Mutex::new(State::configured(configuration)),
             wake: Condvar::new(),
             worker: Mutex::new(None),
             cleanup: Mutex::new(()),
@@ -1175,7 +1193,8 @@ impl Instance {
 
     fn descriptor(&self, state: &State) -> Value {
         json!({"id":self.id,"kind":"acp","instance_id":self.instance_id,"connection_generation":1,
-            "session_id":state.session,"project_id":self.project_id,"name":self.name,"lifecycle":state.lifecycle,"seq":state.seq})
+            "session_id":state.session,"project_id":self.project_id,"name":self.name,"lifecycle":state.lifecycle,"seq":state.seq,
+            "configuration":state.configuration.projection()})
     }
 
     fn projection(&self, state: &State) -> Value {
@@ -1193,6 +1212,7 @@ impl Instance {
             "foreground":state.foreground.as_ref().map(|(id,cancelling)| json!({"prompt_id":id,"state":if *cancelling {"cancelling"} else {"active"}})),
             "work":work,"interactions":state.interactions.iter().map(Interaction::metadata).collect::<Vec<_>>(),
             "agent":state.agent,"authentication":auth_projection(state),
+            "configuration":state.configuration.projection(),
             "cursor":state.seq,"gap":state.evicted_through > 0,
             "truncation":{"through":state.evicted_through,"completed_work":state.completed_evicted,"interactions":state.interactions_evicted},
             "resource":{"failure":state.failure,"stderr_truncated":state.stderr_truncated,
@@ -1787,7 +1807,25 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
             incoming_request(state, &method, request)?;
             return Ok(());
         }
+        if method == "$/cancel_request" {
+            cancel_incoming(state, &message["params"])?;
+            return Ok(());
+        }
         if method == "session/update" {
+            // Inspect configuration before the schema's default-on-error
+            // metadata decoding can silently discard an invalid advertised ID.
+            if matches!(
+                message["params"]["update"]["sessionUpdate"].as_str(),
+                Some("current_mode_update" | "config_option_update")
+            ) {
+                ensure!(
+                    state.session.as_deref() == message["params"]["sessionId"].as_str(),
+                    "transport-failed: wrong update session"
+                );
+                state.configuration.update(&message["params"]["update"])?;
+                state.changed();
+                return Ok(());
+            }
             let update: acp::SessionNotification = decode(message["params"].take())?;
             ensure!(
                 state.session.as_deref() == Some(update.session_id.0.as_ref()),
@@ -1805,14 +1843,14 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
                 }
                 acp::SessionUpdate::ToolCall(tool) => {
                     ensure!(
-                        valid_id(tool.tool_call_id.0.as_ref()),
+                        valid_tool_call_id(tool.tool_call_id.0.as_ref()),
                         "transport-failed: invalid ACP tool identity"
                     );
                     state.event("tool", json!({"tool_call_id":tool.tool_call_id,"details":inert_value(serde_json::to_value(&tool)?)}));
                 }
                 acp::SessionUpdate::ToolCallUpdate(tool) => {
                     ensure!(
-                        valid_id(tool.tool_call_id.0.as_ref()),
+                        valid_tool_call_id(tool.tool_call_id.0.as_ref()),
                         "transport-failed: invalid ACP tool identity"
                     );
                     state.event("tool", json!({"tool_call_id":tool.tool_call_id,"details":inert_value(serde_json::to_value(&tool)?)}));
@@ -1895,6 +1933,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
             None
         }
         (RpcKind::NewSession, Ok(value)) => {
+            state.configuration.session(&value)?;
             let session: acp::NewSessionResponse = decode(value)?;
             let session_id = session.session_id.0.to_string();
             ensure!(
@@ -1902,8 +1941,17 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
                 "transport-failed: invalid ACP session identity"
             );
             state.session = Some(session_id);
-            state.lifecycle = "ready";
+            configure_next(state)?;
             None
+        }
+        (RpcKind::Configure, Ok(value)) => {
+            state.configuration.acknowledge(&value)?;
+            configure_next(state)?;
+            None
+        }
+        (RpcKind::Configure, Err(_)) => {
+            state.configuration.fail("setting-rejected");
+            bail!("unsupported: ACP startup setting rejected");
         }
         (RpcKind::NewSession, Err(error)) if i32::from(error.code) == -32000 => {
             state.lifecycle = "auth-required";
@@ -1966,6 +2014,62 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
     if let Some(error) = follow_up_error {
         return Err(error);
     }
+    Ok(())
+}
+
+fn configure_next(state: &mut State) -> Result<()> {
+    let session = state
+        .session
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!("transport-failed: ACP configuration session missing"))?;
+    if let Some(request) = state.configuration.next(session)? {
+        state.lifecycle = "starting";
+        if let Err(error) = state.rpc(request, RpcKind::Configure, None) {
+            state.configuration.fail("setting-dispatch");
+            return Err(error);
+        }
+    } else {
+        state.lifecycle = "ready";
+    }
+    Ok(())
+}
+
+// OMP's original permission request can be withdrawn by agent steering.
+// This is not a human answer, an ownership operation or a prompt interrupt.
+// The same state lock orders withdrawal against an already admitted response.
+fn cancel_incoming(state: &mut State, params: &Value) -> Result<()> {
+    let Some(raw) = params.get("requestId") else {
+        return Ok(());
+    };
+    let Ok(id) = acp::RequestId::deserialize(raw) else {
+        return Ok(());
+    };
+    if validate_rpc_id(&id).is_err() {
+        return Ok(());
+    }
+    let Some(index) = state.interactions.iter().position(|interaction| {
+        interaction.wire_id == id
+            && interaction.state == "pending"
+            && !interaction.responding
+            && state
+                .responders
+                .get(&id)
+                .and_then(|responder| responder.interaction.as_deref())
+                == Some(interaction.id.as_str())
+    }) else {
+        return Ok(());
+    };
+    let mut frame = encode(
+        acp::Response::<Value>::new(id.clone(), Err(acp::Error::request_cancelled())),
+        None,
+    )?;
+    frame.response_id = Some(id);
+    state.capacity(std::slice::from_ref(&frame), false)?;
+    let interaction = &mut state.interactions[index];
+    interaction.state = "cancelled";
+    interaction.responding = true;
+    state.enqueue(frame);
+    state.changed();
     Ok(())
 }
 
@@ -2132,7 +2236,7 @@ fn parse_form(state: &State, mut params: Value) -> Result<ParsedInteraction> {
     );
     if let Some(tool) = params.get("toolCallId").filter(|v| !v.is_null()) {
         ensure!(
-            params.get("sessionId").is_some() && tool.as_str().is_some_and(valid_id),
+            params.get("sessionId").is_some() && tool.as_str().is_some_and(valid_tool_call_id),
             "invalid-request: ACP elicitation tool identity"
         );
     }
@@ -2174,7 +2278,7 @@ fn parse_permission(state: &State, params: Value) -> Result<ParsedInteraction> {
     let permission: acp::RequestPermissionRequest = decode(params)?;
     ensure!(
         state.session.as_deref() == Some(permission.session_id.0.as_ref())
-            && valid_id(permission.tool_call.tool_call_id.0.as_ref()),
+            && valid_tool_call_id(permission.tool_call.tool_call_id.0.as_ref()),
         "invalid-request: ACP permission scope"
     );
     ensure!(
@@ -2694,6 +2798,11 @@ fn optional_u64(request: &Value, field: &str, default: u64) -> Result<u64> {
 fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 256 && !id.chars().any(char::is_control)
 }
+fn valid_tool_call_id(id: &str) -> bool {
+    // Provider tool IDs may include opaque Responses item handles. Preserve
+    // the complete identity; local setting/session/RPC budgets stay unchanged.
+    !id.is_empty() && id.len() <= TOOL_CALL_ID && !id.chars().any(char::is_control)
+}
 fn fresh(prefix: &str) -> String {
     format!("{prefix}-{}", Uuid::new_v4().simple())
 }
@@ -2793,6 +2902,7 @@ mod tests {
                 "unit boundary",
                 Path::new("/tmp"),
                 vec!["/bin/false".into()],
+                json!({}),
             )
             .unwrap();
         let instance = broker.instance(descriptor["id"].as_str().unwrap()).unwrap();
@@ -3279,6 +3389,7 @@ mod tests {
                     "retired",
                     Path::new("/tmp"),
                     vec!["/bin/false".into()],
+                    json!({}),
                 )
                 .unwrap();
             broker.end(ended["id"].as_str().unwrap());
@@ -3294,6 +3405,7 @@ mod tests {
                     "reserved",
                     Path::new("/tmp"),
                     vec!["/bin/false".into()],
+                    json!({}),
                 )
                 .unwrap();
         }
@@ -3303,6 +3415,7 @@ mod tests {
                 "over capacity",
                 Path::new("/tmp"),
                 vec!["/bin/false".into()],
+                json!({}),
             )
             .unwrap_err();
         assert!(error.to_string().starts_with("capacity-exceeded:"));
@@ -4073,5 +4186,53 @@ mod tests {
         assert!(state.interactions.iter().all(|i| i.state == "unknown"));
         assert_eq!(state.work[0].state, "completed");
         assert_eq!(state.work[1].state, "unknown");
+    }
+
+    #[test]
+    fn e06s01_peer_cancellation_preserves_wire_id_type_and_admitted_winner() {
+        let (broker, instance, target) = ready_broker();
+        let interaction = {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, json!({"id":91,"method":"session/request_permission","params":{
+                "sessionId":"session","toolCall":{"toolCallId":"original-tool"},
+                "options":[{"optionId":"original-allow","name":"Allow once","kind":"allow_once"}]}})).unwrap();
+            cancel_incoming(&mut state, &json!({"requestId":"91"})).unwrap();
+            assert_eq!(
+                state.interactions[0].state, "pending",
+                "string ID is not numeric ID"
+            );
+            state.interactions[0].metadata()
+        };
+        let request = json!({"op":"acp-permission","target":target,"control":{"kind":"control","ref":"unit"},
+            "owner_generation":7,"call_id":"original-winner","interaction_id":interaction["interaction_id"],
+            "revision":1,"option_id":"original-allow"});
+        let admitted = broker
+            .commit(
+                broker
+                    .prepare("acp-permission", &request, "controller")
+                    .unwrap(),
+                7,
+            )
+            .unwrap();
+        let mut state = instance.state.lock();
+        let queued = state.output_count;
+        let selected = state.interactions[0].selection.clone();
+        cancel_incoming(&mut state, &json!({"requestId":91})).unwrap();
+        assert_eq!(
+            state.output_count, queued,
+            "late withdrawal must not answer twice"
+        );
+        assert_eq!(state.interactions[0].state, "selected");
+        assert_eq!(state.interactions[0].selection, selected);
+        assert_eq!(
+            state.interactions[0].selected_work.as_deref(),
+            admitted["work_id"].as_str()
+        );
+        assert!(
+            state
+                .work
+                .iter()
+                .all(|work| work.operation != "acp-interrupt")
+        );
     }
 }

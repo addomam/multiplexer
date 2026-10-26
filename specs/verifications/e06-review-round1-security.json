@@ -1,0 +1,80 @@
+{
+  "scope": "e06-acp-daily-use-only",
+  "round": 1,
+  "source": "specs/verifications/e06-review-round1-source.json",
+  "agent": "E06Security1",
+  "report": {
+    "coverage_summary": "VERDICT: PASS — independent E06 security source review only; not overall E06 runtime/live acceptance.\n\nScope: feat/acp-daily-use, supplied base 2195b05adf23ae26a80065ecdd6d9196e2915998 and round-1 frozen manifest. Targeted security tracing covered all 22 listed code files, the eight frozen documentation/manifest files, required epic/story/task/audit documents, and both credential-free guard/launcher copies. No supported introduced security finding survived source-to-sink tracing and nearby-control inspection.\n\nScoring: total_items=12 security review checks listed below; must_fix=[]; should_fix=[]; consider=[]. Score=100*(12-0-0)/12=100. No must-fix items and score>=94 satisfy the source-review PASS threshold. These are reviewed control areas, not 12 vulnerability findings.\n\nEvidence-backed control coverage:\n1. Launch injection/provenance: CLI/picker requests reach daemon profile preparation and Broker reservation, then Command::new plus argv, not a shell. Executables are resolved through absolute PATH directories/canonical executable files; raw launch retains its absolute-executable requirement. References: src/acp_profiles.rs:24-150; src/daemon.rs:294-486; src/acp.rs:1371-1404. Trusted same-user profile argv, cwd and PATH are not treated as attacker-controlled injection.\n2. Configuration boundaries: profile count, labels, argv size and closed settings are validated before runtime reservation. Global configuration patches validate a candidate before replacing/persisting current configuration. References: src/acp_profiles.rs:24-60; src/acp/settings.rs:7-37; src/projects.rs:531-573. Catalog projection exposes id/label/availability/defaults, not adapter argv/environment: src/acp_profiles.rs:93-102.\n3. Startup settings: requested model/mode/effort/options resolve against advertised exact choices; unsupported, ambiguous or conflicting requests fail. Configuration acknowledgements precede ready/prompt admission, with final mismatch detection and no rejected-setter fallback. References: src/acp/settings.rs:299-462; src/acp.rs:1935-1955,2020-2034,796-813.\n4. Reporting/policy truth: requested and reported settings remain separate; later displacement is marked changed. Native rendering sanitizes displayed settings and explicitly disclaims interpreting mode as permission policy. References: src/acp/settings.rs:209-223,261-296; src/tui/agent.rs:270-302; README.md:97.\n5. Application authorization: daemon authorization encloses Broker commit; commit checks the complete target tuple, captured owner generation and duplicate call identity. Permission selection must match an exact offered option. References: src/daemon.rs:490-509; src/acp.rs:770-795,928-950,1181-1191. No cross-target control substitution path was identified.\n6. Callback/cancellation identity: session/request scope and retained original responders govern interactions. Peer cancellation matches typed request IDs and only a pending, unadmitted responder; an admitted selection remains the winner. References: src/acp.rs:2040-2099,2217-2315; src/acp.rs:4192-4238. The string/numeric-ID and late-cancellation regression source asserts those distinctions.\n7. Opaque upstream IDs: the separate 4-KiB bound is used for tool notifications, updates, forms and permissions without truncation; local IDs retain 256-byte bounds. References: src/acp.rs:1844-1856,2237-2241,2277-2282,2798-2804. tests/fixtures/acp_peer.rs:866-938 exercises long original identities across those routes.\n8. Lost transport/replies: ConnectionError distinguishes uncertain transport from explicit daemon rejection. Native work captures its original authority; transport failure stops the old worker rather than replaying it. Shutdown closes the original stream and joins the worker. References: src/client.rs:31-165; src/tui/control.rs:175-304,351-364; src/tui.rs:1870-1877.\n9. Recovery/retargeting: recovery registers fresh native provenance, disables automatic acquisition, drains accumulated events and checks daemon_id plus the original complete ACP tuple. Ended/missing/replaced targets do not select same-name replacements. Recovery uses existing socket connections, not ensure_daemon. References: src/tui.rs:771-842,905-978; src/tui/control.rs:337-339. CLI startup and in-process recovery are distinct paths.\n10. Pause/consent/Force: wall-clock gaps and rollback conservatively fence paused clients; the worker checks the UI heartbeat before queued work. Force confirmation requires successful full-warning presentation plus drained input, and early Enter is consumed rather than retained. References: src/tui.rs:33-38,1027-1040,1249-1270; src/tui/control.rs:175-185,1040-1071,1212-1223,1479-1588. Native queued/clipped/stale-owner negative cases remain in tests/pty_control/native.rs:674-765.\n11. Privacy/resources: metadata inspection omits interaction details/selections unless content is explicitly requested; ACP display paths escape control/bidi content. Frame, queue, setting and interaction budgets remain bounded. Original process/pipe ownership, cancellation, worker joins and uncertain-cleanup charging remain explicit. References: src/acp.rs:129-148,320-402,1031-1093,1371-1573,1612-1674,2812-2851; src/tui/agent.rs:2289-2320. No new auth/body logging sink was identified in the reviewed launch/settings paths.\n12. Credential-free live guard/launcher: local://e06-provider-gate.mjs:45-93 restricts fetch routes/model/effort, rejects redirects, clamps requested output to 2000, checks deadlines, and synchronously checks/increments the single ledger maximum before network dispatch. Its counter check uses ledger.max_model_requests, not the old stricter literal. Ledger serialization contains counts/settings/categories, not auth or request bodies. local://e06-live-launcher.sh:3-17 clears the environment, supplies private HOME/XDG/session locations, disables ambient extensions/skills/rules/LSP/PTY, requests always-ask permissions and bounds wall time. tests/acp/native/omp_live.rs:327-570 checks exact confined helper commands before permission selection; lines696-760 require budget evidence and report fixed categories/booleans rather than raw provider content. This is the narrow approved harness path, not a claim that a fetch preload is a general hostile-code sandbox.\n\nBehavior-test source was inspected for settings rejection, exact effects/identity, stale-control rejection, independent transport loss, paused-client drafts, replacement daemon/agent rejection and normal cleanup/sentinel preservation. The revised native unknown-state regression retains fresh-observer, original-owner/PID and intercepted-input assertions at tests/pty_control/native.rs:1707-1725. Security-relevant conventions/design remain the existing bounded broker/authority model, not E05 or a new generic plugin/protocol abstraction.\n\nExclusions: trusted local same-user arbitrary argv/config; speculative races or bypasses without an attacker-reachable impact path; unrelated/preexisting issues; and the acknowledged historical terminal-only settlement limitation. No other current reviewer report was read.\n\nExecution/privacy attestation: I did not edit files, run programs, build, test, lint, format, execute payloads, invoke providers/auth, or make network calls. I opened no actual private auth/database/session/log fixture and did not follow paths from the credential-free copies into private storage. All verification/provider outcomes supplied by the parent remain attributed evidence, not checks performed by me.",
+    "findings": [],
+    "reviewed_paths": [
+      "src/acp.rs",
+      "src/acp/settings.rs",
+      "src/acp_profiles.rs",
+      "src/cli.rs",
+      "src/client.rs",
+      "src/daemon.rs",
+      "src/lib.rs",
+      "src/projects.rs",
+      "src/tui.rs",
+      "src/tui/agent.rs",
+      "src/tui/control.rs",
+      "src/tui/launch.rs",
+      "src/tui/view.rs",
+      "tests/acp.rs",
+      "tests/acp/native.rs",
+      "tests/acp/native/acceptance.rs",
+      "tests/acp/native/daily_use.rs",
+      "tests/acp/native/omp_live.rs",
+      "tests/acp/omp.rs",
+      "tests/acp/profiles.rs",
+      "tests/fixtures/acp_peer.rs",
+      "tests/pty_control/native.rs",
+      "README.md",
+      "CHANGELOG.md",
+      "CONVENTIONS.md",
+      "Cargo.toml",
+      "Cargo.lock",
+      "specs/epics/e06-acp-daily-use/PLAN.md",
+      "specs/epics/e06-acp-daily-use/epic.yaml",
+      "specs/epics/e06-acp-daily-use/e06s01-story.md",
+      "specs/epics/e06-acp-daily-use/e06s02-story.md",
+      "specs/epics/e06-acp-daily-use/e06s03-story.md",
+      "specs/epics/e06-acp-daily-use/e06s01-tasks.yaml",
+      "specs/epics/e06-acp-daily-use/e06s02-tasks.yaml",
+      "specs/epics/e06-acp-daily-use/e06s03-tasks.yaml",
+      "specs/product/SCOPE_LATEST.yaml",
+      "specs/security/epics/e06/THREAT_MODEL.md",
+      "specs/verifications/AUDIT-e06-build.md",
+      "specs/verifications/e06-review-round1-source.json",
+      "local://e06-provider-gate.mjs",
+      "local://e06-live-launcher.sh"
+    ],
+    "deferred": [
+      {
+        "reason": "Overall live acceptance remains failed/incomplete according to the supplied evidence: eight actual requests used against aggregate approval of nine; no further live execution is authorized. The historical stricter guard blocked final generation. The reviewed copy now uses the single declared maximum; the old failed acceptance is not reported as an unfixed production vulnerability, and source review does not convert the repaired guard or ACP end_turn into successful live generation.",
+        "paths": [
+          "specs/epics/e06-acp-daily-use/PLAN.md",
+          "specs/security/epics/e06/THREAT_MODEL.md",
+          "tests/acp/native/omp_live.rs",
+          "local://e06-provider-gate.mjs"
+        ]
+      },
+      {
+        "reason": "Actual credential contents, installed-provider implementation, private filesystem state and enforcement of the launcher on a live process were intentionally not inspected or exercised. Physical machine suspend, Linux and minimum-toolchain behavior are also outside this read-only source review.",
+        "paths": [
+          "local://e06-live-launcher.sh",
+          "tests/acp/native/omp_live.rs",
+          "src/tui.rs",
+          "src/tui/control.rs"
+        ]
+      },
+      {
+        "reason": "Branch/base and frozen SHA256 identities were accepted from the supplied scope manifest and parent freeze attestation; no git program or hash recomputation was run. Targeted source inspection is not an independent reproduction of the parent's runtime, regression or integrity checks.",
+        "paths": [
+          "specs/verifications/e06-review-round1-source.json",
+          "specs/verifications/AUDIT-e06-build.md"
+        ]
+      }
+    ]
+  }
+}

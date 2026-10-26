@@ -1,0 +1,11 @@
+{
+  "verdict": "FAIL",
+  "total_items": 32,
+  "score": 93.75,
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [],
+  "reviewed_files": [],
+  "summary": "",
+  "verification_limits": ""
+}

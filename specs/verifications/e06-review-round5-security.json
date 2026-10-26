@@ -1,0 +1,111 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 20,
+  "passed_items": 20,
+  "checklist": [
+    {
+      "area": "Frozen production-path coverage",
+      "result": "PASS — static review",
+      "evidence": "Inspected all 13 production paths for the assigned security scope: src/acp.rs, src/acp/settings.rs, src/acp_profiles.rs, src/cli.rs, src/client.rs, src/daemon.rs, src/lib.rs, src/projects.rs, src/tui.rs, src/tui/agent.rs, src/tui/control.rs, src/tui/launch.rs and src/tui/view.rs. Followed narrowly related unchanged ownership and process-identity contracts in src/control.rs and src/runtime.rs."
+    },
+    {
+      "area": "Frozen test-path coverage",
+      "result": "PASS — source inspection only",
+      "evidence": "Inspected tests/acp.rs, tests/acp/native.rs, tests/acp/native/acceptance.rs, tests/acp/native/daily_use.rs, tests/acp/native/omp_live.rs, tests/acp/omp.rs, tests/acp/profiles.rs, tests/fixtures/acp_peer.rs, tests/pty_control/native.rs, tests/acp/native/recovery_edges.rs and tests/shell_races.rs. Reviewed security assertions, fault seams, fixture trust boundaries and cleanup oracles; none were executed."
+    },
+    {
+      "area": "Frozen documentation and requirement coverage",
+      "result": "PASS — static review",
+      "evidence": "Inspected README.md, CHANGELOG.md, CONVENTIONS.md, Cargo.toml, Cargo.lock, specs/epics/e06-acp-daily-use/PLAN.md:1-45 only, specs/product/SCOPE_LATEST.yaml and specs/security/epics/e06/THREAT_MODEL.md. Read the sealed specs/verifications/e06-review-round5-source.json manifest and E06 story requirements. Did not follow historical review/runtime/handoff references or reopen E05."
+    },
+    {
+      "area": "Authority admission and revocation ordering",
+      "result": "PASS — no supported bypass found",
+      "evidence": "src/daemon.rs:490-509 authorizes the capability and commits prepared ACP actions through Authority::admit_acp. src/control.rs:1194-1215 holds the authority boundary while validating the current generation; src/acp.rs:768 onward rechecks exact target/state and reserves resources before publishing work. An action prepared before transfer cannot gain admission using the revoked generation."
+    },
+    {
+      "area": "Exact target, capability and responder identities",
+      "result": "PASS — fail-closed identity checks",
+      "evidence": "src/acp.rs uses a closed target tuple including kind, target ID, instance ID, connection generation and explicitly present session ID. Interaction answers also require the retained interaction ID and revision. Typed JSON-RPC IDs and responder write stamps prevent numeric/string aliasing and premature responder reuse. Relevant negative assertions appear in tests/acp.rs:526-555,1614-1660 and src/acp.rs:3776-4239."
+    },
+    {
+      "area": "Ownership transfer and pending-claim cancellation",
+      "result": "PASS — admitted work remains independent",
+      "evidence": "Inspected Registry claim/offer handling in src/control.rs and ACP work admission/delivery in src/acp.rs. Force changes ownership without implicitly dispatching session/cancel or process termination. Ordinary pending-claim cancellation grants nobody while retaining admitted work and unanswered interactions. tests/acp.rs:558-615,1943-1997,2221-2410 assert these distinctions, including stale handles against later reservations."
+    },
+    {
+      "area": "Original-connection consent, keep and withdrawal",
+      "result": "PASS — human provenance preserved",
+      "evidence": "src/control.rs checks original connected native provenance separately from intentionally transferable bearer control. src/tui/control.rs requires current warning facts, rendered visibility and fresh input before consent/force confirmation. Keep and withdrawal retain human control without silently rearming external policy. tests/acp.rs:2632-2860 and tests/pty_control/native.rs:875-1013 explicitly assert provenance, revision, clock and unknown-settlement behavior."
+    },
+    {
+      "area": "Application-input routes and no replay",
+      "result": "PASS — gated routes traced",
+      "evidence": "Inspected top-level key/repeat, literal-prefix, paste, mouse, gesture-tail and focus routing in src/tui.rs, ownership interception in src/tui/control.rs, and ACP editing/submission in src/tui/agent.rs. ACP targets do not fall through to PTY byte input. Drafts bind to the captured exact target and grant; changing authority discards them. Definite non-admission permits deliberate correction, not automatic resubmission; transport ambiguity does not restore pending submissions."
+    },
+    {
+      "area": "Dual-connection and suspended-UI dispatch fencing",
+      "result": "PASS — independent worker fence present",
+      "evidence": "src/tui/control.rs:192-196 checks stop state, wall-clock heartbeat, authority connection and observation connection before dequeuing work; :256-260 repeats those checks between a claim's state read and its mutation. src/tui.rs:35-38 treats long or backward wall-clock gaps conservatively, and :1034 onward fences the UI before refreshing its heartbeat. Connection teardown shuts down the owned socket, rather than relying on dropping a clone."
+    },
+    {
+      "area": "Exact recovery without reacquisition or resurrection",
+      "result": "PASS — observation-only recovery",
+      "evidence": "src/tui.rs:795 onward validates original daemon and target continuity, including exact ACP instance/connection and established session. Recovery connects to the existing daemon, does not invoke autostart, and rejects missing/replaced/ended targets instead of selecting a same-name replacement. src/tui/control.rs:365-366 disables automatic acquisition on recovered attachments. Fresh AgentView/NativeControl state discards old drafts, grants, offers and consent controls."
+    },
+    {
+      "area": "Recovery readiness, launch continuity and observer cleanup",
+      "result": "PASS — structural and acknowledged state preserved",
+      "evidence": "src/tui.rs:981 onward completes fallible display setup before registration; recovery paints and drains old input while fenced, rereads terminal geometry after blocking setup, reconciles structural resize and only then publishes Reconnected at :1293. Acknowledged launch identity is retained before fallible follow-up observation, including parsed receipts salvaged during worker teardown. src/tui/control.rs:379 onward performs bounded guarded cleanup of recovered observer registrations without releasing owners or cancelling reservations. tests/acp/native/recovery_edges.rs and tests/pty_control/native.rs:1955-2007 cover these seams in source."
+    },
+    {
+      "area": "Profile, executable, argv and symlink trust",
+      "result": "PASS — shell-free explicit launch",
+      "evidence": "src/acp_profiles.rs:24 onward bounds profile identifiers, labels, argv and defaults; :72 onward resolves regular executable files using absolute paths or absolute PATH entries. Resolution follows executable symlinks for usability while preserving the invocation pathname and basename. src/acp.rs:1370 onward uses Command::new plus discrete args/current_dir, not shell interpolation. src/daemon.rs:294 onward validates closed launch fields, profile selection and explicit controller input. Unknown/unavailable profiles do not silently fall back."
+    },
+    {
+      "area": "Configuration-file persistence boundary",
+      "result": "PASS — existing protections retained",
+      "evidence": "src/projects.rs validates profile patches before replacing working configuration and persists configuration rather than live ACP/control state. Inspected canonical configuration identity, no-follow regular-file checks, stable private sibling locks, expected-generation conflict detection and atomic private temporary-file replacement. tests/acp/profiles.rs covers rejected-profile rollback; src/projects.rs:1274-1546 covers aliases, concurrent writers, dangling symlinks and hard-link rejection. Trusted configured commands/hooks are not represented as a sandbox."
+    },
+    {
+      "area": "Requested, reported and exact advertised settings",
+      "result": "PASS — no unsupported policy inference found",
+      "evidence": "src/acp/settings.rs:7 onward validates closed bounded requests; :306 onward resolves exact advertised setting IDs and rejects ambiguous semantic categories or conflicting aliases. :346 onward serializes setters against the original session and resolves subsequent choices using the preceding response. Requested values remain separate from reported values; configuration responses must support the selected current value before readiness, and later drift is represented as changed. Permission policy and unsupported configuration remain explicitly unreported rather than inferred."
+    },
+    {
+      "area": "Genuine interaction and authentication dispatch",
+      "result": "PASS — original responders retained",
+      "evidence": "src/acp.rs retains incoming form/permission responders with their original typed wire IDs and scopes. Form acceptance validates the shared bounded schema; permission responses use exact offered option IDs. Selection is atomic, and later cancellation cannot overwrite an admitted winner (cancel_incoming at :2040 onward). Native controls require deliberate review and visible permission choices. Authentication accepts only explicitly selected advertised agent authentication methods; unsupported client/terminal/unknown methods do not become implicit login or command execution."
+    },
+    {
+      "area": "Frame, content, history and queue bounds",
+      "result": "PASS — bounded hostile-peer paths",
+      "evidence": "src/acp.rs:34-39 establishes the 1 MiB frame, 4 MiB byte queues and count caps; read_frame at :1635 checks size while accumulating, and ingress reservation at :1669 charges in-flight input. Writer capacity includes in-flight frames; history and interaction content have separate bounded retention, with live responders protected from eviction. Inspected bounded stderr draining, outstanding RPCs, call-ID tombstones and retained-lifetime capacity. Native projection caches and display serialization are bounded in src/tui/agent.rs."
+    },
+    {
+      "area": "Hostile terminal rendering",
+      "result": "PASS — ACP content remains inert",
+      "evidence": "src/acp.rs:2812 and :2836 sanitize event strings/objects; src/tui/agent.rs:2297 onward renders control and direction-format characters inertly, including raw interaction schemas and exact opaque option values. Chrome clipping also filters control/bidi characters. ACP content is not emitted as terminal escape instructions or automatically opened as URLs. tests/acp/native.rs:715 onward inspects title/clipboard/CSI/bidi effects in its hostile-rendering scenario; this is test-source evidence, not an observed run."
+    },
+    {
+      "area": "Authentication privacy and public projections",
+      "result": "PASS — no new credential/content disclosure path found",
+      "evidence": "Inspected ACP metadata versus explicit include_content projections, error handling, bounded private stderr and profile catalog output. Public ACP metadata excludes conversation/form values and raw provider errors; profile catalogs exclude command argv/environment. Launch filtering removes inherited AMUX_/OMP_/HERDR_ integration routing variables and shell startup overrides. tests/acp.rs:737-781,1347-1443,2506-2596 and tests/acp/native/acceptance.rs:521 onward assert projection privacy. Existing same-user privileged configuration/snapshot access is documented, not misclassified as a new cross-user boundary."
+    },
+    {
+      "area": "Owned cleanup and truthful unknown states",
+      "result": "PASS — no supported new ownership/cleanup vulnerability found",
+      "evidence": "src/acp.rs:1422 onward captures a birth-qualified owned session and conservatively retains uncertain capture/cleanup. Cleanup terminates the owned process tree, reaps the child, cancels/joins pipe workers and checks endpoint settlement. src/runtime.rs:640-824 confirms PID birth identities and limits session discovery to the original leader's lifetime. src/acp.rs:324-327 prevents uncertain cleanup from freeing capacity. Delivery/submission is not treated as agent application. Historical native application settlement remains unknown and fail-closed; no cap reset or force-only substitute was accepted as a solution."
+    },
+    {
+      "area": "Live acceptance and dependency evidence boundaries",
+      "result": "PASS — no fabricated execution or acceptance proof",
+      "evidence": "tests/acp/native/omp_live.rs contains an explicit ignored opt-in installed-OMP harness, distinct from deterministic tests/acp/omp.rs and tests/fixtures/acp_peer.rs. Inspected its exact-instance, genuine question/permission, confined-effect, budget-evidence and cleanup assertions only as source. Cargo.toml/Cargo.lock were inspected for declared and pinned dependencies, without fetching packages or claiming a vulnerability-database audit. No plan approval, synthetic fixture, ignored test, documentation claim or parent verification was counted as live/runtime acceptance."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the assigned independent static security review: all 32 frozen paths were inspected for security-relevant behavior, with narrow related ownership and process-lifetime contracts traced. No supported new Must-fix, Should-fix or optional security finding survived source-to-sink analysis. Score is 100 × 20/20 static checklist items; it is not E06 product acceptance. Actual installed-OMP interoperability and runtime recovery/cleanup gates remain the parent's separate responsibility, and the historical native application-settlement limitation remains unresolved.",
+  "limits": "Read-only, static source review only. No code/configuration edits, shell/source execution, builds, tests, lint, formatting, provider calls, network calls, daemon/global operations, commits or actual authentication reads occurred. No previous review/audit/repair/runtime reports, saved handoffs, execution logs or private retired fixtures were consulted; PLAN inspection stopped at line 45. Manifest paths were used as the source boundary; file hashes and branch/base ancestry were not independently executed or verified. Tests and opt-in live harnesses were inspected but not run. Dependency advisory status, installed executable behavior, OS scheduling/race outcomes, genuine live allow/deny effects and resource settlement were not experimentally established. PASS means no supported vulnerability was found within this static scope, not proof of absence or completion of the live acceptance criteria."
+}

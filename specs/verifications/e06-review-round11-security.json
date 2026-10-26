@@ -1,0 +1,171 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 32,
+  "passed_items": 32,
+  "checklist": [
+    {
+      "area": "Frozen scope coverage",
+      "result": "PASS",
+      "evidence": "Reviewed all 92 paths enumerated by specs/verifications/e06-review-round11-source.json: 24 first-party code/test paths, eight first-party documentation/manifest paths and 60 vendored paths. Reviewed-path inventories were recorded in incremental sections."
+    },
+    {
+      "area": "Vendored dependency integration and provenance",
+      "result": "PASS",
+      "evidence": "Cargo.toml patches crossterm to vendor/crossterm; Cargo.lock selects 0.29.0. Reviewed all six declared changed vendor files and the integration context of the other 54. Release identity is based on sealed-manifest provenance, not an independently fetched baseline."
+    },
+    {
+      "area": "Shell-free adapter invocation",
+      "result": "PASS",
+      "evidence": "src/daemon.rs:294–486 validates mutually exclusive profile/raw launch forms and bounded absolute argv. src/acp.rs:1370–1407 invokes Command::new with separate arguments and explicit cwd, without shell interpolation."
+    },
+    {
+      "area": "Executable resolution and symlink semantics",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs:116–192 resolves executable files through absolute PATH directories without canonicalizing away the invocation path. Missing executables fail explicitly. tests/acp/profiles.rs covers absolute and PATH symlink invocation identity."
+    },
+    {
+      "area": "Explicit CLI/native launch ownership",
+      "result": "PASS",
+      "evidence": "src/cli.rs separates native attaching launch from an explicitly supplied controller. src/tui/control.rs registers an original attachment controller and submits one acp-open on its worker; daemon launch reserves and publishes target authority together."
+    },
+    {
+      "area": "Lossless explicit settings input",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs:11–51 rejects duplicate JSON option keys and preserves exact strings. src/cli.rs:203–249 supports delimiter-containing identities through options JSON. src/tui/launch.rs rejects oversized/control-containing edits in full rather than launching truncated settings."
+    },
+    {
+      "area": "Configuration-only persistence",
+      "result": "PASS",
+      "evidence": "src/projects.rs separates disk schemas from runtime state, validates profile patches before persistence and restores the previous configuration on save failure. Runtime ACP instances, grants and sessions are not persisted."
+    },
+    {
+      "area": "Closed and bounded settings",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs validates only model, mode, effort and options with existing identifier/content limits. src/acp_profiles.rs bounds profile count, labels and argv; src/acp.rs validates requested settings before reserving a runtime instance."
+    },
+    {
+      "area": "Advertised settings capability resolution",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs:290–345 resolves semantic settings only through advertised models, modes and configuration categories. Explicit option IDs remain distinct; ambiguous or unsupported semantic requests fail rather than selecting guessed alternatives."
+    },
+    {
+      "area": "Settings acknowledgement before readiness",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs:346–442 serializes original setting requests, requires confirming configOptions responses and checks final applied values. src/acp.rs:1920–1951 advances configuration before ready; prompt admission requires lifecycle ready."
+    },
+    {
+      "area": "Truthful settings and permission policy presentation",
+      "result": "PASS",
+      "evidence": "Configuration projections distinguish requested, reported, agent-default, applied, changed and failed states. src/tui/agent.rs and src/tui/launch.rs explicitly avoid interpreting mode metadata or unreported defaults as permission guarantees."
+    },
+    {
+      "area": "Opaque upstream tool-call identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs validates notification, form and permission tool-call identities using the separate 4-KiB tool ID bound. Local session/settings/RPC identifier limits remain separate; original tool IDs are retained rather than shortened or replaced."
+    },
+    {
+      "area": "Exclusive target authority",
+      "result": "PASS",
+      "evidence": "src/daemon.rs:490–514 authorizes control before preparing a mutation and commits through Authority::admit_acp. The narrow unchanged src/control.rs:1194–1253 reference rechecks exact current owner/reference/generation while holding target authority across commit."
+    },
+    {
+      "area": "Force does not interrupt or kill",
+      "result": "PASS",
+      "evidence": "The unchanged registry force branch supersedes reservation and grants authority without invoking ACP cancellation or process cleanup. Native Force requires presented confirmation and current captured observations; broker interrupt and close remain separate explicit actions."
+    },
+    {
+      "area": "Cancelled pending claims grant nobody",
+      "result": "PASS",
+      "evidence": "Reviewed claim controls and first-party regressions, including tests/acp/native/recovery_edges.rs:735–760. Pending cancellation leaves owner/reservation empty while exact retained broker work and process identity remain intact; it does not select an answer or interrupt the turn."
+    },
+    {
+      "area": "Conditional keep/withdraw and external policy",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs:1178–1329 queues explicit keep before subsequent application activity on the original FIFO. Reviewed unchanged registry controls and tests/pty_control/native.rs conditional cases preserving the human token and preventing automatic external-policy rearming."
+    },
+    {
+      "area": "All application-input routes gated",
+      "result": "PASS",
+      "evidence": "src/tui.rs routes key, literal prefix, paste and application mouse input through NativeControl. src/tui/control.rs:894–940 checks connection/current control and rejects PTY forwarding for ACP targets. ACP editor events have no raw-PTY fallback."
+    },
+    {
+      "area": "Captured drafts and no automatic replay",
+      "result": "PASS",
+      "evidence": "src/tui/agent.rs binds first edits to exact target/control/generation, discards mismatched drafts and returns captured action envelopes. Definite non-admission may restore only the original binding for a deliberate new submission; uncertain transport does not trigger retry."
+    },
+    {
+      "area": "Original question responder continuity",
+      "result": "PASS",
+      "evidence": "src/acp.rs:2076–2275 correlates local interaction/revision to its retained original wire responder and validates session or outstanding request scope. Form responses use that exact request ID; parent RPC completion does not silently replace or cancel the responder."
+    },
+    {
+      "area": "Exact permission allow/deny and withdrawal",
+      "result": "PASS",
+      "evidence": "src/acp.rs:897–931 and 2277–2315 permit only offered option IDs on the exact pending interaction/session. $/cancel_request withdrawal is ordered under the same state lock and cannot replace an admitted human response. tests/acp/omp.rs:308–430 checks exact denial and stale-response rejection."
+    },
+    {
+      "area": "Daemon lifetime continuity",
+      "result": "PASS",
+      "evidence": "src/tui.rs:817–856 validates the original daemon_id. Recovery connects only to the existing socket and does not call ensure_daemon. A replaced daemon or missing original target produces an ended attachment rather than relaunch or same-name substitution."
+    },
+    {
+      "area": "Exact agent/session recovery identity",
+      "result": "PASS",
+      "evidence": "Resume validation preserves id, instance_id, connection_generation and every established session_id. Only initial null-to-established session identity may advance. Acknowledged launches retain their own exact continuity target across follow-up observation loss."
+    },
+    {
+      "area": "Disconnect and pause fencing",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs:162–327 checks both authority and observation sockets plus heartbeat before dequeuing work, and rechecks after compound claim observation. src/tui.rs checks pause/connection state and stops old authority before cleanup or recovery."
+    },
+    {
+      "area": "Recovery-time queued input freshness",
+      "result": "PASS",
+      "evidence": "src/tui.rs:1280–1394 keeps recovery input discard-only until a painted observer frame, conclusive empty input boundary and reconciled geometry. Fresh controller provenance disables automatic acquisition; queued claim/consent/Force gestures are not replayed."
+    },
+    {
+      "area": "Filtered/internal-event readiness",
+      "result": "PASS",
+      "evidence": "vendor/crossterm/src/event.rs:206–239 exposes Empty/Pending/Inconclusive. src/event/read.rs:44–81 skips bounded internal replies, preserves public events and requires a source exhaustion proof. TUI safety boundaries use this API rather than interpreting filtered poll(false) as emptiness."
+    },
+    {
+      "area": "Parser fragments and finite/zero deadlines",
+      "result": "PASS",
+      "evidence": "vendor/crossterm/src/event/source/unix/mio.rs:81–205 retains parser fragments, caps work at 32 visits and allows the initial zero-deadline readiness visit without indefinite drain. A bounded yield or incomplete sequence does not certify Empty."
+    },
+    {
+      "area": "Resize/wakeup progress and borrowed descriptors",
+      "result": "PASS",
+      "evidence": "The mio source finishes retained token batches before further TTY parsing and performs level readiness checks before reads. It does not set shared parent-shell O_NONBLOCK flags. The terminal Unix helpers retain raw-mode restoration. Focused regression sources cover sustained incomplete input and recovery geometry."
+    },
+    {
+      "area": "Untrusted rendering boundaries",
+      "result": "PASS",
+      "evidence": "src/acp.rs sanitizes narrative/tool display content; src/tui/agent.rs bounds and escapes controls/bidi at rendering while retaining canonical response values. Wrapper labels are clipped safely. Native PTY rendering consumes parsed terminal cells, not raw child escape streams."
+    },
+    {
+      "area": "Unknown delivery and admitted-work retention",
+      "result": "PASS",
+      "evidence": "src/acp.rs:398–520 marks unresolved work/interactions unknown on closure, retains independent submitted/write-failed evidence and protects pending/in-flight responders from completed-history eviction. Delivery is not treated as application acknowledgement or safe native settlement."
+    },
+    {
+      "area": "Owned process and endpoint cleanup",
+      "result": "PASS",
+      "evidence": "src/acp.rs:1241–1533 owns the original child/session, birth-qualified process tree, cancellable pipe endpoints and joined workers. Cleanup checks reaping, descendants, joins and endpoint closure; process-identity or cleanup uncertainty remains observable and charged."
+    },
+    {
+      "area": "Privacy and opt-in content",
+      "result": "PASS",
+      "evidence": "Profile catalogs omit argv/environment; default public metadata omits conversation content and private capability handles. Adapter stderr is bounded rather than published as raw diagnostics. tests/acp/native/omp_live.rs uses private spec checks and category-only failure output without formatting provider content or auth."
+    },
+    {
+      "area": "Requirements, regressions and acceptance honesty",
+      "result": "PASS",
+      "evidence": "Reviewed settled E06 scope/threat model, PLAN.md lines 1–45, README/changelog and regression sources for all three stories. Fixtures are identified as protocol evidence and genuine-provider acceptance remains explicitly ignored/opt-in. Historical native unknown settlement, exhausted caps and failed live acceptance are not converted into success by source approval."
+    }
+  ],
+  "findings": [],
+  "summary": "Static E06 source/security review PASS: 32/32 checklist items, score 100. All 92 frozen paths were reviewed, with focused tracing of the six modified vendor files and their authority-sensitive consumers. No supported Must-fix, Should-fix or optional security finding survived source-to-consumer analysis. This is source approval only, not installed-provider or end-to-end acceptance.",
+  "limits": "Read-only static analysis only. No edits, builds, tests, lint, formatting, shell/source execution, payload execution, network/provider calls, auth/config/daemon/global operations or commits were performed. No previous reviews, audits, runtime reports, saved handoff/state, execution logs or real auth/private retired fixtures were read; PLAN.md was restricted to lines 1–45. Narrow unchanged control/runtime references were used only to resolve causal consumers. Branch/base and vendor baseline identity rely on the sealed manifest; frozen hashes were not recomputed and upstream release files were not fetched. Runtime scheduling, platform behavior, actual installed OMP same-instance question/permission effects, provider budgets and complete cleanup were not exercised. Fixture coverage and ignored live tests do not establish installed-provider acceptance. Historical unsafe native application settlement and live-acceptance failures/caps remain unchanged and unwaived."
+}

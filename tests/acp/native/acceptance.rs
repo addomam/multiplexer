@@ -5,6 +5,7 @@ use super::*;
 // per observed rendered transition, bounded by the retained canonical choices.
 fn show_interaction(host: &Host, agent: &Agent, native: &mut Attachment, wanted: Option<&Value>) {
     let projection = host.inspect(agent);
+    native.projected(host, projection["seq"].as_u64().unwrap());
     let ids = projection["content"]["interactions"]
         .as_array()
         .unwrap()
@@ -22,8 +23,7 @@ fn show_interaction(host: &Host, agent: &Agent, native: &mut Attachment, wanted:
                     .clone()
             })
     };
-    // A newly arrived question may still be awaiting the next canonical refresh.
-    // One full rendered cycle plus its arrival is enough; never repeat an answer.
+    // Canonical arrival is fenced above; observe each deliberate navigation.
     for _ in 0..=ids.len() + 1 {
         let current = visible(&native.text());
         if current.as_deref() == wanted {

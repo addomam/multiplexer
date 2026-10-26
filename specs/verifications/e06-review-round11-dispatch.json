@@ -1,0 +1,31 @@
+{
+  "type": "review-dispatch",
+  "context": "E06-only independent source/security round11/max12, not runtime acceptance",
+  "round": 11,
+  "max_rounds": 12,
+  "source": "specs/verifications/e06-review-round11-source.json",
+  "agents": [
+    {
+      "name": "E06BlindA11",
+      "agent": "reviewer",
+      "task": "# Target\nIndependently review all92 frozen files in specs/verifications/e06-review-round11-source.json against settled E06 story requirements and PLAN1-45. Cover ownership/input races, protocol and exact identities, launch/settings/native UX, recovery and resource lifecycle across the entire scope.\n# Acceptance\nReturn the complete independent checklist/score and causal evidence-backed findings via supplied schema. Read-only: skip builds/lint/tests/formatters/providers/auth or source execution. No prior reports/handoff/runtime evidence; no edits. Source approval is not live/runtime acceptance.\nReturn the exact flat root schema, without source-security-review or any other enclosing wrapper.",
+      "solutionSpace": "Independent whole-scope static review; causal ownership, protocol, UX or lifecycle defects remain open; no predetermined finding or fix."
+    },
+    {
+      "name": "E06BlindB11",
+      "agent": "reviewer",
+      "task": "# Target\nIndependently review all92 frozen files in specs/verifications/e06-review-round11-source.json against settled E06 story requirements and PLAN1-45. Cover ownership/input races, protocol and exact identities, launch/settings/native UX, recovery and resource lifecycle across the entire scope.\n# Acceptance\nReturn the complete independent checklist/score and causal evidence-backed findings via supplied schema. Read-only: skip builds/lint/tests/formatters/providers/auth or source execution. No prior reports/handoff/runtime evidence; no edits. Source approval is not live/runtime acceptance.\nReturn the exact flat root schema, without source-security-review or any other enclosing wrapper.",
+      "solutionSpace": "Independent whole-scope static review; causal ownership, protocol, UX or lifecycle defects remain open; no predetermined finding or fix."
+    },
+    {
+      "name": "E06Security11",
+      "agent": "security-reviewer",
+      "task": "# Target\nIndependently security-review all92 frozen files in specs/verifications/e06-review-round11-source.json and settled E06 threat model/requirements. Trace relevant invocation, settings, input authority, identity continuity, untrusted rendering, retained delivery/resource cleanup and privacy.\n# Acceptance\nReturn complete checklist/score and causal evidence-backed security findings through supplied schema. Read-only static analysis only: skip builds/lint/tests/formatters/providers/auth/config/global operations or source execution. Do not read earlier reviews, runtime/audit/handoff evidence or retired private roots. No edits; distinguish accepted historical unknown native settlement from new vulnerabilities.\nReturn the exact flat root schema, without source-security-review or any other enclosing wrapper.",
+      "solutionSpace": "Independent source security analysis; invocation, untrusted rendering, input authority, identity, retained delivery and resource threats remain open; no assumed vulnerability."
+    }
+  ],
+  "shared_brief": "# Goal\nIndependently review E06 ACP daily-use implementation in /Users/addomam/projects/amux-integration-api, branch feat/acp-daily-use, base2195b05adf23ae26a80065ecdd6d9196e2915998. E05 custom non-ACP integration is parked. Settled deliverables: installed OMP same-instance ACP interop, explicit safe CLI/native profile/settings launch and exact surviving-agent attachment recovery after detach/disconnect/pause. Do not reopen Elaborate/Plan.\n# Contract\nREAD ONLY static review. No edits, builds/lint/tests/formatters, shell/source execution, provider/auth/config/daemon/global operations or commits. Static source and narrow unchanged references only. Never read real auth/private retired fixtures, previous reviews, audits, runtime reports, saved handoff/state or execution logs. Remain blind. Read CONVENTIONS.md, sealed specs/verifications/e06-review-round11-source.json, E06 story requirements/threat model and PLAN.md lines1–45 only (later execution amendments expose prior reports). Review all92 frozen paths:24 first-party code/tests,8 first-party docs/manifests,60 vendored release paths. Manifest includes baseline provenance;54 vendor files remain release-identical, six changed. Review their integration and scrutinize six changed vendor files plus all first-party paths.\nPreserve exclusive target ownership, Force never implicitly interrupts/kills, cancelled pending claims grant nobody and retain admitted calls, keep/withdraw preserves human control/external reacquisition policy, all application-input routes gated/no replay, exact daemon/agent/connection/session/work identities, genuine question and permission allow/deny to the same live agent, truthful requested/reported/unreported settings/policy, exact advertised IDs/lossless edits, shell-free invocation/symlinks, retained unknown delivery/cleanup, stock Zsh/OMP. Recovery must not duplicate/relaunch/replay/implicitly acquire/resurrect daemon. Native application settlement historically remains unsafe: no cap reset, force-only substitute or waiver. Inspect bounded input readiness including filtered/internal events, parser fragments, finite/zero deadlines, queued-input freshness, resize/wakeup progress and borrowed blocking descriptors without parent-shell flag changes.\nReturn the supplied complete checklist/score/findings JSON object AT ROOT, no enclosing wrapper. Score=100*passed_items/total_items; PASS requires>=94 and zero supported Must-fix/Should-fix. Findings need exact file/line, causal consumer/security impact, evidence and narrow fix; optional considerations separate. State static/no-runtime limits; source approval/fixtures/ignored live tests are not installed-provider acceptance. This is E06 source/security round11 under explicit max12; do not run additional reviews or share findings. All execution stays with parent.\n",
+  "executed_checks_by_reviewers": "forbidden",
+  "provider_budget": "unchanged8/cap9/1",
+  "publication": "not authorized"
+}

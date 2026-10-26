@@ -166,8 +166,84 @@ enum Command {
     },
 }
 
+#[derive(clap::Args)]
+struct AcpStart {
+    /// ACP profile: omp, codex, grok, or a configured profile.
+    profile: String,
+    /// Exact project ID or unambiguous project name.
+    #[arg(long)]
+    project: String,
+    #[arg(long)]
+    name: Option<String>,
+    #[arg(long)]
+    cwd: Option<String>,
+    #[arg(long)]
+    model: Option<String>,
+    #[arg(long)]
+    mode: Option<String>,
+    #[arg(long)]
+    effort: Option<String>,
+    /// Advertised config option ID=choice ID; repeat for distinct options.
+    #[arg(long = "option", value_name = "ID=VALUE")]
+    options: Vec<String>,
+    /// JSON object of exact option ID:choice ID pairs, including delimiter-containing IDs.
+    #[arg(long, value_name = "JSON")]
+    options_json: Option<String>,
+    /// Explicit external controller JSON; returns JSON instead of attaching.
+    #[arg(long)]
+    controller: Option<String>,
+}
+
+impl AcpStart {
+    fn request(self) -> Result<Value> {
+        let mut settings = serde_json::Map::new();
+        for (key, value) in [
+            ("model", self.model),
+            ("mode", self.mode),
+            ("effort", self.effort),
+        ] {
+            if let Some(value) = value {
+                settings.insert(key.into(), Value::String(value));
+            }
+        }
+        let mut options = self
+            .options_json
+            .as_deref()
+            .map(crate::acp_profiles::parse_options_json)
+            .transpose()?
+            .unwrap_or_default();
+        for option in self.options {
+            let (id, value) = option
+                .split_once('=')
+                .context("--option requires ID=VALUE")?;
+            anyhow::ensure!(
+                !id.is_empty() && !value.is_empty(),
+                "--option requires nonempty ID=VALUE"
+            );
+            anyhow::ensure!(!options.contains_key(id), "duplicate --option ID");
+            options.insert(id.into(), Value::String(value.into()));
+        }
+        if !options.is_empty() {
+            settings.insert("options".into(), Value::Object(options));
+        }
+        let controller = self
+            .controller
+            .map(|text| serde_json::from_str::<Value>(&text))
+            .transpose()
+            .context("invalid controller JSON")?;
+        Ok(
+            json!({"op":"acp-open","agent":self.profile,"project":self.project,
+            "name":self.name,"cwd":self.cwd,"settings":settings,"controller":controller}),
+        )
+    }
+}
+
 #[derive(Subcommand)]
 enum AcpCommand {
+    /// Launch a profile and attach a human controller to that same instance.
+    Start(AcpStart),
+    /// List configured and built-in profiles without exposing adapter argv.
+    Profiles,
     /// Start one owned stdio adapter; command argv follows --.
     Open {
         #[arg(long)]
@@ -198,6 +274,12 @@ fn request_for(command: Command) -> Result<Value> {
         Command::Api { request } => {
             serde_json::from_str::<Value>(&request).context("invalid API JSON")?
         }
+        Command::Acp {
+            command: AcpCommand::Start(start),
+        } => start.request()?,
+        Command::Acp {
+            command: AcpCommand::Profiles,
+        } => json!({"op":"acp-profiles"}),
         Command::Acp {
             command:
                 AcpCommand::Open {
@@ -339,6 +421,15 @@ pub fn run() -> Result<()> {
         Some(Command::Attach { terminal }) => {
             crate::client::ensure_daemon(&socket)?;
             crate::tui::run(&socket, terminal)
+        }
+        Some(Command::Acp {
+            command: AcpCommand::Start(start),
+        }) if start.controller.is_none() => {
+            crate::client::ensure_daemon(&socket)?;
+            let launch = request_for(Command::Acp {
+                command: AcpCommand::Start(start),
+            })?;
+            crate::tui::start(&socket, launch)
         }
         Some(Command::Acp {
             command: AcpCommand::Attach { view },

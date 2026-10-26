@@ -1,0 +1,171 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 32,
+  "passed_items": 32,
+  "checklist": [
+    {
+      "area": "Sealed scope and requirements",
+      "result": "PASS — static",
+      "evidence": "Reviewed all 32 paths in specs/verifications/e06-review-round8-source.json, the three E06 stories, settled scope/threat model, and PLAN.md lines 1-45 only. E05 remains parked; no earlier review/runtime/handoff evidence was used."
+    },
+    {
+      "area": "Explicit profile selection",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs, src/cli.rs and src/daemon.rs distinguish named profiles from raw command launches. Missing profiles/executables and conflicting launch forms fail explicitly; profile discovery excludes argv/environment."
+    },
+    {
+      "area": "Bounded profile configuration",
+      "result": "PASS — static",
+      "evidence": "src/projects.rs and src/acp_profiles.rs validate profile count, identifiers, labels, argv and defaults before accepting configuration. Failed configuration persistence/validation retains the previous usable configuration."
+    },
+    {
+      "area": "Shell-free invocation and symlinks",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs resolves only absolute executables or bare commands in absolute PATH directories, retaining the invocation path rather than canonicalizing away symlink identity. src/acp.rs uses Command::new plus args, not shell interpolation. tests/acp/profiles.rs covers absolute and PATH aliases."
+    },
+    {
+      "area": "Closed and lossless requested settings",
+      "result": "PASS — static",
+      "evidence": "src/acp/settings.rs bounds requested settings and rejects unknown fields/invalid identifiers. src/acp_profiles.rs parses explicit option JSON without delimiter splitting and rejects duplicate keys; CLI/native tests preserve IDs and choices containing commas and equals signs."
+    },
+    {
+      "area": "Exact advertised setting identities",
+      "result": "PASS — static",
+      "evidence": "src/acp/settings.rs validates raw advertised metadata before permissive typed decoding can discard malformed entries. Duplicate option/choice IDs are rejected; ambiguous semantic categories fail rather than selecting an arbitrary option; explicit option IDs remain distinct."
+    },
+    {
+      "area": "Original acknowledged startup RPCs",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs configure_next/apply and src/acp/settings.rs next/acknowledge retain the active original setter until its matching RPC succeeds. Configuration setters require value-confirming responses; later startup changes are checked against previously acknowledged settings before readiness."
+    },
+    {
+      "area": "Truthful settings and permission policy",
+      "result": "PASS — static",
+      "evidence": "Configuration projections separate requested, reported and unreported values and expose failed/changed states. src/tui/agent.rs and src/tui/launch.rs do not equate an absent default or selected model with a confirmed permission policy. tests/acp/omp.rs covers unreported defaults and rejected/unconfirmed settings."
+    },
+    {
+      "area": "Explicit CLI and native launch authority",
+      "result": "PASS — static",
+      "evidence": "src/cli.rs preserves explicit-controller automation while human launches use the original native attachment. src/tui/launch.rs requires deliberate submission, displays inherited defaults/unavailable executables, and sends selected project/profile/settings through the existing daemon operation."
+    },
+    {
+      "area": "Exact atomic mutation admission",
+      "result": "PASS — static",
+      "evidence": "src/daemon.rs acp_action authorizes the target and invokes broker commit under Authority::admit_acp. src/acp.rs rechecks owner generation, exact instance/connection/session tuple and duplicate call identity before publishing work; narrow src/control.rs references establish the shared revocation ordering point."
+    },
+    {
+      "area": "Force does not interrupt or kill",
+      "result": "PASS — static",
+      "evidence": "Ownership changes do not generate ACP prompt cancellation or process termination. tests/acp.rs and tests/acp/native/acceptance.rs retain original work/RPC/process identities across force and require an explicit acp-interrupt or acp-close for those effects."
+    },
+    {
+      "area": "Cancelled pending claims grant nobody",
+      "result": "PASS — static",
+      "evidence": "Authority cancellation paths retain admitted ACP work and pending callbacks without rebinding them to the requester. tests/acp.rs covers cancellation before/after offer, stale controls/offers and subsequent deliberate reacquisition."
+    },
+    {
+      "area": "Conditional keep and external reacquisition policy",
+      "result": "PASS — static",
+      "evidence": "src/tui/control.rs retains original-connection view/activity/consent ordering. src/control.rs guards and native acceptance tests distinguish keep/withdraw from release/grant and require external policy to create a new attempt."
+    },
+    {
+      "area": "Every application-input route is gated",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs routes native bytes, paste, literal prefix, application mouse and ACP actions through NativeControl/current grants. Observer keys, intercepted confirmations and mouse tails are consumed rather than queued for later replay; tests/pty_control/native.rs and tests/acp/native.rs exercise these routes."
+    },
+    {
+      "area": "Captured drafts and actions do not rebind",
+      "result": "PASS — static",
+      "evidence": "src/tui/agent.rs binds drafts/reviews/actions to the exact target, control generation and interaction revision. Authority or identity changes discard captures. Definite pre-admission rejection is distinguished from transport uncertainty; unknown requests are not automatically retried."
+    },
+    {
+      "area": "Genuine scoped questions and permissions",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs parse_form/parse_permission retain original request IDs, session or outstanding-request scope, tool identity and exact offered options. Unsupported filesystem/terminal/URL methods receive errors rather than becoming new execution capabilities."
+    },
+    {
+      "area": "One response winner and typed cancellation IDs",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs orders pending selection and $/cancel_request under the same state lock. Cancellation matches typed numeric/string RPC IDs, cannot overwrite an admitted winner and does not become a human answer or prompt interrupt. tests/acp/omp.rs and the e06s01 unit regression cover these distinctions."
+    },
+    {
+      "area": "Opaque upstream tool-call identities",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs applies the distinct 4-KiB tool-call-ID bound to tool updates, session-scoped forms and permissions while preserving the complete identifier. Local setting/interaction/RPC identity and frame/content bounds remain separate."
+    },
+    {
+      "area": "Untrusted rendering remains inert",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs inert rendering and src/tui/agent.rs, src/tui/control.rs, src/tui/launch.rs and src/tui/view.rs sanitize control/bidirectional characters at rendering boundaries. Native hostile-rendering tests inspect escape sequences and title/clipboard effects rather than treating plain displayed text as sufficient proof."
+    },
+    {
+      "area": "Metadata and content privacy",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs and src/daemon.rs distinguish content-enabled inspection from metadata/events. Provider error bodies, prompts, forms/selections and agent-supplied conversation content are not projected into the public ACP metadata path; tests/acp.rs and native acceptance tests assert this separation."
+    },
+    {
+      "area": "Bounded protocol and admission resources",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs bounds frames, ingress/egress bytes and counts, responders, interaction content/history, retained calls and live targets. Capacity checks precede publication; live responders are not evicted to admit more work, and a lifetime call slot remains available for explicit close."
+    },
+    {
+      "area": "Truthful delivery and unknown settlement",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs keeps accepted/submitted/write-failed delivery separate from original RPC completion and unknown application outcome. EOF, lost replies and unconfirmed selection never become proof of cancellation or application; tests/acp.rs covers retained unknown work and response-pipe failure."
+    },
+    {
+      "area": "Owned cleanup and retained uncertainty",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs owns original endpoints, cancellation wakeup, child/session cleanup and joined pipe workers. Failed birth-qualified capture or incomplete endpoint/process cleanup remains failed/charged rather than being evicted as successful cleanup. Cleanup tests retain unrelated-process sentinels."
+    },
+    {
+      "area": "Exact surviving recovery identity",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs Resume captures daemon and exact ACP instance/connection/session identity. Recovery validates the original target, permits only initial null-to-established session advancement, and ends on replacement/missing targets without same-name substitution or automatic relaunch."
+    },
+    {
+      "area": "Both native connection lifetimes are fenced",
+      "result": "PASS — static",
+      "evidence": "src/client.rs exposes connection-loss classification/liveness. src/tui/control.rs checks authority and observation sockets before dequeued work and again after compound claim observation, preventing a previously queued claim/launch from borrowing a newer observation lifetime."
+    },
+    {
+      "area": "Paused UI cannot lend stale queued authority",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs uses conservative wall-clock pause detection; src/tui/control.rs checks the UI heartbeat before worker mutations and after blocking claim observation. Recovery-edge tests hold genuine responses across stopped UI/connection loss and assert no stale claim grant."
+    },
+    {
+      "area": "Recovery discards old input and authority",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs creates fresh local UI/editor state and drains recovery input before readiness. NativeControl::recovered disables initial automatic acquisition; old controls, drafts, consent and claim UI are not imported into the new attachment."
+    },
+    {
+      "area": "Acknowledged launch continuity survives loss",
+      "result": "PASS — static",
+      "evidence": "src/tui/control.rs stop joins the old worker and preserves only an already parsed successful launch receipt. src/tui.rs records that exact target before subsequent snapshot validation and does not repeat the launch when the observation connection fails. tests/acp/native/recovery_edges.rs covers the loss boundaries."
+    },
+    {
+      "area": "Safe observer-registration cleanup",
+      "result": "PASS — static",
+      "evidence": "Recovered attachment teardown attempts the existing controller close operation only after stopping/joining its worker. src/control.rs close guards refuse owner/pending-claim destruction, so cleanup does not release authority, cancel claims or silently acquire control; recovery-edge tests cover idle-observer accumulation."
+    },
+    {
+      "area": "Structural geometry before recovery readiness",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs reconciles the actual painted/kernel terminal size after blocking setup and discarded recovery events, reapplying structural resize before declaring readiness. tests/pty_control/native.rs and tests/acp/native/recovery_edges.rs cover registration/selection resize and lost notifications."
+    },
+    {
+      "area": "Stock native behavior and historical limitations",
+      "result": "PASS — static",
+      "evidence": "tests/shell_races.rs, tests/pty_control/native.rs, README.md and CONVENTIONS.md preserve stock Zsh/native OMP distinctions. Existing unknown native application settlement continues to block safe handoff; explicit warned force is not represented as a repair or complete acceptance."
+    },
+    {
+      "area": "Dependencies, test boundaries and acceptance honesty",
+      "result": "PASS — static",
+      "evidence": "Reviewed src/lib.rs, Cargo.toml/Cargo.lock, README.md, CHANGELOG.md and all frozen test sources. ACP schema is pinned at 1.12.0; synthetic fixtures are labeled non-provider evidence. tests/acp/native/omp_live.rs requires genuine same-agent callbacks/effects and external provider-budget evidence, but this ignored opt-in driver was not run and establishes no live PASS here."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the independent static security gate: 32/32 checklist items passed, score 100*32/32 = 100. Reviewed all 32 frozen files (13 production, 11 test, 8 documentation/configuration), sealed E06 requirements and narrow unchanged authority controls. No evidence-backed Must-fix, Should-fix or optional security finding survived source-to-control/sink tracing. This is not E06 runtime or release acceptance.",
+  "limits": "Read-only source analysis only. No edits, builds, lint, tests, formatters, shell/source or payload execution, provider/network calls, real auth/private retired fixture access, config/daemon/global operations or commits. No prior review/audit/repair/runtime report, saved handoff or execution log was read. Manifest hashes/branch identity were taken as the supplied sealed context, not independently recomputed. Installed OMP same-instance interoperability, actual native/API effects, runtime cleanup and live budget enforcement remain the parent's separate runtime gates. Historical unresolved native/application settlement and existing authorization counters/caps are unchanged; neither synthetic fixtures, ignored live tests nor this static PASS resolve them."
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "synthetic-auth-actual-installed-OMP-with-network-denied",
+  "actual_provider_calls": 0,
+  "proof": {
+    "status": "failed",
+    "kind": "synthetic-auth-actual-installed-OMP-with-network-denied",
+    "actual_provider_calls": 0,
+    "stage": "session/prompt",
+    "failure_category": "ENOENT: no such file or directory, open '/private/tmp/amux-e06-omp-offline-AHCQ4z/compiled-capture.json'",
+    "child_exit": 0
+  },
+  "budget": {
+    "model_requests": 0,
+    "max_model_requests": 4,
+    "max_requested_output_tokens": 2000,
+    "wall_seconds": 45,
+    "model": "github-copilot/gpt-6-luna",
+    "effort": "low",
+    "subscription_only": true,
+    "premium_or_api_key_fallback": false,
+    "blocked_requests": 18,
+    "requests": [],
+    "deadline_enforced": true,
+    "deadline_expired": false,
+    "metadata_requests": 2,
+    "blocked_categories": [
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-route",
+      "unapproved-route",
+      "unapproved-route",
+      "unapproved-route",
+      "unapproved-route",
+      "unapproved-route",
+      "unapproved-route",
+      "unsupported-body-encoding",
+      "unsupported-body-encoding",
+      "unsupported-body-encoding",
+      "unsupported-body-encoding",
+      "unsupported-body-encoding",
+      "unsupported-body-encoding"
+    ]
+  }
+}

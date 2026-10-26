@@ -354,6 +354,54 @@ fn retain_orphan_pipes(root: &Path, keep: Option<i32>) -> Result<()> {
     Ok(())
 }
 
+// Mirrors OMP18.12.6's advertised categories and string-valued setters. This
+// fixture is protocol evidence only; it never pretends to be a real OMP run.
+fn e06_options(mode: &str) -> Value {
+    let mut options = json!([
+        {"id":"mode","name":"Mode","category":"mode","type":"select","currentValue":"default",
+            "options":[{"value":"default","name":"Default"},{"value":"plan","name":"Plan"}]},
+        {"id":"model","name":"Model","category":"model","type":"select","currentValue":"fixture/other",
+            "options":[{"value":"fixture/cheap","name":"Cheap"},{"value":"fixture/other","name":"Other"}]},
+        {"id":"thinking","name":"Thinking","category":"thought_level","type":"select","currentValue":"off",
+            "options":[{"value":"off","name":"Off"},{"value":"low","name":"Low"},{"value":"high","name":"High"}]},
+        {"id":"fixture-detail","name":"Detail","type":"select","currentValue":"full",
+            "options":[{"value":"brief","name":"Brief"},{"value":"full","name":"Full"}]}
+    ]);
+    if mode == "e06-settings-no-effort" {
+        options.as_array_mut().unwrap().remove(2);
+    } else if mode == "e06-settings-ambiguous" {
+        let mut duplicate = options[2].clone();
+        duplicate["id"] = json!("other-thinking");
+        options.as_array_mut().unwrap().push(duplicate);
+    } else if mode == "e06-settings-categories" {
+        options[1]["id"] = json!("engine");
+        options[2]["id"] = json!("depth");
+    } else if mode == "e06-settings-model-dependent" {
+        options[2]["options"] =
+            json!([{"value":"off","name":"Off"},{"value":"high","name":"High"}]);
+    } else if mode == "e06-settings-delimited" {
+        options[3]["id"] = json!("fixture,detail=level");
+        options[3]["options"] = json!([
+            {"value":"brief,exact=value","name":"Delimited choice"},
+            {"value":"full","name":"Full"}
+        ]);
+    } else if mode == "e06-settings-long-model" {
+        options[1]["options"][0]["value"] = json!(format!("fixture/{}", "m".repeat(196)));
+    } else if mode == "e06-settings-boundary-model" {
+        options[1]["options"].as_array_mut().unwrap().push(json!({
+            "value":format!("fixture/{}", "b".repeat(248)),"name":"Boundary model"
+        }));
+    }
+    options
+}
+
+fn e06_update(session: &str, update: Value) -> Result<()> {
+    emit(
+        json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":session,"update":update}}),
+    )?;
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let root = PathBuf::from(
         std::env::args_os()
@@ -452,6 +500,8 @@ fn main() -> Result<()> {
     let mut failed_once = false;
     let mut startup_bonus = 0_i64;
     let mut parent_completed_form = false;
+    let mut configuration = e06_options(&mode);
+    let mut settings_sequence = Vec::new();
     let mut reader = BufReader::new(std::io::stdin().lock());
     while let Some(request) = receive(&mut reader)? {
         if request["method"] == "session/cancel" {
@@ -602,7 +652,91 @@ fn main() -> Result<()> {
                     let response = receive(&mut reader)?.ok_or("session form response missing")?;
                     startup_bonus += form_bonus(&response, &json!("41"), false)?;
                 }
-                json!({"sessionId":session})
+                if mode.starts_with("e06-") {
+                    json!({"sessionId":session,"configOptions":configuration,"modes":{
+                        "currentModeId":"default","availableModes":[{"id":"default","name":"Default"},{"id":"plan","name":"Plan"}]}})
+                } else {
+                    json!({"sessionId":session})
+                }
+            }
+            Some("session/set_config_option" | "session/set_mode") if mode.starts_with("e06-") => {
+                if request["params"]["sessionId"] != session {
+                    return Err("setting lost original session".into());
+                }
+                let is_mode = request["method"] == "session/set_mode";
+                let (config_id, value) = if is_mode {
+                    ("mode", &request["params"]["modeId"])
+                } else {
+                    (
+                        request["params"]["configId"]
+                            .as_str()
+                            .ok_or("config id required")?,
+                        &request["params"]["value"],
+                    )
+                };
+                let entry = if is_mode {
+                    json!({"method":"session/set_mode","modeId":value})
+                } else {
+                    json!({"method":"session/set_config_option","configId":config_id,"value":value})
+                };
+                settings_sequence.push(entry);
+                fs::write(
+                    root.join("settings-sequence.json"),
+                    serde_json::to_vec(&settings_sequence)?,
+                )?;
+                if mode == "e06-settings-hold" && settings_sequence.len() == 1 {
+                    barrier(&root, "settings")?;
+                }
+                if mode == "e06-settings-reject" {
+                    emit(
+                        json!({"jsonrpc":"2.0","id":id,"error":{"code":-32602,"message":"fixture rejected setting"}}),
+                    )?;
+                    continue;
+                }
+                if mode == "e06-settings-omit" {
+                    json!({})
+                } else {
+                    let option = configuration
+                        .as_array_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .find(|option| option["id"] == config_id)
+                        .ok_or("unoffered setting reached peer")?;
+                    if !option["options"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|choice| choice["value"] == *value)
+                    {
+                        return Err("unoffered choice reached peer".into());
+                    }
+                    option["currentValue"] = if mode == "e06-settings-drift" {
+                        json!("fixture/other")
+                    } else {
+                        value.clone()
+                    };
+                    if mode == "e06-settings-model-dependent" && config_id == "model" {
+                        configuration[2]["options"] =
+                            json!([{"value":"off","name":"Off"},{"value":"low","name":"Low"}]);
+                    }
+                    if is_mode {
+                        e06_update(
+                            &session,
+                            json!({"sessionUpdate":"current_mode_update","currentModeId":value}),
+                        )?;
+                    }
+                    e06_update(
+                        &session,
+                        json!({"sessionUpdate":"config_option_update","configOptions":configuration}),
+                    )?;
+                    if mode == "e06-settings-null-ack" {
+                        Value::Null
+                    } else if is_mode {
+                        json!({})
+                    } else {
+                        json!({"configOptions":configuration})
+                    }
+                }
             }
             Some("session/prompt") if request["params"]["sessionId"] == session => {
                 if mode == "error-once" && !failed_once {
@@ -743,7 +877,80 @@ fn main() -> Result<()> {
                         barrier(&root, &format!("capacity-{index}"))?;
                     }
                 }
-                let bonus = if mode == "s04-complete" {
+                let bonus = if matches!(mode.as_str(), "e06-omp" | "e06-omp-cancel") {
+                    let tool_id = "opaque".repeat(80);
+                    e06_update(
+                        &session,
+                        json!({"sessionUpdate":"tool_call","toolCallId":tool_id,
+                        "title":"Long opaque OMP tool","kind":"other","status":"in_progress"}),
+                    )?;
+                    e06_update(
+                        &session,
+                        json!({"sessionUpdate":"tool_call_update","toolCallId":tool_id,
+                        "status":"in_progress"}),
+                    )?;
+                    send_form(
+                        json!("omp-question"),
+                        json!({"sessionId":session,"toolCallId":tool_id}),
+                        json!({"type":"object","properties":{
+                            "q0":{"type":"string","title":"Continue?","oneOf":[
+                                {"const":"Proceed","title":"Proceed"},{"const":"Stop","title":"Stop"}],"default":"Proceed"},
+                            "q0__other":{"type":"string","title":"Other"}}}),
+                        "Continue?",
+                    )?;
+                    let response = receive(&mut reader)?.ok_or("OMP-shaped answer missing")?;
+                    if response["id"] != "omp-question"
+                        || response["result"]["action"] != "accept"
+                        || response["result"]["content"]["q0"] != "Proceed"
+                    {
+                        return Err("OMP-shaped form lost exact answer".into());
+                    }
+                    emit(
+                        json!({"jsonrpc":"2.0","id":91,"method":"session/request_permission","params":{
+                        "sessionId":session,"toolCall":{"toolCallId":tool_id,"title":"Confined effect","kind":"execute","status":"pending"},
+                        "options":[{"optionId":"allow_once","name":"Allow once","kind":"allow_once"},
+                            {"optionId":"reject_once","name":"Reject","kind":"reject_once"}]}}),
+                    )?;
+                    if mode == "e06-omp-cancel" {
+                        barrier(&root, "omp-permission")?;
+                        emit(
+                            json!({"jsonrpc":"2.0","method":"$/cancel_request","params":{"requestId":91}}),
+                        )?;
+                    }
+                    let response = receive(&mut reader)?.ok_or("OMP-shaped permission missing")?;
+                    if mode == "e06-omp-cancel" {
+                        if response["id"] != 91 || response["error"]["code"] != -32800 {
+                            return Err("OMP cancellation lost exact responder".into());
+                        }
+                        permitted = false;
+                    } else {
+                        if response["id"] != 91
+                            || response["result"]["outcome"]["outcome"] != "selected"
+                        {
+                            return Err("OMP-shaped permission lost exact responder".into());
+                        }
+                        permitted = match response["result"]["outcome"]["optionId"].as_str() {
+                            Some("allow_once") => true,
+                            Some("reject_once") => false,
+                            _ => return Err("fabricated OMP option".into()),
+                        };
+                    }
+                    fs::write(
+                        root.join("omp-permission.json"),
+                        serde_json::to_vec(&json!({"allowed":permitted}))?,
+                    )?;
+                    configuration[0]["currentValue"] = json!("plan");
+                    configuration[2]["currentValue"] = json!("high");
+                    e06_update(
+                        &session,
+                        json!({"sessionUpdate":"current_mode_update","currentModeId":"plan"}),
+                    )?;
+                    e06_update(
+                        &session,
+                        json!({"sessionUpdate":"config_option_update","configOptions":configuration}),
+                    )?;
+                    0
+                } else if mode == "s04-complete" {
                     send_form(
                         json!("reusable-form"),
                         json!({"sessionId":session}),

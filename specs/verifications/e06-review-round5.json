@@ -1,0 +1,42 @@
+{
+  "verdict": "FAIL",
+  "scope": "E06-only source/security",
+  "round": 5,
+  "max_rounds": 5,
+  "source": "specs/verifications/e06-review-round5-source.json",
+  "source_files": 32,
+  "source_unchanged_at_verdict": true,
+  "reports": {
+    "A": "specs/verifications/e06-review-round5-A.json",
+    "B": "specs/verifications/e06-review-round5-B.json",
+    "security": "specs/verifications/e06-review-round5-security.json"
+  },
+  "scores": {
+    "A": 96.875,
+    "B": 92.3076923076923,
+    "security": 100
+  },
+  "findings": [
+    {
+      "id": "E06-R5-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui/control.rs",
+      "line": 179,
+      "title": "Clone the shutdown handle before creating the native controller",
+      "impact": "If the newly added UnixStream clone fails, for example because the native process has exhausted its file descriptors, registration exits after the daemon has created the attachment controller but before a NativeControl exists. The only returned controller capability is discarded, while the daemon retains that disconnected registration. Repeated failed attachment attempts can consume the 4096-controller limit and eventually prevent otherwise valid attachments.",
+      "evidence": "NativeControl::register receives controller-create successfully at lines175-178, then propagates connection.shutdown_handle() failure at line179. client::Connection::shutdown_handle delegates to UnixStream::try_clone, which is fallible. NativeControl::stop/Drop cannot run because Self has not been constructed. On socket departure, daemon::serve invokes Registry::depart; src/control.rs:855-872 only marks the view disconnected and does not remove its controller. Removal requires an explicit guarded close in src/control.rs:1052-1085. The fallible clone after controller creation is added by this patch.",
+      "fix": "Move connection.shutdown_handle()? before the controller-create RPC, so this local allocation failure cannot leave a newly minted daemon registration behind. Alternatively, explicitly close the still-unowned newly created controller before propagating that error; do not release ownership or cancel claims as cleanup."
+    }
+  ],
+  "all_full_reports_read_before_any_new_source_edit": true,
+  "runtime": "specs/verifications/e06-round5-regressions.json",
+  "source_gate": "failed; review cap exhausted; repair reachable defect and verify, but no new review without explicit extension",
+  "historical_review_caps": "unchanged",
+  "actual_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "new_live_or_publication_authorization": false
+}

@@ -1,12 +1,14 @@
-project: Collection of terminals, ACP agent views, configuration and launch/setup recipes.
+project: Collection of terminals, structured agent views, configuration and launch/setup recipes.
 workspace: Execution directory and optional Git worktree identity.
 shell_context: Live Zsh interpreter and mutable state; capture clones cwd and exports only.
 execution: Command or job within a shell.
 terminal: PTY, emulator and associated process lifetime.
 agent_settled: Root OMP explicitly idle after agent_end with no retry or continuation active; not process exit or turn_end.
 acp_session: One structured conversation owned by a local ACP agent instance and connection; not a PTY or shell.
-agent_view: Amux-owned human conversation and interaction surface for the same ACP session addressed by the API.
-input_admission: Atomic daemon acceptance of a typed ACP action under the current ownership generation.
-accepted_work: Canonical ACP work committed before an ownership cut; retained and allowed to continue afterward.
+agent_view: Amux-owned human conversation and interaction surface for one structured session addressed by the API; ACP is delivered, ToolV1 is planned in e05.
+input_admission: Atomic daemon acceptance of a typed structured action under the current ownership generation; not provider application.
+accepted_work: Canonical structured work committed before an ownership cut; retained and allowed to continue afterward.
 agent_application: Provider application of an action, reported separately from amux acceptance, transport delivery and turn completion; unknown without evidence.
 acp_handoff_cut: Boundary ordering amux input admission against authority transfer; does not certify native PTY buffer drain.
+tool_integration: Planned language-neutral local process contract exposing one real cooperating tool session and genuine responders without implementing ACP.
+tool_session: One live semantic session owned by a ToolV1 integration child; tool wire IDs, amux work IDs and ownership generation remain distinct.

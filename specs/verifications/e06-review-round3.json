@@ -1,0 +1,68 @@
+{
+  "scope": "e06-only",
+  "round": 3,
+  "max_rounds": 5,
+  "status": "FAIL",
+  "source": "specs/verifications/e06-review-round3-source.json",
+  "scores": [
+    85,
+    94.44444444444444,
+    100
+  ],
+  "full_reports": [
+    "e06-review-round3-A.json",
+    "e06-review-round3-B.json",
+    "e06-review-round3-security.json"
+  ],
+  "unique_findings": [
+    {
+      "id": "E06-R3-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp/settings.rs",
+      "line": 304,
+      "title": "Track configuration selections by their exact advertised option ID",
+      "impact": "An acknowledged explicit settings.options selection can terminate startup; independent options sharing a category can also collide or be skipped.",
+      "evidence": "Requested::Option resolves an exact ID, but config maps thought_level options to category:thought_level. Existing fixture mode e06-settings-ambiguous advertises thinking and other-thinking under that category. For {\"options\":{\"thinking\":\"low\"}}, the exact setter is acknowledged and verified, then next calls current(category:thought_level); duplicate-category lookup becomes None and triggers setting-mismatch. Configure failure ends the owned peer instead of reaching ready. Existing ambiguity coverage tests semantic effort, not this explicit-option path.",
+      "fix": "Key configuration-option bookkeeping/current checks by exact config ID, including semantic requests after concrete resolution. Detect conflicts only for aliases addressing the same underlying option; preserve legacy setter synchronization. Cover explicit selection and two independent same-category options while retaining ambiguous semantic-effort rejection."
+    },
+    {
+      "id": "E06-R3-02",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/acp_profiles.rs",
+      "line": 74,
+      "title": "Preserve the resolved executable pathname when following symlinks",
+      "impact": "Executable-path-dependent profiles can be reported available but launch the wrong runtime or fail before ACP initialization, including virtual-environment Python adapters.",
+      "evidence": "executable returns canonical at line79; prepare substitutes it into command[0] at lines141–144; Broker invokes that path at src/acp.rs:1371–1374. Canonicalizing venv/bin/python to the system interpreter loses the adjacent virtual-environment configuration/site-packages. Symlink-basename-selected multicall launchers likewise lose invocation identity. Existing profile tests use direct executable paths.",
+      "fix": "Resolve bare commands to absolute PATH candidates while retaining the candidate executable pathname. Validate metadata through symlinks without substituting their canonical targets into argv. Add a symlink-dependent launcher regression."
+    },
+    {
+      "id": "E06-R3-03",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui/launch.rs",
+      "line": 93,
+      "title": "Keep inherited option defaults out of the lossy text round trip",
+      "impact": "Selecting a valid profile and submitting untouched native options can fail locally or alter the requested option identity, although structured defaults remain usable.",
+      "evidence": "defaults formats ID=VALUE entries and joins them with commas at lines93–95; request splits commas and the first equals sign at lines114–117. Common validation permits these characters. A valid default {\"options\":{\"detail\":\"a,b\"}} becomes detail=a,b and fails parsing b before launch; an option ID containing '=' is split into another key/value. Clearing this field already uses the daemon's lossless structured inheritance.",
+      "fix": "Keep untouched defaults structured/inherited, such as initializing the override field empty with the existing inherited-default presentation. Alternatively use a lossless escaped representation. Add delimiter-containing default ID/value regressions."
+    },
+    {
+      "id": "E06-B-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui.rs",
+      "line": 1008,
+      "title": "Drain recovery-time input after native registration completes",
+      "impact": "Input accumulated while the recovered attachment is still registering can become a fresh ownership request on the new controller. For example, withhold the recovery controller-create response, queue Prefix/Ctrl-L, then release the response: the resumed event loop processes those keys and can acquire an unowned target or create a reservation against its existing owner without a fresh post-recovery gesture. This breaks the promised discard of queued recovery input even though recovered() disables polling-based auto-acquisition.",
+      "evidence": "The only recovered-event drain is at tui.rs:977–998. It runs before display/resize setup and NativeControl::register at line 1008. register performs snapshot and controller-create RPCs at tui/control.rs:164–173, leaving a blocking input-accumulation interval after that drain. No later setup drain exists, and tick is initialized anew at tui.rs:1049. The queued Prefix/Ctrl-L is consumed by tui.rs:1403–1413, calling NativeControl::open; its observer branch calls request at control.rs:940, which enqueues Work::Claim at lines 950–966. The worker has a fresh heartbeat, so the pause guard does not reject this setup-time input.",
+      "fix": "Perform the bounded recovered-input drain after native registration and the remaining blocking setup, before recovered events can reach authority/application routing. Preserve safe quit and fail-closed overflow behavior. Add a controlling-PTY regression that holds the recovery registration response, queues Prefix/Ctrl-L during that interval, then verifies unchanged owner/reservation and no ownership-claim emission after registration completes."
+    }
+  ],
+  "live_provider_requests": 8,
+  "aggregate_cap": 9,
+  "remaining": 1,
+  "historical_caps": "unchanged",
+  "all_reports_read_before_any_source_edit": true
+}

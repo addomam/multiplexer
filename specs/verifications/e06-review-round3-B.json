@@ -1,0 +1,113 @@
+{
+  "verdict": "FAIL",
+  "score": 94.44444444444444,
+  "total_items": 18,
+  "passed_items": 17,
+  "checklist": [
+    {
+      "area": "Settled scope and preserved contracts",
+      "result": "PASS",
+      "evidence": "Reviewed CONVENTIONS.md, E06 PLAN.md lines 1–45, SCOPE_LATEST.yaml and THREAT_MODEL.md. E05 remains parked; implementation uses the existing daemon, ACP broker and native controller interfaces."
+    },
+    {
+      "area": "Profile validation and executable resolution",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs validates bounded profile IDs, labels, argv and defaults; prepare resolves an installed executable without a shell and merges explicit settings. Daemon acp-profiles dispatch returns the intended safe catalog fields."
+    },
+    {
+      "area": "Human CLI launch and explicit-controller routing",
+      "result": "PASS",
+      "evidence": "src/cli.rs routes controller-free acp start to tui::start and routes explicit --controller through the JSON API. src/daemon.rs consumes agent/settings, rejects simultaneous profile/raw argv, resolves exact or unambiguous profile-project selection and reserves one broker instance."
+    },
+    {
+      "area": "Native picker launch consumer",
+      "result": "PASS",
+      "evidence": "src/tui/launch.rs produces explicit project/profile/settings requests. NativeControl::launch adds the original native controller, Op::Launch has an explicit reply consumer, and tui.rs selects the acknowledged target without relaunching."
+    },
+    {
+      "area": "Closed settings and advertised identity validation",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs validates bounded closed settings, rejects duplicate advertised identities, resolves semantic model/mode/effort through advertised choices and maps effort only to thought_level."
+    },
+    {
+      "area": "Startup setting acknowledgements and readiness",
+      "result": "PASS",
+      "evidence": "src/acp.rs consumes RpcKind::Configure explicitly; configure_next keeps lifecycle starting until settings acknowledge and consistency checks finish. Broker::commit rejects prompts before ready. Unsupported/rejected/unconfirmed settings fail without fallback."
+    },
+    {
+      "area": "Reported configuration and displacement",
+      "result": "PASS",
+      "evidence": "Configuration::update handles current_mode_update/config_option_update, tracks displacement of acknowledged settings, and feeds descriptor/inspect/snapshot projections. AgentView consumes requested/reported/state/failure and explicitly distinguishes unreported values."
+    },
+    {
+      "area": "Typed cancellation and admitted-winner preservation",
+      "result": "PASS",
+      "evidence": "src/acp.rs dispatches $/cancel_request to cancel_incoming, matches typed wire IDs plus the current retained responder and only cancels pending, unselected interactions. Writer completion retires the exact responder; already admitted selections are not overwritten."
+    },
+    {
+      "area": "Opaque tool identity across consumers",
+      "result": "PASS",
+      "evidence": "The separate 4-KiB tool identity validator is used for tool notifications, form tool scope and permission tool scope. The retained interaction and native projection consumers do not replace opaque IDs. tests/fixtures/acp_peer.rs exercises a 480-byte ID across these boundaries."
+    },
+    {
+      "area": "Exact original daemon, instance and session continuity",
+      "result": "PASS",
+      "evidence": "Resume::validate checks daemon_id and ACP id/instance_id/connection_generation/session_id; only a null session may become established on the original tuple. NativeControl::register independently checks daemon identity on its own connection."
+    },
+    {
+      "area": "Loss fencing and joined worker teardown",
+      "result": "PASS",
+      "evidence": "The attached loop checks both streams and pause gaps; worker dequeue and compound claim observation recheck stop/heartbeat. NativeControl::stop shuts down the original stream before joining and retains only parsed successful launch identity, not old authority or drafts."
+    },
+    {
+      "area": "Observer-only recovery and acknowledged launch retention",
+      "result": "PASS",
+      "evidence": "supervise reconnects through Connection::connect without ensure_daemon. recovered disables first-view auto-acquisition. Both ordinary launch consumption and teardown salvage bind recovery to the successful launch receipt rather than the prior view."
+    },
+    {
+      "area": "Discarding input throughout recovery setup",
+      "result": "FAIL",
+      "evidence": "The recovered-input drain at src/tui.rs:977–998 precedes display/resize setup and NativeControl::register at line 1008. Registration performs two blocking RPCs, after which queued events are routed without another drain. See E06-B-01."
+    },
+    {
+      "area": "Bounded registrations and owned resource lifetimes",
+      "result": "PASS",
+      "evidence": "Recovery validates observation/display setup before registration; stopped idle recovered controllers attempt existing guarded close. src/control.rs retains owners/pending claims and enforces the registration cap. ACP retains original endpoint/process cleanup classification and joins owned workers."
+    },
+    {
+      "area": "Owners, pending claims and accepted work preservation",
+      "result": "PASS",
+      "evidence": "Recovery creates a new controller rather than importing old claims/control. Existing close_controller refuses owned/pending registrations. Force/cancel/keep paths retain their existing ownership semantics; accepted broker work and responders remain on the original instance."
+    },
+    {
+      "area": "Native PTY and stock interaction boundaries",
+      "result": "PASS",
+      "evidence": "ACP event handling consumes active-agent input without PTY fallback; NativeControl::input rejects ACP targets. Native physical input still requires control. Changed native tests retain byte-delivery, original-owner/PID and no-replay assertions rather than claiming native application settlement is repaired."
+    },
+    {
+      "area": "Actual consumer test source and lifecycle assertions",
+      "result": "PASS",
+      "evidence": "Inspected frozen test registrations, OMP/settings/profile tests, controlling-PTY daily-use/recovery-edge tests, native acceptance changes, fixture dispatch and teardown helpers. These drive actual CLI/TUI consumers and assert original tuple/PID/work/effects, cleanup and sentinel survival. The registration-time queued-input ordering in E06-B-01 is not covered."
+    },
+    {
+      "area": "Documentation, manifests and live-gate boundaries",
+      "result": "PASS",
+      "evidence": "README/CHANGELOG describe profile inheritance, reported-setting uncertainty, observer recovery, no replay/relaunch and native-fence limitations. Cargo.toml/Cargo.lock retain pinned ACP schema 1.12.0 with no E06 dependency change. The ignored OMP driver separately checks provider budget evidence and owned cleanup; it is not source proof of a completed live gate."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-B-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui.rs",
+      "line": 1008,
+      "title": "Drain recovery-time input after native registration completes",
+      "impact": "Input accumulated while the recovered attachment is still registering can become a fresh ownership request on the new controller. For example, withhold the recovery controller-create response, queue Prefix/Ctrl-L, then release the response: the resumed event loop processes those keys and can acquire an unowned target or create a reservation against its existing owner without a fresh post-recovery gesture. This breaks the promised discard of queued recovery input even though recovered() disables polling-based auto-acquisition.",
+      "evidence": "The only recovered-event drain is at tui.rs:977–998. It runs before display/resize setup and NativeControl::register at line 1008. register performs snapshot and controller-create RPCs at tui/control.rs:164–173, leaving a blocking input-accumulation interval after that drain. No later setup drain exists, and tick is initialized anew at tui.rs:1049. The queued Prefix/Ctrl-L is consumed by tui.rs:1403–1413, calling NativeControl::open; its observer branch calls request at control.rs:940, which enqueues Work::Claim at lines 950–966. The worker has a fresh heartbeat, so the pause guard does not reject this setup-time input.",
+      "fix": "Perform the bounded recovered-input drain after native registration and the remaining blocking setup, before recovered events can reach authority/application routing. Preserve safe quit and fail-closed overflow behavior. Add a controlling-PTY regression that holds the recovery registration response, queues Prefix/Ctrl-L during that interval, then verifies unchanged owner/reservation and no ownership-claim emission after registration completes."
+    }
+  ],
+  "summary": "FAIL: 17 of 18 applicable source-review areas passed (94.44%). One patch-introduced recovery ordering defect allows registration-time queued input to become authority on the fresh controller. No other supported Must-fix or Should-fix findings were identified in the reviewed source paths.",
+  "limits": "Read-only independent source review against base 2195b05 and the frozen round-3 manifest. No earlier review reports, dispositions, self-audits, verdicts or PLAN amendments after line 45 were consulted. No files were edited and no builds, tests, linters, formatters, runtime/CLI/provider/network calls were executed. Checklist PASS denotes source conclusions, not exercised verification or full E06 acceptance. Parent-supplied runtime evidence was not rerun. Complete real-provider acceptance remains unpassed; eight of nine authorized model requests are spent and no new live execution was authorized. Historical review caps, native PTY fence limitations and integration/publication restrictions remain unchanged."
+}

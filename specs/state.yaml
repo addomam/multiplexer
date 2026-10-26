@@ -1,12 +1,12 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/thin-integration-api, signing: unsigned-authorized-command-scoped-fallback, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: scope_work
-active_epic: e05
+vcs: {kind: git, branch: feat/acp-daily-use, signing: unsigned-authorized-command-scoped-fallback, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: release_branch
+active_epic: e06
 project_cycle:
-  current_phase: 1
-  completed_phases: []
+  current_phase: 5
+  completed_phases: [1, 2, 3, 4]
   mode: standard
-  scope: thin-tool-integration
+  scope: acp-daily-use
   previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
 elaborate_review:
   scope: same-instance-agent-interaction-specification
@@ -32,8 +32,9 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: elaborate-spec
+  next_skill: release-branch
   blocked: false
+  blocker: null
   reason: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -92,10 +93,119 @@ handoff:
     User's direct-repair request is complete without another reproduction/review cycle. Existing native FIFO replies now return owned captured action identity only after typed definite daemon non-admission; answer values are removed, exact pending call/revision/target/control/generation guards retain deliberate correction/cancel and ambiguous transport failure stays fail-closed. One focused actual controlling-PTY case passes correction49 and F7 cancel32 on original owner/PID/session/RPC with complete cleanup,6.35s. Initial default-parallel full1799 passes ACP66/1ignored then fails unrelated shell_races openpty Os-6; preserve it, no product PTY fix claimed. Resource-bounded full bg260/artifact1803 now PASS402workspace/291default, strict workspace/default Rust/fmt, OMP8/49, Zsh/Node, actual cursor showcase1 and final native guards2,618.33s. Suite test-threads1 leaves each test's internal races enabled. No provider/auth/global/publication action or fresh RED. All reachable repair/verification complete; changed-source independent/human acceptance remains separate with original5/5 and supplemental1/1 exhausted, no automatic further review. Evidence is e04s04-rejection-recovery.json.
     Current user decision supersedes the preceding pending-delivery snapshots: "ok sick. this looks great. Let's merge this and keep going" explicitly accepts local main integration of repair66b5293 after actual runtime proof. The22 runtime hashes still match full1803, all four S04 tasks now pass with this human post-cap decision, and the completed e04 capsule is archived. Original5/5 and supplemental1/1 FAIL reports/caps stay unchanged; no new independent PASS, provider run, push, tag, release or global change. Land by safe fast-forward in the clean /Users/addomam/projects/amux-acp main worktree, preserve the dirty original checkout, then start the previously requested thin non-ACP integration API scope on a new feature branch. Authorization is specs/verifications/e04-main-landing.json.
     ACP is now actually fast-forwarded onto local main af745cdf4045af76a7a34a8bb4260e24057461ce. Its clean parent worktree is safely repurposed and moved to /Users/addomam/projects/amux-integration-api on feat/thin-integration-api; the merged ACP branch is retained and no unmerged work is discarded. Post-relocation smoke initially fails before daemon spawn because the reused test binary embeds the old CARGO_BIN_EXE path; rebuilding only amux-owned artifacts then passes the actual native recovery case1/1 with original RPC/effects and cleanup,6.58s (bg262). The unstarted fixture root has no holders and is removed; no production change or provider call. The next thin-tool API scope and planning context are complete; elaborate its minimal semantic contract and real consumer before a reviewed Build plan. The API cannot make an uncooperative terminal reliable. No new initiative implementation, merge/push/release or global changes are claimed.
-  last_step_completed: e04-main-landed-and-actual-smoke-PASS-e05-scope-complete
+    E05 refined contract and Build packet are now prepared under the user's "Ok do it" and language-neutral local API selection. A concrete in-process ToolV1 codec reuses the single structured broker/transport/view, with explicit new tool target kind, one owned integration child and unchanged ACP public contracts. Pinned OMP18.12.6 typed SDK hooks are source-supported, not runtime-accepted; sandboxed installed --version/--help are the only new executions, network and user-home access denied. Four vertical stories and all tasks start failing. New e05-only independent contract/Plan review is pending; Build requires explicit phase approval after that pass, live/global/main publication remains separately gated. E03/e04 native-fence failures and exhausted caps remain unchanged.
+    E05 Plan round1 failed the dual gate100/93.75: B-01 genuine SDK approval-call correlation and B-02 effective always-ask policy were missing. Preserve both reports and incomplete structured-report recovery; final B summary records one must-fix and one should-fix. Source-backed adapter contract now specifies bounded serialized requested/resolved-event binding, synchronous failure barrier and explicit isolated settings; S04 gains the offline real-wrapper overlap/deny-allow regression,21 scenarios total. Fresh blind round2/5 is running against26 frozen planning artifacts.22/22 delivered source hashes remain unchanged; no SDK/provider/runtime/auth/global/main operations and no implementation approval.
+    E05 contract and full Build plan now pass fresh independent round2 at100/100 with zero findings from both reviewers, clearing B-01/B-02 at specification level. All26 frozen planning fingerprints matched before disposition-only status updates;17 tasks remain failing across21 scenarios. Reports/gate: specs/verifications/e05-plan-review-round2.json. No production code/tests, SDK/model/auth/global/remote/main changes. Required next user decision is explicit Plan-to-Build approval; only then run feature-worktree baseline/LSP prerequisites and e05s01 same-instance tracer. New exact live approval remains separate and final OMP acceptance cannot be closed using deterministic reference proof alone.
+    User explicitly parks e05 and authorizes all three ACP daily-use outcomes: actual OMP compatibility, convenient launch and truthful same-session reattachment. E05 globals are frozen with hashes in e05-parking.json; all17 e05 tasks remain failing/not implemented, reviews/history/caps retained. New feature branch feat/acp-daily-use preserves all planning work and the dirty original checkout. E06 bounded Plan/impact/threat model and seven failing tasks are saved; production edits await actual baseline bg_263. User separately approves cheap OMP subscription-only live acceptance: at most4 model requests,2000 requested output tokens each,120s, low effort, no premium/API-key fallback or global auth/config changes; not a hard monetary cap. Parent owns live execution and shared integration. No main merge/push/release.
+    E06 production is integrated on the isolated feature branch: acknowledged model/mode/effort settings, exact OMP responder cancellation, native/profile CLI launch and fenced same-session recovery. Registered deterministic E06 acceptance passes19 with one live case ignored, plus five units. Current full workspace bg_278 passes426 tests across30 suites,12 ignored, strict Clippy, check, build and fmt after cleaning only stale relocated showcase artifacts. Independent built-CLI/controlling-PTY smoke passes real effects42 then57 on the same peer/session, observer reattachment, no draft replay or implicit reacquisition and normal cleanup; two driver-oracle failures are retained separately. Actual OMP provider acceptance, fresh reviews and final documentation remain pending; zero real provider requests so far. The isolated subscription transport gate passes synthetic four-request concurrency/cap enforcement and its independent one-second deadline. Stories/tasks remain failing until their actual gates succeed.
+    E06 latest focused integration bg_289 passes19 cases plus5 units after preserving complete opaque upstream tool IDs under4KiB and switching Darwin sleep fences to conservative wall time. Full workspace426/bg_278 predates those repairs and must be rerun. Real OMP18.12.6 with supported cheap subscription MAI/low now completes its genuine ask via the native UI on the original session; complete acceptance remains failing because the live driver required incidental shell quoting, then its110s guard terminated the owned peer. Actual provider accounting is5/6 requests used,1 remaining; no further live requests are running or authorized beyond that aggregate cap. Repair single-token helper commands and canonical permission selection offline first (bg_291 oracle failure retained; bg_292 running). All seven task gates remain failing pending actual final runtime and fresh review; e05 remains parked and historical caps unchanged.
+    E06 live bg_293 passes actual native ask, API noncancelling handoff and exact genuine Bash deny/allow file effects on the original OMP tuple/PID/work, but fails independent budget proof: the private guard retained an accidentally stricter3-request literal and blocked final generation. Eight actual requests used under explicitly extended aggregate cap9;1 remains, no further live run authorized. Single-source guard admission now proves4 concurrent synthetic calls/fifth rejection offline, zero provider calls. Actual installed-OMP/native/API full offline bg_292 passes with normal cleanup. Native regression integration fences F9 behind canonical projection, exposes Force readiness only after full paint/drained input, and replaces the obsolete persistent-unknown label with fresh observer identity/no-replay/old-owner/PID proof. Historical full failures2119/2123/2125/2127 retained; current full gate bg_299 pending. Fresh E06 source review is still pending; no historical review cap reset or main publication.
+    E06 post-review repairs now pass bg_306:430 workspace/319 default tests (overlap), strict Clippy/check/build/fmt, actual cursor showcase and native unknown-settlement guards;23 nonlive E06 cases pass. Actual final built CLI/native smoke proves42→57 on the same peer with normal cleanup. Four causal native recovery boundaries plus cleared-profile settings pass bg_305; the real integrated first-session snapshot/inspect failure is preserved. New blind A/B/security E06 round2 is running against31 frozen source/doc files after round1 FAIL; historical caps unchanged. All seven tasks still fail pending actual fresh-review/live gates. Copied auth/raw private fixture and throwaways were retired after no holders; public8/9 accounting retained,1 remains, no new live run authorized.
+    E06 round2 failed source scores92.857/87.5/security100 with two unique lifecycle findings; full reports remain unchanged. Both repairs now pass bg_307 fourteen actual causal/daily native cases and bg_308433 workspace/322 default tests (overlap), strict checks/build/fmt and26 E06 nonlive cases. Parsed launch receipts survive observation/authority loss before consumption without replay; failed setup allocates no registrations and eligible recovered idle observers actually close without deleting original owners/claims. Independent final built CLI/native smoke on binary662c8ebb proves42→57 on the original tuple/PID and normal cleanup; three scratch-driver-only failures are preserved separately. Fresh blind A/B/security E06 round3/max5 is running against31 frozen files; all seven tasks remain failing until fresh-review/live gates. Copied private auth/raw fixture remains retired. Actual spending stays8/9 with1 remaining, no fresh live run authorized; no historical cap reset, main merge/push/release or global change.
+    E06 round3 FAIL85/94.444/security100 is preserved with four supported Should-fix findings. Exact option IDs/legacy aliases, symlink invocation, structured inherited native options and post-first-paint recovery input are repaired. Combined RED bg_312five failures and intermediate bg_313oracle/fixture failures remain; bg_31432 nonlive cases pass after explicit fixture rebuild and deletion of incidental sequence assertions. Full bg_315passes439 workspace/328 default tests (overlap), strict checks/build/fmt, actual cursor showcase and exact native unknown-settlement guards. Current built CLI/native binary9553876a visibly returns Locked/observer and proves42→57 on the original tuple/PID with normal cleanup; immutable round3/round4 receipts retained. Fresh blind A/B/security E06 round4/max5 is running against31 frozen files. All tasks remain failing pending fresh-review/live gates; actual spending stays8/cap9 with1 remaining, no fresh live run authorized. Private auth/raw fixture remains retired; no historical cap reset, global or publication operation.
+    E06 round4 FAIL88.235/100/security100 remains preserved. Both worker observation-loss and real native registration-resize regressions fail before repair (bg_316/317), then pass with32 existing nonlive cases in bg_318. Independent built CLI/native binaryc1b3e158 proves42→57 on the same tuple/PID, read-only observer and normal owned cleanup; its captured first observer header is transient Unknown, not a settled Locked visual claim. Integrated bg_319 passes441 workspace tests but default shell-race fixture reads an empty redirection-created file before the queued builtin writes; preserve the failure and await actual exact content, not file existence. Full repaired gate bg_320 is running before fresh final E06 source round5/max5, now32 frozen-review candidate files including that fixture. All seven task gates remain failing; provider8/9,1 remaining and no new run/publication authorization.
+    E06 source round5/max5 is FAIL96.875/92.307/security100: A finds one P2 descriptor clone after controller creation; B/security pass, all full reports and exact32 reviewed hashes preserved. Move that allocation before the side effect, then rebuild and run actual CLI/native arithmetic42→57 on binaryb2ce09d2 with the same tuple/PID, read-only observer, no duplicate/replay/acquisition and complete normal owned cleanup. No descriptor-exhaustion injection or rare-branch runtime RED is claimed. Current bg_321 passes441 workspace/330 default tests (overlap), strict checks/build/fmt, actual cursor/native unknown-settlement guards and34 nonlive E06 cases. Repaired32-file identity is e06-post-round5-source.json. E06 review cap5/max5 is exhausted: next action is obtain explicit E06-only5→6 source/security-review extension; do not reset historical caps or dispatch another review without approval. All seven task gates remain failing. Provider8/cap9/1 remains; no fresh live run until source PASS and separate bounded approval. Private copied auth/raw fixture stays retired; no global, commit, merge, push or release authorization. Keep unmerged feature worktree.
+    User explicitly raises this E06 source/security review cap5→10; no historical cap or provider/publication authorization changes. Fresh independent E06BlindA6/E06BlindB6/E06Security6 are running against e06-review-round6-source.json (32 files; all24 code/test hashes match exercised bg_321). All seven task statuses remain failing until actual review/live gates. Read all complete reports before any new source edit; preserve every earlier failed review. Provider8/cap9/1 remains, copied auth/raw fixture retired; no partial probe or fresh live run before source PASS plus separately bounded approval.
+    E06 source round6 FAIL96.875/91.6667/security100 is fully read and preserved. Valid legacy mode null and exact picker-selection recovery have causal RED→GREEN; the initial picker oracle is explicitly invalid, not production proof. Full bg_328 fails native resize, then child-only missed-SIGWINCH RED bg_329 proves the painted/application geometry mismatch. Paint-time reconciliation preserves no-replay and clipped/queued Force rejection; bg_330 passes38 unique nonlive E06 cases plus the original cancellation/Force scenario. Current complete repaired-source bg_331 is running. Independent built CLI/native binary3aaf091e proves42→57 on the same tuple/PID, read-only observer and complete normal cleanup; first header is transient Unknown. All seven gates remain failing before fresh round7/max10 and live acceptance. Provider8/cap9/1, historical caps and publication gates unchanged.
+    Final E06 repaired-source bg_332 passes445 workspace/334 default tests (overlap), strict Clippy/check/build/fmt, actual cursor showcase, both unknown-native-settlement guards and38 unique nonlive E06 cases. The new missed-notification case now exits by normal detach; its explicit two-line cleanup is included in this full gate. Production binary remains3aaf091e with independent actual CLI/native42→57 and normal cleanup. All32 sealed source/doc hashes match the frozen round7 manifest; fresh E06BlindA7/E06BlindB7/E06Security7 are running under explicit E06 max10. Read all full reports before source edits. All seven gates remain failing until actual source/live acceptance; provider8/cap9/1, retired private auth/raw fixture, historical caps and publication restrictions remain unchanged.
+    E06 round7 FAIL93.75/100/security100 has one supported P2 explicit-options identity defect; every full report and32 unchanged reviewed hashes is archived before repairs. Preserve planned simple --option shorthand and add --options-json, replacing the native override mini-language with the same bounded lossless JSON-object parser; duplicate decoded keys remain rejected and profile inheritance stays structured. Real CLI/native delimiter overrides fail before repair (bg_333/334), then bg_335 passes40 nonlive E06 cases. Independent current built CLI/native binary54ef38a3 exercises the new JSON flag, visibly applied settings, same-instance42→57, Locked/read-only observer and normal owned cleanup. Full current-source bg_336 is running before fresh round8/max10. All seven task gates remain failing; provider8/cap9/1 and historical/publication restrictions unchanged.
+    E06 round9 FAIL96.875/100/security100 is archived with every full report and32 unchanged frozen hashes in e06-review-round9.json. One supported P2: native launch edits silently filter/truncate invalid input into a different valid identity. Reject complete over-budget/control-containing scalar edits without mutating the field, retain per-field rejection until deliberate correction, block submission while any rejection remains and preserve legal Options JSON whitespace. Add one real native boundary regression before production repair. Existing bg_342 and actual CLI/native712285f4 proof remain pre-repair acceptance only. Seven task gates remain failing; final authorized source round10/max10 follows actual repair/runtime proof. Provider8/cap9/1, no new live or publication authority; all historical caps unchanged.
+    E06 round9 atomic launch editing has causal RED bg_344 and focused GREEN bg_345. Full bg_346/347 and ACP bg_349 preserve subsequent native failures, including five unread kernel F10 bytes. Exact rendered ready-target/session fences and the local released-crossterm readiness repair are implemented; failed candidate bg_350 is explicitly retained as an introduced blocking-stdin stall, not21 original defects. Corrected bg_351 passes13 launch cases, and actual CLI/native binary1fad0548 proves owner/observer physical resize plus one F10 close, inert gestures, same-instance42→57 and normal cleanup. Full bg_352 passes449 workspace/338 default tests, both native settlement guards and42 unique nonlive E06 cases; remove its exposed upstream redundant-parentheses warning without suppression and run clean full bg_353. Final exact-binary smoke and final source round10/max10 remain pending. Every task gate remains failing; provider8/cap9/1, no fresh live run, historical caps and publication restrictions are unchanged.
+    Final repaired-source bg_353 passes449 workspace/338 default tests (overlap), strict Clippy/check/build/fmt, actual cursor showcase, both unknown-native-settlement guards and42 unique nonlive E06 cases. Actual final binaryc211a2cc proves owner/observer settings physical resize and one-key F10 close, inert gestures, exact tuple/PID75199 and42→57 with complete normal cleanup. Fresh blind E06BlindA10/E06BlindB10/E06Security10 are running against92 sealed paths (32 original plus60 vendored release files;57 unchanged and3 bounded changes). Read/archive all complete reports and verify92 unchanged hashes before source edits or closing task gates. This is final E06 round10/max10. All seven gates remain failing; provider8/cap9/1, no partial probe, no fresh live approval, historical caps/publication unchanged.
+    Final E06 round10 FAIL A94.444444/B100/security92 is fully read and archived in e06-review-round10.json; all92 frozen hashes match before any source change. Two logical supported findings remain: A:F1/security:R10-S1 P1 zero-time filtered terminal replies can hide queued old ownership input at recovery/consent/Force presentation; security:R10-S2 P2 ready incomplete terminal input can bypass the reader timeout. These are static findings, not observed exploits or a new runtime RED. Runtime bg_353 and actual final native proof remain valid only for exercised cases, not those uncovered interleavings. All seven task/story gates remain failing. E06 source/security cap10/10 exhausted: stop for explicit human decision, no round11 or new live run. Keep feature worktree and every report; provider8/cap9/1, historical caps and publication restrictions unchanged.
+    User explicitly chooses “Fix and review, cap12”: raise E06-only source/security max10→12, fix the two supported input-boundary defects, add targeted regressions and real-terminal proof, then at most two fresh A/B/security rounds. No provider-budget/global/commit/merge/push authority changes. Preserve round10 FAIL and92 matched hashes. Parent remains integration owner: explicit three-state bounded input-boundary probe plus native routing; independent source-reader and native-regression slices receive disjoint files/interfaces. All seven gates remain failing until actual repaired runtime/source/live verification.
+    E06 round10 repairs now have causal native RED bg_354→GREEN bg_356, three dependency boundary units in both default/event-stream bg_358, and complete bg_359 PASS451 workspace/340 default (overlap),44 unique nonlive cases, strict checks and both preserved unknown-native-settlement guards. Final actual CLI/native binary784097aa injects internal replies and unterminated paste through owner/observer physical settings resizes, then discards/completes it and proves42→57 on original tuple/PID2966 with normal cleanup/sentinel/fallbackfalse. Standalone generated lockfile removed; no new provider calls. Fresh blind E06BlindA11/E06BlindB11/E06Security11 run against92 sealed paths (54 vendor files release-identical,6 bounded changes), max12 explicitly approved. Read/archive all complete reports and match92 hashes before any new source edit or task closure. All seven tasks remain failing; provider8/cap9/1 and all historical/publication limits unchanged.
+    E06 fresh round11 PASS A100/B100/security100, zero findings. Every complete report is read/archived and all92 frozen hashes match at verdict before task closure. Complete bg_359 and actual native784097aa support six passing nonlive tasks and passing e06s02/e06s03; e06s01-T2 and story/epic acceptance remain failing/in-progress. Provider8/cap9/1 unchanged: ask separately to raise total cap9→12 for one fresh complete max4-request OMP subscription run, MAI flash/low/2000 requested output tokens each/110-second guard, no partial probes or premium/API-key fallback. No new live requests, global changes or commit/merge/push authority.
+    User explicitly selects “Run complete acceptance, cap12”: authorize one fresh max4-request complete OMP subscription acceptance run, aggregate provider cap9→12 with8 already used. Model github-copilot/mai-code-1.1-flash/low, ≤2000 requested output tokens each,110-second guard, fresh private copied auth and ledger; no premium/API-key fallback, global changes or publication. Six nonlive gates pass; live acceptance stays failing until actual run and normal cleanup succeed.
+    E06 complete genuine installed-OMP acceptance now PASS in one foreground run:1 selected/1 passed/0 ignored,10.06 seconds. Exactly4 actual MAI flash/low requests at2000 requested output tokens each; aggregate12/cap12/0. Genuine native question answer, API Force preserving the original pending permission, exact deny/allow file effects, original tuple/PID/work/RPC and normal end_turn all pass without implicit interruption. Native termios/host/drainer, original agent/workers/endpoints, daemon/socket/workspace and unrelated-sentinel cleanup pass. Separate private copied-auth/raw root has no lsof holders and is removed; global subscription credential row is unchanged. Full receipt e06-omp-live-final.json. All7 tasks/3 stories pass; E05 remains parked with historical failures/caps preserved. Retain uncommitted feature worktree; commit/merge/push/release still need separate authorization, no further live calls.
+    User explicitly requests “commit and merge”: authorize committing the verified E06 feature and parked E05 planning/evidence on feat/acp-daily-use and fast-forwarding local main. Main worktree /Users/addomam/projects/amux-acp is clean at af745cdf; feature also retains the earlier2195b05 planning commit. All86 reviewed code/test/vendor/Cargo paths still match the approved source; full acceptance remains green. Attempt configured SSH signing with the actual configured author. No push, tag, release, global change or new provider run. Generic traceability matrix/scripts are absent, so quantitative gate-trace is WAIVED, not fabricated; all7 explicit task verify/evidence links are present. Keep the feature worktree until integration and actual main smoke succeed.
+  last_step_completed: e06-user-authorized-local-commit-and-merge-prepared
   required_reading:
+    - specs/epics/e06-acp-daily-use/PLAN.md
+    - specs/epics/e06-acp-daily-use/epic.yaml
+    - specs/epics/e06-acp-daily-use/e06s01-story.md
+    - specs/epics/e06-acp-daily-use/e06s01-tasks.yaml
+    - specs/epics/e06-acp-daily-use/e06s02-story.md
+    - specs/epics/e06-acp-daily-use/e06s02-tasks.yaml
+    - specs/epics/e06-acp-daily-use/e06s03-story.md
+    - specs/epics/e06-acp-daily-use/e06s03-tasks.yaml
+    - specs/security/epics/e06/THREAT_MODEL.md
+    - specs/verifications/e05-parking.json
+    - specs/verifications/e06-review-round9-source.json
+    - specs/verifications/e06-native-input-diagnosis.json
+    - specs/verifications/e06-native-cli-smoke-input-repair.json
+    - specs/verifications/e06-review-round10-source.json
+    - specs/verifications/e06-review-round11-source.json
+    - specs/verifications/e06-review-round11-dispatch.json
+    - specs/verifications/e06-review-round11.json
+    - specs/verifications/e06-live-cap12-authorization.json
+    - specs/verifications/e06-omp-live-final.json
+    - specs/verifications/e06-daily-use-verify.json
+    - specs/verifications/AUDIT-e06-build-round11.md
+    - specs/verifications/e06-review-round10-repairs.json
+    - specs/verifications/e06-post-round10-regressions.json
+    - specs/verifications/e06-native-cli-smoke-post-round10.json
+    - specs/verifications/e06-review-round10.json
+    - specs/verifications/e06-review-round9-repairs.json
+    - specs/verifications/AUDIT-e06-build-round10.md
+    - specs/verifications/e06-post-round9-regressions.json
+    - specs/verifications/e06-native-cli-smoke-final.json
+    - specs/verifications/AUDIT-e06-build-round9.md
+    - specs/verifications/e06-post-round8-regressions.json
+    - specs/verifications/e06-review-round8.json
+    - specs/verifications/e06-review-round8-repairs.json
+    - specs/verifications/e06-post-round8-source.json
+    - specs/verifications/e06-native-cli-smoke-post-round8.json
+    - specs/verifications/e06-review-round8-source.json
+    - specs/verifications/AUDIT-e06-build-round8.md
+    - specs/verifications/e06-post-round7-regressions.json
+    - specs/verifications/e06-review-round7.json
+    - specs/verifications/e06-review-round7-repairs.json
+    - specs/verifications/e06-post-round7-source.json
+    - specs/verifications/e06-native-cli-smoke-post-round7.json
+    - specs/verifications/e06-review-round7-source.json
+    - specs/verifications/AUDIT-e06-build-round7.md
+    - specs/verifications/e06-post-round6-regressions.json
+    - specs/verifications/e06-review-round6.json
+    - specs/verifications/e06-review-round6-repairs.json
+    - specs/verifications/e06-post-round6-source.json
+    - specs/verifications/e06-native-cli-smoke-post-round6.json
+    - specs/verifications/e06-review-round6-source.json
+    - specs/verifications/e06-post-round5-source.json
+    - specs/verifications/e06-post-round5-regressions.json
+    - specs/verifications/e06-review-round5.json
+    - specs/verifications/e06-review-round5-repairs.json
+    - specs/verifications/e06-native-cli-smoke-post-round5.json
+    - specs/verifications/e06-review-round5-source.json
+    - specs/verifications/e06-round5-regressions.json
+    - specs/verifications/e06-review-round4.json
+    - specs/verifications/e06-review-round4-repairs.json
+    - specs/verifications/e06-review-round4-source.json
+    - specs/verifications/e06-round4-regressions.json
+    - specs/verifications/e06-review-round3.json
+    - specs/verifications/e06-review-round3-repairs.json
+    - specs/verifications/e06-review-round3-source.json
+    - specs/verifications/e06-round3-regressions.json
+    - specs/verifications/e06-review-round2.json
+    - specs/verifications/e06-review-round2-source.json
+    - specs/verifications/e06-round2-regressions.json
+    - specs/verifications/e06-review-round1.json
+    - specs/verifications/e06-round1-bootstrap-gap.json
+    - specs/verifications/e06-private-cleanup.json
     - specs/planning-context.yaml
     - specs/product/SCOPE_LATEST.yaml
+    - specs/adr/0005-thin-tool-integration.md
+    - specs/contracts/tool-integration-v1.md
+    - specs/contracts/omp-tool-adapter.md
+    - specs/verifications/e05-plan-review-round1.json
+    - specs/verifications/e05-plan-round2-source.json
+    - specs/verifications/e05-plan-review-round2.json
+    - specs/verifications/AUDIT-e05-plan-round2.md
+    - specs/epics/e05-thin-tool-integration/PLAN.md
+    - specs/epics/e05-thin-tool-integration/epic.yaml
+    - specs/testing/e05-TEST_PLAN.md
+    - specs/security/epics/e05/THREAT_MODEL.md
+    - specs/verifications/e05-contract-research.json
     - specs/product/SCOPE_E04.yaml
     - specs/verifications/e04-main-landing.json
     - specs/verifications/e04s04-live-codex-grok.json
@@ -710,13 +820,71 @@ e04s04_completed_cycle:
     - {agent: e04-s04-native, workspace: w1Y, tab: 'w1Y:t1', pane: 'w1Y:p1', worktree: /Users/addomam/projects/amux-acp-s04-native, branch: feat/acp-s04-native, base: 5311409, files: [tests/acp/native/acceptance.rs], model: openai-codex/gpt-6.1-sol, thinking: high, status: safely-integrated-retired-without-force-branch-retained, commit: f8aa0073759f8ff4a55f9c77a5085412891ed80e, integration: 5862083, completion_job: bg_207, worker_checks: prohibited-parent-only}
   human_delivery_decision: {status: accepted, source: specs/verifications/e04-main-landing.json, source_commit: 66b5293, review_caps_reset: false, independent_post_repair_PASS: false}
 e05_discovery:
-  status: scope-complete-contract-elaboration-next
-  scope: specs/product/SCOPE_LATEST.yaml
-  planning_context: specs/planning-context.yaml
+  status: parked-by-explicit-user-decision-not-implemented
+  scope: specs/product/SCOPE_E05.yaml
+  planning_context: specs/planning-context-e05.yaml
   branch: feat/thin-integration-api
   worktree: /Users/addomam/projects/amux-integration-api
   baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
-  provisional_story_ids: [e05s01, e05s02, e05s03, e05s04]
+  story_ids: [e05s01, e05s02, e05s03, e05s04]
   implementation_started: false
   authorization: user-keep-going-on-previously-requested-thin-API-scope
   post_landing_native_smoke: {job: bg_262, executed: 1, passed: 1, seconds: 6.58, provider_calls: 0, relocation_cache_failure: bg_261, source_changed: false}
+e05_plan_review:
+  scope: e05-only-language-neutral-contract-and-build-plan
+  status: PASS-contract-and-plan-only
+  round: 2
+  max_rounds: 5
+  reviewers: 2
+  minimum_score_each: 94
+  zero_must_fix_required: true
+  historical_e03_e04_caps: unchanged
+  build_approval: parked-by-explicit-user-decision
+  source: specs/verifications/e05-plan-round2-source.json
+  agents: [E05PlanR2A, E05PlanR2B]
+  self_audit: specs/verifications/AUDIT-e05-plan-round2.md
+  static_validation: specs/verifications/e05-plan-round2-static-validation.json
+  previous_round: {round: 1, status: FAIL, scores: [100, 93.75], must_fix: 1, should_fix: 1, evidence: specs/verifications/e05-plan-review-round1.json, findings: [B-01, B-02], disposition: specification-repaired-and-cleared-in-round2}
+  scores: [100, 100]
+  must_fix: [0, 0]
+  should_fix: [0, 0]
+  evidence: specs/verifications/e05-plan-review-round2.json
+  runtime_acceptance: not-implemented
+e06_build:
+  scope: acp-daily-use
+  status: verified-user-authorized-local-commit-and-merge
+  authorization: user-explicit-do-all-three
+  plan: specs/epics/e06-acp-daily-use/PLAN.md
+  branch: feat/acp-daily-use
+  worktree: /Users/addomam/projects/amux-integration-api
+  baseline_job: bg_269
+  baseline_evidence: specs/verifications/e06-baseline-repair.json
+  stories: [e06s01, e06s02, e06s03]
+  previous_full_workspace: {job: bg_278, status: passed-before-opaque-ID-and-sleep-clock-repairs, tests: 426, suites: 30, ignored: 12, raw_evidence: "artifact://2058"}
+  focused_integration: {job: bg_289, passed: 19, unit_passed: 5, live_ignored: 1, raw_evidence: "artifact://2102"}
+  independent_native_smoke: specs/verifications/e06-native-cli-smoke-post-round10.json
+  actual_provider_requests: 12
+  aggregate_provider_cap: 12
+  provider_requests_remaining: 0
+  previous_live_job: {job: bg_293, status: failed-private-budget-guard-blocked-final-generation, native_genuine_question: passed, api_handoff_deny_allow_effects: passed, normal_owned_cleanup: passed}
+  latest_live_run: {status: passed, execution: foreground-single-run, selected: 1, passed: 1, ignored: 0, seconds: 10.06, provider_requests: 4, genuine_question: passed, native_answer: passed, api_handoff_deny_allow_effects: passed, original_tuple_pid_work_rpc: passed, implicit_cancel: false, normal_owned_cleanup: passed, evidence: specs/verifications/e06-omp-live-final.json}
+  offline_full_omp: {job: bg_292, status: passed-not-provider-acceptance, actual_provider_requests: 0, evidence: specs/verifications/e06-omp-offline-native.json}
+  current_full_gate: {job: bg_359, status: passed-not-provider-acceptance, workspace: 451, default: 340, counts_overlap: true, raw: "artifact://2632", evidence: specs/verifications/e06-post-round10-regressions.json}
+  task_runtime_selection: {job: bg_359, status: all-seven-task-gates-passing-with-separate-live-proof, unique_nonlive: 44, groups: [13, 13, 13], extra_unit_native: 5, separate_dependency_units: 3, live_ignored_in_default: 1, live_acceptance: passed-separate-explicit-run}
+  fresh_review: {scope: e06-only, round: 11, max_rounds: 12, status: passed-source-only, scores: [100, 100, 100], findings: 0, source: specs/verifications/e06-review-round11-source.json, report: specs/verifications/e06-review-round11.json, frozen_files: 92, hashes_matched_at_verdict: 92, previous_round: specs/verifications/e06-review-round10.json}
+  source_review_cap_extension_request: {from: 10, to: 12, status: explicitly-approved-by-user-Fix-and-review-cap12, scope: E06-only-source-security, historical_caps: unchanged, live_provider_budget: unchanged, prior_extension: {from: 5, to: 10, status: explicitly-approved-by-user}}
+  historical_review_caps: unchanged
+  live_approval: completed-one-explicit-complete-run-cap12-twelve-used-zero-remaining-MAI-flash-low-2000-requested-output-tokens-each-110s-no-premium-or-API-key-fallback-no-further-live-calls
+  live_cap_extension: specs/verifications/e06-live-cap12-authorization.json
+  verification: specs/verifications/e06-daily-use-verify.json
+  main_merge_push_release: local-commit-and-main-merge-explicitly-authorized-push-tag-release-not-authorized
+  landing: specs/verifications/e06-local-landing.json
+  gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
+e06_fixture_bug_cycle:
+  bug: BUG-e06-native-fixture-cleanup
+  current_step: 5
+  completed_steps: [1, 2, 3, 4]
+  status: verified-on-kept-feature-branch-pending-commit
+  baseline: {job: bg_263, status: failed-stalled-and-terminated, exit: 101, seconds: 2595.28, evidence: specs/verifications/e06-baseline-stall.json}
+  forward_e06_production: cleared-by-bg_269-repaired-preflight
+  current_action: preserve-failure-repair-and-green-evidence-during-feature-integration

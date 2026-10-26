@@ -197,13 +197,64 @@ e04_landing:
   prior_feature_worktree: safely-repurposed-and-moved-no-unmerged-discard-branch-retained
   push_tag_release_CI: not-requested-not-claimed
 e05_cycle:
-  phase: discover
-  status: scope-complete-awaiting-contract-elaboration-and-reviewed-plan
-  scope: specs/product/SCOPE_LATEST.yaml
-  planning_context: specs/planning-context.yaml
+  phase: parked
+  status: parked-by-explicit-user-decision-not-implemented
+  scope: specs/product/SCOPE_E05.yaml
+  planning_context: specs/planning-context-e05.yaml
   branch: feat/thin-integration-api
   worktree: /Users/addomam/projects/amux-integration-api
   baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
   implementation_started: false
   new_provider_runs: not-authorized
   main_integration: not-authorized-for-new-initiative
+  contract: specs/contracts/tool-integration-v1.md
+  plan: specs/epics/e05-thin-tool-integration/PLAN.md
+  plan_review: PASS-e05-only-round2-of5-100-100-zero-findings-round1-FAIL-preserved
+  build_approval: parked-not-authorized-not-implemented
+  plan_review_evidence: specs/verifications/e05-plan-review-round2.json
+e05s01: failing
+e05s02: failing
+e05s03: failing
+e05s04: failing
+e05_task_ledgers:
+  e05s01: specs/epics/e05-thin-tool-integration/e05s01-tasks.yaml
+  e05s02: specs/epics/e05-thin-tool-integration/e05s02-tasks.yaml
+  e05s03: specs/epics/e05-thin-tool-integration/e05s03-tasks.yaml
+  e05s04: specs/epics/e05-thin-tool-integration/e05s04-tasks.yaml
+e05_parking: specs/verifications/e05-parking.json
+e06_cycle:
+  phase: release
+  status: verified-user-authorized-local-commit-and-merge
+  branch: feat/acp-daily-use
+  worktree: /Users/addomam/projects/amux-integration-api
+  baseline_job: bg_269
+  baseline_evidence: specs/verifications/e06-baseline-repair.json
+  original_baseline_failure: specs/verifications/e06-baseline-stall.json
+  previous_full_workspace: {job: bg_278, status: passed-before-opaque-ID-and-sleep-clock-repairs, tests: 426, suites: 30, ignored: 12, raw_evidence: "artifact://2058"}
+  focused_integration: {job: bg_289, passed: 19, unit_passed: 5, live_ignored: 1, raw_evidence: "artifact://2102"}
+  independent_native_smoke: specs/verifications/e06-native-cli-smoke-post-round10.json
+  actual_provider_requests: 12
+  aggregate_provider_cap: 12
+  provider_requests_remaining: 0
+  previous_live_job: {job: bg_293, status: failed-private-budget-guard-blocked-final-generation, native_genuine_question: passed, api_handoff_deny_allow_effects: passed, normal_owned_cleanup: passed}
+  latest_live_run: {status: passed, execution: foreground-single-run, selected: 1, passed: 1, ignored: 0, seconds: 10.06, provider_requests: 4, genuine_question: passed, native_answer: passed, api_handoff_deny_allow_effects: passed, original_tuple_pid_work_rpc: passed, implicit_cancel: false, normal_owned_cleanup: passed, evidence: specs/verifications/e06-omp-live-final.json}
+  offline_full_omp: {job: bg_292, status: passed-not-provider-acceptance, actual_provider_requests: 0, evidence: specs/verifications/e06-omp-offline-native.json}
+  current_full_gate: {job: bg_359, status: passed-not-provider-acceptance, workspace: 451, default: 340, counts_overlap: true, raw: "artifact://2632", evidence: specs/verifications/e06-post-round10-regressions.json}
+  task_runtime_selection: {job: bg_359, status: all-seven-task-gates-passing-with-separate-live-proof, unique_nonlive: 44, groups: [13, 13, 13], extra_unit_native: 5, separate_dependency_units: 3, live_ignored_in_default: 1, live_acceptance: passed-separate-explicit-run}
+  fresh_review: {scope: e06-only, round: 11, max_rounds: 12, status: passed-source-only, scores: [100, 100, 100], findings: 0, source: specs/verifications/e06-review-round11-source.json, report: specs/verifications/e06-review-round11.json, frozen_files: 92, hashes_matched_at_verdict: 92, previous_round: specs/verifications/e06-review-round10.json}
+  source_review_cap_extension_request: {from: 10, to: 12, status: explicitly-approved-by-user-Fix-and-review-cap12, scope: E06-only-source-security, historical_caps: unchanged, live_provider_budget: unchanged, prior_extension: {from: 5, to: 10, status: explicitly-approved-by-user}}
+  plan: specs/epics/e06-acp-daily-use/PLAN.md
+  scope: specs/product/SCOPE_LATEST.yaml
+  live_approval: completed-one-explicit-complete-run-cap12-twelve-used-zero-remaining-MAI-flash-low-2000-requested-output-tokens-each-110s-no-premium-or-API-key-fallback-no-further-live-calls
+  live_cap_extension: specs/verifications/e06-live-cap12-authorization.json
+  verification: specs/verifications/e06-daily-use-verify.json
+  main_integration_push_release: local-commit-and-main-merge-explicitly-authorized-push-tag-release-not-authorized
+  landing: specs/verifications/e06-local-landing.json
+  gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
+e06s01: passing
+e06s02: passing
+e06s03: passing
+e06_task_ledgers:
+  e06s01: specs/epics/e06-acp-daily-use/e06s01-tasks.yaml
+  e06s02: specs/epics/e06-acp-daily-use/e06s02-tasks.yaml
+  e06s03: specs/epics/e06-acp-daily-use/e06s03-tasks.yaml

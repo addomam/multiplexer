@@ -1,0 +1,22 @@
+story_id: e06s01
+spec: e06s01-story.md
+title: Real OMP ACP compatibility
+status: passing
+bcps: 5
+tasks:
+  - id: e06s01-T1
+    description: "Protocol and genuine settings interop with offline regression boundaries"
+    verify: "cargo test --test acp e06s01_ -- --nocapture"
+    risk: P0
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: critical, categories: [ACP, daily-use, Security Review]}
+  - id: e06s01-T2
+    description: "Actual installed-server and bounded real-subscription same-session native/API acceptance"
+    verify: "cargo test --test acp e06s01_live_omp -- --ignored --exact --nocapture"
+    risk: P0
+    security: medium
+    security_verify: no new supported security findings in affected paths
+    status: passing
+    allure: {severity: critical, categories: [ACP, daily-use, Security Review]}

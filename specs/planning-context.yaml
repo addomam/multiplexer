@@ -1,46 +1,10 @@
-feature_name: Thin tool integration without ACP
-initiative: e05-thin-tool-integration
-status: scoped-awaiting-contract-elaboration-and-reviewed-plan
-problem_statement: >-
-  Tool authors need a small supported integration contract that connects one real
-  running tool's semantic interactions to both amux human and automation surfaces
-  without implementing ACP, parsing terminal output or launching a shadow agent.
-  Reliable guarantees require a cooperating tool-side delivery/responder path;
-  an opaque terminal remains explicitly best-effort.
-actors:
-  - Tool authors implementing a thin local integration.
-  - Humans using amux's owned interaction surface.
-  - External automation using the same local broker and live instance.
-  - Amux daemon retaining authoritative admission, ownership and canonical outcomes.
+feature_name: ACP-first daily agent workflow
+initiative: e06-acp-daily-use
+status: user-authorized-implementation
 source_of_truth: specs/product/SCOPE_LATEST.yaml
-previous_scope: specs/product/SCOPE_E04.yaml
-delivered_baseline:
-  main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce
-  repair_commit: 66b52933ff6dbd35fb1ebe929d5d98c46eed8fb1
-  landing_receipt: specs/verifications/e04-main-landing.json
-  current_local_source: specs/verifications/e04s04-rejection-recovery.json
-  real_adapter_evidence: specs/verifications/e04s04-live-codex-grok.json
-  real_adapter_provenance: round4-source-not-a-new-source-provider-rerun
-constraints:
-  - Preserve established ACP and native terminal/Zsh/OMP behavior and ownership invariants.
-  - Reuse authoritative admission and canonical interactions rather than duplicate the arbiter.
-  - Genuine questions and exact permission allow/deny must resume their original live work.
-  - Do not infer tool application or safe settlement from transport or lifecycle observation.
-  - Keep runtime in memory, content private, resources bounded and cleanup confined to owned resources.
-  - Retain historical e03/e04 failures and exhausted review caps without relabelling acceptance.
-phase_authorization:
-  current: scope-and-contract-investigation-under-user-keep-going-direction
-  implementation: not-started-requires-refined-contract-and-reviewed-plan
-  live_provider_calls: separately-approved-only
-  global_daemon_config_auth_changes: not-authorized
-  next_initiative_merge_push_tag_release: not-authorized
-required_reading:
-  - specs/product/SCOPE_LATEST.yaml
-  - specs/product/SCOPE_E04.yaml
-  - specs/product/VISION_LATEST.yaml
-  - specs/product/GLOSSARY_LATEST.yaml
-  - specs/adr/0004-acp-authoritative-input.md
-  - specs/verifications/e04-main-landing.json
-  - integrations/omp/amux.ts
-  - integrations/omp/lifecycle.ts
-next_step: Elaborate the minimal tool-facing contract and inspect a real consumer's supported semantic hooks; choose transport and API shape only with that evidence.
+plan: specs/epics/e06-acp-daily-use/PLAN.md
+parked_e05: specs/verifications/e05-parking.json
+implementation: user-explicit-do-all-three
+live_approval: cheap-OMP-subscription-only-four-model-requests-2000-requested-output-tokens-each-120s-no-premium-or-API-key-fallback
+global_changes_main_push_release: not-authorized
+required_reading: [CONVENTIONS.md, specs/state.yaml, specs/execution-status.yaml, specs/epics/e06-acp-daily-use/PLAN.md, specs/epics/e06-acp-daily-use/epic.yaml, specs/security/epics/e06/THREAT_MODEL.md]

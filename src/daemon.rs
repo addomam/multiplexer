@@ -65,6 +65,7 @@ struct HookJob {
     kind: &'static str,
 }
 struct Daemon {
+    daemon_id: String,
     state: Mutex<State>,
     controls: Mutex<crate::control::Registry>,
     pending_launches: Mutex<BTreeMap<String, LaunchControl>>,
@@ -262,7 +263,7 @@ impl Daemon {
                 .collect::<Result<_>>()?;
             let views: Vec<_> = state.agent_views.values().cloned().collect();
             (
-                json!({"seq":state.seq,"detach_generation":state.detach_generation,
+                json!({"daemon_id":self.daemon_id,"seq":state.seq,"detach_generation":state.detach_generation,
                 "config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),
                 "terminals":terminals,"diagnostics":state.diagnostics}),
                 views,
@@ -284,6 +285,7 @@ impl Daemon {
                 "project_id":view["project_id"],"instance_id":view["instance_id"],
                 "connection_generation":metadata["target"]["connection_generation"],
                 "session_id":metadata["target"]["session_id"],"lifecycle":metadata["lifecycle"],
+                "configuration":metadata["configuration"].take(),
                 "ownership":ownership,"seq":metadata["seq"]}));
         }
         snapshot["agent_views"] = agents.into();
@@ -301,20 +303,56 @@ impl Daemon {
                 "cwd",
                 "controller",
                 "command",
+                "agent",
+                "settings",
             ],
         )?;
-        let project = request["project"]
+        ensure!(
+            !(request.get("agent").is_some() && request.get("command").is_some()),
+            "invalid-request: agent profile and raw command are mutually exclusive"
+        );
+        let agent = request
+            .get("agent")
+            .map(|value| {
+                value
+                    .as_str()
+                    .context("invalid-request: agent profile ID must be a string")
+            })
+            .transpose()?;
+        let requested_project = request["project"]
             .as_str()
             .context("invalid-request: project ID required")?;
-        let default_cwd = self
-            .state
-            .lock()
-            .store
-            .projects
-            .get(project)
-            .context("project-not-found: exact project ID required")?
-            .context
-            .clone();
+        let (project, default_cwd, profile) = {
+            let state = self.state.lock();
+            let profile = agent
+                .map(|id| crate::acp_profiles::select(&state.store.config.acp_profiles, id))
+                .transpose()?;
+            let chosen = if let Some(project) = state.store.projects.get(requested_project) {
+                project
+            } else if profile.is_some() {
+                let mut matches = state
+                    .store
+                    .projects
+                    .values()
+                    .filter(|project| project.name == requested_project);
+                let project = matches
+                    .next()
+                    .context("project-not-found: project ID or name not found")?;
+                ensure!(
+                    matches.next().is_none(),
+                    "project-ambiguous: exact project ID required"
+                );
+                project
+            } else {
+                bail!("project-not-found: exact project ID required");
+            };
+            let project = if chosen.id == requested_project {
+                std::borrow::Cow::Borrowed(requested_project)
+            } else {
+                std::borrow::Cow::Owned(chosen.id.clone())
+            };
+            (project, chosen.context.clone(), profile)
+        };
         let name = match request.get("name") {
             None => "ACP agent",
             Some(Value::String(name))
@@ -344,37 +382,48 @@ impl Daemon {
             .canonicalize()
             .context("invalid-request: ACP cwd is unavailable")?;
         ensure!(cwd.is_dir(), "invalid-request: ACP cwd must be a directory");
-        let args = request["command"]
-            .as_array()
-            .context("invalid-request: command argv required")?;
-        ensure!(
-            !args.is_empty() && args.len() <= 128,
-            "invalid-request: command argv exceeds limit"
-        );
-        let mut bytes = 0usize;
-        let command = args
-            .iter()
-            .map(|arg| {
-                let arg = arg
-                    .as_str()
-                    .context("invalid-request: command arguments must be strings")?;
-                bytes += arg.len();
-                ensure!(
-                    bytes <= 64 * 1024 && !arg.contains('\0'),
-                    "invalid-request: command argv exceeds limit"
-                );
-                Ok(arg.to_owned())
-            })
-            .collect::<Result<Vec<_>>>()?;
-        ensure!(
-            Path::new(&command[0]).is_absolute(),
-            "invalid-request: adapter executable must be absolute"
-        );
+        let (command, settings) = if let Some(profile) = profile {
+            crate::acp_profiles::prepare(profile, request.get("settings"))?
+        } else {
+            let args = request["command"]
+                .as_array()
+                .context("invalid-request: command argv required")?;
+            ensure!(
+                !args.is_empty() && args.len() <= 128,
+                "invalid-request: command argv exceeds limit"
+            );
+            let mut bytes = 0usize;
+            let command = args
+                .iter()
+                .map(|arg| {
+                    let arg = arg
+                        .as_str()
+                        .context("invalid-request: command arguments must be strings")?;
+                    bytes += arg.len();
+                    ensure!(
+                        bytes <= 64 * 1024 && !arg.contains('\0'),
+                        "invalid-request: command argv exceeds limit"
+                    );
+                    Ok(arg.to_owned())
+                })
+                .collect::<Result<Vec<_>>>()?;
+            ensure!(
+                Path::new(&command[0]).is_absolute(),
+                "invalid-request: adapter executable must be absolute"
+            );
+            (
+                command,
+                request
+                    .get("settings")
+                    .cloned()
+                    .unwrap_or_else(|| json!({})),
+            )
+        };
         ensure!(
             !self.stopping.load(Ordering::Acquire),
             "daemon-stopping: cannot open ACP view"
         );
-        let descriptor = Arc::new(self.acp.reserve(project, name, &cwd, command)?);
+        let descriptor = Arc::new(self.acp.reserve(&project, name, &cwd, command, settings)?);
         let id = descriptor["id"]
             .as_str()
             .context("acp-internal: missing reserved target")?;
@@ -1262,6 +1311,11 @@ impl Daemon {
             bail!("wrong-target-kind: ACP views are not terminals");
         }
         match op {
+            "acp-profiles" => {
+                validate_mutation_fields(&request, &["version", "op", "persistent"])?;
+                let profiles = self.state.lock().store.config.acp_profiles.clone();
+                Ok(crate::acp_profiles::list(profiles))
+            }
             "acp-open" => self.acp_open(&request),
             "acp-inspect" => self.acp.inspect(&request),
             "acp-prompt" | "acp-authenticate" | "acp-answer" | "acp-permission"
@@ -1990,6 +2044,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let (hook_jobs, hook_receiver) = std::sync::mpsc::sync_channel::<Option<HookJob>>(64);
     let daemon = Arc::new(Daemon {
+        daemon_id: Uuid::new_v4().simple().to_string(),
         state: Mutex::new(State {
             store,
             terminals: BTreeMap::new(),

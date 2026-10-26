@@ -16,10 +16,22 @@ mod native;
 #[path = "acp/acceptance.rs"]
 mod acceptance;
 
+#[path = "acp/omp.rs"]
+mod omp;
+
+#[path = "acp/profiles.rs"]
+mod profiles;
+
 #[test]
 #[ignore = "requires explicit private Codex/Grok OAuth, model and usage approval"]
 fn e04s04_live_adapters() {
     native::live::run();
+}
+
+#[test]
+#[ignore = "requires explicit private OMP subscription OAuth, cheap model and enforced four-request/2000-output-token/120s usage approval"]
+fn e06s01_live_omp() {
+    native::omp_live::run();
 }
 
 fn exchange(socket: &Path, mut request: Value) -> std::io::Result<Value> {
@@ -129,6 +141,22 @@ impl Host {
     }
 }
 
+fn reap_until(child: &mut Child, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return true,
+            Ok(None) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Err(error)
+                if error.kind() == std::io::ErrorKind::Interrupted && Instant::now() < deadline => {
+            }
+            _ => return false,
+        }
+    }
+}
+
 impl Drop for Host {
     fn drop(&mut self) {
         let _ = exchange(&self.socket, json!({"op":"shutdown"}));
@@ -136,10 +164,10 @@ impl Drop for Host {
         while self.daemon.try_wait().ok().flatten().is_none() && Instant::now() < deadline {
             std::thread::sleep(Duration::from_millis(10));
         }
-        if self.daemon.try_wait().ok().flatten().is_none() {
+        if self.daemon.try_wait().is_ok_and(|status| status.is_none()) {
             let _ = self.daemon.kill();
         }
-        let _ = self.daemon.wait();
+        let reaped = reap_until(&mut self.daemon, Duration::from_secs(5));
         // Only after every test assertion and daemon shutdown/reap may fixture
         // watchdogs provide fallback cleanup. Never let them pass the reap oracle.
         let mut peer_roots = vec![self.root.clone()];
@@ -166,6 +194,10 @@ impl Drop for Host {
             std::thread::sleep(Duration::from_millis(10));
         }
         let _ = fs::remove_dir_all(&self.root);
+        if !reaped {
+            eprintln!("ACP fixture daemon {} was not reaped", self.daemon.id());
+            assert!(std::thread::panicking(), "ACP fixture cleanup failed");
+        }
     }
 }
 
@@ -457,7 +489,11 @@ impl Sentinel {
 impl Drop for Sentinel {
     fn drop(&mut self) {
         let _ = self.0.kill();
-        let _ = self.0.wait();
+        let reaped = reap_until(&mut self.0, Duration::from_secs(5));
+        if !reaped {
+            eprintln!("ACP fixture sentinel {} was not reaped", self.0.id());
+            assert!(std::thread::panicking(), "ACP sentinel cleanup failed");
+        }
     }
 }
 

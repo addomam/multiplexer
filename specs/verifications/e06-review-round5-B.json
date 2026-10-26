@@ -1,0 +1,141 @@
+{
+  "verdict": "PASS",
+  "score": 92.3076923076923,
+  "total_items": 26,
+  "passed_items": 24,
+  "checklist": [
+    {
+      "area": "Frozen review scope and E05 boundary",
+      "result": "PASS",
+      "evidence": "Reviewed the 24 implementation/test paths and eight documentation/dependency paths enumerated by specs/verifications/e06-review-round5-source.json, against base 2195b05adf23ae26a80065ecdd6d9196e2915998. Read CONVENTIONS, scoped requirements, threat model and PLAN lines 1–45; did not reopen E05."
+    },
+    {
+      "area": "Profile configuration and persistence",
+      "result": "PASS",
+      "evidence": "src/projects.rs adds bounded configuration-only AcpProfile definitions and validates them through src/acp_profiles.rs. Runtime controller, session and work identities are not persisted."
+    },
+    {
+      "area": "Original executable and symlink invocation",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs resolves absolute executables or absolute daemon-PATH entries, checks executable-file metadata and retains the selected invocation path rather than canonicalizing through symlinks. tests/acp/profiles.rs covers original executable/symlink behavior."
+    },
+    {
+      "area": "Shell-free launch boundary",
+      "result": "PASS",
+      "evidence": "Profile preparation produces argv consumed by the existing Command-based ACP launch in src/acp.rs. Raw launches retain absolute-executable validation; profile metadata returned by acp-profiles excludes command argv and environment."
+    },
+    {
+      "area": "Explicit CLI launch and controller selection",
+      "result": "PASS",
+      "evidence": "src/cli.rs routes acp start without --controller into tui::start and routes an explicit controller through the JSON API. Optional null fields are removed before daemon validation; duplicate option IDs are rejected."
+    },
+    {
+      "area": "Native profile/settings launch dispatch",
+      "result": "PASS",
+      "evidence": "src/tui/launch.rs constructs explicit profile/settings requests. NativeControl::launch queues Op::Launch on the original native worker; received handles that variant explicitly and selects the returned target without creating another agent."
+    },
+    {
+      "area": "Closed and bounded requested settings",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs validates allowed fields, string identities, option count and content budget. Profile defaults and explicit overrides pass the same validation before broker reservation/startup."
+    },
+    {
+      "area": "Exact advertised setting identities",
+      "result": "PASS",
+      "evidence": "Configuration::resolve uses advertised categories and exact option IDs, including thought_level, rather than guessed CLI flags. Model is applied before subsequent effort resolution. Pinned upstream OMP source advertises mode/model/thinking IDs and the corresponding mode/model/thought_level categories."
+    },
+    {
+      "area": "Settings acknowledgments before readiness",
+      "result": "PASS",
+      "evidence": "src/acp.rs explicitly dispatches RpcKind::Configure responses through Configuration::acknowledge and configure_next. Lifecycle remains starting while a setting is pending; unsupported, rejected or mismatched settings fail rather than admitting prompts with a fallback."
+    },
+    {
+      "area": "Truthful configuration and permission-policy presentation",
+      "result": "PASS",
+      "evidence": "Configuration projects requested, reported, agent-default, changed and failure states. src/tui/agent.rs displays requested/reported values and explicitly states that mode metadata is not a permission guarantee."
+    },
+    {
+      "area": "Opaque upstream tool identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs uses the distinct 4-KiB tool-call-ID bound for tool notifications, forms and permissions while retaining existing local-ID and wire/content budgets. Exact tool IDs remain separate from inert display details."
+    },
+    {
+      "area": "Same-session question and permission routing",
+      "result": "PASS",
+      "evidence": "Incoming elicitation and permission requests retain their original wire responders and exact session/scope identities. Existing answer/permission admission binds target, control generation and interaction identity. tests/acp/omp.rs and native acceptance source cover these consumer-visible paths; this is static evidence only."
+    },
+    {
+      "area": "OMP cancellation and admitted-winner ordering",
+      "result": "PASS",
+      "evidence": "The notification dispatcher explicitly routes $/cancel_request to cancel_incoming. Withdrawal selects only the original pending, nonresponding interaction under the state lock, while already selected responses are left intact; no ownership grant or prompt interrupt is manufactured."
+    },
+    {
+      "area": "Exclusive ownership and admission boundary",
+      "result": "PASS",
+      "evidence": "daemon ACP actions authorize current control, prepare exact broker identities and commit under Authority::admit_acp. The narrowly inspected unchanged control registry rechecks current owner/reference/generation before commit."
+    },
+    {
+      "area": "Force, pending cancellation and human control",
+      "result": "PASS",
+      "evidence": "Native control operations continue through the existing claim/force/keep/release handlers. Added launch/recovery paths do not substitute interruption or process termination for ownership transfer, and recovered attachments disable automatic acquisition."
+    },
+    {
+      "area": "Application-input routing and no replay",
+      "result": "PASS",
+      "evidence": "Keyboard, paste, mouse and ACP editor actions retain NativeControl admission/captured-authority paths. Recovery constructs fresh local editor/control state, drains queued input and does not restore old drafts, claims, offers or uncertain mutations."
+    },
+    {
+      "area": "Transport failures versus daemon rejection",
+      "result": "PASS",
+      "evidence": "src/client.rs distinguishes ConnectionError from explicit DaemonError. Native worker transport failures terminate the stream; daemon-rejected answers may restore only unadmitted local selection state, not replay a potentially applied request."
+    },
+    {
+      "area": "Both native connection lifetimes fenced",
+      "result": "PASS",
+      "evidence": "The UI checks observation and authority connectivity. The worker checks its own connection plus the observation shutdown handle before processing queued work; dropping Connection shuts down surviving handles to the same socket."
+    },
+    {
+      "area": "Paused UI and compound claim fencing",
+      "result": "PASS",
+      "evidence": "Wall-clock pause checks fence the UI and worker. Work::Claim repeats lifetime/pause checks after its observation and immediately before issuing ownership-claim. recovery_edges.rs contains a causally gated regression for that compound path."
+    },
+    {
+      "area": "Exact surviving attachment continuity",
+      "result": "PASS",
+      "evidence": "Resume validates daemon_id and the original ACP id/instance/connection/session tuple. Only initial null-session establishment may advance; missing, replaced, closing or ended targets are not silently substituted or relaunched."
+    },
+    {
+      "area": "Acknowledged launch continuity across loss",
+      "result": "PASS",
+      "evidence": "Successful launch receipts are converted into Resume identities both during normal polling and after worker teardown. recovery_edges.rs covers follow-up observation loss and queued launch receipts on either connection."
+    },
+    {
+      "area": "Fresh provenance and structural geometry before readiness",
+      "result": "PASS",
+      "evidence": "Recovery registers fresh native provenance, disables auto-acquisition, paints/drains observer state and reconciles kernel terminal size before reporting Reconnected. tests/pty_control/native.rs adds a registration-time resize regression without application-byte effects."
+    },
+    {
+      "area": "Bounded observer cleanup and retained uncertainty",
+      "result": "PASS",
+      "evidence": "NativeControl::stop fences and joins the worker, retains parsed launch identity only, and uses guarded controller-close for recovered registrations. The unchanged close guard refuses owners and pending claims; unavailable cleanup does not implicitly release authority."
+    },
+    {
+      "area": "Regression coverage and documentation integrity",
+      "result": "PASS",
+      "evidence": "Reviewed protocol/profile fixtures, native acceptance/daily-use/recovery tests, shell-race adjustment, README, CHANGELOG, CONVENTIONS, Cargo manifests, scoped requirements and threat model. Fixtures are identified as protocol evidence and live tests are explicitly opt-in; historical native-settlement limitations remain documented."
+    },
+    {
+      "area": "Actual installed OMP same-instance live acceptance",
+      "result": "NOT VERIFIED",
+      "evidence": "The opt-in live harness checks genuine question/native answer, exact permission deny/allow effects, original tuple/PID/work, provider bounds and cleanup. No execution was authorized for this review. The sealed source manifest and allowed threat-model text explicitly retain failing live acceptance; synthetic tests and ignored cases do not establish a live PASS."
+    },
+    {
+      "area": "Actual native/application settlement acceptance",
+      "result": "NOT VERIFIED",
+      "evidence": "Historical unknown native/application settlement remains unresolved by contract and documentation. This review neither exercised that boundary nor treated force-only ownership or PTY delivery as application settlement."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the independent static source review: no evidence-backed patch-introduced Must-fix or Should-fix defect was found. Twenty-four of 26 checklist items passed static review; two runtime acceptance items remain unverified. This verdict does not close E06 live acceptance, waive historical native/application settlement, reset review/provider caps or authorize landing.",
+  "limits": "Read-only static inspection only: no edits, builds, tests, lint, formatters, shell/source execution, provider calls, auth/config/daemon/global operations or commits. No prior review/audit/repair/runtime reports or saved handoff/execution logs were consulted. Narrow pinned upstream OMP source references were inspected to compare actual protocol handlers and setting identities, but the installed executable was not run and manifest content hashes were not independently recomputed. Parent-owned runtime gates remain separate; neither fixture source nor previously recorded claims were treated as exercised verification."
+}

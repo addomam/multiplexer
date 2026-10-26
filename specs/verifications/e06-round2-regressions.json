@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "job": "bg_306",
+  "raw_evidence": "artifact://2168",
+  "exit": 0,
+  "wall_seconds": 237.35,
+  "workspace": {
+    "passed": 430,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_package": {
+    "passed": 319,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "strict_clippy": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "all_targets_check": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "workspace_build": "passed",
+  "format": "passed",
+  "node_observer_syntax": "passed",
+  "independent_actual_cursor_showcase": {
+    "selected": 1,
+    "passed": 1,
+    "seconds": 3.84
+  },
+  "native_unknown_settlement_guards": {
+    "selected": 2,
+    "passed": 2,
+    "seconds": [
+      1.02,
+      1.08
+    ]
+  },
+  "task_selection": {
+    "e06s01": {
+      "passed": 9,
+      "ignored_live": 1,
+      "seconds": 5.41
+    },
+    "e06s02": {
+      "passed": 5,
+      "seconds": 2.69
+    },
+    "e06s03": {
+      "passed": 9,
+      "seconds": 3.73
+    },
+    "exact_native_reconnect": {
+      "passed": 1,
+      "seconds": 1.85
+    },
+    "unique_nonlive_e06_cases": 23
+  },
+  "focused_causal_recovery_and_cleared_profile": {
+    "job": "bg_305",
+    "passed": 5,
+    "wall_seconds": 10.3
+  },
+  "omp_bun_and_zsh": {
+    "job": "bg_304",
+    "passed": 8,
+    "expect_calls": 49,
+    "zsh_syntax": "passed"
+  },
+  "independent_built_cli_native": "specs/verifications/e06-native-cli-smoke.json",
+  "source": "specs/verifications/e06-review-round2-source.json",
+  "earlier_review_failure": "specs/verifications/e06-review-round1.json",
+  "earlier_actual_bootstrap_gap": "specs/verifications/e06-round1-bootstrap-gap.json",
+  "physical_suspend": "not performed; real process-group SIGSTOP and Darwin wall-clock fencing only",
+  "provider_calls": 0,
+  "live_acceptance": "still failing; no further live generation performed",
+  "provider_accounting": {
+    "actual_requests_spent": 8,
+    "aggregate_cap": 9,
+    "remaining": 1
+  },
+  "historical_review_caps": "unchanged"
+}
