@@ -1,4 +1,24 @@
-# amux e03 current-delivery security review
+# amux e06 verified-delivery security disposition
+
+Current source/security approval: `../verifications/e06-review-round11.json`, independent A100/B100/security100 with zero findings. All92 frozen paths matched at verdict; before the authorized commit, all86 production/test/vendor/Cargo-manifest paths still match that approved snapshot. Subsequent changes only record verified acceptance, status and landing authorization.
+
+Runtime and genuine installed-provider proof: `../verifications/e06-daily-use-verify.json` and `../verifications/e06-omp-live-final.json`. Complete regressions, native input-boundary fixes and one genuine OMP question/native-answer/API-permission deny+allow run pass. Model use is12/cap12/0; no further live calls. Copied auth/raw resources are removed, and the global subscription credential is unchanged.
+
+The user now explicitly authorizes commit and local-main merge only. No unresolved supported security finding is waived; prior failures, native unknown application settlement and all historical review caps remain preserved. No push, tag, release, global changes or new provider run is authorized.
+
+## Historical e04 security disposition
+
+# amux e04 current-delivery security disposition
+
+Current candidate: `66b5293`, based on main `a46eaddeb79a9a42628d9cb39cd60945ece27fbb`. Exact runtime-source binding: `specs/verifications/e04s04-rejection-recovery.json`; all 22 hashes still match full gate `artifact://1803`. This section supersedes the historical e03 delivery scope below.
+
+Latest independent specialist: `epics/e04/e04s04-review-supplemental1.json`, zero supported security findings, one operational must-fix (`E04S04-OPS-S1-01`). The operational defect is locally repaired and verified through the real controlling PTY and complete regression gate. Original five-round and supplemental FAIL reports remain unchanged; there is no independent post-repair PASS.
+
+The repair returns an existing captured action envelope only for a typed definite daemon non-admission. Answer values are removed, exact pending target/call/revision/control/generation guards remain, and ambiguous transport failures stay fail-closed without replay. No new listener, credential handling, automatic retry, authority, process-signalling or provider execution is added. Current source self-audit is `../verifications/AUDIT-e04s04.md`.
+
+The user explicitly accepts local main integration after this verified repair: `../verifications/e04-main-landing.json` and `EXCEPTIONS.md`. No supported unresolved HIGH security finding is being waived. This human delivery decision does not reset review caps, clear the historical native application fence, or authorize new model runs, global configuration, push, tag or release.
+
+## Historical e03 delivery security review
 
 Scope: complete integrated e03 relative to6318845 plus fixes, feat/e03-agent-interaction. Final round5 security PASS/no unwaived HIGH did not override general A97.5%/one P1 and B100%: overall FAIL, exhausted5/5. The cleanup repair has controlled regression/local-process proofs and final preflight308. The user's subsequent “looks great”/overnight commit authorization approves limited delivery after the cap, not a new independent security/Build PASS or claimed source inspection. See EXCEPTIONS.md; native limitations/full acceptance are unchanged.
 

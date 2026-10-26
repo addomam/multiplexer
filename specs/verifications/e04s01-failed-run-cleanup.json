@@ -1,0 +1,30 @@
+{
+  "scope": "first integrated e04s01 fixture run; not runtime acceptance",
+  "failed_command": "cargo fmt --all && cargo build --example acp_fixture && cargo test --test acp -- --nocapture",
+  "failure_output": "artifact://974",
+  "failure": "SIGABRT after exchange asserted on incomplete close/shutdown response and Host::drop called the same panicking helper during unwind",
+  "cleanup": {
+    "private_daemons_acknowledging_shutdown": 5,
+    "private_sockets_already_absent": 5,
+    "daemon_log_panic_or_error_matches": 0,
+    "recorded_peer_and_descendant_pids_checked_with_signal_zero": [71330, 71332, 71270, 71329, 71310, 71252, 71266, 71269, 71271, 71254, 71255, 71307],
+    "all_recorded_pids": "ESRCH",
+    "lsof_owned_daemon_and_fixture_executables": "no owners; exit 1",
+    "lsof_bin_sleep_for_expired_fixture_sentinels": "no owners; exit 1",
+    "global_daemon_config_auth_or_process_group_changes": false,
+    "private_roots": [
+      "/private/tmp/amux-acp-33981f56efe04f4c94ac09afd37d2712",
+      "/private/tmp/amux-acp-51e6d3475378454094cb816690f20d55",
+      "/private/tmp/amux-acp-11984ad431564fff95a7200262a173f9",
+      "/private/tmp/amux-acp-0657da549515482fa0aeb3364888a801",
+      "/private/tmp/amux-acp-c196a4c470fe4ee5aad59bb2aef53d3c",
+      "/private/tmp/amux-acp-5e696bb28d3d4755b392b4335a7476c7",
+      "/private/tmp/amux-acp-f3ab8a313a74482e9d104306fb55687d",
+      "/private/tmp/amux-acp-1b8828d63c054219a4bf3bb14220acce",
+      "/private/tmp/amux-acp-1f87eedf8d6249d29d5e9f6f519bd967",
+      "/private/tmp/amux-acp-5c3fd09b38d74f789cd8f20e3d829794"
+    ]
+  },
+  "fix": "Return UnexpectedEof from the fallible socket helper rather than panic. Preserve the race's required successful acknowledgement, independent peer/descendant reap checks and unrelated sentinel survival checks.",
+  "acceptance": "failing until subsequent actual verification"
+}

@@ -1,0 +1,14 @@
+{
+  "status": "failed-to-complete-not-PASS",
+  "job": "bg_263",
+  "command": "cargo test && cargo clippy --all-targets -- -D warnings && cargo build",
+  "observed": {"library_passed": 126, "general_acceptance_passed": 16, "ACP_suite": "remaining native complete acceptance stalled over30min"},
+  "stack_observation": "Owned test57960 blocked in Child::wait during drop; symbolicated as Attachment::drop native.rs374. Its only direct child59010 is the private fixture daemon, NOT a Zsh host, so symbol attribution is not yet a confirmed root cause.",
+  "private_fixture": "amux-acp-aaa8f74d51b64458891fffba43720fb6",
+  "child_binding": "PID59010 PPID57960 PGID59010, start Sun Oct25 08:07:38 2026; exact feature binary --socket private fixture daemon.sock daemon --projects-dir private projects",
+  "manual_cleanup": "Exact original private daemon TERM exited it; later KILL guard refused defunct identity and sent nothing. Pinned test57960 terminated after2595.28s, exit101/signal15, artifact2015. Final ps57960/59010/59025/59027 returns no processes. This cannot count as normal no-fallback cleanup.",
+  "root_cause": "Confirmed fixture fallback has unbounded Child::wait and stops native drainer before host teardown. Original application assertion/defect remains unestablished; repaired exact existing case and full preflight pass at e06-baseline-repair.json.",
+  "production_edits": "None before baseline repair; E06 gate cleared only by bg_269 exit0",
+  "provider_calls": 0,
+  "historical_caps": "unchanged"
+}

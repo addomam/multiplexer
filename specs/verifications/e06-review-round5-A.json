@@ -1,0 +1,183 @@
+{
+  "verdict": "FAIL",
+  "score": 96.875,
+  "total_items": 32,
+  "passed_items": 31,
+  "checklist": [
+    {
+      "area": "src/acp.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Traced startup configuration RPCs through apply/configure_next, original-session prompt admission, typed responder cancellation, permission/form responses, retained work and pipe cleanup. Configuration and cancellation have explicit receiving-side dispatch branches; force/claim transitions do not manufacture interrupts."
+    },
+    {
+      "area": "src/acp/settings.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed requested-settings validation, advertised category/option resolution, exact option IDs, grouped choices, semantic/exact aliases, sequential acknowledgements, final cross-setting consistency checks and later reported-setting drift. Unsupported or unconfirmed selections fail startup rather than silently falling back."
+    },
+    {
+      "area": "src/acp_profiles.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed bounded built-in/configured profiles, override merging, metadata exposure, absolute-directory PATH search and executable checks. Invocation preserves symlink paths and argv rather than invoking a shell or canonicalizing to a different executable identity."
+    },
+    {
+      "area": "src/cli.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Traced ACP start/attach parsing and request construction through native and explicit external-controller paths. Root-level absent CLI options are removed rather than sent as invalid null name/cwd/settings fields; native start receives one launch request."
+    },
+    {
+      "area": "src/client.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed typed daemon versus transport errors, persistent framing, socket liveness, shutdown-handle cloning and Connection drop shutdown. Recovery uses existing connections/socket paths rather than the daemon-start helper. The shutdown-handle allocation failure is accounted for in the separate NativeControl finding."
+    },
+    {
+      "area": "src/daemon.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Traced acp-profiles/acp-open consumers, project selection, pre-reservation validation, reserve/publish/claim/start ordering, exact opening receipt, authority-ordered ACP admission and snapshot daemon identity. Failed opens retain unknown cleanup/work rather than discarding admitted history."
+    },
+    {
+      "area": "src/lib.rs",
+      "result": "PASS_STATIC",
+      "evidence": "The added private acp_profiles module is wired to the existing daemon/config consumers; no alternate public compatibility layer or unused replacement API was introduced."
+    },
+    {
+      "area": "src/projects.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed profile deserialization/defaults, config validation, transactional update/persistence and rollback context. ACP profiles remain configuration data; live instances and authority remain daemon memory."
+    },
+    {
+      "area": "src/tui.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed exact daemon/instance/connection/session recovery, one-time null-to-established session promotion, acknowledged launch receipt salvage, existing-daemon-only retries, fresh observer state, pause and both-socket fences, event draining and structural resize reconciliation before recovered readiness."
+    },
+    {
+      "area": "src/tui/agent.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed settings presentation and unchanged canonical editor/action consumers. Actions retain exact target/control/generation binding; authority changes and canonical disposition changes discard drafts. ACP input is consumed locally or emitted as structured ACP actions, never forwarded as PTY input."
+    },
+    {
+      "area": "src/tui/control.rs",
+      "result": "FAIL_STATIC",
+      "evidence": "Worker dequeue and compound-claim boundaries check pause, stop and both connection lifetimes; teardown fences queued work and salvages only successful launch identity. However, the new fallible shutdown-handle clone occurs after controller-create and before NativeControl construction, leaking a retained observer registration on clone failure; see E06-R5-01."
+    },
+    {
+      "area": "src/tui/launch.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed project/profile selection, defaults, explicit settings editing, exact inherited options preservation and one-shot launch submission. Cancel is local, and profile invocation remains daemon-resolved and shell-free."
+    },
+    {
+      "area": "src/tui/view.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed picker/help changes and surrounding native geometry/rendering context. The ACP entry point is explicit and does not replace stock terminal/OMP launch routes."
+    },
+    {
+      "area": "tests/acp.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed integration wiring, fixture ownership/admission helpers and cleanup changes, with related existing force, pending-claim cancellation, caller-loss and exact-work assertions. Test source was inspected, not executed."
+    },
+    {
+      "area": "tests/acp/native.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed real-PTY attachment helpers, bounded reap/drainer handling, deliberate ownership gestures, draft/input fencing, same-work handoff and canonical rendering assertions. No test result or native settlement proof is inferred."
+    },
+    {
+      "area": "tests/acp/native/acceptance.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed synthetic two-surface question/permission and handoff scenarios, corrected deliberate force confirmation, same-work checks and definite-non-admission correction paths. These scenarios are not treated as installed-OMP acceptance."
+    },
+    {
+      "area": "tests/acp/native/daily_use.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed profile launch/default inheritance, loss of either native socket, pause fencing, exact surviving target/PID assertions, ended/replaced daemon handling and prevention of old claim migration. Relay behavior and cleanup were inspected statically."
+    },
+    {
+      "area": "tests/acp/native/omp_live.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed the opt-in installed-OMP driver, genuine interaction selection, original-agent identity checks, permission deny/allow effects, budget evidence checks and owned cleanup. Its ignored/opt-in source is not evidence that any live scenario passed."
+    },
+    {
+      "area": "tests/acp/omp.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed tests for acknowledgement-before-ready, exact advertised IDs, duplicate categories, semantic aliases, model-dependent choices, unsupported/unconfirmed settings, long tool identities, peer cancellation, later drift and unchanged defaults. Fixtures remain synthetic."
+    },
+    {
+      "area": "tests/acp/profiles.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed CLI/profile/default override coverage, unavailable/conflicting profiles, rollback and absolute/PATH symlink invocation identity. Source exercises the intended daemon/CLI contracts without exposing profile argv in listing metadata."
+    },
+    {
+      "area": "tests/fixtures/acp_peer.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed settings and OMP-shaped request routes in the real-stdio synthetic peer, barriers, exact response validation, effects and cleanup context. Fixture behavior is explicitly synthetic and is not substituted for provider behavior."
+    },
+    {
+      "area": "tests/pty_control/native.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed changed native ownership/consent expectations, transparent connection fault handling and the recovery-registration resize case. The geometry case asserts surviving PTY dimensions, unchanged owner/generation/PID and absence of application input."
+    },
+    {
+      "area": "tests/acp/native/recovery_edges.rs",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed phase-controlled compound-claim pause, queued/in-flight acknowledged launch recovery, session-establishment races, setup/observer cleanup and registration-time input draining. Existing setup-failure coverage does not cover the newly introduced shutdown-handle clone failure."
+    },
+    {
+      "area": "tests/shell_races.rs",
+      "result": "PASS_STATIC",
+      "evidence": "The changed assertion waits for the complete queued shell effect, rather than treating redirection-created file existence as completion. Surrounding wake/input race and ownership setup remain intact."
+    },
+    {
+      "area": "README.md",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed ACP profile/settings/native recovery documentation and surrounding ownership/settlement limits. Existing historical runtime claims and linked reports were not used as fresh acceptance evidence."
+    },
+    {
+      "area": "CHANGELOG.md",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed the frozen change descriptions against implementation scope. No additional runtime verification or permission to reset existing review/provider caps is inferred from changelog text."
+    },
+    {
+      "area": "CONVENTIONS.md",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed memory-only runtime ownership, configuration persistence, stable IDs, stock Zsh/OMP, bounded resources and observable behavior/cleanup conventions."
+    },
+    {
+      "area": "Cargo.toml",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed package/features/dependency context. Read-only diff against the supplied base shows no Cargo.toml change; no new execution/plugin dependency is required by the reviewed implementation."
+    },
+    {
+      "area": "Cargo.lock",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed the pinned agent-client-protocol-schema 1.12.0 entry and dependency context. Read-only diff against the supplied base shows no lockfile change."
+    },
+    {
+      "area": "specs/epics/e06-acp-daily-use/PLAN.md:1-45",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed only the authorized first 45 lines: installed-OMP same-instance interoperability, safe profile/settings launch and exact no-replay recovery contracts. Later execution amendments were not read."
+    },
+    {
+      "area": "specs/product/SCOPE_LATEST.yaml",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed the E06 daily-use scope and E05 parking boundary. No custom non-ACP integration, replanning or native-settlement waiver is proposed."
+    },
+    {
+      "area": "specs/security/epics/e06/THREAT_MODEL.md",
+      "result": "PASS_STATIC",
+      "evidence": "Reviewed ownership, identity, configuration honesty, inert content, shell-free launch, recovery fencing and cleanup threats. The observer-allocation finding is assessed against the bounded safe-recovery cleanup requirement."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R5-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui/control.rs",
+      "line": 179,
+      "title": "Clone the shutdown handle before creating the native controller",
+      "impact": "If the newly added UnixStream clone fails, for example because the native process has exhausted its file descriptors, registration exits after the daemon has created the attachment controller but before a NativeControl exists. The only returned controller capability is discarded, while the daemon retains that disconnected registration. Repeated failed attachment attempts can consume the 4096-controller limit and eventually prevent otherwise valid attachments.",
+      "evidence": "NativeControl::register receives controller-create successfully at lines175-178, then propagates connection.shutdown_handle() failure at line179. client::Connection::shutdown_handle delegates to UnixStream::try_clone, which is fallible. NativeControl::stop/Drop cannot run because Self has not been constructed. On socket departure, daemon::serve invokes Registry::depart; src/control.rs:855-872 only marks the view disconnected and does not remove its controller. Removal requires an explicit guarded close in src/control.rs:1052-1085. The fallible clone after controller creation is added by this patch.",
+      "fix": "Move connection.shutdown_handle()? before the controller-create RPC, so this local allocation failure cannot leave a newly minted daemon registration behind. Alternatively, explicitly close the still-unowned newly created controller before propagating that error; do not release ownership or cancel claims as cleanup."
+    }
+  ],
+  "summary": "Independently reviewed all32 frozen implementation/test/documentation paths against base2195b05adf23ae26a80065ecdd6d9196e2915998, plus narrowly related unchanged authority and connection consumers. Found one patch-introduced P2 observer-registration leak on the new shutdown-handle allocation failure path. The static checklist scores31/32 (96.875%), but the supported Should-fix finding makes the verdict FAIL.",
+  "limits": "Static source review and read-only git diff only. No edits, builds, tests, linters, formatters, shell/source execution, provider calls, live daemon/config/auth/global operations or commits were performed. No real authentication material, private retired fixtures, prior review/audit/repair/runtime reports, saved handoffs or execution logs were read; PLAN access was limited to lines1-45. The finding is established by control-flow inspection, not an injected runtime failure. Checklist PASS_STATIC means no supported additional defect found in that source slice, not that its tests passed. Actual installed-OMP interoperability, provider effects, native/application settlement, full regressions and runtime cleanup remain separate parent-owned acceptance gates; synthetic fixtures, ignored live tests, historical evidence and plan approval are not runtime proof. No review/provider cap reset, additional review round or force-only settlement substitution is implied."
+}

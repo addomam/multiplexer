@@ -1,0 +1,183 @@
+{
+  "verdict": "FAIL",
+  "score": 96.875,
+  "total_items": 32,
+  "passed_items": 31,
+  "checklist": [
+    {
+      "area": "src/acp.rs — admission, RPC routing and responder identity",
+      "result": "PASS — static",
+      "evidence": "Traced added Configure RPCs through success/error dispatch and readiness; traced peer cancellation through exact typed request IDs, responder identity and selected-response exclusion. Existing admission retains original controller/generation/work/RPC identities across ownership changes."
+    },
+    {
+      "area": "src/acp/settings.rs — requested versus reported settings",
+      "result": "PASS — static",
+      "evidence": "Closed requested-settings shape; advertised IDs and values are validated; sequential setting responses are acknowledged before readiness; conflicts, dependent-option changes and final mismatches fail explicitly. Exact option IDs, reported values and unknown/unreported states remain distinct."
+    },
+    {
+      "area": "src/acp_profiles.rs — executable selection and shell-free launch",
+      "result": "PASS — static",
+      "evidence": "Reviewed configured/builtin profiles, bounded argv/defaults, absolute PATH entries, executable metadata checks and merge validation. Invocation preserves the selected symlink path rather than canonicalizing away argv[0] behavior; no shell interpolation or fallback launch is introduced."
+    },
+    {
+      "area": "src/cli.rs — profile/settings command dispatch",
+      "result": "PASS — static",
+      "evidence": "Reviewed CLI parsing and request construction through daemon consumers, including explicit profile/raw-command distinction and settings serialization. Existing control-bearing mutations continue to preserve supplied capability objects."
+    },
+    {
+      "area": "src/client.rs — native connection lifetime",
+      "result": "PASS — static",
+      "evidence": "Reviewed typed connection errors, EOF/poll/peek liveness checks, shutdown-handle cloning and Connection Drop shutdown. Followed these consumers into attachment supervision and worker fencing; readiness/autostart remains separate from recovery."
+    },
+    {
+      "area": "src/daemon.rs — launch, ownership and API integration",
+      "result": "PASS — static",
+      "evidence": "Traced acp-profiles/acp-open/settings from dispatch through project resolution, canonical cwd, reservation, controller claim, publication and asynchronous startup. Reviewed rollback paths and lock boundaries; force/claim behavior continues through existing ownership authority rather than bypassing it."
+    },
+    {
+      "area": "src/lib.rs — module integration",
+      "result": "PASS — static",
+      "evidence": "Reviewed module declarations and visibility for ACP profiles and existing public entry points; no obsolete compatibility route or duplicate integration convention was introduced."
+    },
+    {
+      "area": "src/projects.rs — profile configuration persistence",
+      "result": "PASS — static",
+      "evidence": "Reviewed Config/AcpProfile deserialization, defaults and validation through global configuration and persistence. Existing conflict detection and rollback remain in place; runtime ACP/controller/session identities are not added to the durable project schema."
+    },
+    {
+      "area": "src/tui.rs — exact selected-target recovery",
+      "result": "FAIL — static",
+      "evidence": "Continuity is updated only at the next loop top, after pause/liveness checks. Keyboard and mouse picker selection change active earlier and may immediately perform a fallible resize. A loss at that boundary recovers the previous target instead of the newly selected survivor; see E06-R1."
+    },
+    {
+      "area": "src/tui/agent.rs — native ACP input and interaction handling",
+      "result": "PASS — static",
+      "evidence": "Reviewed prompt, form, permission, authentication and interrupt capture plus consumers. Input bindings carry exact target/control/generation; stale drafts are discarded; definite non-admission permits deliberate correction without automatic replay. ACP events are consumed locally rather than falling through to PTY input."
+    },
+    {
+      "area": "src/tui/control.rs — queued/in-flight work and teardown",
+      "result": "PASS — static",
+      "evidence": "Reviewed worker queue dispatch, stop/pause/both-stream fences, the second fence between compound claim observation and mutation, original-connection input/view/consent/keep ordering, launch-receipt salvage and shutdown/join. Recovered-controller close uses existing guards and does not implicitly release owners or cancel claims."
+    },
+    {
+      "area": "src/tui/launch.rs — explicit native launch dialog",
+      "result": "PASS — static",
+      "evidence": "Reviewed bounded dialog state, advertised profile selection, project selection, settings/default overrides and explicit submission into NativeControl launch. Cancellation and local editing do not create an ACP instance."
+    },
+    {
+      "area": "src/tui/view.rs — presentation and structural geometry",
+      "result": "PASS — static",
+      "evidence": "Reviewed native/ACP presentation and picker affordances. Recovery geometry reconciliation is consumed by resize/render paths before the Reconnected readiness message; no application-input route is added by the view changes."
+    },
+    {
+      "area": "tests/acp.rs — broker and ownership regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed exact RPC/work continuity, cancelled claims granting nobody, force without implicit cancellation, original-connection provenance, genuine responder selection, malformed scopes, bounded history/queues, failed delivery, unknown application and owned-process cleanup assertions."
+    },
+    {
+      "area": "tests/acp/native.rs — actual native input-path regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed controlling-PTY coverage for stale drafts, physical/repeat/paste/mouse routes, cooperative handoff, permission/form routing, original-connection activity and inert rendering. Synthetic-peer behavior is not treated as live-provider evidence."
+    },
+    {
+      "area": "tests/acp/native/acceptance.rs — two-surface interaction regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed same-session native/API forms and permissions, handoffs, Grok Other correction/cancellation, unrepresentable replies and definite non-admission behavior. Assertions retain original work identities and distinguish delivery from application."
+    },
+    {
+      "area": "tests/acp/native/daily_use.rs — daily-use recovery regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed launch defaults/settings, stream disconnection, pause fencing, draft disposal, surviving target/PID/work checks and no daemon resurrection/same-name substitution. These cases do not cover the selection-to-continuity gap reported in E06-R1."
+    },
+    {
+      "area": "tests/acp/native/omp_live.rs — installed OMP acceptance driver",
+      "result": "PASS — source reviewed only; live acceptance unverified",
+      "evidence": "Reviewed the explicitly gated/ignored driver for one original OMP session, genuine question answer and permission deny/allow effects, ownership transfer and cleanup assertions. No private spec/auth data was opened and no provider operation was performed."
+    },
+    {
+      "area": "tests/acp/omp.rs — OMP-shaped protocol regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed long opaque tool identity, original form/permission routing, exact cancellation and settings-update assertions. Fixture behavior is kept separate from proof of installed OMP interoperability."
+    },
+    {
+      "area": "tests/acp/profiles.rs — profile/settings regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed profile configuration/defaults, safe executable resolution, rejected settings and explicit launch contracts. No test result or actual installed-agent availability is inferred from the source."
+    },
+    {
+      "area": "tests/fixtures/acp_peer.rs — synthetic peer dispatch",
+      "result": "PASS — static",
+      "evidence": "Reviewed the complete peer dispatch, including E06 session metadata, setting acknowledgements/rejections/drift, long tool IDs, form/permission responses and peer cancellation. Added wire values have corresponding consuming branches rather than silent drops."
+    },
+    {
+      "area": "tests/pty_control/native.rs — native ownership and geometry regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed actual-PTY ownership, consent/keep ordering, unknown native settlement preservation, transparent delayed-response relay, native connection loss and recovery-registration resize assertions. Force-based fixtures are not substituted for safe native settlement acceptance."
+    },
+    {
+      "area": "tests/acp/native/recovery_edges.rs — recovery boundary regression sources",
+      "result": "PASS — source reviewed, not executed",
+      "evidence": "Reviewed transparent relay boundaries for compound claims, queued launches, parsed launch receipts, null-to-established sessions, registration failure and buffered recovery controls. Relays forward real daemon replies; reviewed coverage does not establish runtime success."
+    },
+    {
+      "area": "tests/shell_races.rs — stock shell race regression source",
+      "result": "PASS — static",
+      "evidence": "Reviewed the file and changed synchronization: waiting for expected marker content avoids treating redirection-created empty files as completed shell writes. No stock Zsh execution or settlement semantics are changed by that adjustment."
+    },
+    {
+      "area": "README.md — user-facing launch/recovery contract",
+      "result": "PASS — static",
+      "evidence": "Reviewed documented ACP profile/settings launch, explicit native controls, recovery/no-replay behavior and stock shell/OMP distinction. Documentation is treated as contract, not execution evidence."
+    },
+    {
+      "area": "CHANGELOG.md — change scope and limitations",
+      "result": "PASS — static",
+      "evidence": "Reviewed the frozen changelog context for E06 launch/settings/OMP/recovery changes. No unrelated E05 integration work is required or inferred."
+    },
+    {
+      "area": "CONVENTIONS.md — repository contracts",
+      "result": "PASS — static",
+      "evidence": "Reviewed runtime-versus-durable state, stable identities, stock Zsh/OMP, shared API, bounded nonblocking PTY behavior and evidence requirements; applied these contracts to the changed producers and consumers."
+    },
+    {
+      "area": "Cargo.toml — dependency and target integration",
+      "result": "PASS — static",
+      "evidence": "Reviewed dependency declarations and fixture/test target integration against source use. No dependency resolution, compilation or executable invocation was performed."
+    },
+    {
+      "area": "Cargo.lock — frozen dependency graph",
+      "result": "PASS — static",
+      "evidence": "Reviewed the frozen lockfile alongside manifest dependencies. This is source inspection only, not a registry-integrity, buildability or supply-chain execution attestation."
+    },
+    {
+      "area": "specs/epics/e06-acp-daily-use/PLAN.md — sealed planning contract",
+      "result": "PASS — static; lines 1–45 only",
+      "evidence": "Reviewed only the permitted initial 45 lines and the E06 story requirements. Later execution amendments, prior reviewer material and saved execution evidence were not consulted."
+    },
+    {
+      "area": "specs/product/SCOPE_LATEST.yaml — E06/E05 scope boundary",
+      "result": "PASS — static",
+      "evidence": "Reviewed the frozen product scope: E06 ACP daily use remains the target; E05 custom non-ACP integration stays parked, with no inferred requirement to reopen planning or implement it."
+    },
+    {
+      "area": "specs/security/epics/e06/THREAT_MODEL.md — security and continuity requirements",
+      "result": "PASS — static",
+      "evidence": "Reviewed threats against capability ownership, same-instance identity, truthful settings, original responders, invocation, stale input, recovery and cleanup. Traced relevant checks into source; historical unknown native application settlement remains unresolved rather than relabeled as confirmed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R1",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui.rs",
+      "line": 1046,
+      "title": "Capture target continuity when selection changes, before fallible work",
+      "impact": "A disconnect or pause immediately after a deliberate picker switch can reconnect to the previous view, not the newly selected surviving target. If the previous target ended meanwhile, recovery instead declares the attachment ended even though the selected target is still alive.",
+      "evidence": "The keyboard picker assigns active = id at line 1584, then calls resize_native at line 1662; mouse selection assigns active at line 1816 and resizes at line 1822. Resume is not updated at either selection point. Its only general selection update is at lines 1046–1051, after the loop's pause and both-connection checks at lines 1033–1044. Thus a failed selected-PTY resize returns before capture, and an ACP selection followed by connection loss or pause also returns before capture. Teardown only salvages launch receipts, while attached subsequently validates and selects resume.active at lines 933–941, causally restoring the stale previous identity.",
+      "fix": "Commit Resume::capture from the current snapshot at every deliberate active-target selection before resize or other fallible work, covering keyboard and mouse paths and shared active-changing helpers. Keep acknowledged ACP-launch receipt handling intact. Add a transparent-relay regression that switches from A to surviving B and drops the observation connection at the following resize/read boundary; recovery must validate and select B without replay, relaunch or acquisition."
+    }
+  ],
+  "summary": "Reviewed all 32 frozen paths, the permitted PLAN section, E06 story requirements/threat model and narrow unchanged ownership contracts. One patch-introduced selected-target continuity defect requires correction, so the verdict is FAIL despite 31/32 static checklist items passing. No additional supported ownership, RPC-dispatch, settings/profile or responder-routing defect was established.",
+  "limits": "Static, read-only review only. No edits, builds, lint, tests, formatters, shell/source execution, provider calls, auth/config/daemon/global operations, commits, new agents or extra review rounds were performed. Prior review/audit/runtime reports, saved handoffs/execution logs, real auth and private retired fixtures were not read. PASS entries mean no supported defect found in the reviewed source, not exercised acceptance. Installed OMP same-instance live interoperability, native application settlement, operating-system resource-failure behavior and runtime cleanup remain unverified here; fixtures, ignored live tests, plan approval and manifest/parent verification claims were not accepted as runtime proof. The score is the static source-checklist ratio only."
+}

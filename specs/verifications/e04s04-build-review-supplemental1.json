@@ -1,0 +1,96 @@
+{
+  "scope": "e04s04-complete-broker-authorized-supplemental1",
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "authorization": "specs/verifications/e04s04-supplemental-review-authorization.json",
+  "review_pass": {
+    "supplemental": 1,
+    "global": 6,
+    "additional_passes_authorized": 1,
+    "additional_passes_used": 1,
+    "original_cycle": "exhausted5-of5-preserved",
+    "cap_reset": false,
+    "automatic_further_loop": false
+  },
+  "delivery": {
+    "full_original_reports_persisted_verbatim": true,
+    "all_three_full_reports_read_before_disposition": true,
+    "source_frozen_through_all_reports": true,
+    "source_hashes_parent_after_runtime": "22/22 matched",
+    "counterpart_reports_shared": false
+  },
+  "reviewers": {
+    "A": {
+      "report": "specs/verifications/e04s04-review-a-supplemental1.json",
+      "score": 100,
+      "pass": 32,
+      "denominator": 32,
+      "must": 0,
+      "should": 0,
+      "consider": 0,
+      "independently_computed_hashes": "22/22"
+    },
+    "B": {
+      "report": "specs/verifications/e04s04-review-b-supplemental1.json",
+      "score": 100,
+      "pass": 32,
+      "denominator": 32,
+      "must": 0,
+      "should": 0,
+      "consider": 0,
+      "independently_computed_hashes": "22/22"
+    },
+    "specialist": {
+      "report": "specs/security/epics/e04/e04s04-review-supplemental1.json",
+      "score": 96.875,
+      "pass": 31,
+      "denominator": 32,
+      "operational_must": 1,
+      "should": 0,
+      "consider": 0,
+      "supported_security_vulnerabilities": 0,
+      "independently_computed_hashes": 0,
+      "limits": "Read-only static source trace; no executed payload or runtime/hash tool claims."
+    }
+  },
+  "code_review_AND": "PASS-numeric-and-zero-code-review-must",
+  "security_operational_gate": "FAIL-one-supported-operational-must-fix-overrides-numeric-pass",
+  "AND_gate": "FAIL",
+  "prior_reply_budget_finding": {
+    "id": "E04S04-OPS-R5-01",
+    "status": "cleared-by-all-three-current-source-reviews-and-fresh-existing-native-CLI-proof",
+    "history": "Original round5 FAIL retained; no historical report rewritten."
+  },
+  "current_finding": {
+    "id": "E04S04-OPS-S1-01",
+    "title": "Definite retained-content admission rejection leaves native responder captured",
+    "classification": "operational-must-fix-not-a-supported-security-vulnerability",
+    "locations": [
+      "src/acp.rs:943",
+      "src/tui/control.rs:423-448",
+      "src/tui/agent.rs:1294-1296",
+      "src/tui/agent.rs:1729-1744"
+    ],
+    "disposition": "accepted-for-repair; runtime-trigger-confirmed; native-latch-source-supported-not-yet-runtime-reproduced",
+    "runtime_evidence": "specs/verifications/e04s04-retained-admission-cli.json",
+    "causal_trace": "A valid local answer can fail definite asynchronous retain_capacity before work/call/selection/wire publication. Reply does not retain correlated original action. NativeControl only displays error/refreshes; unchanged pending interaction/binding retains captured, so editor rejects deliberate edits/F5/F7.",
+    "remedy": "After actual-native RED, correlate a definite non-admission receipt to exact original call/interaction/revision/target/control/generation. Clear only that matching capture/review while canonical interaction stays pending; allow a new deliberate smaller answer or cancel. Never replay, substitute a later grant, raise budgets, or clear on ambiguous timeout/disconnect."
+  },
+  "runtime": {
+    "fresh_evidence": "specs/verifications/e04s04-supplemental1-runtime.json",
+    "fresh_native": 2,
+    "fresh_Grok_library": 5,
+    "reply_budget_actual_CLI": "PASS",
+    "retained_admission_actual_CLI": "trigger-confirmed-and-same-grant-smaller-answer-PASS",
+    "full_gate_reused_not_rerun": "artifact://1760; unchanged22-file source; workspace401/default290 overlap",
+    "live_attribution": "artifact://1659 belongs to round4; no repaired-source live rerun",
+    "provider_calls_this_pass": 0
+  },
+  "task_ledgers": "all-four-failing",
+  "whole_story": "failing-unresolved-E04S04-OPS-S1-01",
+  "next_action": "Deterministic actual-native retention rejection RED, then bounded correlated definite-non-admission recovery and runtime verification; no provider use needed. No further automatic review pass; human review/decision after repair.",
+  "production_source_changed_this_pass": false,
+  "historical_native_fence": "Unchanged unresolved/best-effort/fail-closed; no acceptance by force or ACP",
+  "publication": "No merge/push/release authorized or performed.",
+  "post_review_local_repair": {"finding":"E04S04-OPS-S1-01","status":"locally-fixed-native-and-resource-bounded-full-PASS-not-independently-cleared","evidence":"specs/verifications/e04s04-rejection-recovery.json","artifact":"artifact://1803","reviewed_source_and_original_FAIL":"preserved","new_review_pass":false,"new_live_run":false}
+}

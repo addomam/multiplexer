@@ -1,0 +1,41 @@
+{
+  "type": "independent-source-security-gate",
+  "context": "E06 only; all complete reports read before source edits",
+  "round": 8,
+  "max_rounds": 10,
+  "status": "FAIL",
+  "scores": {
+    "A": 100,
+    "B": 96.875,
+    "security": 100
+  },
+  "reports": {
+    "A": "specs/verifications/e06-review-round8-A.json",
+    "B": "specs/verifications/e06-review-round8-B.json",
+    "security": "specs/verifications/e06-review-round8-security.json"
+  },
+  "source": "specs/verifications/e06-review-round8-source.json",
+  "frozen_files": 32,
+  "all_hashes_matched_at_verdict": true,
+  "findings": [
+    {
+      "id": "E06-B8-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui/agent.rs",
+      "line": 973,
+      "title": "Keep mode and effort visible when model identifiers fill the pane",
+      "impact": "For an accepted long model ID, the native ACP view permanently hides the following reported and requested mode/effort at ordinary terminal widths. This defeats the launch contract's visible effective-or-unreported settings, including the permission-relevant mode, even though the canonical configuration contains them.",
+      "evidence": "AgentView::sync at lines 287–301 concatenates model, mode and effort onto one reported line and one requested line. The new draw block at lines 972–975 uses Paragraph::new(self.settings.as_str()) without wrapping and allocates exactly three rows. Setting IDs may be 256 bytes, so, for example, a valid 100-character model ID exceeds a 120-column pane before either mode or effort is reached. History scrolling and interaction navigation do not scroll this settings paragraph. The block is added by the base patch; short fixture display checks do not cover this case.",
+      "fix": "Render settings using width-aware wrapping with sufficient allocated rows, or provide an explicit read-only settings detail/scroll surface. Ensure reported and requested mode/effort remain reachable for bounded long identifiers; add a native rendering regression using a long accepted model ID at an ordinary terminal width."
+    }
+  ],
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "historical_caps": "unchanged",
+  "task_status": "all seven remain failing"
+}

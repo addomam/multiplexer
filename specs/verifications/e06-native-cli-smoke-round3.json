@@ -1,0 +1,38 @@
+{
+  "kind": "actual-built-human-CLI-and-controlling-PTY-outside-tests",
+  "status": "passed",
+  "provider_calls": 0,
+  "binary_sha256": "662c8ebb50e1c936b2e84f5d43af4080c1fbddf7da748c4f641b01d46b31fc0d",
+  "target": {
+    "id": "acp-1320c528e4af4c01bf95e7a391307558",
+    "instance_id": "instance-3220cee67e4f40af884d239f4cb4e5ce",
+    "connection_generation": 1,
+    "session_id": "arithmetic-78359",
+    "kind": "acp"
+  },
+  "native_effect": 42,
+  "reattached_API_effect": 57,
+  "original_peer_pid": 78359,
+  "original_agent_retained": true,
+  "duplicate_agents": false,
+  "stale_draft_replayed": false,
+  "automatic_reacquisition": false,
+  "termios_restored": true,
+  "TUI_exits": [
+    0,
+    0
+  ],
+  "host_exits": [
+    0,
+    0
+  ],
+  "drainers_joined": true,
+  "peer_reaped": true,
+  "daemon_exit": 0,
+  "socket_absent": true,
+  "sentinel_survived": true,
+  "fallback_used": false,
+  "private_root_removed": true,
+  "source": "specs/verifications/e06-review-round3-source.json",
+  "raw_evidence": "artifact://2222"
+}

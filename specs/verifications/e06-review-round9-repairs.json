@@ -1,0 +1,46 @@
+{
+  "type": "review-response",
+  "context": "E06 source round9 supported finding plus ordinary native integration defect; not final source or live acceptance",
+  "source_review": "specs/verifications/e06-review-round9.json",
+  "finding": {
+    "id": "E06-R9-01",
+    "supported": true,
+    "consumer_impact": "Invalid pasted launch identity could be truncated or control-filtered into a different valid identity",
+    "fix": "Atomic whole-edit rejection, retained per-field rejection, submission blocked until deliberate correction; legal JSON whitespace preserved",
+    "causal_RED": "bg_344 / artifact://2539",
+    "setup_failure_not_RED": "bg_343 wrong257-byte fixture identity",
+    "focused_GREEN": "bg_345 / artifact://2541,13 passed"
+  },
+  "additional_runtime_repair": {
+    "failed_full_runs": [
+      "bg_346",
+      "bg_347"
+    ],
+    "readiness_fence": "Exact rendered newly launched ready target/session, not previous anchor ownership/cursor",
+    "causal_observation": "bg_349 / artifact://2550:104 passed,1 failed,2 ignored; all5 F10 bytes remained unread in kernel",
+    "diagnosis": "specs/verifications/e06-native-input-diagnosis.json",
+    "failed_candidate": "bg_350 / artifact://2565:84 passed,21 failed,2 ignored; introduced reread of blocking stdin, not21 original defects",
+    "corrected_candidate": "bg_351 / artifact://2570:13 passed",
+    "fix": "Bounded existing Mio readiness cursor plus stack-only zero-time level check before rereading borrowed blocking descriptor; parent-shell flags unchanged",
+    "vendor_release": "MIT crossterm0.29.0 revision36d95b26a26e64b0f8c12edfe11f410a6d56a812",
+    "verified_baseline_files": 60,
+    "unchanged_release_files": 57,
+    "changed_vendor_files": [
+      "src/event/source/unix/mio.rs",
+      "Cargo.toml existing Rustix event feature",
+      "src/terminal/sys/unix.rs redundant-parentheses warning only"
+    ]
+  },
+  "final_runtime": "specs/verifications/e06-post-round9-regressions.json",
+  "final_actual_binary": "specs/verifications/e06-native-cli-smoke-final.json",
+  "final_source_review": "round10/max10 currently running, all seven gates failing",
+  "provider": {
+    "new_requests": 0,
+    "total_spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "privacy_scan": "new evidence no matching credential patterns",
+  "historical_caps": "unchanged",
+  "publication": "not authorized"
+}

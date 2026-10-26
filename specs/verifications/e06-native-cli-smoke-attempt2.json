@@ -1,0 +1,9 @@
+{
+  "kind": "actual-built-cli-and-controlling-PTY-not-test-harness",
+  "status": "failed",
+  "provider_calls": 0,
+  "binary_sha256": "15e2f7817cc81bfcde765ec21065ebce4a2f935ca43e37928bc8fbec18c10ccf",
+  "fallback_used": true,
+  "failure_category": "native-surface-missing-Local draft 0/65536 B",
+  "private_root_removed": true
+}

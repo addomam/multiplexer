@@ -1,0 +1,54 @@
+feature_name: Thin tool integration without ACP
+initiative: e05-thin-tool-integration
+status: independently-reviewed-contract-and-build-plan-awaiting-explicit-Build-approval
+problem_statement: >-
+  Tool authors need a small language-neutral local contract connecting one actual
+  tool session and its genuine questions/permissions to amux's owned human/API
+  surfaces without implementing ACP, parsing terminals or duplicating authority.
+user_decisions:
+  public_contract: language-neutral-local-message-API
+  author_language: unrestricted
+  native_surface: existing-amux-owned-view-not-upstream-TUI-coexistence
+source_of_truth: specs/product/SCOPE_LATEST.yaml
+architecture: specs/adr/0005-thin-tool-integration.md
+wire_contract: specs/contracts/tool-integration-v1.md
+research: specs/verifications/e05-contract-research.json
+delivered_baseline:
+  main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce
+  repair_commit: 66b52933ff6dbd35fb1ebe929d5d98c46eed8fb1
+  landing_receipt: specs/verifications/e04-main-landing.json
+  current_local_source: specs/verifications/e04s04-rejection-recovery.json
+  real_adapter_evidence: specs/verifications/e04s04-live-codex-grok.json
+  real_adapter_provenance: round4-source-not-a-new-source-provider-rerun
+constraints:
+  - One authority and canonical broker; concrete ToolV1 and existing ACP codecs, one owned child per target.
+  - Preserve force versus interrupt, ordinary pending cancel, conditional keep/withdraw, no replay and retained admitted work.
+  - Every mutation uses exact target/control/generation/call/interaction identities; no pipe-write application inference.
+  - Genuine question and exact offered permission callbacks resume original live work; unsupported fails explicitly.
+  - Existing terminal/Zsh/OMP lifecycle and ACP public contracts stay unchanged; historical native fence/caps remain as recorded.
+  - Runtime in memory; bounded private content and original endpoint/process/worker cleanup proof.
+consumer:
+  reference: Python-stdlib real arithmetic and permission-gated private ledger tool
+  real_tool: standalone OMP SDK adapter pinned to18.12.6 source45c35e40c46166dc726ccc52f5d27f40f2449f99
+  OMP_profile: typed questions and once-deny permissions; no remembered grants, ambient extensions or alternate human input
+  proof_status: source-supported-not-executed
+phase_authorization:
+  current: refined-contract-and-reviewed-build-plan-under-user-do-it-direction
+  implementation: not-started-awaits-independent-plan-pass-and-explicit-Plan-to-Build-approval
+  live_provider_calls: separately-approved-exact-harness-model-auth-and-cost-only
+  global_daemon_config_auth_changes: not-authorized
+  next_initiative_merge_push_tag_release: not-authorized
+required_reading:
+  - specs/product/SCOPE_LATEST.yaml
+  - specs/product/SCOPE_E04.yaml
+  - specs/adr/0004-acp-authoritative-input.md
+  - specs/adr/0005-thin-tool-integration.md
+  - specs/contracts/tool-integration-v1.md
+  - specs/contracts/omp-tool-adapter.md
+  - specs/verifications/e05-plan-review-round2.json
+  - specs/epics/e05-thin-tool-integration/PLAN.md
+  - specs/epics/e05-thin-tool-integration/epic.yaml
+  - specs/IMPACT_LATEST.md
+  - specs/verifications/e05-contract-research.json
+  - specs/verifications/e04-main-landing.json
+next_step: Obtain explicit Plan-to-Build approval; then verify isolated-worktree baseline and LSP navigation before the e05s01 tracer. No new live/provider/global/main-publication authorization.

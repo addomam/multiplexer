@@ -1,0 +1,14 @@
+{
+  "scope": "native-ordering-driver-failed-baseline-following-cleanup",
+  "failure_record": "specs/verifications/e04s02-native-gate-baseline.json",
+  "cause": "Probe-specific socket suffix exceeded Darwin AF_UNIX path bound; shorten it to n.sock and close the new listener on constructor failure. No product code change.",
+  "daemon_path_bytes": 98,
+  "failed_native_path_bytes": 104,
+  "corrected_native_path_bytes": 93,
+  "daemon_exit": 0,
+  "peer_absent_after_shutdown": true,
+  "unrelated_owned_sentinel_reaped": true,
+  "no_root_holders": true,
+  "private_root_removed": true,
+  "status": "cleaned-failed-proof-not-a-pass"
+}

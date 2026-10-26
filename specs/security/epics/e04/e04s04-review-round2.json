@@ -1,0 +1,175 @@
+{
+  "coverage_summary": "VERDICT: FAIL for implemented local tasks1–3. Supported security-exploit findings: 0. Supported operational/resource/lifecycle findings: 1 HIGH must-fix, confidence 9/10; should-fix: 0. Score = 100*(32-1-0)/32 = 96.875. The numerical threshold is met, but the mandatory zero-must-fix gate is not.\n\nMethod and provenance: Read-only static review of relevant boundaries in all19 manifest files, affected unchanged CLI/native-guard paths, actual conventions, threat model, contracts and current evidence. checks_run=false. No edits, builds, tests, formatters, payloads, agents, provider/auth/network/install/publication operations. No prior reviewer report was opened. Independently read Git metadata confirming feat/acp-agent-interaction at 6a9403899d6bf333cd5a0a407f45f637a8f298b8 and the preceding test-only9c46d0b checkpoint. Mounted tools provide no hashing primitive: 0/19 SHA256 values independently recomputed. Neither frozen-byte equality, working-tree cleanliness nor the complete base-to-current diff is independently attested.\n\nTransport/resource assessment: Nonblocking owned descriptors, shared sticky cancellation EOF, non-retryable ConnectionAborted, finite hangup-buffer handling and joining every successfully spawned worker address the covered blocked-I/O path. Spawn/capture/publication/partial-worker error exits converge on owned cleanup; cancellation does not enter force/handoff. However, retained-endpoint uncertainty is detected only by a worker still executing transfer after cancellation. An idle writer can drop its pipe before that observation, falsely completing cleanup and releasing its capacity charge. Parent RED/GREEN and outside-test observations remain evidence for their exercised all-three-endpoints/blocked-writer case, not disproof of this separate reachable path.\n\nAll32 rubric items considered; 'covered' below means source/test/evidence reviewed, not checks executed by this reviewer:\n1 approvedLocalScope — covered; local tasks1–3 are distinguished from whole-story/live acceptance.\n2 sameLiveTuple — covered; exact target/instance/generation/session checks and same-process assertions.\n3 originalRPC — covered; outstanding typed RPC mappings and original work identities survive transfer.\n4 freshReusedWireResponders — covered; per-response atomic write status and Arc identity prevent late bookkeeping from removing a fresh reused-ID responder.\n5 actualFormValues — covered; genuine form values7/11/5 are independently consumed by fixture arithmetic, not merely echoed receipts.\n6 fourDispositions — covered; opaque offered allow/reject once/always selections remain exact.\n7 allowEffect — covered; only permitted fixture branches compute/write tool effects.\n8 denyAbsence — covered; denied attempts preserve prior value and lack the corresponding tool-effect marker.\n9 authorityOnlyForce — covered; authority transfer does not invoke ACP cancellation or resource teardown.\n10 staleAPI — covered; exact current owner/control generation, interaction revision and duplicate-call checks precede commit.\n11 physicalNoReplay — covered; active-ACP events are consumed, including observer/repeat/paste/mouse/focus and double-prefix paths.\n12 freshReacquisition — covered; deliberate new claim/input is required; original stale drafts are not rebound.\n13 conditionalOriginalProvenance — covered; view/activity/consent require the original live attachment connection.\n14 humanPreserved — covered; original-connection keep and requester withdraw preserve the human generation and pending interaction.\n15 exactCanonicalOwnerGeneration — covered; Authority locks the target through broker admission; work retains original server-derived controller and generation.\n16 heldAdmission — covered; immutable accepted/not-submitted64KiB work remains charged and inspectable while stdin is stalled.\n17 independentProgress — covered; dedicated workers and bounded queues keep snapshot/ownership/unrelated computation outside blocked pipe I/O.\n18 privateRecovery — covered; private controller recovery exposes canonical retained work without rebinding authority.\n19 closeUnknownTruth — covered; unresolved work becomes unknown, observed outcomes are not overwritten by late writer bookkeeping, and no application acknowledgement is invented.\n20 shutdownOrdering/noErrorMask — covered; canonical close is observed before shutdown, with only precise post-admission EOF/reset classification accepted by the regression.\n21 hostileIsolation — covered; pre-accumulation frame/ingress bounds and malformed/overflow failure apply to the exact instance.\n22 stderrDrain — covered; retention caps do not stop draining; cancellation owns its exit.\n23 privacy/errors — covered; public ACP projections exclude conversation/selection/raw provider errors; content reads are explicit; rendering neutralizes controls/bidi. Local Unix access is protected by owned-private directory and socket permissions.\n24 realProcessIdentity — covered; birth-qualified root/session capture, discovery and signalling are used; no comprehensive escaped-orphan capture is claimed.\n25 cleanup/workerJoins/retainedEndpoints/chargedUncertainty — FAIL: S04-OPS-02. Idle/early-return endpoints are not classified after known-tree cleanup, so retained processes can become uncharged despite cleanup_complete=true.\n26 sentinel/noUnrelatedImpact — covered; known identities/session ownership constrain cleanup; test sentinels are checked before fallback and separately reaped. The proposed repair must preserve this boundary, not signal unknown retainers.\n27 nativeTermiosHostDrainer — covered; actual PTY host remains pinned until termios observation, and owned nonblocking drainer is joined.\n28 actualOutsideEvidence — covered as parent evidence only. Complete native49/49deny/57 proof is explicitly pre-repair1399; current1457 contains the permanent native case. Repair CLI smoke starts no PTY/drainer and does not falsely claim an exercised drainer join.\n29 regressionShowcaseCounts — covered as parent evidence only: selected8, workspace392/30suites/10ignored, default281/12suites/7ignored, exact native guards2, showcase1, Bun8/49; overlapping suites are not distinct totals and218.86s is the recorded wall duration.\n30 historicalFenceCapsAndLiveHonesty — covered; native unknown remains fail-closed, e03 all32/e03s08/native presentation failures and exhausted historical caps remain unchanged; no local result grants live or publication authority.\n31 FIRST/types/maintainability — covered; real-child predicates, typed protocol envelopes, captured bindings and existing helpers are reused. Fowler Long Method risk exists in causal E2E traces, but no separate supported refactor requirement was identified.\n32 noMissingReachableImplementationOrFalseGateClaim — qualified by the reachable cleanup-accounting gap above and the overbroad README106 guarantee; this is the same root cause, not a second deduction. Source search confirms e04s04_live_adapters is absent. That driver and genuine Codex/Claude execution remain missing required Task4 work, explicitly unimplemented/unapproved/failing, not a passing fail-closed harness or a zero-case success. No additional false live-command PASS claim was found.\n\nWhole S04 remains FAILING. This review neither clears historical caps nor establishes live-adapter compatibility or native application settlement.",
+  "findings": [
+    {
+      "rule_id": "S04-OPS-02",
+      "title": "Idle workers can drop retained pipes without recording cleanup uncertainty",
+      "summary": "HIGH operational must-fix; confidence9/10; rubric25, with the same consequence qualifying rubric32. Retained-endpoint accounting occurs only inside PipeIo::transfer after cancellation. An escaped/reparented adapter descendant can retain stdin's read end alone, close stdout/stderr and remain alive while no write is in flight. Explicit close wakes the idle writer, which returns immediately on the non-live state and drops its PipeIo without another transfer. The captured tree terminates and all workers join, but cancellation.retained remains false. finish then makes cleanup_complete true, so reserve stops charging that instance against the eight-slot ceiling despite the still-live retainer. The current regression holds all three endpoints and blocks a64KiB write; it does not cover this idle-writer path. This is false cleanup/resource-admission accounting, not a demand to discover or kill arbitrary escaped PIDs.",
+      "severity": "high",
+      "confidence": "high",
+      "category": "operational-resource-lifecycle",
+      "locations": [
+        {
+          "path": "src/acp.rs",
+          "start_line": 1515,
+          "end_line": 1526,
+          "role": "Idle writer exits and drops its owned endpoint before cancellation classification"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 1288,
+          "end_line": 1292,
+          "role": "Retained uncertainty is recorded only when transfer executes after cancellation"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 1456,
+          "end_line": 1476,
+          "role": "Owner joins workers and accepts cleanup unless a transfer reported retention"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 300,
+          "end_line": 303,
+          "role": "Joined target becomes cleanup-complete without retained-endpoint failure"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 559,
+          "end_line": 569,
+          "role": "Cleanup-complete instance no longer consumes a charged admission slot"
+        },
+        {
+          "path": "src/runtime.rs",
+          "start_line": 716,
+          "end_line": 718,
+          "role": "Initial ownership capture contains the root; previously escaped ancestry/session is not captured"
+        },
+        {
+          "path": "src/runtime.rs",
+          "start_line": 735,
+          "end_line": 772,
+          "role": "Cleanup discovery cannot find the already reparented, different-session retainer"
+        },
+        {
+          "path": "tests/acp/acceptance.rs",
+          "start_line": 662,
+          "end_line": 719,
+          "role": "Existing retained-pipe case uses held work and does not exercise an idle stdin-only retainer"
+        },
+        {
+          "path": "README.md",
+          "start_line": 106,
+          "end_line": 106,
+          "role": "General retained-endpoint cleanup/charging guarantee exceeds implemented detection"
+        }
+      ],
+      "cwe": [
+        "CWE-664",
+        "CWE-400"
+      ],
+      "evidence": [
+        {
+          "label": "Reachable adapter-controlled source",
+          "explanation": "The adapter controls inherited child-stdio endpoints. The existing fixture demonstrates a setsid/fork/reparented process outside captured ancestry/session. The same process shape can close stdout/stderr, retain stdin only and park; after ordinary initialization the writer can be idle with an empty output queue. No payload or reproduction was executed by this reviewer.",
+          "excerpt": "if !state.live() || state.transport_error.is_some() {\n    return;\n}"
+        },
+        {
+          "label": "Broken endpoint-lifetime control",
+          "explanation": "Close marks state non-live and wakes the writer before the owner finishes tree termination. The idle writer returns without any subsequent PipeIo::transfer call. There is no final owner-side inspection or Drop classification for the endpoint before it is discarded; dropping the shared wake sender cannot classify a worker that already returned.",
+          "excerpt": "if self.cancellation.stopped.load(Ordering::Acquire) && !self.hung_up(events)? {\n    self.cancellation.retained.store(true, Ordering::Release);\n    return Err(io::ErrorKind::ConnectionAborted.into());\n}"
+        },
+        {
+          "label": "False completion reaches admission",
+          "explanation": "With root/known members terminated, stdout/stderr at EOF and all handles joined, run sees no retained flag and records no cleanup failure. finish sets joined. cleanup_complete excludes only cleanup/process-identity failures, and reserve counts cleanup-complete instances as ended rather than charged. Repeated open/close operations can therefore leave retainers outside the stated charging boundary.",
+          "excerpt": "self.joined && !matches!(self.failure, Some(\"cleanup\" | \"process-identity\"))"
+        },
+        {
+          "label": "Nearby test does not close the gap",
+          "explanation": "The retained-pipe regression calls s04_held_prompt before close/shutdown, leaving a writer blocked on64KiB while a retainer holds all three descriptors. Its cancellation flag is necessarily observable through active I/O. Those meaningful parent RED/GREEN results do not cover returning from an idle writer without another transfer.",
+          "excerpt": "let original = s04_held_prompt(&host, &agent);"
+        }
+      ],
+      "anchor": "src/acp.rs:1522",
+      "remediation": "Retain endpoint observability until known-tree termination and final classification of every owned pipe, including idle-worker, reader early-return and partial-start exits. Record a still-held endpoint as incomplete/failed cleanup before releasing its descriptor and keep the instance charged. Preserve prompt cancellation, full worker joins and birth-qualified signalling; do not write probe payloads, detach workers or signal uncaptured PIDs. Parent should add real-child stdin-only/idle-writer regressions for close and direct shutdown, plus stdout-only/early-reader-exit coverage, asserting retainer liveness, truthful cleanup metadata and continued capacity charging before explicit fixture release. Update the general documentation/evidence claim to match the repaired coverage."
+    }
+  ],
+  "reviewed_paths": [
+    "CONVENTIONS.md",
+    "src/acp.rs",
+    "src/control.rs",
+    "src/daemon.rs",
+    "src/client.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs",
+    "src/runtime.rs",
+    "src/cli.rs",
+    "tests/acp.rs",
+    "tests/acp/native.rs",
+    "tests/acp/acceptance.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/fixtures/acp_peer.rs",
+    "tests/pty_control.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "specs/bugs/BUG-e03-native-settlement.md",
+    "specs/bugs/BUG-e04-acp-retained-pipes.md",
+    "specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-story.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+    "specs/epics/e04-acp-agent-interaction/epic.yaml",
+    "specs/epics/e04-acp-agent-interaction/context.yaml",
+    "specs/adr/0004-acp-authoritative-input.md",
+    "specs/IMPACT_LATEST.md",
+    "specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "specs/security/epics/e04/THREAT_MODEL.md",
+    "specs/verifications/AUDIT-e04s04.md",
+    "specs/verifications/NFR-e04s04.json",
+    "specs/verifications/e04s04-verify.yaml",
+    "specs/verifications/e04s04-round2-source.json",
+    "specs/verifications/e04s04-build.md",
+    "specs/verifications/e04s04-retained-pipe-before-after.json",
+    "specs/verifications/e04s04-retained-pipe-runtime.json",
+    "specs/verifications/e04s04-complete-native-attempt1.json",
+    "specs/verifications/e04s04-native-fence.json",
+    "specs/verifications/e04s04-worker-retirement.json",
+    "specs/verifications/e04s04-live-prerequisites.json",
+    "specs/verifications/e03-complete-broker-acceptance.json"
+  ],
+  "deferred": [
+    {
+      "reason": "Independent19-file SHA256 comparison is unavailable through mounted tools. Git branch/ref and checkpoint order were read independently, but working-tree byte equality, cleanliness and the asserted production-only diff were not independently checked.",
+      "paths": [
+        "specs/verifications/e04s04-round2-source.json"
+      ]
+    },
+    {
+      "reason": "The supported idle-endpoint accounting finding is statically traced, not runtime-reproduced. Parent should exercise the specified stdin-only/idle and stdout-only/early-exit cases, then run the existing retained-pipe case and current contiguous local/native regression gates after repair. No such checks were run here.",
+      "paths": [
+        "src/acp.rs",
+        "tests/acp/acceptance.rs",
+        "tests/fixtures/acp_peer.rs"
+      ]
+    },
+    {
+      "reason": "Task4 has reachable missing source—the root ignored live-adapter driver—and no real-adapter proof. Concrete installed closures/launchers, actual model/auth/private-root bindings, prompt limits and enforceable spend approval are still missing. This remains a failing requirement; absence is not tested fail-closed behavior or approval to install, inspect credentials or contact providers.",
+      "paths": [
+        "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+        "specs/verifications/e04s04-live-prerequisites.json",
+        "tests/acp.rs"
+      ]
+    },
+    {
+      "reason": "Parent records were inspected without independently opening execution logs or rerunning commands. No independent Linux/MSRV, RSS/latency, CI, coverage-percentage, live-model, native application-fence repair or publication assurance is supplied.",
+      "paths": [
+        "specs/verifications/e04s04-verify.yaml",
+        "specs/verifications/NFR-e04s04.json",
+        "specs/verifications/e04s04-native-fence.json"
+      ]
+    }
+  ]
+}

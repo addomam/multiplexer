@@ -1,0 +1,16 @@
+{
+  "status": "failed",
+  "job": "bg_282",
+  "command": "AMUX_E06_OMP_LIVE_SPEC=<private-0600-spec> TMPDIR=/private/tmp cargo test --test acp e06s01_live_omp -- --ignored --exact --nocapture",
+  "exit": 101,
+  "test_seconds": 0.74,
+  "wall_seconds_including_compile": 2.45,
+  "scenario_failure": "omp-startup-failed",
+  "normal_cleanup_failure": "daemon-request-rejected",
+  "actual_provider_requests": 0,
+  "provider_count_evidence": "The mandatory preload's fresh real-budget file was never created; startup failed before the provider gate could initialize. No prompt was submitted.",
+  "separate_network_denied_version_probe": {"exit": 134, "stdout_empty": true, "stderr_empty": true, "actual_provider_requests": 0},
+  "attribution": "The new strict system-read sandbox allowlist also aborts a bare installed OMP --version before preload. The exact denied dependency is unknown. This is a live harness isolation failure, not a confirmed amux production defect. Reuse the already proven network-gated/private-HOME/real-user-HOME-read-denied sandbox instead of adding an unrequested OS-library allowlist.",
+  "acceptance": "not-passed",
+  "auth_or_transcript_content_recorded": false
+}

@@ -1,0 +1,27 @@
+{
+  "total_items": 32,
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [
+    {
+      "title": "Retire stale non-pass wording in S04 evidence",
+      "body": "specs/verifications/e04s04-build.md line 28 still says the current contiguous attempt is bg_212 and not a PASS. The status header and the later artifact://1399 table correctly record the completed local gate. A reader of only the attempt list can treat a finished local run as incomplete. Rewrite that sentence as history of 1396; do not treat it as a source defect.",
+      "priority": 3,
+      "confidence": 0.86,
+      "file_path": "specs/verifications/e04s04-build.md",
+      "line_start": 28,
+      "line_end": 28,
+      "rubric_item": 29
+    }
+  ],
+  "score": 100,
+  "recommendation": "PASS",
+  "source_hashes_matched": 17,
+  "checks_run": false,
+  "scope_status": "local-task1-3-source-review-PASS; task4-live-adapters-unapproved-unimplemented-not-run; whole-story-FAILING; historical-e03-caps-unchanged",
+  "explanation": "Independent SHA256 of all 17 frozen files matched e04s04-round1-source.json; production src/Cargo.toml/Cargo.lock are unchanged from baseline 5311409. All 32 local-rubric items pass on source and consumer paths: same tuple and original prompt RPC, fresh interaction/work IDs despite reused wire reusable-form/73, typed bonuses 7/11/5 rather than defaults, all four opaque dispositions with allow-only tool-effect-N, force without cancel/kill, stale API stale-control/stale-handle, observer physical input not replayed, explicit prefix+Ctrl-L reacquisition, original-connection keep/withdraw, exact owner/generation on six responders, 64KiB admission before socket drop, sibling compute during stall, private retained work, close-to-unknown before shutdown, EOF/reset accepted only after that admission (recorded run was UnexpectedEof; a complete error line would fail ok), hostile isolation, continued stderr drain, content-free metadata, real session/group descendant identity published independently of ready, cleanup_complete and pid absence before Host drop writes fixture-fallback, unrelated sleep sentinel, real PTY termios/host/drainer in the recorded outside proof, and no e04s04_live_adapters symbol or false command-availability claim. Parent artifact://1399 rows were read, not re-executed: selected 7, workspace 391/30/10 ignored, default 280/12/7 ignored, Bun 8/49, showcase 1. Security findings 0 and operational findings 0 at confidence >= 0.8. This PASS is not Task 4 or whole-story acceptance.",
+  "fowler_smells": [
+    "Long Method",
+    "Duplicated Code"
+  ]
+}

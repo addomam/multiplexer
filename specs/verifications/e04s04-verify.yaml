@@ -1,0 +1,142 @@
+type: verification
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
+story_id: e04s04
+verified_at: direct-rejection-repair-actual-native-and-resource-bounded-full1803-observed
+status: runtime-PASS-user-accepted-postcap-local-delivery-not-new-independent-PASS
+source: specs/verifications/e04s04-rejection-recovery.json
+source_commit: 66b5293
+previous_terminal_verdict:
+  command: cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
+  exit_code: 0
+  artifact: artifact://1760
+  job: bg_257
+  wall_seconds: 210.40
+  note: Actual contiguous final gate includes Node syntax, showcase and final native guards. Focused/local runs and earlier real matrix separately below; overlapping counts are not distinct totals and0.00s is not wall duration.
+  counts:
+    selected: 12
+    workspace: 401
+    workspace_suites: 30
+    workspace_ignored: 11
+    default: 290
+    default_suites: 12
+    default_ignored: 8
+    showcase_exact: 1
+    native_exact_guards: 2
+    omp: 8
+    omp_assertions: 49
+  separate_focused: {artifact: 'artifact://1754', native_reply_budget: 1, local_S04: 12, Grok_regressions: 5}
+  separate_live: {artifact: 'artifact://1659', source: specs/verifications/e04s04-round4-source.json, actual_ignored_case_executed: 1, passed: 1, primary_real_rows: 8, post_repair_rerun: false}
+  final_native_guards: {job: bg_257, artifact: 'artifact://1760', executed: 2, passed: 2, included_in_chain: true}
+  named_S04_cases:
+  - acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application
+  - acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree
+  - acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects
+  - acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation
+  - acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force
+  - native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs
+  - acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure
+  - acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown
+  - acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown
+  - acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes
+  - native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable
+  - native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering
+terminal_verdict:
+  command: cargo test --workspace -- --test-threads=1 && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo test -- --test-threads=1 && cargo clippy --all-targets -- -D warnings && cargo check --all-targets && cargo build && cargo fmt --check && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh && node --check tests/fixtures/acp_live_observer.mjs && cargo test -p terminal-showcase --test multiplexer independent_showcase_runs_inside_amux_and_checks_real_cursor_replies -- --ignored --exact --nocapture && cargo test --test pty_control request_preserves_owner_input_but_native_delivery_never_becomes_safe_settlement -- --exact --nocapture && cargo test --test pty_control forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity -- --exact --nocapture
+  exit_code: 0
+  artifact: artifact://1803
+  job: bg_260
+  wall_seconds: 618.33
+  note: Resource-bounded suite concurrency only; internal race concurrency unchanged. Initial default-parallel1799 FAIL retained. Counts overlap; source binding and focused actual-PTY cleanup proof are in rejection recovery.
+  counts: {focused_native: 1, workspace: 402, workspace_suites: 30, workspace_ignored: 11, default: 291, default_suites: 12, default_ignored: 8, showcase_exact: 1, native_exact_guards: 2, omp: 8, omp_assertions: 49}
+  new_native_case: native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel
+  source_and_focused_evidence: specs/verifications/e04s04-rejection-recovery.json
+  previous_parallel_failure: {artifact: 'artifact://1799', exit_code: 101, failing_case: concurrent_first_opens_publish_one_main_and_valid_default_parents, observed: macOS-openpty-Os-minus6, product_PTY_fix_claimed: false}
+outside_test:
+  repair_actual_CLI:
+    passed: true
+    evidence: specs/verifications/e04s04-retained-pipe-runtime.json
+    close_returns_before_fixture_EOF: true
+    cleanup_stays_incomplete_charged: true
+    daemon0_before_retainer_release: true
+    owned_cleanup_without_fallback: true
+    PTY_drainer_started: false
+  earlier_complete_native:
+    passed_on_source_gate: artifact://1399
+    evidence: specs/verifications/e04s04-complete-native-attempt1.json
+    values:
+    - 49
+    - 49
+    - 57
+    same_target_original_RPC: true
+    termios_host_drainer_cleanup: true
+  current_permanent_native_full_case: PASS-at1721
+  endpoint_truth_actual_CLI:
+    passed: true
+    evidence: specs/verifications/e04s04-endpoint-truth-runtime.json
+    paths: 3
+    daemon0_before_retainer_release: true
+    owned_cleanup_without_fallback: true
+    PTY_drainer_started: false
+  previous_Grok_codec_CLI: {passed: true, evidence: specs/verifications/e04s04-grok-codec-cli.json, provider_calls: 0, owned_cleanup_without_fallback: true}
+  previous_source_Other_CLI: {passed: true, evidence: specs/verifications/e04s04-other-recovery-cli.json, actual_source: specs/verifications/e04s04-round5-source.json, provider_calls: 0, owned_cleanup_without_fallback: true}
+  current_reply_budget_CLI: {passed: true, evidence: specs/verifications/e04s04-reply-budget-recovery.json, actual_final_binary: true, provider_calls: 0, owned_cleanup_without_fallback: true}
+retained_pipe_RCA: specs/verifications/e04s04-retained-pipe-before-after.json
+final_native_revisit:
+  passed_retained_fail_closed_guards: 2
+  current_artifact: artifact://1760
+  earlier_detailed_evidence: specs/verifications/e04s04-native-fence.json
+  native_application_settlement: still-unresolved-not-an-acceptance-PASS
+security:
+  self_audit: specs/verifications/AUDIT-e04s04.md
+  previous_round1: specs/security/epics/e04/e04s04-review-round1.json
+  previous_operational_must_fix: 1
+  current_independent: supplemental1-FAIL-finding-locally-repaired-not-independently-cleared
+  current_operational_must_fix: E04S04-OPS-S1-01-locally-fixed-and-verified
+  AND_gate: historical-independent-FAIL-preserved-local-repair-runtime-PASS-user-accepted-delivery
+  actual_counterexample: specs/verifications/e04s04-idle-pipe-before.json
+  previous_round2: specs/security/epics/e04/e04s04-review-round2.json
+  supported_security_findings: 0
+  build_review: specs/verifications/e04s04-build-review-supplemental1.json
+  independent_clearance_round: none-supplemental1-failed-new-must-fix
+  next_changed_source_round: none-original5-of5-and-extra1-of1-consumed-human-local-delivery-decision-accepted
+nfr: specs/verifications/NFR-e04s04.json
+worker_retirement: specs/verifications/e04s04-worker-retirement.json
+historical_failures:
+  fixture_attempts:
+  - 1387
+  - 1390
+  - 1396
+  production_RED: 1449
+  record: specs/verifications/e04s04-build.md
+  production_RED_endpoint_truth: 1498
+live_task:
+  status: actual-Codex-Grok-complete-matrix-PASS-on-round4-source-user-accepted-local-delivery
+  required_test: e04s04_live_adapters
+  prerequisites: specs/verifications/e04s04-live-prerequisites.json
+  zero_case_command: never-counts-as-PASS
+  private_setup: specs/verifications/e04s04-private-setup.json
+  installed_closure_captured: true
+  current_evidence: specs/verifications/e04s04-live-codex-grok.json
+  actual_artifact: artifact://1659
+  private_OAuth_runtime: removed-after-owned-absence-and-no-open-holder-proof
+  Claude_execution: false
+all_task_ledgers: all-four-runtime-passing-user-accepted-postcap
+whole_story: done-user-accepted-not-independently-recleared
+historical_e03_and_review_caps: unchanged
+ACP_main_merge_push_release: local-main-authorized-push-tag-release-not-requested
+endpoint_truth_RCA: specs/verifications/e04s04-endpoint-truth-before-after.json
+local_tasks:
+  1: passing
+  2: passing
+  3: passing
+  4: passing
+previous_local_baseline: {source: 6a5d9af, artifact: 'artifact://1515', review: specs/verifications/e04s04-build-review-round3.json}
+Other_recovery: specs/verifications/e04s04-other-recovery.json
+previous_round4: specs/verifications/e04s04-build-review-round4.json
+reply_budget_repair: specs/verifications/e04s04-reply-budget-recovery.json
+review_disposition: Original supplemental1/global6 FAIL is preserved. E04S04-OPS-S1-01 is locally fixed; actual native correction49/cancel32 and resource-bounded full1803 PASS. The user subsequently accepts local main integration. No fresh independent PASS, cap reset, reproduction/review/provider cycle, push/tag/release or global change is claimed.
+supplemental_review: {authorization: specs/verifications/e04s04-supplemental-review-authorization.json, evidence: specs/verifications/e04s04-build-review-supplemental1.json, original_cycle: exhausted5-of5-preserved, additional_used: 1, additional_allowed: 1, cap_reset: false, code_scores: [100, 100], specialist_score: 96.875, supported_security_findings: 0, operational_must: 1}
+fresh_supplemental_runtime: {evidence: specs/verifications/e04s04-supplemental1-runtime.json, native: 2, Grok_library: 5, reply_budget_CLI: PASS, full1760: reused-unchanged22-source-hashes-not-rerun, provider_calls: 0}
+retained_admission_CLI: {evidence: specs/verifications/e04s04-retained-admission-cli.json, pending: 6, retained_bytes: 4162387, remaining_bytes: 31917, rejected_notes_bytes: 40960, rejected_call_no_work_or_wire: true, deliberate_same_grant_smaller_answer: PASS, native_latch: static-only-no-native-runtime-claim, owned_cleanup_before_fallback: PASS}
+rejection_recovery: {evidence: specs/verifications/e04s04-rejection-recovery.json, status: locally-fixed-native-and-full-PASS-not-independently-cleared, provider_calls: 0, further_review: none-original5-of5-and-extra1-of1-preserved}
+human_delivery_authorization: specs/verifications/e04-main-landing.json

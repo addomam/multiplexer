@@ -1,0 +1,57 @@
+{
+  "scope": "e04s04-owned-pipe-repair-actual-built-CLI",
+  "source_commit": "6a94038",
+  "provider_calls": 0,
+  "rows": [
+    {
+      "transition": "explicit-close-then-shutdown",
+      "original_admitted": true,
+      "retainer_other_session_reparented": true,
+      "peer_pid": 75124,
+      "retainer_pid": 75128,
+      "close_seconds": 0.224,
+      "close_returned_before_fixture_EOF": true,
+      "cleanup_stays_failed_incomplete": true,
+      "original_call_unknown_not_application": true,
+      "snapshot_after_close": true,
+      "shutdown_seconds": 0.268,
+      "daemon_exit": 0,
+      "daemon_exited_before_retainer_release": true,
+      "captured_peer_absent": true,
+      "socket_removed": true,
+      "sentinel_alive_before_fixture_release": true,
+      "retainer_absent_after_explicit_release": true,
+      "cleanup": {
+        "fallback_signals": [],
+        "drainer_errors": [],
+        "drainer_joined": true,
+        "private_root_removed": true
+      },
+      "sentinel_owned_reap": -15
+    },
+    {
+      "transition": "direct-shutdown",
+      "original_admitted": true,
+      "retainer_other_session_reparented": true,
+      "peer_pid": 75178,
+      "retainer_pid": 75181,
+      "shutdown_seconds": 0.258,
+      "daemon_exit": 0,
+      "daemon_exited_before_retainer_release": true,
+      "captured_peer_absent": true,
+      "socket_removed": true,
+      "sentinel_alive_before_fixture_release": true,
+      "retainer_absent_after_explicit_release": true,
+      "cleanup": {
+        "fallback_signals": [],
+        "drainer_errors": [],
+        "drainer_joined": true,
+        "private_root_removed": true
+      },
+      "sentinel_owned_reap": -15
+    }
+  ],
+  "passed": true,
+  "native_tui_started": false,
+  "drainer_note": "CLI-only lifecycle smoke creates no PTY/drainer; helper cleanup drainer_joined=true means none remained, not an observed thread join."
+}

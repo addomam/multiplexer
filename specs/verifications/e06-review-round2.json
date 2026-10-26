@@ -1,0 +1,49 @@
+{
+  "scope": "e06-only",
+  "round": 2,
+  "max_rounds": 5,
+  "verdict": "FAIL",
+  "scores": {
+    "A": 92.85714285714286,
+    "B": 87.5,
+    "security": 100
+  },
+  "denominators": {
+    "A": {
+      "passed": 13,
+      "total": 14
+    },
+    "B": {
+      "passed": 14,
+      "total": 16
+    },
+    "security": {
+      "passed": 14,
+      "total": 14
+    }
+  },
+  "unique_findings": [
+    {
+      "id": "E06-R2-01",
+      "also": "E06-B-01",
+      "category": "Must-fix",
+      "priority": "P1",
+      "disposition": "accept: fence/join worker, salvage only parsed successful launch continuity before dropping reply channel; retain exact new target without processing/replaying queued authority; test acknowledgement arriving during observation plus authority loss before UI consumption"
+    },
+    {
+      "id": "E06-B-02",
+      "category": "Should-fix",
+      "priority": "P2",
+      "disposition": "accept: observe/validate before registering, and use existing guarded idle-controller close for retired recovered observers; never release owners or cancel pending claims for cleanup; verify repeated failed setup and idle recovery cleanup against actual registry capabilities"
+    }
+  ],
+  "all_full_reports_read_before_source_edits": true,
+  "provider_accounting": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "live_runs_active_or_newly_authorized": false,
+  "historical_review_caps": "unchanged",
+  "next": "repair both causal lifecycle issues, actual native smoke/full gate and fresh E06 round3; no live usage before stable review"
+}

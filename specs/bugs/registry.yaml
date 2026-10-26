@@ -172,3 +172,11 @@ bugs:
     source: BUG-e03-smoke-cleanup-identity.md
     scope: opt-in-smoke-only-owned-signal-failure-path
     evidence: ../verifications/e03-smoke-cleanup-runtime.json
+  - id: e06-native-fixture-cleanup
+    status: fixed
+    severity: high
+    source: BUG-e06-native-fixture-cleanup.md
+    scope: ACP-test-fixture-fallback-reaping
+    evidence: ../verifications/e06-baseline-stall.json
+    repair_evidence: ../verifications/e06-baseline-repair.json
+    integrated_verification: ../verifications/e06-final-regressions.json

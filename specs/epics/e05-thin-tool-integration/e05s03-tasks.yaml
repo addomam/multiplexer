@@ -1,0 +1,112 @@
+story_id: e05s03
+type: task-ledger
+context: context.yaml
+status: failing
+future_commands_not_evidence: true
+tasks:
+- id: e05s03t01
+  title: boundary-regressions
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s01
+  - e05s02
+  change: Create RED behavior regressions for uncertain identities, boundaries, races
+    and cleanup before production changes; no wiring/default/source-text tests.
+  scenarios:
+  - SC-e05s03-P0-01
+  - SC-e05s03-P0-02
+  - SC-e05s03-P0-03
+  - SC-e05s03-P0-04
+  - SC-e05s03-P0-05
+  - SC-e05s03-P1-06
+  verify: cargo test --test tool_integration e05s03_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s03_admit_revoke_orders
+  - e05s03_handoff_force_cancel
+  - e05s03_conditional_provenance
+  - e05s03_native_stale_input
+  - e05s03_interrupt_identity
+  - e05s03_disconnect_gap_render
+  zero_case_is_failure: true
+- id: e05s03t02
+  title: implementation
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s03t01
+  change: Implement only this story against the integrated concrete protocol/shared
+    broker contract, preserving ACP/native behavior and exact original responders.
+  scenarios:
+  - SC-e05s03-P0-01
+  - SC-e05s03-P0-02
+  - SC-e05s03-P0-03
+  - SC-e05s03-P0-04
+  - SC-e05s03-P0-05
+  - SC-e05s03-P1-06
+  verify: cargo test --test tool_integration e05s03_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s03_admit_revoke_orders
+  - e05s03_handoff_force_cancel
+  - e05s03_conditional_provenance
+  - e05s03_native_stale_input
+  - e05s03_interrupt_identity
+  - e05s03_disconnect_gap_render
+  zero_case_is_failure: true
+- id: e05s03t03
+  title: runtime-smoke
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s03t02
+  change: Exercise the actual CLI/API/controlling-PTY surface and real arithmetic/file
+    effects outside test-only proof; observe original endpoints/processes/workers/sentinel
+    before fallback.
+  scenarios:
+  - SC-e05s03-P0-01
+  - SC-e05s03-P0-02
+  - SC-e05s03-P0-03
+  - SC-e05s03-P0-04
+  - SC-e05s03-P0-05
+  - SC-e05s03-P1-06
+  verify: cargo test --test tool_integration e05s03_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s03_admit_revoke_orders
+  - e05s03_handoff_force_cancel
+  - e05s03_conditional_provenance
+  - e05s03_native_stale_input
+  - e05s03_interrupt_identity
+  - e05s03_disconnect_gap_render
+  zero_case_is_failure: true
+- id: e05s03t04
+  title: compatibility-evidence
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s03t03
+  change: Run affected/full existing regression boundaries and record actual source-bound
+    commands/counts/smoke/cleanup; update shipped docs only for observed behavior.
+  scenarios:
+  - SC-e05s03-P0-01
+  - SC-e05s03-P0-02
+  - SC-e05s03-P0-03
+  - SC-e05s03-P0-04
+  - SC-e05s03-P0-05
+  - SC-e05s03-P1-06
+  verify: cargo test --test tool_integration e05s03_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s03_admit_revoke_orders
+  - e05s03_handoff_force_cancel
+  - e05s03_conditional_provenance
+  - e05s03_native_stale_input
+  - e05s03_interrupt_identity
+  - e05s03_disconnect_gap_render
+  zero_case_is_failure: true

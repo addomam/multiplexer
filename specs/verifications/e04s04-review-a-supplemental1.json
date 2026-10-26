@@ -1,0 +1,304 @@
+{
+  "reviewer": "A",
+  "report_type": "independent-static-code-review",
+  "scope": "e04s04-repaired-ACP-broker-reply-budget-supplemental1",
+  "source_root": "/Users/addomam/projects/amux-acp-build",
+  "branch": "feat/acp-agent-interaction",
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "merge_base_main": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+  "authorization": {
+    "kind": "explicit-user-request",
+    "user_request": "Ok great. Do another review pass now that the reply-budget defect is fixed and let's see if it works.",
+    "authorization_file": "specs/verifications/e04s04-supplemental-review-authorization.json",
+    "supplemental_pass": 1,
+    "global_pass": 6,
+    "historical_rounds_used": 5,
+    "configured_cap": 5,
+    "cap_reset": false,
+    "automatic_further_loop": false,
+    "story_acceptance": false,
+    "publication": "not-authorized-not-performed",
+    "merge_push_release": false
+  },
+  "blind": {
+    "current_counterpart_reports_read": false,
+    "counterparts_contacted": false,
+    "prior_scores_treated_as_proof": false
+  },
+  "checks_run": false,
+  "overall_correctness": "correct",
+  "confidence": 0.88,
+  "must_fix_count": 0,
+  "should_fix_count": 0,
+  "consider_count": 0,
+  "total_items": 32,
+  "individually_assessed": 32,
+  "denominator": 32,
+  "formula": "100*(32-must_fix_count-should_fix_count)/32 = 100*(32-0-0)/32 = 100",
+  "score": 100,
+  "minimum_score": 94,
+  "numeric_threshold_met": true,
+  "zero_must_gate_met": true,
+  "specialist_operational_must_found": false,
+  "verdict": "zero-must-zero-should-score-100-independent-code-gate-met-not-story-acceptance-not-publication",
+  "fowler_smells": [],
+  "fowler_assessment": "No actionable Fowler smell in the reply-budget repair. The new predicate is one ensure in the existing closed Grok codec, using the existing allocation-free value_bytes counter and a named RESPONSE_OVERHEAD reserve. It does not add a provider trait, second responder, duplicated Other-notes rule, or new dependency. Pre-existing Long Method in src/acp.rs and the causal native acceptance trace is unchanged in kind and was not expanded into a framework. No new Feature Envy, Data Clump, Message Chain, Middle Man, Shotgun Surgery, or Divergent Change.",
+  "findings": [],
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [],
+  "security_assessment": {
+    "security_sensitive": true,
+    "supported_vulnerabilities": 0,
+    "confidence_threshold": 8,
+    "exclusions_applied": ["general DoS/resource pressure", "absolute operator argv is privileged config", "agent tools are not claimed sandboxed", "test-only exact shell effects are confined"],
+    "note": "No concrete source-to-sink exploit at confidence >= 8 was found. The repaired size check is an operational representability gate, not a vulnerability. CWE-863/367, 639, 664, 200/117, 78/116, 862, and 833 were traced at the cited consumers and did not yield a supported finding."
+  },
+  "hash_verification": {
+    "computed_by_reviewer": true,
+    "tool": "hashlib.sha256",
+    "cross_check": "shasum -a 256 on src/acp/grok.rs, tests/acp/native/acceptance.rs, and tests/fixtures/acp_peer.rs",
+    "inventory_paths": 22,
+    "matched": 22,
+    "mismatches": 0,
+    "compared_to": "specs/verifications/e04s04-reply-budget-source.json sha256 map"
+  },
+  "git_facts_computed": {
+    "head": "741fe4a188397223d063073ddf919c7123a1586a",
+    "head_subject": "fix(acp): bound Grok reply expansion before offering questions",
+    "merge_base_main": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+    "diff_678e3a2_stat": "19 files, production change only src/acp/grok.rs plus native/fixture test and evidence/docs",
+    "inventory_paths_dirty": false,
+    "working_tree_not_fully_clean": [
+      "M specs/state.yaml",
+      "?? specs/verifications/e04s04-supplemental-review-authorization.json"
+    ]
+  },
+  "bound_proof": {
+    "predicate": "value_bytes(params) <= (FRAME - LOCAL_CONTENT - RESPONSE_OVERHEAD) / 2",
+    "FRAME": 1048576,
+    "LOCAL_CONTENT": 65536,
+    "RESPONSE_OVERHEAD": 4096,
+    "max_params_bytes": 489472,
+    "equality_at_limit": "2*489472 + 65536 + 4096 = 1048576",
+    "wire_shape": "{\"jsonrpc\":\"2.0\",\"id\":<validated id>,\"result\":<grok::response>}\n",
+    "max_id_token_bytes": 514,
+    "id_rule": "validate_rpc_id before incoming_request; string ids are <=256 bytes and control-free; quote/backslash expand 2x; U+2028/U+2029 expand 3 UTF-8 bytes to 6, not worse",
+    "tight_case_uncovered_syntax_plus_envelope_minus_2x_skeleton": 370,
+    "margin_under_RESPONSE_OVERHEAD_bytes": 3726,
+    "thirty_two_question_syntax_excluding_duplicated_tokens": 914,
+    "conclusion": "Question text is copied at most twice as object keys and a selected preview at most once. Both are inside value_bytes(params). Submitted choices and notes are re-encoded by the same serde_json rules and are bounded by LOCAL_CONTENT before encode. Envelope, colons, brackets, and per-question map syntax fit in the 4096 reserve with thousands of bytes of slack. The check therefore rejects before publication every request whose worst-case accept reply would exceed FRAME, and it does not depend on a particular short answer."
+  },
+  "parent_evidence_cited_not_executed": {
+    "focused": "artifact://1754, parent-attributed exact native 1, Grok library 5, local S04 12; opt-in live ignored",
+    "full_gate": "bg257/artifact://1760, parent-attributed 210.40s PASS, workspace 401/default 290, counts overlap",
+    "actual_cli": "specs/verifications/e04s04-reply-budget-recovery.json read; not re-executed",
+    "live_matrix": "artifact://1659 remains round4 source only; not relabelled a repaired-source rerun",
+    "red_checkpoint": "2891de4 test-only RED and 741fe4a repair observed in git log; not re-executed"
+  },
+  "checklist": [
+    {
+      "item": 1,
+      "title": "Closed genuine Grok method/schema/modes; no fabricated prose/MCP questions.",
+      "status": "pass",
+      "evidence": "src/acp.rs:2012-2022 dispatches only _x.ai/ask_user_question through grok::form then parse_form and stamps actions accept/cancel. elicitation/create and session/request_permission remain separate arms. The unmatched arm returns method_not_found before Interaction construction. grok.rs:18-21 accepts only mode default or plan. No prose or MCP question parser was added. Cargo.toml pins agent-client-protocol-schema =1.12.0 default-features=false."
+    },
+    {
+      "item": 2,
+      "title": "Exact session/tool/wire RPC identity and malformed scope rejection.",
+      "status": "pass",
+      "evidence": "grok.rs:23-26 requires a valid toolCallId. parse_form still requires exactly one of sessionId/requestId and the live session before publication. src/acp.rs:1785-1786 validates the RPC id before incoming_request, and encode echoes that same id. A grok::form or parse_form error becomes -32602 on that original id at src/acp.rs:2024-2031 without publishing an interaction."
+    },
+    {
+      "item": 3,
+      "title": "Duplicate question/choice and question/option count bounds.",
+      "status": "pass",
+      "evidence": "grok.rs:31-32 caps questions at FIELDS/2 (32) and rejects empty. grok.rs:48-50 rejects duplicate question text. grok.rs:89 and 104-107 cap each option list and reject duplicate labels. grok.rs:122-123 caps total choices, including an injected Other, at OPTIONS (256). These checks run before parse_form publication."
+    },
+    {
+      "item": 4,
+      "title": "Nullable flags and scalar/multiselect semantics.",
+      "status": "pass",
+      "evidence": "grok.rs:64-76 treats a null multiSelect or multi_select as absent and therefore single-choice, rejects a non-boolean flag, and rejects both spellings together. A true flag builds an array field with minItems 1; otherwise the field is a string oneOf. The native fixture sends multiSelect null for the subsequent small question and the expected wire answer is a one-element array."
+    },
+    {
+      "item": 5,
+      "title": "Original answers/previews/annotations/Other wire shape.",
+      "status": "pass",
+      "evidence": "grok.rs:152-176 writes outcome accepted, answers keyed by the original question text to a string array, and annotations only when notes or a single-selection preview exist. Preview is copied from the offered option, not invented. Cancel is outcome cancelled. The native regression asserts the exact grok-other accept object, including Other and notes 7."
+    },
+    {
+      "item": 6,
+      "title": "Shared scalar/array Other dependent-notes validation before capture and admission.",
+      "status": "pass",
+      "evidence": "src/acp.rs:2546-2558 rejects Other, including an array containing Other, when the grok_notes_key is missing, empty, or non-string. validate_form_values is the shared pre-capture and admission validator. The reply-budget predicate does not move or duplicate that rule. The library case at src/acp.rs:3388-3416 still expects decline and missing notes to leave the responder pending."
+    },
+    {
+      "item": 7,
+      "title": "Unsupported decline retains responder and is not offered natively.",
+      "status": "pass",
+      "evidence": "grok.rs:147-149 bails on Decline. src/acp.rs:893-900 uses that result with ? before enqueue at 962 and before selection mutation at 964, so the pending responder is retained. Native decline_offered at src/tui/agent.rs:1121-1124 is false for the accept/cancel action list, and F6 at 1378-1382 returns without answer()."
+    },
+    {
+      "item": 8,
+      "title": "Concrete worst-case reply bound: escaping, repeated keys, previews, max values/count/RPC.",
+      "status": "pass",
+      "evidence": "grok.rs:34-40 requires value_bytes(params) <= 489472 before schema construction. value_bytes and encode both use serde_json, so escaping is counted on the same rules as the wire. Question text is inserted at most twice as keys; a preview at most once; both are inside params. Choices and notes are bounded by LOCAL_CONTENT at src/acp.rs:2528-2529 before grok::response/encode. A 256-byte escaped RPC id is at most 514 bytes and is inside the 4096 reserve. Static compact-JSON accounting leaves at least 3726 bytes under that reserve in the minimal one-question case and more slack at 32 questions. Limit: this is static arithmetic, not an executed maximizer."
+    },
+    {
+      "item": 9,
+      "title": "Ingress budget error on original RPC before canonical/native responder publication.",
+      "status": "pass",
+      "evidence": "The predicate fails grok::form before parse_form. src/acp.rs:2024-2031 maps that Err to an error event code -32602 and error_response(invalid_params) and returns before interactions.push_back at 2083. error_response inserts a write-tracking responder with interaction None; it does not publish a selectable interaction. The native test asserts the original id grok-large, error code -32602, and an empty interactions array."
+    },
+    {
+      "item": 10,
+      "title": "Conservative admission policy documented without changing other supported contracts.",
+      "status": "pass",
+      "evidence": "README.md:101 states the twice-metadata plus 64 KiB plus framing budget and that it is not a promise to accept every otherwise in-frame request. CHANGELOG records rejection before publication without truncation or authority substitution. Standard elicitation, permission, and prompt paths do not call the new predicate. No public signature or dependency changed."
+    },
+    {
+      "item": 11,
+      "title": "First-valid canonical selection, stale losers, and reused IDs/writer stamps.",
+      "status": "pass",
+      "evidence": "pending_interaction at src/acp.rs:1972-1988 requires revision 1, pending state, and the original responder mapping. A second answer fails stale-interaction before enqueue. Commit mutates selection only after the no-fallible point at 961. Reused inbound ids finish the previous write stamp at 1994-2001 before a new request is parsed. The repair does not add a second selector."
+    },
+    {
+      "item": 12,
+      "title": "Atomic authority/generation-to-broker ordering and no late substitution.",
+      "status": "pass",
+      "evidence": "admit_acp at src/control.rs:1194-1211 locks the authority target, checks the live generation, then calls commit. commit at src/acp.rs:752-759 rechecks prepared.generation against that checked generation and then locks ACP state. grok::form only transforms JSON and performs no owner lookup. Native envelopes carry the captured control and generation; daemon acp_action authorizes that captured handle."
+    },
+    {
+      "item": 13,
+      "title": "Force authority-only and accepted work retention.",
+      "status": "pass",
+      "evidence": "src/control.rs:534-536 and 743-746 grant forced authority. grant at 1520-1523 records accepted-work-may-continue for ACP and does not enqueue session/cancel or signal a process. revoke at 1488-1496 drops the old control and native batch but does not clear the calls map. The new native regression asserts no acp-interrupt work and no unexpected-cancel after the repaired flow."
+    },
+    {
+      "item": 14,
+      "title": "Ordinary pending ownership cancellation retains calls and grants nobody.",
+      "status": "pass",
+      "evidence": "src/control.rs:748-771 cancels an ordinary pending claim by revoke(), clearing owner and reservation, setting resumable_owner without granting it, and emitting control-cancelled. The existing test cancel_first_revokes_owner_grants_nobody_and_prior_owner_resumes_fresh expects a null owner. Calls are not cleared by revoke. The repair does not add a cancel side effect."
+    },
+    {
+      "item": 15,
+      "title": "Conditional keep/withdraw/external reacquisition and original activity provenance.",
+      "status": "pass",
+      "evidence": "src/control.rs:700-705 keeps conditional claims on an explicit keep/consent path. Withdraw is separate from ordinary cancel at 749-753. activity at 1193-1210 and the control activity arm record activity only for the original native connection. Borrowed capability does not manufacture provenance. Reacquisition remains an external claim/accept, not an amux policy change."
+    },
+    {
+      "item": 16,
+      "title": "Every native application-input/stale draft fence, no intercepted-input replay.",
+      "status": "pass",
+      "evidence": "src/tui.rs:1025-1069 consumes an active agent view before PTY paste/key/mouse forwarding and continues after agent.event. src/tui/control.rs:716-718 refuses native input for agent targets. daemon.rs:1243-1259 rejects native operations aimed at an ACP target or agent-view terminal id. agent.rs:223-230 discards drafts when the captured binding no longer matches. restore_unqueued restores text only; it does not submit."
+    },
+    {
+      "item": 17,
+      "title": "Native deliberate edit/cancel availability through validation/admission rejection paths.",
+      "status": "pass",
+      "evidence": "The size defect is closed by rejecting before publication, so there is no captured editor to stick. The subsequent same-owner question is offered and deliberately answered Other/7 in tests/acp/native/acceptance.rs:670-684. Other-notes rejection remains in validate_form_values before capture, and decline/invalid admission returns before commit, leaving the original grant able to correct or cancel. Synchronous queue rejection still calls restore_unqueued at src/tui.rs:1064-1065."
+    },
+    {
+      "item": 18,
+      "title": "Original prompt completion and honest delivery/application/unknown distinctions.",
+      "status": "pass",
+      "evidence": "The fixture adds the rejected question as bonus 0, then emits stopReason end_turn for the original prompt id. completed_turn checks that stop reason, effect 42, commands 1, and the original rpc_id. Projection at src/acp.rs:1181-1190 labels application unknown and keeps delivery separate from outcome. ACP admission is not treated as provider application."
+    },
+    {
+      "item": 19,
+      "title": "Explicit interrupt plus applicable pending/late original-RPC responses.",
+      "status": "pass",
+      "evidence": "cancel_frame at src/acp.rs:163-167 encodes outcome cancelled on the Grok wire id. Explicit interrupt at 848-850 pushes that frame for pending session-scoped questions and sends session/cancel separately. Late applicable requests at 2050-2085 are admitted nonselectable with the same frame before publication. Prompt stopReason remains the prompt RPC outcome, not the question response. Oversized questions fail closed with -32602 instead of being published and then cancelled."
+    },
+    {
+      "item": 20,
+      "title": "Exact offered permission allow/deny, no synthesized permission.",
+      "status": "pass",
+      "evidence": "src/acp.rs:910-925 admits a permission only when option_id equals an offered id, then sends that same id as Selected. Interrupt and late cancel use Cancelled, not a fabricated allow. Native Enter copies option_id from the loaded offered array. The repair does not add a permission synthesizer."
+    },
+    {
+      "item": 21,
+      "title": "Startup/close/shutdown races, ended authority, and no resurrection.",
+      "status": "pass",
+      "evidence": "src/acp.rs:1388-1408 returns before spawn if the instance is no longer live, and a failed birth capture reaps the pinned child and closes with process-identity instead of publishing it. Broker::end/shutdown ends lifetimes before outside-lock joins. Target::end at src/control.rs:2018-2030 is idempotent and does not recreate an owner. discard_empty_ended removes only a dead, cleanup-complete, empty target."
+    },
+    {
+      "item": 22,
+      "title": "Ingress/egress/call/retention budgets before irreversible publication.",
+      "status": "pass",
+      "evidence": "encode at src/acp.rs:2604-2608 still rejects a frame over FRAME after the newline. retain_capacity and responder insertion remain after the new predicate and after mandatory cancel-frame encoding. error_response capacity failure fails the transport instead of publishing a partial interaction. The new check adds a pre-publication representability bound without raising FRAME or LOCAL_CONTENT."
+    },
+    {
+      "item": 23,
+      "title": "Lock order and no blocking I/O/spawn/join under admission locks.",
+      "status": "pass",
+      "evidence": "admit_acp locks authority then commit locks ACP state. The new predicate is a pure value_bytes walk inside grok::form, with no spawn, pipe, wait, or join. Writer join and process wait remain in run() outside those locks. No authority-to-topology edge was added."
+    },
+    {
+      "item": 24,
+      "title": "Owned retained-pipe cleanup truth and joins, no capacity release on unknown.",
+      "status": "pass",
+      "evidence": "run() joins workers and probes stdin/stdout/stderr before dropping the pipe owner. If reap, termination, join, or endpoint classification fails, failure is set to cleanup before finish. cleanup_complete at src/acp.rs:309-312 stays false for cleanup or process-identity, and prune_ended releases a slot only when that predicate is true."
+    },
+    {
+      "item": 25,
+      "title": "Birth-pinned owned process cleanup, unrelated sentinel preservation.",
+      "status": "pass",
+      "evidence": "Spawn uses setsid and ProcessTree::capture_owned_session before publication. Failed capture reaps only the pinned child/group and does not killpg after wait. The native finish path asserts the unrelated sentinel is alive after daemon exit 0, socket removal, and root removal, and before fixture fallback."
+    },
+    {
+      "item": 26,
+      "title": "Canonical gap/category/metadata/content privacy and bounded caches.",
+      "status": "pass",
+      "evidence": "Interaction::metadata at src/acp.rs:122-124 and projection at 1181-1199 omit prompt, answer, and question bodies. Content is returned only when include_content is explicitly true. The budget error event is code -32602 and category unsupported-or-invalid-interaction, with no question text. Transcript eviction records an explicit gap cursor."
+    },
+    {
+      "item": 27,
+      "title": "Inert terminal rendering/chrome/control/bidi and PTY input isolation.",
+      "status": "pass",
+      "evidence": "Broker inert at src/acp.rs:2703-2716 replaces controls other than newline/tab, plus the listed bidi and line-separator characters, with U+FFFD before content retention. Host display uses push_inert at src/tui/agent.rs:2243-2268, which writes a visible \\u{hex} escape instead of a terminal control. Agent-view input never falls through to PTY write."
+    },
+    {
+      "item": 28,
+      "title": "Actual native/fixture regression F.I.R.S.T and original-RPC arithmetic/cleanup oracle.",
+      "status": "pass",
+      "evidence": "tests/acp/native/acceptance.rs:644-698 opens a private s04-grok-large peer, expects original prompt effect 42 and commands 1, asserts grok-large -32602 and empty interactions, then answers the same owner/PID/session question Other/7 for cumulative 52 and the exact grok-other wire object. The peer implements that arithmetic at tests/fixtures/acp_peer.rs:748-771 and 1015. finish/detach assert host exit 0, termios, daemon exit 0, socket/root absence, and sentinel survival before fallback. Git log shows test-only 2891de4 before repair 741fe4a. Limit: this reviewer did not execute the test; parent artifact 1754 is cited, not rerun."
+    },
+    {
+      "item": 29,
+      "title": "Consumer-visible boundary/error coverage, no incidental/default/source-text assertions.",
+      "status": "pass",
+      "evidence": "The new regression asserts original RPC id, error code, empty canonical interactions, same owner and peer pid, exact wire response, effect values, and absence of interrupt/cancel side effects. It does not assert Rust source text, a default answer, or a non-empty screen. Existing Grok library cases still assert pending-responder and wire transitions."
+    },
+    {
+      "item": 30,
+      "title": "Live observer/cheap OAuth evidence honesty and tested-source attribution.",
+      "status": "pass",
+      "evidence": "specs/verifications/e04s04-reply-budget-recovery.json and AUDIT-e04s04.md attribute artifact 1659 to round4 source and state that the local repair had no provider rerun. tests/acp/native/live.rs and the observer are byte-identical to the frozen inventory and were not relabelled. This review does not claim a repaired-source model run. Limit: the observer was not re-executed."
+    },
+    {
+      "item": 31,
+      "title": "Boring concrete design, allocation/copy/computation discipline, typed conventions/dependencies.",
+      "status": "pass",
+      "evidence": "The repair reuses value_bytes, which counts through serde_json::to_writer without a second schema buffer, and adds one named 4096-byte reserve. No new crate, public signature, provider trait, retry, or I/O was added. Cargo.toml is unchanged from the frozen hash. Actual 12-line CONVENTIONS.md was read; generic line-count rules were not applied."
+    },
+    {
+      "item": 32,
+      "title": "Docs/task/state gate provenance; historical fence/caps and no false runtime acceptance.",
+      "status": "pass",
+      "evidence": "Committed e04s04-tasks.yaml keeps all four tasks failing and records cap 5/5 exhausted with no independent clearance. e04s04-story.md status remains failing. README/CHANGELOG document the conservative bound without claiming story acceptance or a native-fence repair. specs/bugs/BUG-e03-native-settlement.md remains accepted-deferred, not fixed. HEAD state.yaml still records the exhausted cap. Limit: the working tree state.yaml was dirty during this review with parent supplemental bookkeeping; that uncommitted ledger was not treated as frozen-source acceptance or as this reviewer's runtime proof."
+    }
+  ],
+  "limitations": [
+    "No build, test, lint, formatter, provider, auth, install, network, or global command was run.",
+    "Parent focused artifact 1754, full artifact 1760, and reply-budget CLI recovery were read as attributed evidence, not re-executed.",
+    "Live matrix artifact 1659 was not rerun and is not a repaired-source result.",
+    "The worst-case reply bound was proved by static serde_json shape and compact-JSON byte accounting, not by executing a maximizer.",
+    "Large unchanged files were reviewed at the invariant dispatch and consumer boundaries, not as a line-by-line reread of every historical test.",
+    "Working tree was not fully clean: specs/state.yaml was modified and the authorization JSON was untracked. The 22 frozen inventory paths matched HEAD hashes.",
+    "Current supplemental counterpart reports were not read and counterparts were not contacted."
+  ],
+  "explanation": "Zero must-fix and zero should-fix. Score 100*(32-0-0)/32=100, so both the numeric and zero-must gates pass. The Grok reply-budget predicate rejects an unrepresentable question with -32602 before responder publication, and the static bound covers escaping, repeated keys, previews, 32 questions, submitted values, and string/number/null RPC ids. This is not story acceptance, publication, or a cap reset. checks_run=false."
+}

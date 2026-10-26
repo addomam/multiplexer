@@ -1,6 +1,70 @@
 # Changelog
 
-## Unreleased — e03 ownership and agent interaction (Build)
+## 0.1.0 — macOS arm64 preview
+
+First tagged release: local terminal/project management and same-instance ACP conversations, including verified OMP questions and permission allow/deny, explicit installed-agent profiles and fail-closed reattachment. Linux runtime and the declared minimum Rust toolchain remain unverified. Terminal-only application settlement is still best-effort/fail-closed; this release does not resolve historical native-fence failures. E05's generic non-ACP integration remains parked. Quantitative coverage/traceability is waived, not claimed.
+
+Release checks:451 workspace Rust tests, strict workspace Clippy/check/fmt, optimized builds,13 actual optimized native/profile cases,8 OMP tests and Zsh syntax pass without provider calls. Prior explicitly authorized genuine OMP acceptance is separate; its12-request aggregate budget is exhausted. No daemon restart, global config/auth change or new live-model run is part of publication.
+
+### ACP daily use
+
+- Park E05's custom non-ACP integration API without discarding its approved planning packet or resetting historical review caps.
+- Add installed OMP/Codex/Grok launch profiles, original-attachment `acp start`, an ACP picker dialog and explicit model/mode/effort/option overrides. Resolve argv without a shell; reject unavailable adapters and unsupported or unconfirmed settings rather than silently substituting.
+- Expose requested versus agent-reported configuration, including unreported defaults and later changes. Keep permission-policy uncertainty explicit.
+- Correlate OMP's genuine `$/cancel_request` with its original pending responder, preserving admitted winners and exact string/number wire identities.
+- Preserve opaque provider tool-call IDs up to4KiB across updates, questions and permissions instead of applying the256-byte local-ID limit. Keep complete identities and existing frame/content/queue bounds.
+- Fence disconnected or paused attachments, discard stale drafts/queued authority, and recover only the same live agent through the same daemon lifetime. Never replay input, implicitly reacquire control, relaunch an agent or resurrect a daemon.
+- Use conservative wall-clock pause detection on macOS, whose monotonic uptime excludes machine sleep; clock rollback also fences input. Advertise Force readiness only after the full-warning paint/input-drain fence, then repaint the enabled action without replaying an early Enter.
+- Prove profile CLI/native launch and same-instance detach/observer reattachment through actual controlling PTYs and independent built-CLI arithmetic effects. Keep real-provider acceptance separate from deterministic peers.
+- Recheck attachment liveness after a claim's observation RPC and before sending the ownership mutation; stopped workers shut down their owning connection even if the UI still holds a shutdown handle. Preserve the external owner with no stale reservation.
+- Reconcile initial null-to-established sessions consistently across ordinary polling and recovery. Capture an acknowledged new launch before its fallible follow-up snapshot; retain that exact surviving target without relaunch or prior-view substitution.
+- Show inherited profile values for cleared launch controls and state profile-option merge semantics honestly; keep the existing requested-setting/profile-default contract.
+- Preserve successful launch replies that arrive while the UI is blocked or loses either stream: fence/join first, salvage only acknowledged identity, and recover the exact new agent without queued authority or launch replay.
+- Validate observation/display setup before creating recovery controllers, and verify the expected daemon on the original authority connection. Reclaim idle recovered observers through existing guarded close; keep owned/pending registrations intact and leave unavailable cleanup retained.
+- Keep concrete advertised configuration IDs distinct even within one category; preserve semantic/exact alias conflicts and synchronize legacy mode updates only with a unique corresponding option.
+- Preserve symlinked executable invocation paths for virtual environments and basename-dispatch launchers. Inherit untouched native option defaults as structured JSON rather than a lossy comma/equals text round trip.
+- Drain registration/projection-time recovery input after the first observer paint, then repaint Reconnected. Queued control shortcuts cannot become authority requests on the fresh controller; safe quit and fail-closed overflow remain.
+- Fence native worker dispatch on both original connection lifetimes, including queued launches while the UI cannot poll; preserve already admitted work without implicit interruption.
+- Reconcile the actual native PTY geometry after recovery input drain, repaint and drain again before Reconnected, so registration-time resize is not discarded with stale application input.
+- Allocate the native shutdown handle before controller creation, so descriptor-clone failure cannot strand a new disconnected registration.
+- Accept the protocol-valid null acknowledgement for legacy ACP mode changes without relaxing config-option value confirmation.
+- Retain deliberate keyboard/mouse picker selections before fallible work, and reconcile native PTY geometry from the actual painted viewport when resize notification is lost. Preserve clipped-warning rejection and fresh Force confirmation.
+- Preserve complete advertised IDs/choices in explicit native Options JSON and CLI `--options-json`, including commas and equals signs. Keep planned `--option ID=VALUE` shorthand, structured profile inheritance, bounded input and duplicate-ID rejection.
+- Add a wrapped, scrollable F10 settings view so long model IDs cannot hide current/requested mode or effort. Keep settings inert/read-only, preserve prompt/interaction drafts and discard application gestures without replay or authority changes.
+- Reject complete oversized/control-containing native launch edits instead of silently filtering or truncating them into a different identity. Retain per-field rejection until deliberate correction, block launch while any rejection remains and preserve legal Options JSON whitespace.
+- Preserve pending native key/paste and resize readiness across event reads, including zero-time consent/recovery drains. Keep inherited stdin flags unchanged; do not require a wakeup key, retry or replay intercepted input.
+- Require an explicit bounded Empty/Pending/Inconclusive native-input proof before reporting view facts, finishing recovery or enabling consent/Force confirmation. Skip internal terminal replies without losing queued human events; keep incomplete/budget-exhausted drains fenced across frames without reconnect churn or replay.
+- Bound ready TTY read work and honor finite/zero deadlines even when no complete event is parsed. Retain partial input/edge readiness and allow resize/wakeup/disconnection progress without changing parent-shell fd flags.
+- Verify genuine installed-OMP native question answering and same-instance API handoff/permission deny+allow effects through normal turn completion and owned cleanup. Keep the four-request cheap subscription receipt separate from deterministic peers, historical failed runs and terminal-only settlement limitations.
+
+### ACP conversation transport
+
+- Add explicit owned ACP views, CLI open/inspect/attach and current-control, generation-bound prompt/authenticate/interrupt/close admission using pinned official ACP v1 schema types. Keep native terminal/agent routes and stock Zsh/OMP distinct.
+- Retain exact work/RPC/session identities across caller loss and authority transfer. Force never interrupts; cancelled pending claims grant nobody; accepted work is not replayed or discarded by a later owner check.
+- Bound frames, reserved/in-flight queues, history, stderr and owned target admission. Keep unknown delivery and process-identity cleanup truthful; unknown cleanup is retained and continues consuming its reservation.
+- Render canonical same-instance history and identity-bound local drafts in the actual human TUI. Paste never submits, observers cannot send application input, and revocation clears draft authority and stale controlled status.
+- Verify the first transport slice with local deterministic stdio peers, real CLI and controlling-PTY interaction. Real adapter/provider/auth/model compatibility, later interaction stories and complete ACP acceptance are separate gates; historical native-fence failures and review caps remain unchanged.
+- Expose ACP ownership's approved `settlement_boundary: input-admission` field consistently in receipts and human control panels. Preserve completed force-warning eligibility across unchanged fully-visible repaints; changed facts, clipping, resize and scrolling still require a new safe presentation.
+- Accept the existing persistent transport flag on ACP open. Retain unqueued native-editor drafts under their original authority without replay, keep late process-identity cleanup uncertainty charged after close, and preserve observed authentication outcomes if follow-up setup cannot enqueue. Roll back empty failed-open views without discarding concurrent admitted-close history.
+- Preserve the last confirmed ACP draft/transcript across failed inspection reads, surface the failure separately and restart history only for a real target-identity change. Distinguish an unread target from a retained cache; clear superseded local rejection notices on deliberate requeue without claiming agent admission.
+- Sanitize remaining bidi/line-format marks in ACP metadata and native chrome; reject them in ACP names. Exercise actual queued-response lifetime ordering rather than claiming a late reply from an already-reaped peer.
+- Answer malformed or foreign-session cancel-time permissions with explicit protocol errors without dropping the original prompt or killing its ACP session; valid late permissions retain distinct Cancelled semantics.
+- Enable genuine request-/session-scoped ACP forms and exact offered tool permissions on the same owned connection. Retain original bootstrap/auth/prompt scope and typed responder identity through parent completion and wire-ID reuse.
+- Add native typed flat controls, editable defaults and explicit unset, two-step review/accept, separate form decline/cancel and deliberate permission allow/reject once/always. Share backend answer validation; expose local pattern/format limitations without claiming general JSON Schema validation.
+- Linearize competing API/native responses and reserve explicit-interrupt replies atomically. Keep late applicable forms/permissions nonselectable, losing answers out of accepted history, and written delivery distinct from agent application.
+- Align native history with 64 live/responding plus 1024 retained completed records; account for bounded server metadata separately from the 4-MiB canonical content cap. Preserve supported large declared defaults and optional omission while keeping submitted answers within 64 KiB.
+- Exercise running-question reserved handoff, noncancelling force, pending cancellation/private recovery, original-attachment conditional consent and all native input/draft fences against the same live ACP peer. Preserve stale-answer rejection and independently observed fresh arithmetic effects after deliberate reacquisition.
+- Verify canonical gap/category retention and inert hostile rendering through a real controlling PTY. Keep actual cleanup observations separate from fixture fallback; pin the native test host until post-TUI termios observation and deliberately type fresh answers rather than asserting incidental defaults.
+- Exercise the complete local ACP broker with same-session API/native questions and allow/deny, exact reused-wire responders, owned descendants, stalled input, hostile frames and concurrent close/shutdown. Keep genuine real-adapter acceptance separate; terminal-only settlement remains best-effort and unknown blocks safe grants.
+- Cancel and join owned ACP pipe workers independently of peer EOF, including a reparented different-session process retaining stdin/stdout/stderr. Keep observed retained endpoints cleanup-failed and capacity-charged; do not detach workers or signal unknown processes.
+- Retain original ACP pipe endpoints through final cleanup classification, even when an idle writer or failed frame reader returns early. Probe endpoint closure independently of workers and keep unresolved targets charged; check cancellation before I/O without rewriting completed byte counts.
+- Project genuine Grok `_x.ai/ask_user_question` into the existing bounded form ledger, including nullable single-choice flags, multiselect and Other/preview/notes responses. Preserve exact wire IDs and mandatory cancel replies; reject unsupported decline without consuming the responder or inventing plan chat/skip actions.
+- Add opt-in real Codex/Grok OAuth acceptance through the actual daemon and controlling PTY, with a transparent private wire observer, bounded low-effort model use and explicit cleanup. Keep failed attempts and historical native-fence/review boundaries; compatibility is claimed only by the recorded exercised rows.
+- Validate Grok Other notes before native review/capture as well as API admission, retaining deliberate correction/cancellation on the original grant. Verify omitted/explicitly empty notes through real controlling-PTY arithmetic effects and exact original responses, without replay or additional model calls.
+- Reject Grok question metadata before publication when its conservatively bounded answers/annotations could exceed the existing wire-frame limit. Preserve the original RPC error and subsequent same-session native work instead of capturing an answer that cannot be represented; no truncation, replay or authority substitution.
+- Recover the exact native form/permission editor after definite asynchronous daemon non-admission, including retained-content backpressure. Preserve values and current authority for deliberate correction/cancel; strip answer text from rejection feedback and never replay, unlock a different captured call or reinterpret timeout/disconnect as rejection.
+
+### E03 ownership and agent interaction — historical limited acceptance
 
 - Breaking API/CLI cutover: public `input` and `execute` require a current control capability; CLI callers must supply serialized `--control` JSON. Raw client requests never acquire ownership implicitly.
 - Preserve daemon rejection codes in concrete `client::DaemonError` values and the CLI JSON envelope instead of parsing diagnostic text.
@@ -26,7 +90,7 @@
 - Bind native Force confirmation to a completed, fully visible warning and drained event queue. Consume queued Enter without takeover/replay, invalidate on resize/scroll and block undrawable or clipped dialogs; keep fresh observation checks and the same live process. Use only the pinned Ratatui paragraph-measurement feature, with no terminal library version replacement.
 - Fail closed when opt-in smoke cleanup cannot refresh process ownership. Remove group-wide fallback signals, validate each descendant PID and signal direct children only while unreaped. Bound validation work, preserve cleanup errors and label stale survivor identities as tracked—not owned. Add a no-model regression and verify healthy/failure teardown with isolated local processes.
 
-## Unreleased — Execution substrate reliability
+### Execution substrate reliability
 
 - Correct DECOM-origin-relative CPR through the parsed ANSI Handler boundary; preserve native control behavior and independent expected replies.
 - Compose joined graphemes in native narrow/wide cells, including chunked UTF-8, flags/modifiers/keycaps, CJK/combining, overwrite, wrapping and variation-width replay. Final-cluster working text is limited to 4 KiB; oversized input starts a new native scalar segment without dropping text.
@@ -38,7 +102,7 @@
 - Breaking Rust-library change: `projects::run_hooks` now requires an explicit `&AtomicBool` cancellation argument. CLI/API framing remains version 1.
 - Verify 210 workspace Rust tests, the strict independent-showcase integration, 8 OMP tests, Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle probes. Retain the initial queued-execution timeout observation and exact limits in `specs/verifications/substrate-reliability.md`; no independent review PASS or live-daemon upgrade is implied.
 
-## Unreleased — Terminal capability explorer
+### Terminal capability explorer
 
 - Independent `terminal-showcase` Rust workspace package; amux's default binary and implementation remain unchanged.
 - Fullscreen capability matrix with explicit protocol/visual evidence, eight cycling demonstrations, deterministic screenshot mode and bounded row-differential redraws.
@@ -47,7 +111,7 @@
 - POSIX terminal/signal RAII cleanup, resize handling, bracketed-paste-safe controls, headless JSON regressions and visual pass/fail export.
 - Ordinary-shell amux compatibility regression exposes origin-mode CPR and joined-emoji cursor mismatches without sharing the multiplexer oracle. Strict `--probe --check` preserves failures and exits nonzero.
 
-## Unreleased — Ratatui UI
+### Ratatui UI
 
 - Ratatui 0.30.0 rendering with the existing Crossterm 0.29 input/backend and Rust minimum raised to 1.86.
 - Three-row title/tab bar and top-right Switch button; native terminal fills every remaining row with no footer.
@@ -62,7 +126,7 @@
 - Existing 66 Rust tests, 8 OMP tests, Clippy, release build and Zsh syntax pass; actual Herdr selection, Unicode/colors, picker, exit/new/empty-page detach pass. Compatible with the first-pass daemon without another process-disrupting restart. See `specs/verifications/immediate-input.md`.
 - Daily-use checkpoint verifies a private locked installation outside the checkout, cold auto-start, native detach/reattach, captured context, process-preserving reparenting, busy/partial refusal, descendant cleanup, hook failure recovery and config-only restart. Retired latency workspace/checkout and empty root artifact removed with approval; committed evidence and usable build retained.
 
-## 0.1.0 — local MVP
+### Historical local MVP checkpoint — not a previous tagged release
 
 - Rust daemon-owned PTYs and alacritty_terminal emulator, one-surface detachable TUI, and `amux` CLI over a versioned local API.
 - Unsaved/saved projects, captured Zsh workspaces, independent terminal trees, asynchronous worktree-aware Git status, configurable recipes and bounded setup hooks.

@@ -1,0 +1,87 @@
+{
+  "scope": "e06-only",
+  "round": 2,
+  "source": "specs/verifications/e06-review-round2-source.json",
+  "agent": "E06Security2",
+  "report": {
+    "verdict": "PASS",
+    "score": 100,
+    "total_items": 14,
+    "passed_items": 14,
+    "checklist": [
+      {
+        "area": "Trusted configured argv and executable resolution",
+        "result": "PASS — source review",
+        "evidence": "src/acp_profiles.rs:24-154; src/daemon.rs:294-425; src/acp.rs:556-579,1370-1405. Profiles and raw launches have bounded argv; profiles resolve absolute executables or bare commands through absolute daemon-PATH entries. Execution uses Command with separate arguments, not shell interpolation. Explicit same-user configured argv is trusted operator execution, not an unauthenticated command-injection vulnerability."
+      },
+      {
+        "area": "Settings/profile validation and configuration-only persistence",
+        "result": "PASS — source review",
+        "evidence": "src/acp/settings.rs:7-37; src/projects.rs:36-61,90-141,272-317,522-619; tests/acp/profiles.rs:104-187. Closed settings and bounded profiles are validated before replacing configuration. Persistence uses a stable lock, conflict detection, private atomic replacement and in-memory rollback on failure. The disk schema excludes runtime ACP sessions and authority."
+      },
+      {
+        "area": "Advertised settings and acknowledged startup admission",
+        "result": "PASS — source review",
+        "evidence": "src/acp/settings.rs:174-451; src/acp.rs:800-825,1935-1960,2020-2035; tests/acp/omp.rs:39-213,339-410. Requested settings resolve against actual advertised identifiers, execute through retained original RPCs and complete before ready-state prompt admission. Unsupported, ambiguous, conflicting or unconfirmed selections fail explicitly; later reported displacement is distinguished from acknowledged startup configuration."
+      },
+      {
+        "area": "Explicit human CLI/native launch",
+        "result": "PASS — source review",
+        "evidence": "src/cli.rs:169-290,407-457; src/tui/launch.rs:29-131; src/tui/control.rs:377-390,624-639; src/tui.rs:1040-1097; src/lib.rs:1-11; tests/acp/profiles.rs:30-101; tests/acp/native/daily_use.rs:171-265. Human start launches using the real attachment controller, while noninteractive launch requires an explicit controller. The native dialog emits one deliberate request. An acknowledged launch captures its exact recovery target before the next fallible observation."
+      },
+      {
+        "area": "Original attachment provenance and human consent",
+        "result": "PASS — source review",
+        "evidence": "src/tui/control.rs:161-346,496-519,1173-1273; relevant existing src/control.rs:422-483,700-718,1090-1150,2033-2041. Registration, views, input and control operations retain the original worker connection. Server checks prevent another connection from borrowing original-native view/activity/consent/keep provenance. Consent additionally captures view serial and activity revision."
+      },
+      {
+        "area": "Exact target, generation, call and interaction admission",
+        "result": "PASS — source review",
+        "evidence": "src/daemon.rs:490-513; src/acp.rs:667-1029,1175-1189,2076-2094,2747-2764; src/tui/agent.rs:216-267,735-825,1698-1796. Commit rechecks the complete instance/connection/session tuple, current generation, unique call ID and exact pending interaction/revision under authority ordering. Native actions retain their captured authority rather than substituting a newer grant; definite rejection and uncertain transport failure remain distinct."
+      },
+      {
+        "area": "Recovery continuity, input fencing and no replay/resurrection",
+        "result": "PASS — source review",
+        "evidence": "src/tui.rs:827-1005,1030-1098,1115-1157,1883-1888; src/tui/control.rs:180-260,348-374; src/client.rs:87-146; tests/acp/native/daily_use.rs:277-557; tests/acp/native/recovery_edges.rs:245-478. Recovery reconnects only to the existing socket, creates fresh observer provenance and validates the original daemon/agent tuple. Only initial null-to-first-session establishment may advance session identity. Loss/pause stops the old worker, shuts down its socket and discards local/queued state; compound claims recheck liveness after observation."
+      },
+      {
+        "area": "Force, pending cancellation, conditional keep/withdraw and retained work",
+        "result": "PASS — source review",
+        "evidence": "src/tui/control.rs:816-848,976-1113,1173-1273,1490-1618; relevant existing src/control.rs:490-626,1720-1800; src/acp.rs:770-1029; tests/acp/native/acceptance.rs:126-565. Ownership transitions remain separate from explicit ACP interruption/close. Force changes authority without cancelling the agent turn. Conditional actions use captured owner observations and original-connection consent; intercepted keys are consumed, not forwarded as application responses. Retained work preserves original provenance across handoff."
+      },
+      {
+        "area": "Genuine OMP cancellation and opaque upstream identities",
+        "result": "PASS — source review",
+        "evidence": "src/acp.rs:1810-1855,2040-2073,2217-2314,2798-2804; tests/acp/omp.rs:215-336; tests/fixtures/acp_peer.rs:857-942. OMP cancellation matches the typed original RPC identity and pending responder, does not fabricate a human selection and does not overwrite an admitted winner. Tool-call identifiers are preserved whole under a separate 4-KiB limit across updates, forms and permission scope."
+      },
+      {
+        "area": "Framing, ingress/egress queues and response lifetimes",
+        "result": "PASS — source review",
+        "evidence": "src/acp.rs:335-545,1572-1697,2097-2211,2708-2744; src/client.rs:14,118-178; src/tui/control.rs:174-175,393-456; src/daemon.rs:1920-2015,2120-2148; tests/acp.rs:783-836. Frames are bounded before accumulation; queue accounting retains in-flight charges. Mandatory responses are reserved before publication, and typed responder/write identity prevents late bookkeeping from releasing a reused responder. Native transport failure stops further requests on the uncertain stream."
+      },
+      {
+        "area": "Owned process, pipe and worker cleanup",
+        "result": "PASS — source review",
+        "evidence": "src/acp.rs:1119-1172,1241-1352,1370-1547; relevant existing src/runtime.rs:701-829; src/tui.rs:41-70,1883-1888; tests/acp/native.rs:317-418; tests/pty_control/native.rs:35-81,119-225,475-519. Cleanup uses birth-qualified owned process identities, retains original endpoints, independently wakes blocked pipe workers and joins workers before classifying cleanup. Uncaptured or retained-endpoint cleanup remains incomplete and capacity-charged. Native teardown restores terminal state; test-source fallback is separate from cleanup assertions."
+      },
+      {
+        "area": "Hostile human UI surfaces and deliberate permission selection",
+        "result": "PASS — source review",
+        "evidence": "src/tui/agent.rs:1698-1845,1846-2019,2240-2321; src/tui/launch.rs:199-276; src/tui/view.rs:300-460; src/tui/control.rs:1490-1618,1780-1789; tests/acp/native.rs:737-835. Peer content is rendered as inert bounded data, including terminal escapes and bidi controls. Form acceptance is explicit and identity-bound; permission selection requires the highlighted option anchor to be visible. Force requires a complete warning paint/input-drain fence, and early confirmation is consumed rather than saved."
+      },
+      {
+        "area": "Content privacy and metadata projections",
+        "result": "PASS — source review",
+        "evidence": "src/acp.rs:1031-1093,1194-1238,1700-1715; src/daemon.rs:256-292,1232-1284; src/acp_profiles.rs:98-110; tests/acp/native/acceptance.rs:530-559; tests/acp/native.rs:789-804. Default ACP inspection, snapshots and runtime ACP events exclude transcript/form/selection content; content requires explicit bounded inspection. Profile discovery exposes safe metadata rather than argv/environment. ACP stderr is bounded and not projected as public content. Global configuration remains trusted same-user configuration, not a secret-storage interface."
+      },
+      {
+        "area": "Optional live-run private inputs, permissions and provider budget source",
+        "result": "PASS — source review within stated trust model",
+        "evidence": "tests/acp/native/omp_live.rs:22-86,326-438,503-550,687-760; local://e06-provider-gate.mjs:1-95; local://e06-live-launcher.sh:1-20. The opt-in driver checks private input ownership/modes, verifies genuine permission commands against exact confined helpers before allowing execution and avoids formatting private response content. The supplied fetch guard restricts routes/model/effort, caps requested output at 2000 tokens, counts before forwarding, disables redirects/WebSocket and enforces a deadline. The launcher clears the environment, isolates HOME/config/runtime and denies real-user-HOME reads. These controls assume the trusted installed OMP/launcher, not an adversarial executable or a universal network sandbox."
+      }
+    ],
+    "findings": [],
+    "summary": "PASS for this E06 round-2 security source review: 14 of 14 applicable control areas passed, giving 100%. No evidence-backed security vulnerability survived tracing attacker-controlled peer/model/UI data to a dangerous sink or broken authority control. Reviewed the security-relevant portions of all 23 frozen code/test paths and all eight listed documentation/manifests, plus relevant existing src/control.rs, src/runtime.rs and src/main.rs callers and the two authorized credential-free live-run source copies. Trusted same-user argv execution was not misclassified as injection. No changes were made.",
+    "limits": "Static, read-only review of the manifest-designated current source for feat/acp-daily-use against the supplied base2195b05 context. Manifest hashes and Git metadata were not independently recomputed. No builds, tests, linters, formatters, runtime/CLI/version probes, browser/network/provider calls or payload execution occurred; test assertions are source coverage, not exercised verification. No prior review reports were consulted, and no credential/auth DB, real private live-run directory, raw provider/session/wire output or unrelated worktree was opened. Cargo dependency declarations/lock metadata were inspected, but no dependency-advisory scan was performed. The credential-free guard describes a four-request per-run ledger; this review does not certify aggregate expenditure or authorize reuse with that allowance. The supplied current authorization remains eight requests spent out of nine, one remaining, with no fresh live run authorized. Source-review PASS does not constitute complete live acceptance, runtime cleanup proof, release approval or repair of the historical native unknown-settlement boundary."
+  }
+}

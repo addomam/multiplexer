@@ -1,0 +1,30 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 3,
+  "status": "frozen-for-independent-review",
+  "worktree": "/Users/addomam/projects/amux-acp-build",
+  "branch": "feat/acp-agent-interaction",
+  "verification": {"artifact": "artifact://1080", "workspace_passed": 340, "suites": 30, "ignored": 10, "clippy": "passed-strict-workspace-all-targets", "check": "passed-workspace-all-targets", "build": "passed-workspace", "fmt": "passed", "omp_passed": 8, "zsh_syntax": "passed"},
+  "sha256": {
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+    "src/acp.rs": "9954fba37e328db2b6337c6daee3395511d54d07509ddfad4353bae1b74981bb",
+    "src/cli.rs": "1571b0d3374636260f8a2755fe2b366be96b96689716d68c779aa6aa254930cb",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "76495f2d4085d9f65d73c66dbe9083ea97a74357b016a591fe580bd41e785ce6",
+    "src/lib.rs": "daf3c298192e2f829422bdc080dafb19e0e1690fb1c719be7eec88f9186bc0c7",
+    "src/tui.rs": "b5133560785aeaea731096297cdb690a64fae2238577f3d91a6d660ffb74bf13",
+    "src/tui/agent.rs": "8ee17f017c90e9d43c779f8abb8d1442d39debfd994bba5766bf4e8d327e0734",
+    "src/tui/control.rs": "3bdb6e6ec35c5a5802c77983c33a4b0ef975a22d5f5fec41959965fd11aa1363",
+    "src/tui/view.rs": "573bc270580c93c257ec5c34aa9764475865103b5946f997b05003a8604ba08d",
+    "tests/acp.rs": "14f6b1d80c6c0a44a34e49edfb9561de99aca637e318a85c5cb57335fb628b15",
+    "tests/fixtures/acp_peer.rs": "9eec8e83ca3365ca64fec4569361b433c5f85557b0ea6acf557ac6324a8a2680",
+    "tests/pty_control.rs": "577e8fb6b9e38501dd04d7b42a0c370b79ae3415c072f41dbda597f9c9596b56",
+    "tests/pty_control/native.rs": "ce485d8fbf2e4031bb029a0677aff00d1f6c7e5a8f5dac17b4f6cdcd46cd1c4e"
+  },
+  "runtime_evidence": ["specs/verifications/e04s01-resume-cli-pty-smoke.json", "specs/verifications/e04s01-queue-draft-before.json", "specs/verifications/e04s01-queue-draft-after.json"],
+  "owned_queue_probe_roots": "removed-after-reap-and-exact-no-holder-checks",
+  "story_status": "failing-pending-independent-review",
+  "new_live_model_or_publication_authorization": false,
+  "historical_e03_counters": "unchanged"
+}

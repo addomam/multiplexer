@@ -1,0 +1,37 @@
+{
+  "scope": "actual private CLI name-admission boundary and real arithmetic ACP peer; no TUI or provider run",
+  "root": "/private/tmp/acp-label-boundary-a0o01jid",
+  "frames": {},
+  "status": "passed",
+  "fallback_signals": false,
+  "rejected_labels": [
+    {
+      "codepoint": "U+061C",
+      "outcome": "invalid-request"
+    },
+    {
+      "codepoint": "U+200E",
+      "outcome": "invalid-request"
+    },
+    {
+      "codepoint": "U+200F",
+      "outcome": "invalid-request"
+    },
+    {
+      "codepoint": "U+2028",
+      "outcome": "invalid-request"
+    },
+    {
+      "codepoint": "U+2029",
+      "outcome": "invalid-request"
+    }
+  ],
+  "no_extra_target": true,
+  "peer_pid": 54280,
+  "peer_reaped_before_fallback": true,
+  "daemon_exit": 0,
+  "proxy_joined": true,
+  "proxy_errors": [],
+  "drainer_joined": true,
+  "drainer_errors": []
+}

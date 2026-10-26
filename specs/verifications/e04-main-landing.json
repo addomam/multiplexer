@@ -1,0 +1,72 @@
+{
+  "scope": "e04 ACP local main integration",
+  "status": "landed-locally-and-post-relocation-native-smoke-PASS",
+  "authorization": {
+    "user_message": "ok sick. this looks great. Let's merge this and keep going",
+    "decision": "Accept the verified repair for local main integration after exhausted independent review caps.",
+    "independent_post_repair_PASS": false,
+    "source_inspection_by_user_claimed": false,
+    "original_review_rounds_used": 5,
+    "supplemental_passes_used": 1,
+    "review_caps_reset": false,
+    "new_provider_runs": false,
+    "push_tag_release_deployment": "not requested in this instruction",
+    "global_daemon_config_auth_changes": false
+  },
+  "candidate": {
+    "branch": "feat/acp-agent-interaction",
+    "base": "741fe4a188397223d063073ddf919c7123a1586a",
+    "source_inventory": "specs/verifications/e04s04-rejection-recovery.json",
+    "verified_source_hashes_unchanged": 22,
+    "full_gate": "artifact://1803",
+    "workspace_passed": 402,
+    "default_passed": 291,
+    "counts_overlap": true,
+    "suite_test_threads": 1,
+    "internal_race_concurrency": "unchanged",
+    "actual_native_recovery": "same-grant correction49 and explicit cancellation32, original RPC and owned cleanup",
+    "real_Codex_Grok": "artifact://1659 on round4 source, not a new-source provider rerun",
+    "initial_parallel_failure": "artifact://1799; unrelated openpty Os-6 retained, no production PTY fix claimed"
+  },
+  "repair_commit": "66b52933ff6dbd35fb1ebe929d5d98c46eed8fb1",
+  "gates": {
+    "runtime": "approved Plan gates passed; source-bound full1803 and real adapter evidence retain their exact provenance",
+    "independent_review": "historical FAIL reports preserved; post-cap local delivery explicitly accepted by user, not an independent PASS",
+    "security": "zero supported security findings in latest specialist report; operational must-fix repaired and locally verified, not independently recleared",
+    "traceability": "WAIVED: no traceability matrix or blind-spot input exists in specs",
+    "coverage": "no new percentage measurement claimed; use approved Plan gates, retaining the recorded delivery workflow exception",
+    "CI": "not run: local integration only, no push/release requested",
+    "archival": "Completed capsule moved to specs/epics/archive/e04-acp-agent-interaction; current pointers updated. Immutable historical reports retain paths at their recorded commits."
+  },
+  "preservation": {
+    "original_checkout": "/Users/addomam/projects/multiplexer",
+    "original_checkout_branch": "fix/substrate-defects",
+    "original_checkout_changes": "untouched; nine tracked and 48 untracked paths observed before landing",
+    "main_worktree": "/Users/addomam/projects/amux-acp",
+    "main_before": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+    "historical_e03_native_acceptance": "failing and unresolved application fence preserved; terminal-only remains best-effort and unknown safe grant remains blocked"
+  },
+  "integration": {
+    "method": "fast-forward",
+    "main_commit": "af745cdf4045af76a7a34a8bb4260e24057461ce",
+    "main_worktree": "/Users/addomam/projects/amux-acp",
+    "old_parent_worktree": "/Users/addomam/projects/amux-acp-build",
+    "new_parent_worktree": "/Users/addomam/projects/amux-integration-api",
+    "new_branch": "feat/thin-integration-api",
+    "merged_ACP_branch": "retained",
+    "unmerged_work_discarded": false,
+    "push_tag_release": false,
+    "post_landing_native_smoke": {
+      "job": "bg_262",
+      "command": "cargo clean -p amux && cargo build --example acp_fixture && cargo test --test acp native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel -- --exact --nocapture --test-threads=1",
+      "exit_code": 0,
+      "executed": 1,
+      "passed": 1,
+      "test_seconds": 6.58,
+      "wall_seconds": 22.71,
+      "provider_calls": 0,
+      "source_changed": false,
+      "initial_probe": {"job":"bg_261","exit_code":101,"observed":"ENOENT at daemon spawn; relocated cached binary still embeds old CARGO_BIN_EXE_amux absolute path","remediation":"rebuild only amux-owned package artifacts, not production source","unstarted_private_root":"removed after matching fixture shape and no-open-holder proof"}
+    }
+  }
+}

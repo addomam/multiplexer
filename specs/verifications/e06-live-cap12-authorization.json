@@ -1,0 +1,19 @@
+{
+  "scope": "one-fresh-complete-OMP-subscription-acceptance-run",
+  "explicit_user_selection": "Run complete acceptance, cap12",
+  "previous_aggregate_provider_cap": 9,
+  "authorized_aggregate_provider_cap": 12,
+  "actual_requests_before_run": 8,
+  "max_additional_model_requests": 4,
+  "model": "github-copilot/mai-code-1.1-flash",
+  "effort": "low",
+  "max_requested_output_tokens_each": 2000,
+  "run_guard_seconds": 110,
+  "subscription_only": true,
+  "premium_or_API_key_fallback": false,
+  "fresh_private_auth_copy_and_ledger": true,
+  "source_review_prerequisite": "specs/verifications/e06-review-round11.json",
+  "global_changes": "not-authorized",
+  "commit_merge_push_release": "not-authorized",
+  "historical_review_caps": "unchanged"
+}

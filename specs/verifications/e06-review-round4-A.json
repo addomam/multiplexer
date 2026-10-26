@@ -1,0 +1,119 @@
+{
+  "verdict": "FAIL",
+  "score": 88.23529411764706,
+  "total_items": 17,
+  "passed_items": 15,
+  "checklist": [
+    {
+      "area": "Scope and persistent/runtime state separation",
+      "result": "PASS",
+      "evidence": "Read CONVENTIONS.md, settled E06 PLAN lines 1–45, SCOPE_LATEST.yaml and E06 THREAT_MODEL.md. AcpProfile persists argv/default settings through projects::Config; broker instances, work, responders and native attachment identity remain memory-only. E05 implementation is not introduced."
+    },
+    {
+      "area": "Profile validation, discovery and shell-free executable resolution",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs validates bounded profile maps/argv/settings, resolves absolute or bare PATH executables without a shell, preserves symlink invocation paths, rejects unavailable executables, and limits acp-profiles metadata to id/label/availability/defaults. Traced daemon dispatch and configuration validation consumers."
+    },
+    {
+      "area": "CLI launch, project resolution and controller provenance",
+      "result": "PASS",
+      "evidence": "src/cli.rs routes default acp start through tui::start and an original native controller; --controller remains the explicit JSON-returning path. request_for removes absent optional null fields. daemon::acp_open resolves exact IDs or unambiguous profile-launch project names and preserves raw-command requirements."
+    },
+    {
+      "area": "Native profile dialog and structured default inheritance",
+      "result": "PASS",
+      "evidence": "src/tui/launch.rs captures the selected view's project, exposes explicit profile/settings controls, omits cleared semantic overrides, and leaves untouched options as structured profile defaults. Traced Submit through NativeControl::launch to daemon profile preparation; delimiter-containing inherited options are covered in daily_use.rs."
+    },
+    {
+      "area": "Startup settings admission ordering and failure behavior",
+      "result": "PASS",
+      "evidence": "src/acp.rs dispatches RpcKind::Configure responses explicitly. Configuration is applied after the original session/new response and before lifecycle ready; prompt admission requires ready. Unsupported, rejected, unconfirmed or mismatched settings close the owned lifetime instead of admitting prompts or choosing a fallback."
+    },
+    {
+      "area": "Exact setting identifiers, aliases and dynamic catalogs",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs resolves advertised category/option identities, refreshes catalogs from setter acknowledgements, rejects ambiguous semantic effort and conflicting aliases, and keeps independent concrete option IDs distinct. Checked the pinned ACP 1.12.0 setting request/response and full-catalog update contracts."
+    },
+    {
+      "area": "Truthful requested/reported configuration projections",
+      "result": "PASS",
+      "evidence": "Configuration projections flow through Broker descriptors/inspection, daemon snapshots and AgentView::sync/draw. Missing defaults remain unreported, requested values remain separate, later displacement changes state, and permission-policy uncertainty is explicit."
+    },
+    {
+      "area": "Genuine form and permission response identity",
+      "result": "PASS",
+      "evidence": "Traced incoming_request, parse_form, parse_permission, pending_interaction, prepare/commit, NativeControl::acp_action and AgentView binding/capture. Responses retain original typed wire IDs, session/request scopes, local interaction ID/revision and captured target/control/generation; no PTY fallback or second question process is introduced."
+    },
+    {
+      "area": "Opaque upstream tool-call identities and resource bounds",
+      "result": "PASS",
+      "evidence": "The separate 4-KiB tool-call ID validator is consumed by tool notifications, updates, elicitation scope and permission parsing. Local setting/session/RPC IDs keep their existing bounds, and frame, content, responder and queue limits remain in force. Native interaction rendering does not revalidate tool IDs through the 256-byte local identifier helper."
+    },
+    {
+      "area": "Peer cancellation and admitted-response winner",
+      "result": "PASS",
+      "evidence": "$/cancel_request reaches cancel_incoming before ordinary notification routing. It compares exact typed request IDs and the retained pending responder under the same state lock as response admission, sends one cancellation error, and does not replace an admitted selection or create an interrupt."
+    },
+    {
+      "area": "Ownership contracts and ordinary application-route gating",
+      "result": "PASS",
+      "evidence": "Traced daemon control dispatch, Authority::admit_acp, native key/repeat/literal-prefix/paste/application-mouse paths, ACP actions, ownership panels and conditional keep/consent FIFO. Force remains authority-only; pending cancellation and guarded controller cleanup do not grant another owner or erase accepted work. Historical native settlement remains fail-closed."
+    },
+    {
+      "area": "Acknowledged launch continuity and teardown receipt salvage",
+      "result": "PASS",
+      "evidence": "Op::Launch is explicitly consumed by NativeControl::received. Resume::launched records the returned tuple before follow-up observation; stop joins the worker and salvages only parsed successful launch identity. The exact new target is retained without copying authority, replaying launch or reverting to the preceding view."
+    },
+    {
+      "area": "Pause detection and stale worker/claim fencing",
+      "result": "PASS",
+      "evidence": "Wall-clock pause detection fences rollback/suspend gaps. The UI tears down old local state; the worker checks stop/heartbeat before dequeuing work and again after a compound claim observation. recovery_edges.rs includes the paused observation-before-claim regression, and fresh recovery does not import old claims/offers."
+    },
+    {
+      "area": "Exact existing-daemon observer recovery",
+      "result": "PASS",
+      "evidence": "Resume::validate checks daemon ID, target ID, instance, connection generation and established session, allowing only the initial null-to-established session transition. Recovery connects only to the existing socket, validates before registration, disables automatic acquisition and does not open replacement shells/agents or ensure a daemon."
+    },
+    {
+      "area": "Queued launch/application admission after observation loss",
+      "result": "FAIL",
+      "evidence": "The new native launch is queued onto Work::Rpc, but its worker admission guard checks only stop and heartbeat. Observation liveness is checked only by the UI loop, leaving queued launches dispatchable while that loop has not yet processed observation loss. See E06-R4-01."
+    },
+    {
+      "area": "Native terminal geometry during recovery input draining",
+      "result": "FAIL",
+      "evidence": "The recovery drain discards every non-quit event, including Resize, after size was sampled and resize_native was already called. No post-drain size reconciliation occurs. See E06-R4-02."
+    },
+    {
+      "area": "Owned lifetimes, regression registration and evidence boundaries",
+      "result": "PASS",
+      "evidence": "Read the changed protocol/native/profile regression sources, live harness and fixture dispatch. Transport cleanup retains original endpoints through owned-tree termination and worker joins; test registrations include recovery and profile cases, bounded cleanup and ignored opt-in live acceptance. Deterministic peers are explicitly not represented as real-provider proof. No checks were executed for this review."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R4-01",
+      "category": "Must-fix",
+      "priority": "P1",
+      "file": "src/tui/control.rs",
+      "line": 187,
+      "title": "Fence queued launches against observation-stream loss",
+      "impact": "A queued native profile launch can still reach acp-open after its original observation socket has closed. For example, the authority worker can be awaiting an earlier refresh while the UI queues Launch; if the UI then blocks in terminal output or has not run its next liveness check, closing only the observation connection does not set worker_stop. Releasing the earlier refresh within the two-second heartbeat window lets the worker spawn the new agent rather than discard the queued mutation. This violates the stated either-socket loss fence and queued-authority discard contract.",
+      "evidence": "NativeControl::launch queues Op::Launch through submit at src/tui/control.rs:405–410. The consuming worker's guard at 187–192 checks only worker_stop and heartbeat, and Work::Rpc invokes rpc directly at 196–203. NativeControl receives no observation-stream handle. The observation check and subsequent stop are confined to the UI loop at src/tui.rs:1037–1043 and its teardown, so a blocked/not-yet-scheduled UI leaves the worker able to dispatch the newly introduced launch path. This is a source-derived race, not an executed runtime result.",
+      "fix": "Give the worker shared liveness access to the original observation connection and check both original streams, stop and heartbeat immediately before dispatching mutating work, including Launch and the mutation following a compound claim read. On observed loss, shut down the old authority connection and discard queued work. Add a deterministic regression that withholds an earlier worker read, queues a native launch, closes only observation while UI processing is held, then releases the worker and asserts that no acp-open is admitted."
+    },
+    {
+      "id": "E06-R4-02",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui.rs",
+      "line": 1261,
+      "title": "Reconcile terminal size after draining recovery events",
+      "impact": "Resizing the outer terminal during recovery registration or first-frame setup loses the only Resize event. The drain accepts only quit keys and silently consumes Resize, although size was sampled and the managed PTY resized before registration. After Reconnected, the normal path does not resize again without another resize or picker action, so a surviving Zsh/native application remains at the old PTY dimensions and can stay clipped or incorrectly laid out.",
+      "evidence": "src/tui.rs:981–986 samples terminal size and calls resize_native before the blocking native registration. The recovered-input drain at 1257–1269 reads and discards all events other than Escape/Ctrl-Q, and exits at 1275–1280 without resampling size. The ordinary Resize consumer at 1474–1479 is therefore bypassed. refresh_screen reads the existing PTY geometry; it does not reconcile it. This is introduced by the new recovery drain and is not covered by the fixed-size recovery PTY cases.",
+      "fix": "After recovery input has drained, resample the actual outer terminal dimensions, update size and reconcile the visible native PTY through resize_native before announcing recovery complete; alternatively retain and handle the latest Resize as structural metadata while still discarding all application/control gestures. Cover a resize performed while the recovery registration reply is withheld."
+    }
+  ],
+  "summary": "Fresh read-only E06 round-4 source review completed across 17 applicable areas: 15 passed and 2 failed, for 88.23529411764706%. The blocking source issue is queued native launch admission after observation loss; recovery also drops terminal resize state. No edits, builds, tests, formatters, runtime calls or provider requests were performed.",
+  "limits": "Static review only, against base 2195b05 and the round-4 frozen source manifest. No earlier review reports, dispositions, self-audits, verdicts or PLAN amendments after line 45 were consulted. Supplied bg315 and built CLI/native smoke evidence was treated as parent evidence, not independently executed or revalidated. No credential/auth databases, private raw provider material or unrelated worktrees were accessed. Complete live OMP acceptance remains unpassed: supplied authority states 8 actual requests spent of aggregate 9, one remains, and no fresh run is authorized. Findings are source-backed deductions without new runtime reproduction. This report concerns E06 round 4/max 5 only and does not reset historical review caps or authorize commit, merge, push, release, daemon resurrection or global changes."
+}

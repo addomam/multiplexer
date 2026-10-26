@@ -1,0 +1,60 @@
+{
+  "type": "review-finding-repair-runtime",
+  "context": "E06 source round7; all complete reports read and32 hashes verified before edits",
+  "finding": "E06-R7-01",
+  "review": "specs/verifications/e06-review-round7.json",
+  "status": "causal-RED-to-full-GREEN-source8-required",
+  "decision": "Preserve planned --option ID=VALUE shorthand; add bounded lossless --options-json map and replace native comma/equals mini-language with same exact JSON parser. Duplicate decoded keys, nonstring or empty choices rejected; untouched structured profile defaults retained.",
+  "red": [
+    {
+      "job": "bg_333",
+      "exit": 101,
+      "passed": 0,
+      "failed": 1,
+      "seconds": 0.63,
+      "observed": "actual CLI rejects missing lossless JSON option path"
+    },
+    {
+      "job": "bg_334",
+      "exit": 101,
+      "passed": 0,
+      "failed": 1,
+      "seconds": 12.77,
+      "observed": "real native explicit delimiter-containing option override cannot launch with old mini-language"
+    }
+  ],
+  "green": {
+    "job": "bg_335",
+    "raw": "artifact://2458",
+    "exit": 0,
+    "wall_seconds": 28.75,
+    "groups": {
+      "e06s01": 13,
+      "e06s02": 11,
+      "e06s03": 13
+    },
+    "extra_unit_native": 3,
+    "unique_nonlive": 40,
+    "ignored_live": 1
+  },
+  "actual_changed_path": "specs/verifications/e06-native-cli-smoke-post-round7.json",
+  "source": "specs/verifications/e06-post-round7-source.json",
+  "full_gate": {
+    "job": "bg_336",
+    "status": "passed",
+    "evidence": "specs/verifications/e06-post-round7-regressions.json",
+    "workspace": 447,
+    "default": 336,
+    "unique_nonlive": 40
+  },
+  "next_source_round": 8,
+  "max_rounds": 10,
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "task_status": "all seven remain failing pending complete current runtime/fresh source/live gates",
+  "historical_caps": "unchanged"
+}

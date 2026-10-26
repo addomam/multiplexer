@@ -1,0 +1,304 @@
+{
+  "scope": "e04-acp-plan",
+  "round": 1,
+  "verdict": "FAIL",
+  "scores": [
+    93.75,
+    100
+  ],
+  "must_fix": 0,
+  "should_fix": 2,
+  "AND_gate": "A below94; no Build authorization activated",
+  "historical_e03_counters": "unchanged-5-of-5",
+  "inputs": {
+    "PLAN": "B4A3",
+    "integration_contract": "B737",
+    "context": "BC55",
+    "epic": "D164",
+    "test_plan": "1F53",
+    "self_audit": "EEC3"
+  },
+  "reviews": {
+    "E04PlanA1": {
+      "overall_correctness": "incorrect",
+      "explanation": "FAIL 93.75 = 100*(32-0-2)/32. No must-fix design hole; two should-fixes drop the Plan gate below 94. Historical e03s08/5-of-5 and separate live/publication gates stay preserved. Criteria: 1 pass SCOPE/PLAN/ADR amux-owned view, admission cut, deferred generic API. 2 pass s01/s03/s04 before/after and s02 ADDED; native agent-* and agent-settled unchanged. 3 pass state.yaml e04_plan_review round 1/max 5; e03_scoped_review 5/5 and e03s08 failing unchanged. 4 pass vertical slices; s01 gates mutations and returns unsupported forms; cancel obligations ship in s02. 5 pass s01-s04 order and fail-closed live task. 6 pass 4 stories, 22 failing tasks, 23 scenario IDs, P0/Allure. 7 should-fix: cargo test --test native is not a target. 8 pass IMPACT callers match control.rs/daemon.rs/tui.rs/codex.rs/runtime.rs/projects.rs. 9 pass schema =1.12.0 default-features=false, rust-version 1.88.0 matches Cargo.toml, preserve_order/raw_value required, SDK runtime rejected. 10 pass verified InitializeRequest::new(ProtocolVersion::V1), NewSessionRequest::new(cwd), PromptRequest::new, CancelNotification::new, JsonRpcMessage::wrap/into_inner, ClientRequest client-to-agent, AgentRequest agent-to-client, non-exhaustive StopReason/AuthMethod. 11 pass separate agent_views, no fake PTY, no reconnect. 12 pass async initialize/newSession/auth, FIFO not a waiter, no auto-login; AuthMethod is Agent|Terminal. 13 pass admit_acp memory-only on the target mutex then ACP state; no I/O. 14 pass authority then ACP; snapshot must not extend daemon.rs:253-268 state.lock across ACP. 15 pass ACP work stays out of Target.calls, so control.rs:477 and :1725 do not wait for the whole prompt. 16 pass force is authority-only. 17 pass ordinary cancel grants nobody and retains calls. 18 pass ACP view variant plus original attachment provenance; do not fake the control.rs:457-462 native gate. 19 pass tui.rs resize/focus/paste/key/double-prefix/mouse and API input/execute reject ACP kind. 20 pass register RPC before writer; no destructor cancel. 21 pass one foreground prompt; no arrival-time turn attribution. 22 pass pinned elicitation primitives/enum/multiselect and explicit pattern/format limits. 23 pass exact option IDs and allow_once/allow_always/reject_once/reject_always; dismiss is not deny. 24 pass first-valid admission and no losing history in PLAN:55 and SC-e04s02-P0-04; task text contradicts that. 25 pass reserved Cancelled/form-Cancel before publication, including late requests. 26 pass only StopReason::Cancelled confirms interrupt. 27 pass setsid plus ProcessTree::capture_owned_session, late publication, sentinels. 28 pass stated frame/queue/in-flight/stderr budgets. 29 pass metadata privacy, gap cursors, no outstanding eviction. 30 pass no shell interpolation, inert rendering, no URL prefetch/credential forms/fake sandbox. 31 should-fix on the native command; showcase name in PLAN matches terminal-showcase/tests/multiplexer.rs:98 and live task is fail-closed. 32 pass parent-exclusive shared files in PLAN/contract; Herdr only after stable interfaces. Consider: context.yaml open_plan_work and shared_files_exclusive are stale versus PLAN; e04s04 task 3 omits the already-correct ignored showcase command; local tool-call cancelled marking is a protocol SHOULD not specified. Checks: packet read, source seams, docs.rs 1.12.0 and commit e2d83349, protocol cancellation/elicitation/tool-calls. No build/test/lint/auth/adapter run. Did not read another current-round report.",
+      "confidence": 0.86,
+      "findings": [
+        {
+          "title": "Rewrite the losing-answer task instruction",
+          "body": "e04s02 task 4 tells the implementer to linearize the admission race \"without losing optimistic answers.\" PLAN.md line 55, SC-e04s02-P0-04, and the test plan require the opposite: the losing submission is rejected and must not appear as accepted history. A worker following the task sentence can retain the losing answer even though the scenario forbids it. Change the task text to retain selected/submitted/failed/unknown evidence and exclude losing optimistic answers from history.",
+          "priority": 2,
+          "confidence": 0.84,
+          "file_path": "specs/epics/e04-acp-agent-interaction/e04s02-tasks.yaml",
+          "line_start": 61,
+          "line_end": 62
+        },
+        {
+          "title": "Point native regressions at pty_control",
+          "body": "e04s03 task 4 runs cargo test --test native, and task 6 plus PLAN.md line 56 run cargo test --test pty_control --test native. tests/ has no native binary; native cases are the pty_control module via tests/pty_control.rs line 16 path pty_control/native.rs. Cargo --test selects integration binaries, so both commands fail before the ownership regressions run. Use cargo test --test pty_control native, or an equivalent filter inside that existing binary.",
+          "priority": 2,
+          "confidence": 0.95,
+          "file_path": "specs/epics/e04-acp-agent-interaction/e04s03-tasks.yaml",
+          "line_start": 62,
+          "line_end": 62
+        }
+      ]
+    },
+    "E04PlanB1": {
+      "overall_correctness": "correct",
+      "explanation": "{\"scope\":\"e04-acp-plan\",\"round\":1,\"total_items\":32,\"criteria\":[{\"id\":1,\"title\":\"Authorized ACP human/admission boundary and deferred generic API accurately scoped.\",\"result\":\"pass\",\"evidence\":\"PLAN.md:7-15 and SCOPE_LATEST.yaml out_of_scope keep the amux-owned view and amux admission cut ACP-only; thin non-ACP API and generic plugins stay deferred. Native terminals, agent-* and agent-settled are explicitly unchanged.\"},{\"id\":2,\"title\":\"Requirement deltas have before/after; native requirements not silently changed.\",\"result\":\"pass\",\"evidence\":\"e04s01/s03/s04 section 10 have before/after; e04s02 is ADDED. SCOPE_LATEST.yaml scope_deltas match. No native requirement is rewritten as passing.\"},{\"id\":3,\"title\":\"Historical e03 acceptance/caps and separate live/publication gates preserved.\",\"result\":\"pass\",\"evidence\":\"execution-status.yaml e03s08 remains failing; state.yaml e04_plan_review is round 1/max 5 with e03 counters preserved. PLAN.md:3 and context.yaml phase_authorization keep live models and merge/push/release separate.\"},{\"id\":4,\"title\":\"Each story vertical and initially shipped APIs gated; no unsafe interim exposure.\",\"result\":\"pass\",\"evidence\":\"PLAN.md sequence: s01 gates every initially exposed mutation and returns explicit errors for unsupported bootstrap forms; s02 ships form capability only with supported controls and ships cancel obligations with the interaction feature, not after s03.\"},{\"id\":5,\"title\":\"Dependency/order and final integrated acceptance complete.\",\"result\":\"pass\",\"evidence\":\"s01 has no e04 prerequisite; s02-s04 consume the prior integrated contract. s04 live adapters stay failing until separate approval. Contract requires parent integration before acceptance.\"},{\"id\":6,\"title\":\"Countable story/task/manifest structure, risk/Allure/failing statuses consistent.\",\"result\":\"pass\",\"evidence\":\"Independently counted 4 stories, 22 tasks, 23 scenario IDs, all failing, risk P0, allure present, 8 BCP. Story verify strings match task verify strings. epic.yaml and execution-status.yaml agree.\"},{\"id\":7,\"title\":\"Verify commands meaningful/runnable as planned deliverables, zero-case/skip-to-pass disallowed.\",\"result\":\"pass\",\"evidence\":\"Every completion_gate rejects a zero-case filter. Live command is ignored, exact, and fail-closed. Showcase name independent_showcase_runs_inside_amux_and_checks_real_cursor_replies exists at terminal-showcase/tests/multiplexer.rs:98 and is ignored, matching PLAN.md:95.\"},{\"id\":8,\"title\":\"Existing module purpose/callers/contracts and affected consumer map sufficient.\",\"result\":\"pass\",\"evidence\":\"IMPACT_LATEST.md and PLAN module table match source: daemon.rs:957 dispatch, control.rs Registry/Authority, tui.rs input loop, projects.rs disk config vs memory runtime, codex.rs owned backend, runtime.rs ProcessTree.\"},{\"id\":9,\"title\":\"Package pin/MSRV/feature/unification/prior-art/classification correct.\",\"result\":\"pass\",\"evidence\":\"Workspace Cargo.toml rust-version 1.88. Published schema 1.12.0 is edition 2024, rust-version 1.88.0, default feature schemars only, unstable_protocol_v2 not default. VCS sha e2d83349bc9e28a4059ea3acefa1c91c966f74e2. serde_json preserve_order/raw_value unification is identified as workspace-wide, not assumed ACP-local. SDK 3.5 runtime rejected for unbounded queues.\"},{\"id\":10,\"title\":\"Official API signatures/typed routing directions/non-exhaustive handling correct.\",\"result\":\"pass\",\"evidence\":\"Verified against pinned source: root ProtocolVersion::V1; v1::InitializeRequest::new(ProtocolVersion); NewSessionRequest::new(cwd); PromptRequest::new(session_id, Vec<ContentBlock>); CancelNotification::new(session_id); JsonRpcMessage::wrap/into_inner; ClientRequest is client-to-agent; AgentRequest is agent-to-client; CreateElicitationRequest::new plus scope(); ElicitationFormMode::new; RequestPermissionOutcome::Cancelled serializes outcome=cancelled; unadvertised mode is ErrorCode::InvalidParams -32602. Non-exhaustive wildcard handling is required.\"},{\"id\":11,\"title\":\"Separate ACP target/public/private identities/lifetime avoid fake PTY or stale rebind.\",\"result\":\"pass\",\"evidence\":\"Contract reserves agent_views id acp-<uuid> outside snapshot.terminals. Opaque capability remains {kind,ref} as control.rs capability(). No reconnect/reuse. Stale target tuple is rejected; snapshot is the resync path.\"},{\"id\":12,\"title\":\"Async initialize/newSession/auth and genuine bootstrap forms process without deadlock/automatic login.\",\"result\":\"pass\",\"evidence\":\"Open returns starting without waiting inside the caller or FIFO consumer. Auth is explicit agent-type method_id only; terminal methods are not passed to authenticate, matching AuthMethod::Terminal and the authentication spec. No auto-login, URL open, or credential field. Request-scoped bootstrap forms stay on the retained RPC.\"},{\"id\":13,\"title\":\"Atomic authority to ACP memory commit really closes prepare/revoke race without I/O.\",\"result\":\"pass\",\"evidence\":\"admit_acp locks the target mutex, checks live ACP owner/generation, then runs broker.commit while that ordering point is held. control.rs:1-7 already makes the target mutex the revocation/dispatch point and forbids registry I/O. Plan forbids socket, pipe, spawn, probe, wait, and join inside either lock.\"},{\"id\":14,\"title\":\"Lock graph/topology projection/event drain/joins avoid inversion/blocking.\",\"result\":\"pass\",\"evidence\":\"Declared order is authority then ACP state, never reverse, and never authority/ACP to daemon topology. daemon.rs:253-270 currently holds state across controls.lock and codex.inspect; the plan forbids extending that span into ACP state and drains metadata only after release. Writer blocking is isolated from the application consumer.\"},{\"id\":15,\"title\":\"Cooperative safe ACP offer/reservation independent of whole-turn completion, accepted work survives.\",\"result\":\"pass\",\"evidence\":\"control.rs:1725-1773 and 748-751 offer or accept only after Target.calls is empty. Plan keeps ACP work out of that native-input ledger, so a sealed admission does not wait for session/prompt. Accepted records are not revalidated against the later owner.\"},{\"id\":16,\"title\":\"Force authority-only; no implicit cancel/drop/process signal/new instance.\",\"result\":\"pass\",\"evidence\":\"control.rs:449-451 force only supersedes the reservation and grants. Plan forbids session/cancel, $/cancel_request, dropping RPC maps, signals, and a replacement session.\"},{\"id\":17,\"title\":\"Ordinary pending cancellation revokes prior control/grants none/retains calls; recovery/late outcomes truthful.\",\"result\":\"pass\",\"evidence\":\"Existing claim cancel ends the reservation without clearing calls. Plan/contract keep that behavior for ACP, retain admitted work, and recover private control/call facts after socket loss. Late yield/accept cannot mutate a newer reservation.\"},{\"id\":18,\"title\":\"Conditional keep/withdraw human-preserving with genuine original ACP attachment provenance and external policy.\",\"result\":\"pass\",\"evidence\":\"ADR requires a genuine original attachment, target-kind eligibility, and no fabricated PTY native-input batch. control.rs:1869-1877 is_original_native checks owner connection plus view connection. Keep/withdraw stay human actions; timers do not reacquire. SC-e04s03-P0-04 covers the outcome.\"},{\"id\":19,\"title\":\"Every application input/paste/key/mouse/focus/prefix/editor route fenced, no replay/fresh-token substitution.\",\"result\":\"pass\",\"evidence\":\"Source routes are tui.rs paste, raw key, double-prefix byte forward, resize, focus, and mouse, plus tui/control.rs application_mouse. Contract requires parent interception of all of those, including double-prefix, and a captured control/generation/call envelope rather than a fresh authority lookup.\"},{\"id\":20,\"title\":\"RPC/request/work/session/tool/interaction identities retained/registered before writer; caller loss no destructor cancel.\",\"result\":\"pass\",\"evidence\":\"Plan registers outgoing RPC identity before writer visibility. Duplicate call_id returns duplicate-call and does not resubmit. Authority is not a Drop-cancel; control.rs says settlement can outlive authority but cannot revive it. Exact responses survive socket loss.\"},{\"id\":21,\"title\":\"One foreground prompt/busy semantics and no false universal-turn attribution.\",\"result\":\"pass\",\"evidence\":\"Second prompt is busy, not steer or a hidden queue. Pinned agent.rs has no steer method. Prompt-turn updates have no universal turn id; plan forbids assigning an update to the newest prompt by arrival time.\"},{\"id\":22,\"title\":\"Known primitive/enum/multiselect/default/required/optional forms, explicit dispositions and stated validation limitations honest.\",\"result\":\"pass\",\"evidence\":\"Pinned schema has String/Number/Integer/Boolean/Array/Other, enum_values/one_of, MultiSelectItems String/Titled/Other, required Option<Vec>, inclusive minimum/maximum, and pattern/format. Plan validates known constraints, keeps unset distinct from false/zero/empty, and discloses unenforced pattern/format instead of claiming full JSON Schema.\"},{\"id\":23,\"title\":\"Genuine same-session questions/permissions and exact offered allow/reject once/always options.\",\"result\":\"pass\",\"evidence\":\"PermissionOptionKind is AllowOnce/AllowAlways/RejectOnce/RejectAlways. Contract sends only an offered option_id and displays actual kind. Dismiss is not deny. Forms are elicitation/create, not terminal text.\"},{\"id\":24,\"title\":\"First-valid canonical local admission response race, no duplicate or losing optimistic history/application claim.\",\"result\":\"pass\",\"evidence\":\"First valid amux admission commits the disposition; loser is rejected and absent from history. selected/submitted/failed/unknown are distinct from agent application. Views render the canonical record, not an optimistic answer.\"},{\"id\":25,\"title\":\"Explicit cancel reserves pending and late permission/form Cancelled/Cancel obligations atomically before publication; already selected not answered twice.\",\"result\":\"pass\",\"evidence\":\"Protocol requires Cancelled for pending session/request_permission. Plan reserves writer capacity before accepting session/cancel, applies the same nonselectable disposition to late session permissions and affected session forms, and does not answer an already-selected interaction again.\"},{\"id\":26,\"title\":\"Only cancelled stop reason confirms interrupt; noncancelled stop/error/EOF/unknown and foreground release remain truthful.\",\"result\":\"pass\",\"evidence\":\"StopReason::Cancelled serializes as cancelled. Plan confirms interrupt only from that original prompt response. Other stop reasons, JSON-RPC errors, EOF, and close release or mark unknown without claiming cancellation or application. Foreground slot is released on error.\"},{\"id\":27,\"title\":\"Birth-qualified process lifecycle/failed capture/late publication/concurrent close/shutdown cleanup and unrelated sentinel obligations sufficient.\",\"result\":\"pass\",\"evidence\":\"runtime.rs:716 capture_owned_session requires session==pid. codex.rs:77-81 terminates the child if capture fails. Plan uses setsid plus that capture before publication, outside locks, with late-publication, close, project-close, shutdown, and unrelated-sentinel proofs before fixture fallback.\"},{\"id\":28,\"title\":\"Pre-accumulation frame and every queue/in-flight/reserved resource budget, floods/stalls/overflow/stderr draining specified and testable.\",\"result\":\"pass\",\"evidence\":\"PLAN.md:75 sets 8 targets, 1 MiB frame before accumulation, ingress 64/4 MiB, writer 128/4 MiB including reserved responses, 64 interactions, 64 outbound RPCs, and the stated content/history/stderr caps. In-flight counts toward queues. Overflow fails or degrades with unknown work; stderr keeps draining. SC-e04s01-P0-04 tests each boundary.\"},{\"id\":29,\"title\":\"Metadata privacy/incremental transcript/cursor gaps/bounded completed history/no outstanding eviction.\",\"result\":\"pass\",\"evidence\":\"Snapshots/events omit prompts, answers, env, credentials, and raw errors. include_content is explicit and incremental with gap cursors. Completed history may evict; live RPC and pending responders may not. 8 ended projections have explicit eviction.\"},{\"id\":30,\"title\":\"Security: no terminal escape injection, no shell interpolation, no fake sandbox/delegation/URL/credential form behavior.\",\"result\":\"pass\",\"evidence\":\"Spawn is absolute argv, no shell and no client env map. Ratatui renders escapes as data. URL/fs/terminal capabilities are not advertised; unadvertised URL mode is -32602. Forms do not collect secrets or prefetch URLs. Agent-owned tools are not called a sandbox. Threat model treats these as planned proof obligations, not implemented controls.\"},{\"id\":31,\"title\":\"Verification: exact real daemon/CLI/controlling-PTY smoke/barriers/cleanup before fallback, separately approved real both-adapter compatibility, regressions/independent showcase/native-fence final revisit complete.\",\"result\":\"pass\",\"evidence\":\"Test plan requires real daemon, private roots, barriers, controlling-PTY smoke, and cleanup observation before fallback. s04 live task is separately approved and fail-closed for both pinned adapters. Showcase command is exact. Native fence remains an explicit failing revisit, not an ACP pass.\"},{\"id\":32,\"title\":\"Parent-exclusive shared files, stable explicit backend/view interfaces, genuinely nonconflicting Herdr/worktrees, integration-before-acceptance and safe owned retirement.\",\"result\":\"pass\",\"evidence\":\"PLAN.md:83 and the contract give parent exclusive control/daemon/client/cli/tui/tui-control/tui-view/projects/lib/manifests/ledgers. Workers own only src/acp.rs plus tests/acp.rs, or only src/tui/agent.rs, after contracts stabilize. Interface changes are parent-sequenced. Retirement is after integration and excludes the user pane.\"}],\"must_fix\":[],\"should_fix\":[],\"consider\":[{\"id\":\"C1\",\"criterion\":32,\"file\":\"specs/epics/e04-acp-agent-interaction/context.yaml\",\"line\":85,\"problem\":\"shared_files_exclusive omits src/tui/control.rs, src/tui/view.rs, and src/projects.rs, and open_plan_work at line 107 still lists shapes, budgets, and tasks that PLAN and the integration contract already settle. PLAN lists those files as parent-only.\",\"recommendation\":\"Refresh context.yaml before worker dispatch so the normative capsule matches the contract. Do not treat this as permission to edit those files from a worker.\"},{\"id\":\"C2\",\"criterion\":18,\"file\":\"src/control.rs\",\"line\":1483,\"problem\":\"views-backgrounded eligibility treats only view.terminal equal to the target id as foreground. The ACP view variant replaces terminal with target, so a focused ACP view will not block a conditional grant unless parent maps that focus into this predicate.\",\"recommendation\":\"When implementing the closed ACP view variant, update eligibility and activity provenance together. SC-e04s03-P0-04 already requires the outcome.\"},{\"id\":\"C3\",\"criterion\":7,\"file\":\"specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml\",\"line\":48,\"problem\":\"Task 3 verify runs workspace tests but not ignored tests. The independent showcase command is specified separately in PLAN.md:95 and exists, so it is not missing, but the task verify string alone would not execute it.\",\"recommendation\":\"Keep the ignored showcase invocation beside the task command when recording s04 evidence; do not treat cargo test --workspace as that oracle.\"},{\"id\":\"C4\",\"criterion\":10,\"file\":\"specs/epics/e04-acp-agent-interaction/PLAN.md\",\"line\":17,\"problem\":\"ElicitationAction::Accept is Accept(ElicitationAcceptAction), not a unit variant. Decline and Cancel are unit variants. The stated BTreeMap content type is correct.\",\"recommendation\":\"Construct accept with ElicitationAcceptAction::new().content(map) rather than a unit Accept.\"}],\"score\":100,\"verdict\":\"PASS\",\"checks_run\":[\"Read the full e04 packet, ADR 0004, IMPACT, test plan, threat model, scope, static audit, state and execution status, and CONVENTIONS.md.\",\"Read control.rs ownership, offer, settlement, view, and original-connection paths; daemon.rs snapshot, resolve, and dispatch; tui.rs and tui/control.rs input routes; runtime.rs ProcessTree; codex.rs capture failure; Cargo.toml.\",\"Fetched pinned schema commit e2d83349bc9e28a4059ea3acefa1c91c966f74e2 Cargo.toml, version.rs, rpc.rs, elicitation.rs, agent.rs, client.rs, and current protocol initialization, authentication, elicitation, and prompt-turn docs.\",\"Confirmed showcase test name and ignored attribute; counted 22 failing tasks and 23 scenario IDs.\",\"Did not run build, tests, lint, formatters, installs, adapters, auth, or models, and did not read the other current-round review.\"],\"limitations\":\"This is a plan review against current source and pinned official APIs. No ACP implementation exists, so planned safeguards are not claimed to be present. Isolated LSP references were not used as caller evidence. Long source files were read at the cited seams rather than every line.\",\"summary\":\"The e04 Plan is implementable against the current registry, daemon, TUI, and process seams and matches schema 1.12.0 wire v1. Admission, identities, cancellation, budgets, and gates are specified tightly enough to build without reopening settled product choices. Score 100 with no must-fix; verdict PASS.\"}",
+      "confidence": 0.86
+    }
+  },
+  "parsed_B_report": {
+    "scope": "e04-acp-plan",
+    "round": 1,
+    "total_items": 32,
+    "criteria": [
+      {
+        "id": 1,
+        "title": "Authorized ACP human/admission boundary and deferred generic API accurately scoped.",
+        "result": "pass",
+        "evidence": "PLAN.md:7-15 and SCOPE_LATEST.yaml out_of_scope keep the amux-owned view and amux admission cut ACP-only; thin non-ACP API and generic plugins stay deferred. Native terminals, agent-* and agent-settled are explicitly unchanged."
+      },
+      {
+        "id": 2,
+        "title": "Requirement deltas have before/after; native requirements not silently changed.",
+        "result": "pass",
+        "evidence": "e04s01/s03/s04 section 10 have before/after; e04s02 is ADDED. SCOPE_LATEST.yaml scope_deltas match. No native requirement is rewritten as passing."
+      },
+      {
+        "id": 3,
+        "title": "Historical e03 acceptance/caps and separate live/publication gates preserved.",
+        "result": "pass",
+        "evidence": "execution-status.yaml e03s08 remains failing; state.yaml e04_plan_review is round 1/max 5 with e03 counters preserved. PLAN.md:3 and context.yaml phase_authorization keep live models and merge/push/release separate."
+      },
+      {
+        "id": 4,
+        "title": "Each story vertical and initially shipped APIs gated; no unsafe interim exposure.",
+        "result": "pass",
+        "evidence": "PLAN.md sequence: s01 gates every initially exposed mutation and returns explicit errors for unsupported bootstrap forms; s02 ships form capability only with supported controls and ships cancel obligations with the interaction feature, not after s03."
+      },
+      {
+        "id": 5,
+        "title": "Dependency/order and final integrated acceptance complete.",
+        "result": "pass",
+        "evidence": "s01 has no e04 prerequisite; s02-s04 consume the prior integrated contract. s04 live adapters stay failing until separate approval. Contract requires parent integration before acceptance."
+      },
+      {
+        "id": 6,
+        "title": "Countable story/task/manifest structure, risk/Allure/failing statuses consistent.",
+        "result": "pass",
+        "evidence": "Independently counted 4 stories, 22 tasks, 23 scenario IDs, all failing, risk P0, allure present, 8 BCP. Story verify strings match task verify strings. epic.yaml and execution-status.yaml agree."
+      },
+      {
+        "id": 7,
+        "title": "Verify commands meaningful/runnable as planned deliverables, zero-case/skip-to-pass disallowed.",
+        "result": "pass",
+        "evidence": "Every completion_gate rejects a zero-case filter. Live command is ignored, exact, and fail-closed. Showcase name independent_showcase_runs_inside_amux_and_checks_real_cursor_replies exists at terminal-showcase/tests/multiplexer.rs:98 and is ignored, matching PLAN.md:95."
+      },
+      {
+        "id": 8,
+        "title": "Existing module purpose/callers/contracts and affected consumer map sufficient.",
+        "result": "pass",
+        "evidence": "IMPACT_LATEST.md and PLAN module table match source: daemon.rs:957 dispatch, control.rs Registry/Authority, tui.rs input loop, projects.rs disk config vs memory runtime, codex.rs owned backend, runtime.rs ProcessTree."
+      },
+      {
+        "id": 9,
+        "title": "Package pin/MSRV/feature/unification/prior-art/classification correct.",
+        "result": "pass",
+        "evidence": "Workspace Cargo.toml rust-version 1.88. Published schema 1.12.0 is edition 2024, rust-version 1.88.0, default feature schemars only, unstable_protocol_v2 not default. VCS sha e2d83349bc9e28a4059ea3acefa1c91c966f74e2. serde_json preserve_order/raw_value unification is identified as workspace-wide, not assumed ACP-local. SDK 3.5 runtime rejected for unbounded queues."
+      },
+      {
+        "id": 10,
+        "title": "Official API signatures/typed routing directions/non-exhaustive handling correct.",
+        "result": "pass",
+        "evidence": "Verified against pinned source: root ProtocolVersion::V1; v1::InitializeRequest::new(ProtocolVersion); NewSessionRequest::new(cwd); PromptRequest::new(session_id, Vec<ContentBlock>); CancelNotification::new(session_id); JsonRpcMessage::wrap/into_inner; ClientRequest is client-to-agent; AgentRequest is agent-to-client; CreateElicitationRequest::new plus scope(); ElicitationFormMode::new; RequestPermissionOutcome::Cancelled serializes outcome=cancelled; unadvertised mode is ErrorCode::InvalidParams -32602. Non-exhaustive wildcard handling is required."
+      },
+      {
+        "id": 11,
+        "title": "Separate ACP target/public/private identities/lifetime avoid fake PTY or stale rebind.",
+        "result": "pass",
+        "evidence": "Contract reserves agent_views id acp-<uuid> outside snapshot.terminals. Opaque capability remains {kind,ref} as control.rs capability(). No reconnect/reuse. Stale target tuple is rejected; snapshot is the resync path."
+      },
+      {
+        "id": 12,
+        "title": "Async initialize/newSession/auth and genuine bootstrap forms process without deadlock/automatic login.",
+        "result": "pass",
+        "evidence": "Open returns starting without waiting inside the caller or FIFO consumer. Auth is explicit agent-type method_id only; terminal methods are not passed to authenticate, matching AuthMethod::Terminal and the authentication spec. No auto-login, URL open, or credential field. Request-scoped bootstrap forms stay on the retained RPC."
+      },
+      {
+        "id": 13,
+        "title": "Atomic authority to ACP memory commit really closes prepare/revoke race without I/O.",
+        "result": "pass",
+        "evidence": "admit_acp locks the target mutex, checks live ACP owner/generation, then runs broker.commit while that ordering point is held. control.rs:1-7 already makes the target mutex the revocation/dispatch point and forbids registry I/O. Plan forbids socket, pipe, spawn, probe, wait, and join inside either lock."
+      },
+      {
+        "id": 14,
+        "title": "Lock graph/topology projection/event drain/joins avoid inversion/blocking.",
+        "result": "pass",
+        "evidence": "Declared order is authority then ACP state, never reverse, and never authority/ACP to daemon topology. daemon.rs:253-270 currently holds state across controls.lock and codex.inspect; the plan forbids extending that span into ACP state and drains metadata only after release. Writer blocking is isolated from the application consumer."
+      },
+      {
+        "id": 15,
+        "title": "Cooperative safe ACP offer/reservation independent of whole-turn completion, accepted work survives.",
+        "result": "pass",
+        "evidence": "control.rs:1725-1773 and 748-751 offer or accept only after Target.calls is empty. Plan keeps ACP work out of that native-input ledger, so a sealed admission does not wait for session/prompt. Accepted records are not revalidated against the later owner."
+      },
+      {
+        "id": 16,
+        "title": "Force authority-only; no implicit cancel/drop/process signal/new instance.",
+        "result": "pass",
+        "evidence": "control.rs:449-451 force only supersedes the reservation and grants. Plan forbids session/cancel, $/cancel_request, dropping RPC maps, signals, and a replacement session."
+      },
+      {
+        "id": 17,
+        "title": "Ordinary pending cancellation revokes prior control/grants none/retains calls; recovery/late outcomes truthful.",
+        "result": "pass",
+        "evidence": "Existing claim cancel ends the reservation without clearing calls. Plan/contract keep that behavior for ACP, retain admitted work, and recover private control/call facts after socket loss. Late yield/accept cannot mutate a newer reservation."
+      },
+      {
+        "id": 18,
+        "title": "Conditional keep/withdraw human-preserving with genuine original ACP attachment provenance and external policy.",
+        "result": "pass",
+        "evidence": "ADR requires a genuine original attachment, target-kind eligibility, and no fabricated PTY native-input batch. control.rs:1869-1877 is_original_native checks owner connection plus view connection. Keep/withdraw stay human actions; timers do not reacquire. SC-e04s03-P0-04 covers the outcome."
+      },
+      {
+        "id": 19,
+        "title": "Every application input/paste/key/mouse/focus/prefix/editor route fenced, no replay/fresh-token substitution.",
+        "result": "pass",
+        "evidence": "Source routes are tui.rs paste, raw key, double-prefix byte forward, resize, focus, and mouse, plus tui/control.rs application_mouse. Contract requires parent interception of all of those, including double-prefix, and a captured control/generation/call envelope rather than a fresh authority lookup."
+      },
+      {
+        "id": 20,
+        "title": "RPC/request/work/session/tool/interaction identities retained/registered before writer; caller loss no destructor cancel.",
+        "result": "pass",
+        "evidence": "Plan registers outgoing RPC identity before writer visibility. Duplicate call_id returns duplicate-call and does not resubmit. Authority is not a Drop-cancel; control.rs says settlement can outlive authority but cannot revive it. Exact responses survive socket loss."
+      },
+      {
+        "id": 21,
+        "title": "One foreground prompt/busy semantics and no false universal-turn attribution.",
+        "result": "pass",
+        "evidence": "Second prompt is busy, not steer or a hidden queue. Pinned agent.rs has no steer method. Prompt-turn updates have no universal turn id; plan forbids assigning an update to the newest prompt by arrival time."
+      },
+      {
+        "id": 22,
+        "title": "Known primitive/enum/multiselect/default/required/optional forms, explicit dispositions and stated validation limitations honest.",
+        "result": "pass",
+        "evidence": "Pinned schema has String/Number/Integer/Boolean/Array/Other, enum_values/one_of, MultiSelectItems String/Titled/Other, required Option<Vec>, inclusive minimum/maximum, and pattern/format. Plan validates known constraints, keeps unset distinct from false/zero/empty, and discloses unenforced pattern/format instead of claiming full JSON Schema."
+      },
+      {
+        "id": 23,
+        "title": "Genuine same-session questions/permissions and exact offered allow/reject once/always options.",
+        "result": "pass",
+        "evidence": "PermissionOptionKind is AllowOnce/AllowAlways/RejectOnce/RejectAlways. Contract sends only an offered option_id and displays actual kind. Dismiss is not deny. Forms are elicitation/create, not terminal text."
+      },
+      {
+        "id": 24,
+        "title": "First-valid canonical local admission response race, no duplicate or losing optimistic history/application claim.",
+        "result": "pass",
+        "evidence": "First valid amux admission commits the disposition; loser is rejected and absent from history. selected/submitted/failed/unknown are distinct from agent application. Views render the canonical record, not an optimistic answer."
+      },
+      {
+        "id": 25,
+        "title": "Explicit cancel reserves pending and late permission/form Cancelled/Cancel obligations atomically before publication; already selected not answered twice.",
+        "result": "pass",
+        "evidence": "Protocol requires Cancelled for pending session/request_permission. Plan reserves writer capacity before accepting session/cancel, applies the same nonselectable disposition to late session permissions and affected session forms, and does not answer an already-selected interaction again."
+      },
+      {
+        "id": 26,
+        "title": "Only cancelled stop reason confirms interrupt; noncancelled stop/error/EOF/unknown and foreground release remain truthful.",
+        "result": "pass",
+        "evidence": "StopReason::Cancelled serializes as cancelled. Plan confirms interrupt only from that original prompt response. Other stop reasons, JSON-RPC errors, EOF, and close release or mark unknown without claiming cancellation or application. Foreground slot is released on error."
+      },
+      {
+        "id": 27,
+        "title": "Birth-qualified process lifecycle/failed capture/late publication/concurrent close/shutdown cleanup and unrelated sentinel obligations sufficient.",
+        "result": "pass",
+        "evidence": "runtime.rs:716 capture_owned_session requires session==pid. codex.rs:77-81 terminates the child if capture fails. Plan uses setsid plus that capture before publication, outside locks, with late-publication, close, project-close, shutdown, and unrelated-sentinel proofs before fixture fallback."
+      },
+      {
+        "id": 28,
+        "title": "Pre-accumulation frame and every queue/in-flight/reserved resource budget, floods/stalls/overflow/stderr draining specified and testable.",
+        "result": "pass",
+        "evidence": "PLAN.md:75 sets 8 targets, 1 MiB frame before accumulation, ingress 64/4 MiB, writer 128/4 MiB including reserved responses, 64 interactions, 64 outbound RPCs, and the stated content/history/stderr caps. In-flight counts toward queues. Overflow fails or degrades with unknown work; stderr keeps draining. SC-e04s01-P0-04 tests each boundary."
+      },
+      {
+        "id": 29,
+        "title": "Metadata privacy/incremental transcript/cursor gaps/bounded completed history/no outstanding eviction.",
+        "result": "pass",
+        "evidence": "Snapshots/events omit prompts, answers, env, credentials, and raw errors. include_content is explicit and incremental with gap cursors. Completed history may evict; live RPC and pending responders may not. 8 ended projections have explicit eviction."
+      },
+      {
+        "id": 30,
+        "title": "Security: no terminal escape injection, no shell interpolation, no fake sandbox/delegation/URL/credential form behavior.",
+        "result": "pass",
+        "evidence": "Spawn is absolute argv, no shell and no client env map. Ratatui renders escapes as data. URL/fs/terminal capabilities are not advertised; unadvertised URL mode is -32602. Forms do not collect secrets or prefetch URLs. Agent-owned tools are not called a sandbox. Threat model treats these as planned proof obligations, not implemented controls."
+      },
+      {
+        "id": 31,
+        "title": "Verification: exact real daemon/CLI/controlling-PTY smoke/barriers/cleanup before fallback, separately approved real both-adapter compatibility, regressions/independent showcase/native-fence final revisit complete.",
+        "result": "pass",
+        "evidence": "Test plan requires real daemon, private roots, barriers, controlling-PTY smoke, and cleanup observation before fallback. s04 live task is separately approved and fail-closed for both pinned adapters. Showcase command is exact. Native fence remains an explicit failing revisit, not an ACP pass."
+      },
+      {
+        "id": 32,
+        "title": "Parent-exclusive shared files, stable explicit backend/view interfaces, genuinely nonconflicting Herdr/worktrees, integration-before-acceptance and safe owned retirement.",
+        "result": "pass",
+        "evidence": "PLAN.md:83 and the contract give parent exclusive control/daemon/client/cli/tui/tui-control/tui-view/projects/lib/manifests/ledgers. Workers own only src/acp.rs plus tests/acp.rs, or only src/tui/agent.rs, after contracts stabilize. Interface changes are parent-sequenced. Retirement is after integration and excludes the user pane."
+      }
+    ],
+    "must_fix": [],
+    "should_fix": [],
+    "consider": [
+      {
+        "id": "C1",
+        "criterion": 32,
+        "file": "specs/epics/e04-acp-agent-interaction/context.yaml",
+        "line": 85,
+        "problem": "shared_files_exclusive omits src/tui/control.rs, src/tui/view.rs, and src/projects.rs, and open_plan_work at line 107 still lists shapes, budgets, and tasks that PLAN and the integration contract already settle. PLAN lists those files as parent-only.",
+        "recommendation": "Refresh context.yaml before worker dispatch so the normative capsule matches the contract. Do not treat this as permission to edit those files from a worker."
+      },
+      {
+        "id": "C2",
+        "criterion": 18,
+        "file": "src/control.rs",
+        "line": 1483,
+        "problem": "views-backgrounded eligibility treats only view.terminal equal to the target id as foreground. The ACP view variant replaces terminal with target, so a focused ACP view will not block a conditional grant unless parent maps that focus into this predicate.",
+        "recommendation": "When implementing the closed ACP view variant, update eligibility and activity provenance together. SC-e04s03-P0-04 already requires the outcome."
+      },
+      {
+        "id": "C3",
+        "criterion": 7,
+        "file": "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+        "line": 48,
+        "problem": "Task 3 verify runs workspace tests but not ignored tests. The independent showcase command is specified separately in PLAN.md:95 and exists, so it is not missing, but the task verify string alone would not execute it.",
+        "recommendation": "Keep the ignored showcase invocation beside the task command when recording s04 evidence; do not treat cargo test --workspace as that oracle."
+      },
+      {
+        "id": "C4",
+        "criterion": 10,
+        "file": "specs/epics/e04-acp-agent-interaction/PLAN.md",
+        "line": 17,
+        "problem": "ElicitationAction::Accept is Accept(ElicitationAcceptAction), not a unit variant. Decline and Cancel are unit variants. The stated BTreeMap content type is correct.",
+        "recommendation": "Construct accept with ElicitationAcceptAction::new().content(map) rather than a unit Accept."
+      }
+    ],
+    "score": 100,
+    "verdict": "PASS",
+    "checks_run": [
+      "Read the full e04 packet, ADR 0004, IMPACT, test plan, threat model, scope, static audit, state and execution status, and CONVENTIONS.md.",
+      "Read control.rs ownership, offer, settlement, view, and original-connection paths; daemon.rs snapshot, resolve, and dispatch; tui.rs and tui/control.rs input routes; runtime.rs ProcessTree; codex.rs capture failure; Cargo.toml.",
+      "Fetched pinned schema commit e2d83349bc9e28a4059ea3acefa1c91c966f74e2 Cargo.toml, version.rs, rpc.rs, elicitation.rs, agent.rs, client.rs, and current protocol initialization, authentication, elicitation, and prompt-turn docs.",
+      "Confirmed showcase test name and ignored attribute; counted 22 failing tasks and 23 scenario IDs.",
+      "Did not run build, tests, lint, formatters, installs, adapters, auth, or models, and did not read the other current-round review."
+    ],
+    "limitations": "This is a plan review against current source and pinned official APIs. No ACP implementation exists, so planned safeguards are not claimed to be present. Isolated LSP references were not used as caller evidence. Long source files were read at the cited seams rather than every line.",
+    "summary": "The e04 Plan is implementable against the current registry, daemon, TUI, and process seams and matches schema 1.12.0 wire v1. Admission, identities, cancellation, budgets, and gates are specified tightly enough to build without reopening settled product choices. Score 100 with no must-fix; verdict PASS."
+  },
+  "parent_additional_corrections": [
+    "Use standalone non-production ACP stdio fixture rather than libtest stdout peer; preserve actual framing.",
+    "Atomically end ACP authority and broker lifetime on explicit close/system lifecycle; reflect retained ACP work in receipts without native-settlement claims."
+  ],
+  "next": "Address both reviewers and parent findings, revalidate and request two fresh round2 reviews; all runtime tasks stay failing."
+}

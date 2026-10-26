@@ -1,0 +1,53 @@
+{
+  "scope": "e04s01-local-conversation-transport",
+  "round": 5,
+  "status": "frozen-for-independent-review",
+  "worktree": "/Users/addomam/projects/amux-acp-build",
+  "branch": "feat/acp-agent-interaction",
+  "verification": {
+    "artifact": "artifact://1142",
+    "workspace_passed": 341,
+    "suites": 30,
+    "ignored": 10,
+    "acp_library": 12,
+    "acp_s01": 21,
+    "clippy": "passed-strict-workspace-all-targets",
+    "check": "passed-workspace-all-targets",
+    "build": "passed-workspace",
+    "fmt": "passed",
+    "omp_passed": 8,
+    "zsh_syntax": "passed"
+  },
+  "sha256": {
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+    "src/acp.rs": "9cbda1630c8e161751a651fdebd8d72f8aa1d130e539d6e8dc03bd6c19a49f15",
+    "src/cli.rs": "1571b0d3374636260f8a2755fe2b366be96b96689716d68c779aa6aa254930cb",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+    "src/lib.rs": "daf3c298192e2f829422bdc080dafb19e0e1690fb1c719be7eec88f9186bc0c7",
+    "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+    "src/tui/agent.rs": "7eeb009756002506df4fe488495f6d4ab07c993846e6a39e87d36bf0124894af",
+    "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+    "src/tui/view.rs": "573bc270580c93c257ec5c34aa9764475865103b5946f997b05003a8604ba08d",
+    "tests/acp.rs": "9ee68341a0c4275a7721c9f5869bb05f962fabc29195fd7997b940ef259b8a43",
+    "tests/fixtures/acp_peer.rs": "9eec8e83ca3365ca64fec4569361b433c5f85557b0ea6acf557ac6324a8a2680",
+    "tests/pty_control.rs": "577e8fb6b9e38501dd04d7b42a0c370b79ae3415c072f41dbda597f9c9596b56",
+    "tests/pty_control/native.rs": "ce485d8fbf2e4031bb029a0677aff00d1f6c7e5a8f5dac17b4f6cdcd46cd1c4e"
+  },
+  "runtime_evidence": [
+    "specs/verifications/e04s01-resume-cli-pty-smoke.json",
+    "specs/verifications/e04s01-inspect-before.json",
+    "specs/verifications/e04s01-inspect-after.json",
+    "specs/verifications/e04s01-queue-status-after.json",
+    "specs/verifications/e04s01-label-boundary.json",
+    "specs/verifications/e04s01-first-inspect-before.json",
+    "specs/verifications/e04s01-first-inspect-after.json",
+    "specs/verifications/e04s01-inspect-final.json"
+  ],
+  "owned_pty_probe_roots": "removed-after-reap-and-exact-no-holder-checks",
+  "story_status": "failing-pending-independent-review",
+  "new_live_model_or_publication_authorization": false,
+  "historical_e03_counters": "unchanged",
+  "final_round": true
+}

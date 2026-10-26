@@ -1,0 +1,54 @@
+{
+  "integration_commit": "f87ec7b",
+  "worker_commits_reachable_from_integration": true,
+  "clean_worker_worktrees_before_removal": true,
+  "exit": "Ctrl-D; original Zsh foreground observed in each pane before removal",
+  "remove_force": false,
+  "branches_retained": true,
+  "live_model_checks": 0,
+  "workers": [
+    {
+      "agent": "e04-s02-backend",
+      "workspace": "w1S",
+      "branch": "feat/acp-s02-backend",
+      "worktree": "/Users/addomam/projects/amux-acp-s02-backend",
+      "owned_shell_agent_mcp_pids_absent": [
+        25963,
+        28646,
+        28670
+      ],
+      "worktree_absent": true,
+      "workspace_and_tabs_absent": true,
+      "branch_retained": true,
+      "retirement_error": {
+        "error": {
+          "code": "workspace_not_found",
+          "message": "workspace w1S not found"
+        },
+        "id": "cli:tab:list"
+      }
+    },
+    {
+      "agent": "e04-s02-view",
+      "workspace": "w1T",
+      "branch": "feat/acp-s02-view",
+      "worktree": "/Users/addomam/projects/amux-acp-s02-view",
+      "owned_shell_agent_mcp_pids_absent": [
+        25977,
+        28649,
+        28671
+      ],
+      "worktree_absent": true,
+      "workspace_and_tabs_absent": true,
+      "branch_retained": true,
+      "retirement_error": {
+        "error": {
+          "code": "workspace_not_found",
+          "message": "workspace w1T not found"
+        },
+        "id": "cli:tab:list"
+      }
+    }
+  ],
+  "observed_at": "2026-10-24T05:54:57.795882+00:00"
+}

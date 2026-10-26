@@ -1,0 +1,24 @@
+{
+  "kind": "actual-built-daemon-and-installed-OMP-with-network-denied",
+  "actual_provider_calls": 0,
+  "model_reply": "synthetic-replay-of-saved-genuine-ask-call",
+  "status": "passed",
+  "fallback_used": false,
+  "target": {
+    "kind": "acp",
+    "id": "acp-eea5aef2ea43489084030e5cf9326037",
+    "instance_id": "instance-21e4d5b02d634ec4a5108224dbf6beaf",
+    "connection_generation": 1,
+    "session_id": "01a17439-79b3-7596-bdc3-349c25b23c82"
+  },
+  "original_pid": 301,
+  "genuine_installed_OMP_form_published": true,
+  "original_tuple_pid_retained": true,
+  "explicit_close": true,
+  "peer_reaped": true,
+  "broker_cleanup_complete": true,
+  "daemon_exit": 0,
+  "socket_absent": true,
+  "sentinel_survived": true,
+  "private_root_removed": true
+}

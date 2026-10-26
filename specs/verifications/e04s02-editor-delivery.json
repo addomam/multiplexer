@@ -1,0 +1,58 @@
+{
+  "status": "worker-complete-unverified-not-story-acceptance",
+  "workspace": "w1T",
+  "tab": "w1T:t1",
+  "pane": "w1T:p1",
+  "integration_owner": "parent",
+  "completion_receipt": "artifact://1209",
+  "delivery": {
+    "type": "result",
+    "task_id": "e04-s02-view",
+    "exit": "pass",
+    "commit": "c2a12d660e6a07e20295fcc432093f10675e752a",
+    "changed_files": [
+      "src/tui/agent.rs"
+    ],
+    "implemented_controls_keybindings": {
+      "F9": "Cycle canonical interactions and prompt/history.",
+      "Tab/Shift-Tab": "Navigate form fields.",
+      "text/paste": "Edit bounded local text/numeric drafts without submitting.",
+      "arrows": "Navigate offered enum, multiselect and permission choices.",
+      "Space": "Toggle boolean or highlighted multiselect value.",
+      "F4": "Explicitly unset a form field.",
+      "F5": "Validate through crate::acp::validate_form_values and review; a second unchanged F5 accepts.",
+      "F6": "Decline the exact form.",
+      "F7": "Cancel the exact form.",
+      "Enter": "Deliberately select the highlighted offered permission ID; preserve existing prompt submission.",
+      "F8": "Preserve explicit advertised agent-type authentication.",
+      "Ctrl-C": "Preserve explicit exact-foreground interruption.",
+      "PageUp/PageDown/wheel": "Scroll wrapped interaction context or history."
+    },
+    "implemented_behavior": [
+      "Support text, finite number, i64 integer, boolean, titled/untitled enum and string-array multiselect controls.",
+      "Preserve editable defaults and distinguish unset, false, zero, empty string and empty array.",
+      "Capture exact target/control/generation/interaction/revision; invalidate stale drafts without rebinding or replay.",
+      "Retain exact protocol IDs/values while rendering untrusted content inertly.",
+      "Display constraints, validation limitations and canonical delivery/application dispositions without optimistic history.",
+      "Retain drafts/highlights through capture; restore eligibility only after matching synchronous local queue rejection.",
+      "Bound interaction content, field/option counts and answer drafts; cache unchanged revision material."
+    ],
+    "exact_projection_assumptions": [
+      "projection.target contains exact kind/id/instance_id/connection_generation/session_id.",
+      "grant supplies captured control and owner_generation.",
+      "Canonical editor details are in content.interactions; top-level interactions remain metadata-only.",
+      "Each detail supplies interaction_id, nonnegative integer revision, kind, state, selected_work_id, delivery and application.",
+      "Schema, scope and question/tool context remain immutable within an interaction revision.",
+      "Forms expose official requestedSchema under schema and official scope keys; permissions expose tool_call and exact option_id/name/kind options.",
+      "The backend supplies the agreed pub(crate) validate_form_values helper."
+    ],
+    "remaining_uncertainties": [
+      "Compilation and runtime behavior remain unverified until parent integrates the backend helper and runs checks.",
+      "Actual CLI/controlling-PTY proof and shared ownership/prefix/picker routing verification remain parent-owned.",
+      "No shared routing changes were made.",
+      "LSP references returned 'content modified'; the tooling failure was reported."
+    ],
+    "commit_mode": "Authorized unsigned local fallback; no attribution footer or global configuration changes.",
+    "verify_output": "intentionally not run; parent owns checks"
+  }
+}

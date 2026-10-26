@@ -1,0 +1,44 @@
+{
+  "coverage_summary": "Independent S03 security review: supported_findings = []; operational_findings = []; checks_not_run = true. No concrete vulnerability meeting confidence \u22658/10, or supported S03 operational/resource/test defect, survived source tracing. This is a scoped static review, not a blanket security assurance or real-adapter acceptance.\n\nEvidence basis:\n\u2022 Admission/revocation: src/daemon.rs:441\u2013460 resolves the supplied control and prepares an immutable action; src/control.rs:1194\u20131213 rechecks current authority under the target mutex before broker commit. src/acp.rs:741\u2013989 checks captured generation, exact target tuple, duplicate IDs, lifecycle, foreground/interaction and capacity before publishing canonical work and output. The writer at src/acp.rs:1379\u20131450 transmits retained work without substituting or rechecking a later owner's authority.\n\u2022 Ownership/provenance: src/control.rs:668\u2013817 implements authority-only release/yield/force, ordinary cancellation revocation without a new grant, and exact reserved-offer acceptance. View reports at :1088\u20131164 require the original live connection and increasing serial; admission activity at :1207\u20131208 and native provenance at :2033\u20132041 distinguish borrowed control from original attachment activity. Conditional acceptance at :1762\u20131802 revalidates ownership, consent, activity/view observations and eligibility.\n\u2022 Native input/drafts: src/tui.rs:1025\u20131070 consumes active ACP events without raw PTY fallback; :1099\u20131112 excludes doubled-prefix forwarding. src/tui/control.rs:363\u2013375 dispatches the captured envelope unchanged and :709\u2013713 rejects native forwarding to ACP. src/tui/agent.rs:195\u2013253 invalidates mismatched bindings; :534\u2013820 separates navigation/paste/editing from deliberate actions and restores only synchronously unqueued prompts under their original exact binding. Interaction admission uses the exact pending responder/revision and offered permission ID at src/acp.rs:850\u2013909, :1792\u20131909.\n\u2022 Untrusted adapter/public metadata: src/acp.rs:1452\u20131578 bounds frame accumulation and queued/in-flight ingress and preserves FIFO processing. :1580\u20131789 validates session/RPC association and retains actual stop/error outcomes rather than inferring cancellation. :992\u20131054 gates conversation projection on explicit include_content; :1145\u20131176 projects disposition metadata, not questions/answers/raw errors. Canonical text sanitization at :2365\u20132382 and :2501\u20132538, plus host rendering sanitization at src/tui/agent.rs:2204\u20132257, prevent adapter escape/control data becoming terminal instructions.\n\u2022 Owned processes and unsafe code: src/acp.rs:1210\u20131332 uses direct executable/argv spawn, setsid, captured ProcessTree ownership and outside-authority cleanup/reaping/worker joins. src/runtime.rs:597\u2013615 and :716\u2013829 implement birth-qualified process checks and termination. tests/acp/native.rs:91\u2013233, :286\u2013380 were inspected for openpty/FD ownership, controlling-terminal setup, pinned Zsh leader, bounded raw capture, termios restoration and drainer cleanup. Its fixed shell source passes values as quoted positional arguments; no attacker-controlled shell-source interpolation was identified. Resource/process-sensitive test code and unsafe Rust were not categorically excluded.\n\u2022 Scenario evidence: inspected the current admission unit, seven backend and four native S03 cases, peer barriers/interrupt/rendering modes, README/changelog claims, and supplied runtime records. artifact://1346 directly records one admission unit and eleven S03 integration passes; its tail records successful strict Rust stages and OMP 8 tests/49 assertions. Workspace totals and outside-test CLI/PTY outcomes are parent-supplied evidence, not checks I executed. The current source includes the removed forwarding assertions, successful-original-leader cleanup guard and rendered Foreground:none readiness barrier described in the freeze brief.\n\nNo builds, tests, lint, formatters, payload execution, provider/auth/network operations, repository writes or other reviewer-report reads were performed. Historical e03/S01 caps and S04/live-provider gates remain unchanged. Frozen hashes could not be independently recomputed with the mounted tools; that limitation is recorded separately.",
+  "findings": [],
+  "reviewed_paths": [
+    "src/acp.rs",
+    "src/control.rs",
+    "src/daemon.rs",
+    "src/client.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs",
+    "src/runtime.rs",
+    "tests/acp.rs",
+    "tests/acp/native.rs",
+    "tests/fixtures/acp_peer.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "CONVENTIONS.md",
+    "specs/security/epics/e04/THREAT_MODEL.md",
+    "specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "specs/epics/e04-acp-agent-interaction/e04s03-story.md",
+    "specs/epics/e04-acp-agent-interaction/e04s03-tasks.yaml",
+    "specs/adr/0004-acp-authoritative-input.md",
+    "specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "specs/verifications/e04s03-round1-source.json",
+    "specs/verifications/e04s03-build.md",
+    "specs/verifications/e04s03-conditional-native-attempt3.json",
+    "specs/verifications/e04s03-handoff-native-attempt2.json",
+    "local://e04s03-review-brief.md",
+    "artifact://1326",
+    "artifact://1346"
+  ],
+  "deferred": [
+    {
+      "reason": "Independent source-freeze digest/baseline verification is unavailable: the mounted tools provide read/search but no hashing or command-execution operation. I inspected the manifest and current working-file content rather than assuming HEAD contained the described post-HEAD changes. I cannot attest that the 14 SHA-256 values match the current bytes or independently prove the complete production-baseline diff.",
+      "paths": [
+        "specs/verifications/e04s03-round1-source.json"
+      ]
+    }
+  ]
+}

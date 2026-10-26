@@ -1,0 +1,249 @@
+{
+  "scope": "e04s04-user-authorized-Codex-Grok-existing-OAuth-low-cost-live-acceptance",
+  "status": "complete-real-matrix-and-local-full-PASS-story-FAIL-supplemental1-new-operational-must-fix",
+  "branch": "feat/acp-agent-interaction",
+  "integration_owner": "parent",
+  "Claude_execution": false,
+  "publication_authorized": false,
+  "historical_native_failure_and_review_caps": "unchanged",
+  "auth": {
+    "kind": "existing-OAuth-subscriptions",
+    "copied_only_into_private_homes": true,
+    "private_directories_mode": "0700",
+    "private_auth_config_evidence_mode": "0600",
+    "provider_API_key_environment": "cleared; no API-key fallback",
+    "global_config_auth_default_daemon_changes": false,
+    "public_evidence": "safe versions, models, effort, counts and categorical outcomes only; no credentials, capability refs, private paths or conversation excerpts"
+  },
+  "pinned_runtime": {
+    "codex": {
+      "ACP_adapter": "2.2.2",
+      "installed_ACP_SDK": "1.9.0",
+      "native": "0.160.1",
+      "entry_sha256": "6b1bb4e7e9caaf4aeca1042ae4aec2dc2433b0b0e4b1614b38a4d41699902aaa",
+      "native_sha256": "09fa44fdc37a5fc70dc1ace31235f90468a2e193d0e85f7552eab068ea2582be",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "wire_profile": "gpt-6-luna[low] initially; config updates advertise base model with separate low effort",
+      "mode": "read-only; explicit adapter /plan toggles around question rows, never implicit amux mode/policy changes"
+    },
+    "grok": {
+      "native": "1.0.67 (2fe064390d07)",
+      "native_sha256": "036a47ce2987adae04de827f7803bf0cc460bf169b640db168f18ec7acb734db",
+      "model": "grok-4.7",
+      "effort": "low",
+      "fast": false,
+      "free_or_small_model_offered": false,
+      "maximum_completion_tokens": 768,
+      "retries": 0,
+      "notes": "Homebrew native binary, not stale 1.0.52 updater cache. CLI reasoning flag did not bind agent stdio; documented private GROK_CONFIG overlay actually produced low effort. No update performed."
+    }
+  },
+  "usage": {
+    "model_test_prompts_per_complete_adapter_matrix": 4,
+    "Codex_local_zero_inference_plan_commands_per_matrix": 2,
+    "private_cumulative_session_prompt_ceiling_per_adapter": 12,
+    "ceiling_note": "Initial operator guard8 was increased once to12 for a corrected complete matrix after preserved real failures; used counts never reset. Includes local /plan commands and diagnostic prompts, not a claim of charged provider-call count.",
+    "model_or_effort_fallback": false,
+    "USD_hard_fuse_claim": false,
+    "limitation": "OAuth subscription usage is not an API-dollar ledger. Prompt/time/completion bounds do not prove a hard monetary cap; Grok --max-turns does not bound ACP."
+  },
+  "retained_attempts": [
+    {
+      "kind": "missing-config-guard",
+      "job": "bg_230",
+      "executed": 1,
+      "failed": 1,
+      "classification": "expected fail-closed before provider launch; not production RED"
+    },
+    {
+      "kind": "real-Grok-original-question",
+      "prompts": 1,
+      "result": "built-in question tool gets method-not-found; no canonical form",
+      "cleanup": "daemon0, peer/workers/socket/root absent, unrelated sentinel survives, no fallback",
+      "counter_limitation": "original observer omitted the ACP underscore prefix; its zero form count is not evidence that no question request occurred"
+    },
+    {
+      "kind": "compiled-question-regressions",
+      "commit": "e2f77e6",
+      "artifact": "artifact://1622",
+      "executed": 3,
+      "failed": 3,
+      "GREEN": "bg_232 three passed; broader ACP library26 and integration10 passed artifact1629"
+    },
+    {
+      "kind": "complete-real-matrix-attempt1",
+      "artifact": "artifact://1633",
+      "result": "FAIL",
+      "codex": "bootstrap PASS; model-profile observer stopped after local /plan; cleanup oracle failed, fallback remains distinct",
+      "grok": "bootstrap PASS; actual question request rejected because nullable multiSelect was not supported; explicit cleanup PASS",
+      "classification": "Codex guard defect, Grok real wire integration defect; no false acceptance"
+    },
+    {
+      "kind": "one-real-Grok-shape-diagnostic",
+      "prompts": 1,
+      "observed": "_x.ai/ask_user_question; exact session/tool IDs; multiSelect:null; mode:default",
+      "response": "explicit cancelled on original question; original prompt completed",
+      "cleanup": "observer/adapter exit0 and reader joined; no amux/PTY acceptance claimed"
+    },
+    {
+      "kind": "nullable-flag-regression",
+      "RED": "bg_235 one compiled failing case",
+      "GREEN": "artifact://1639 four Grok unit cases and ten existing local S04 integration cases passed"
+    },
+    {
+      "kind": "complete-real-matrix-attempt2",
+      "artifact": "artifact://1642",
+      "result": "FAIL",
+      "codex": {
+        "bootstrap": "PASS",
+        "API-question-native-answer": "PASS",
+        "native-question-force-API-answer": "PASS",
+        "allow": "FAIL exact-command rendering guard",
+        "deny": "blocked, not passed",
+        "explicit_cleanup": "PASS"
+      },
+      "grok": {
+        "bootstrap": "PASS",
+        "API-question-native-answer": "PASS",
+        "native-question-force-API-answer": "PASS",
+        "allow_exact_file_effect": "PASS",
+        "deny": "selection and original RPC completed, then overstrict end_turn oracle failed",
+        "explicit_cleanup": "PASS"
+      },
+      "post_run_effect_observation": "Grok allowed file had exact controlled bytes; both denied files absent; recorded adapter PIDs absent; no private-root open holders",
+      "classification": "permission fixture assumptions, not confirmed production permission defects"
+    },
+    {
+      "kind": "Other-and-unsupported-decline-regression",
+      "artifact": "artifact://1654",
+      "result": "fixture request incorrectly carried values with decline; not production RED",
+      "corrected_GREEN": "artifact://1656 five Grok unit cases and ten existing S04 integration cases pass"
+    }
+  ],
+  "current_complete_matrix": {
+    "job": "bg_240",
+    "actual_source": "specs/verifications/e04s04-round4-source.json",
+    "artifact": "artifact://1659",
+    "executed_tests": 1,
+    "passed_tests": 1,
+    "row_outcomes": "both adapters: bootstrap + four named real rows + explicit cleanup all PASS",
+    "wall_seconds": 38.39,
+    "test_seconds": 36.57,
+    "same_instance_guarantee": "Within each adapter all four rows preserve model/process/session; original work/RPC tuple is checked through question, force and permission completion.",
+    "native_surface": "real controlling PTY and continuously drained Alacritty surface; deliberate native answer/review and native-origin prompt; stale API and physical F5 fenced",
+    "cleanup": "TUI/host exit0, termios restored, drainer joined; canonical close admitted, owned adapter absent/resource cleanup complete, daemon0/socket/root absent; sentinel survives before fixture fallback",
+    "wire_observations": {
+      "codex": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "low",
+        "wire_counts": {
+          "prompt_requests": 6,
+          "form_requests": 2,
+          "permission_requests": 2,
+          "cancellations": 0,
+          "local_commands": 2
+        },
+        "prompt_stop_reasons": [
+          "end_turn",
+          "end_turn",
+          "end_turn",
+          "end_turn",
+          "end_turn",
+          "cancelled"
+        ],
+        "cumulative_session_prompt_admissions": {
+          "used": 12,
+          "limit": 12
+        },
+        "adapter_PID_absent": true,
+        "allowed_exact_file_effect": true,
+        "denied_file_absent": true
+      },
+      "grok": {
+        "model": "grok-4.7",
+        "reasoning_effort": "low",
+        "wire_counts": {
+          "prompt_requests": 4,
+          "form_requests": 2,
+          "permission_requests": 2,
+          "cancellations": 0,
+          "local_commands": 0
+        },
+        "prompt_stop_reasons": [
+          "end_turn",
+          "end_turn",
+          "end_turn",
+          "cancelled"
+        ],
+        "cumulative_session_prompt_admissions": {
+          "used": 11,
+          "limit": 12
+        },
+        "adapter_PID_absent": true,
+        "allowed_exact_file_effect": true,
+        "denied_file_absent": true
+      }
+    },
+    "denial_note": "Both adapters explicitly reject_once and finish the original RPC with cancelled; neither emits session/cancel. This is an explicit permission outcome, not ownership force or implicit interruption. Question/force rows still require end_turn."
+  },
+  "current_local_verification": {
+    "artifact": "artifact://1760",
+    "workspace_passed": 401,
+    "default_passed": 290,
+    "suite_counts_overlap": true,
+    "strict_workspace_and_default_Rust": "PASS",
+    "fmt_OMP_Zsh_independent_cursor_showcase": "PASS",
+    "focused_Grok_and_S04": "artifact://1754:5+12 and actual native reply-budget1 PASS",
+    "final_native_unknown_settlement_guards": "bg_257/1760:2 PASS; no native settlement repair",
+    "previous_source_synthetic_Grok_CLI": "specs/verifications/e04s04-grok-codec-cli.json",
+    "previous_source_Other_CLI": "specs/verifications/e04s04-other-recovery-cli.json",
+    "full_command_and_counts": "specs/verifications/e04s04-verify.yaml",
+    "frozen_source": "specs/verifications/e04s04-reply-budget-source.json",
+    "reply_budget_repair_and_actual_CLI": "specs/verifications/e04s04-reply-budget-recovery.json",
+    "previous_full": "artifact://1721"
+  },
+  "post_live_local_validation_repair": {
+    "evidence": "specs/verifications/e04s04-other-recovery.json",
+    "provider_model_rerun": false,
+    "scope": "Other notes validation moved before native capture/API admission, followed by pre-publication conservative Grok response budgeting. Observer/live driver/model/auth policy unchanged. Current native/CLI/full1754/1760 verifies local repairs, not a relabelled live rerun."
+  },
+  "fresh_source_review": {
+    "required_round": 5,
+    "max_rounds": 5,
+    "status": "final-round5-FAIL-operational-must-fix-locally-repaired-not-independently-cleared",
+    "report": "specs/verifications/e04s04-build-review-round5.json",
+    "next_round": null,
+    "gate": "cap5-exhausted-human-review-required",
+    "historical_original_cycle_only": true
+  },
+  "current_source_review": {
+    "pass": "supplemental1/global6-explicitly-user-authorized",
+    "status": "FAIL-new-operational-must-fix-E04S04-OPS-S1-01",
+    "report": "specs/verifications/e04s04-build-review-supplemental1.json",
+    "original_reply_budget_defect": "independently-cleared",
+    "original5_of5_preserved": true,
+    "additional1_of1_consumed": true,
+    "cap_reset": false,
+    "new_live_provider_calls": 0,
+    "next_automatic_round": null
+  },
+  "post_live_native_rejection_repair": {"status":"local-native-and-resource-bounded-full-PASS","evidence":"specs/verifications/e04s04-rejection-recovery.json","artifact":"artifact://1803","workspace":402,"default":291,"post_local_repair_model_rerun":false,"whole_story":"pending-changed-source-independent-human-decision"},
+  "sources": [
+    "https://raw.githubusercontent.com/agentclientprotocol/codex-acp/202e66e63343ec4f5a5e35ab590251d813d129ca/README.md",
+    "https://learn.chatgpt.com/docs/models",
+    "https://docs.x.ai/build/cli/headless-scripting",
+    "https://docs.x.ai/build/cli/reference",
+    "https://raw.githubusercontent.com/xai-org/grok-build/main/crates/codegen/xai-grok-tools/src/implementations/grok_build/ask_user_question/types.rs"
+  ],
+  "source_note": "Grok GitHub main is mechanism evidence, newer than pinned installed native; actual1.0.67 wire is the runtime authority.",
+  "private_auth_cleanup": {
+    "status": "PASS-removed-after-observed-owned-exit-and-no-open-holders",
+    "recorded_adapter_PIDs": "absent",
+    "private_root_open_holders_before_removal": 0,
+    "private_auth_config_transcript_and_effect_root_absent": true,
+    "fallback": "not-needed-for-final-two-adapter-matrix; earlier failed cleanup retained separately",
+    "original_user_auth_files": "read/copied only; no global auth/config writes performed",
+    "private_installed_package_roots": "retained per earlier setup approval, no auth copies there"
+  }
+}

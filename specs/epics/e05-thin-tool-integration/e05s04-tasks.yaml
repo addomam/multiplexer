@@ -1,0 +1,125 @@
+story_id: e05s04
+type: task-ledger
+context: context.yaml
+status: failing
+future_commands_not_evidence: true
+tasks:
+- id: e05s04t01
+  title: boundary-regressions
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s01
+  - e05s02
+  - e05s03
+  change: Create RED behavior regressions for uncertain identities, boundaries, races
+    and cleanup before production changes; no wiring/default/source-text tests.
+  scenarios:
+  - SC-e05s04-P0-01
+  - SC-e05s04-P0-02
+  - SC-e05s04-P0-03
+  - SC-e05s04-P1-05
+  - SC-e05s04-P0-06
+  verify: cargo test --test tool_integration e05s04_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s04_reference_interop
+  - e05s04_complete_native_broker
+  - e05s04_hostile_resource_cleanup
+  - e05s04_compatibility_fence
+  - e05s04_omp_approval_correlation
+  zero_case_is_failure: true
+- id: e05s04t02
+  title: implementation
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s04t01
+  change: Implement only this story against the integrated concrete protocol/shared
+    broker contract, preserving ACP/native behavior and exact original responders.
+  scenarios:
+  - SC-e05s04-P0-01
+  - SC-e05s04-P0-02
+  - SC-e05s04-P0-03
+  - SC-e05s04-P1-05
+  - SC-e05s04-P0-06
+  verify: cargo test --test tool_integration e05s04_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s04_reference_interop
+  - e05s04_complete_native_broker
+  - e05s04_hostile_resource_cleanup
+  - e05s04_compatibility_fence
+  - e05s04_omp_approval_correlation
+  zero_case_is_failure: true
+- id: e05s04t03
+  title: runtime-smoke
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s04t02
+  change: Exercise the actual CLI/API/controlling-PTY surface and real arithmetic/file
+    effects outside test-only proof; observe original endpoints/processes/workers/sentinel
+    before fallback.
+  scenarios:
+  - SC-e05s04-P0-01
+  - SC-e05s04-P0-02
+  - SC-e05s04-P0-03
+  - SC-e05s04-P1-05
+  - SC-e05s04-P0-06
+  verify: cargo test --test tool_integration e05s04_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s04_reference_interop
+  - e05s04_complete_native_broker
+  - e05s04_hostile_resource_cleanup
+  - e05s04_compatibility_fence
+  - e05s04_omp_approval_correlation
+  zero_case_is_failure: true
+- id: e05s04t04
+  title: separately-approved-real-OMP-acceptance
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s04t03
+  authorization: blocked-until-new-exact-live-approval
+  scenarios:
+  - SC-e05s04-P0-04
+  verify: cargo test --test tool_integration e05s04_live_omp_adapter -- --ignored
+    --exact --nocapture --test-threads=1
+  expected_cases:
+  - e05s04_live_omp_adapter
+  zero_case_is_failure: true
+  requirements: Exact pinned installed closure and actual cheapest approved model/effort/auth/call/spend
+    caps; genuine original question and typed once/deny, both surfaces and owned private
+    cleanup. No SDK real-HOME bootstrap before approval.
+- id: e05s04t05
+  title: compatibility-evidence
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s04t03
+  - e05s04t04
+  change: Run affected/full existing regression boundaries and record actual source-bound
+    commands/counts/smoke/cleanup; update shipped docs only for observed behavior.
+  scenarios:
+  - SC-e05s04-P0-01
+  - SC-e05s04-P0-02
+  - SC-e05s04-P0-03
+  - SC-e05s04-P0-04
+  - SC-e05s04-P1-05
+  - SC-e05s04-P0-06
+  verify: cargo test --test tool_integration e05s04_ -- --nocapture --test-threads=1 && cargo test --test tool_integration e05s04_live_omp_adapter -- --ignored --exact --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s04_reference_interop
+  - e05s04_complete_native_broker
+  - e05s04_hostile_resource_cleanup
+  - e05s04_compatibility_fence
+  - e05s04_live_omp_adapter
+  - e05s04_omp_approval_correlation
+  zero_case_is_failure: true

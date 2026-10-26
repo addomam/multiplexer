@@ -1,0 +1,31 @@
+{
+  "status": "failed",
+  "job": "bg_283",
+  "exit": 101,
+  "test_seconds": 2.13,
+  "wall_seconds_including_compile": 3.74,
+  "scenario_failure": "genuine-interaction-not-produced",
+  "normal_cleanup": "passed",
+  "model": "github-copilot/gpt-6-luna",
+  "effort": "low",
+  "actual_provider_requests": 2,
+  "requested_output_tokens_each": 2000,
+  "enforced_wall_seconds": 117,
+  "provider_machine_error": "model_not_supported",
+  "original_RPC": "failed-with-no-form",
+  "read_only_model_metadata_check": {"http_status": 200, "model_generation_requests": 0, "cached_luna_present_in_live_account_catalog": false},
+  "next_supported_candidate": {"model": "github-copilot/mai-code-1.1-flash", "policy": "enabled", "responses": true, "low_effort": true, "cached_reference_input_per_million": 0.2, "cached_reference_output_per_million": 1.2, "actual_billing_guaranteed": false},
+  "new_explicit_user_approval": {
+    "selection": "Allow four further requests",
+    "new_run_max_model_requests": 4,
+    "aggregate_max_including_two_rejected_requests": 6,
+    "max_requested_output_tokens_each": 2000,
+    "max_wall_seconds": 120,
+    "subscription_only": true,
+    "premium_or_API_key_fallback": false,
+    "global_auth_config_daemon_changes": false,
+    "hard_monetary_cap": false
+  },
+  "historical_counters_reset": false,
+  "auth_prompt_response_or_tool_content_recorded": false
+}

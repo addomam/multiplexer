@@ -1,0 +1,61 @@
+{
+  "scope": "e04s04-authorized-supplemental1-runtime",
+  "global_review_pass": 6,
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "fresh_focused": {
+    "job": "bg_258",
+    "command": "cargo test --test acp native::acceptance::e04s04_native_grok_ -- --nocapture && cargo test --lib e04s04_grok_",
+    "exit_code": 0,
+    "native_executed": 2,
+    "native_passed": 2,
+    "native_test_seconds": 1.39,
+    "Grok_library_executed": 5,
+    "Grok_library_passed": 5,
+    "wall_seconds": 1.88,
+    "native_observations": "Both existing real controlling-PTY regressions pass: omitted/empty Other notes remain correctable/cancellable on original grant; unrepresentable request rejected on original RPC before offering, original42 followed by same-session fresh native Other7 cumulative52; original identities and full cleanup assertions exercised."
+  },
+  "fresh_outside_test_actual_CLI": {
+    "phase": "GREEN-after-fix",
+    "actual_CLI": "PASS",
+    "original_RPC_explicit_error": -32602,
+    "no_interaction_published": true,
+    "original_prompt": "end_turn",
+    "effect": 42,
+    "commands": 1,
+    "exact_target_and_original_work_RPC": true,
+    "cleanup": {
+      "peer_absent": true,
+      "workers_complete": true,
+      "daemon_exit": 0,
+      "socket_and_root_absent": true,
+      "sentinel_survived_before_own_reap": true,
+      "fallback": false
+    },
+    "provider_calls": 0
+  },
+  "full_gate_reused_not_rerun": {
+    "artifact": "artifact://1760",
+    "why": "All22 frozen source SHA256 entries still match; no code/dependency change since actual full gate. Fresh targeted native/CLI runtime above separately exercised at user request.",
+    "workspace": 401,
+    "default": 290,
+    "counts_overlap": true,
+    "strict_workspace_default_Rust_fmt_OMP_Zsh_Node": "PASS",
+    "actual_cursor_showcase": 1,
+    "native_unknown_guards": 2
+  },
+  "earlier_real_models": {
+    "artifact": "artifact://1659",
+    "actual_source": "specs/verifications/e04s04-round4-source.json",
+    "post_local_repair_rerun": false
+  },
+  "provider_calls_this_pass": 0,
+  "auth_global_config_default_daemon_changes": false,
+  "review_status": "complete-FAIL-new-operational-must-fix-E04S04-OPS-S1-01; prior-reply-budget-defect-independently-cleared",
+  "combined_review": "specs/verifications/e04s04-build-review-supplemental1.json",
+  "retained_admission_probe": "specs/verifications/e04s04-retained-admission-cli.json",
+  "retained_admission_proof_limit": "Actual CLI confirms capacity rejection before publication and same-grant deliberate smaller-answer success. Native latch is source-supported only, not exercised by this CLI probe.",
+  "source_frozen": true,
+  "historical_caps": "original5/5exhausted-preserved; user explicitly authorizes one additional pass only",
+  "publication": "not-authorized-not-performed"
+}

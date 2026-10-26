@@ -1,0 +1,12 @@
+{
+  "scope": "runtime-driver-baseline-attempt2-following-cleanup",
+  "failure_record": "specs/verifications/e04s02-runtime-driver-baseline-attempt2.json",
+  "cause": "Driver added cooperative-only when to force claim. Existing closed force variant correctly rejects it; tests/acp.rs:521-524 documents exact shape. Remove only this invalid driver field.",
+  "tui_exit_file": 0,
+  "peer_absent_after_shutdown": true,
+  "no_fallback_signals": true,
+  "drainer_joined": true,
+  "root_no_holders": true,
+  "private_root_removed": true,
+  "status": "cleaned-failed-proof-not-a-pass"
+}

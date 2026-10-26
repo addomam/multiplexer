@@ -1,0 +1,12 @@
+{
+  "scope": "runtime-driver-baseline-attempt1-following-cleanup",
+  "failure_record": "specs/verifications/e04s02-runtime-driver-baseline-attempt1.json",
+  "cause": "Driver sent Ctrl-B then literal q, which opened the picker and searched q; actual rendered footer requires Ctrl-Q detach. This was not a product failure.",
+  "daemon_exit": 0,
+  "host_exit_after_owned_fallback": -15,
+  "peer_absent_after_shutdown": true,
+  "drainer_joined": true,
+  "root_no_holders": true,
+  "private_root_removed": true,
+  "status": "cleaned-failed-proof-not-a-pass"
+}

@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "provider_calls": 0,
+  "auth_read": false,
+  "surface": "actual built CLI/daemon; synthetic Grok ACP child, not a provider compatibility substitute",
+  "observed": [
+    "nullable single-choice plus multiselect canonical form",
+    "Other with exact notes annotation",
+    "exact original typed RPC response and original prompt end_turn",
+    "same target/instance/connection/session tuple",
+    "admitted close and complete owned cleanup before fallback",
+    "daemon exit0, fixture PID absent, socket/root absent, unrelated sentinel survives until own termination"
+  ],
+  "native_PTY_or_drainer_started": false,
+  "fallback": false
+}

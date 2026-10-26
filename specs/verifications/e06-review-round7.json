@@ -1,0 +1,41 @@
+{
+  "type": "independent-source-security-gate",
+  "context": "E06 only; full reports read before edits; not runtime/live acceptance",
+  "round": 7,
+  "max_rounds": 10,
+  "status": "FAIL",
+  "scores": {
+    "A": 93.75,
+    "B": 100,
+    "security": 100
+  },
+  "reports": {
+    "A": "specs/verifications/e06-review-round7-A.json",
+    "B": "specs/verifications/e06-review-round7-B.json",
+    "security": "specs/verifications/e06-review-round7-security.json"
+  },
+  "source": "specs/verifications/e06-review-round7-source.json",
+  "frozen_files": 32,
+  "all_hashes_matched_at_verdict": true,
+  "findings": [
+    {
+      "id": "E06-R7-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "src/tui/launch.rs",
+      "line": 106,
+      "title": "Make explicit option overrides preserve complete advertised IDs",
+      "impact": "Valid advertised settings cannot be selected or overridden through the new native launch dialog; option IDs containing '=' also cannot be represented by the new CLI --option parser. For the frozen delimiter-containing profile, a deliberate native override to full is rejected locally instead of launching with that supported choice. The CLI splits the same ID incorrectly and passes a different option ID to daemon/settings resolution.",
+      "evidence": "src/tui/launch.rs:106-110 splits the field on ',' and then split_once('='), while src/acp/settings.rs:22-34 accepts complete non-control option IDs/values up to 256 bytes. The frozen public peer at tests/fixtures/acp_peer.rs:382-386 actually advertises option ID 'fixture,detail=level' with choices 'brief,exact=value' and 'full'. Entering 'fixture,detail=level=full' yields a first native segment 'fixture' with no '=', so Dialog::request returns an error before NativeControl::launch. src/cli.rs uses the first-equals split for --option, producing ID 'fixture,detail' rather than the advertised ID; daemon profile merging and Configuration::resolve then receive the wrong identity. tests/acp/native/daily_use.rs tests this catalog only with Options untouched. git show confirmed src/tui/launch.rs is absent from the specified base, establishing introduced provenance.",
+      "fix": "Provide a bounded lossless representation for explicit option ID/value pairs in the native editor and CLI, such as structured pairs or a documented escaping scheme; preserve IDs and values unchanged through daemon settings resolution. Keep structured default inheritance intact and add native/CLI regressions that explicitly override delimiter-containing IDs and choices, rather than only inheriting them."
+    }
+  ],
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "historical_caps": "unchanged",
+  "task_status": "all seven remain failing"
+}

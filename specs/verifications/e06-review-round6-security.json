@@ -1,0 +1,111 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 20,
+  "passed_items": 20,
+  "checklist": [
+    {
+      "area": "Frozen production-source coverage — 13 paths",
+      "result": "PASS",
+      "evidence": "Reviewed src/acp.rs, src/acp/settings.rs, src/acp_profiles.rs, src/cli.rs, src/client.rs, src/daemon.rs, src/lib.rs, src/projects.rs, src/tui.rs, src/tui/agent.rs, src/tui/control.rs, src/tui/launch.rs and src/tui/view.rs. Followed narrowly related authority and process-lifetime controls in src/control.rs and src/runtime.rs."
+    },
+    {
+      "area": "Frozen regression-source coverage — 11 paths",
+      "result": "PASS",
+      "evidence": "Reviewed tests/acp.rs, tests/acp/native.rs, tests/acp/native/acceptance.rs, tests/acp/native/daily_use.rs, tests/acp/native/omp_live.rs, tests/acp/omp.rs, tests/acp/profiles.rs, tests/fixtures/acp_peer.rs, tests/pty_control/native.rs, tests/acp/native/recovery_edges.rs and tests/shell_races.rs. Inspected assertions and harness boundaries without executing them."
+    },
+    {
+      "area": "Frozen documentation/dependency coverage — 8 paths",
+      "result": "PASS",
+      "evidence": "Reviewed README.md, CHANGELOG.md, CONVENTIONS.md, Cargo.toml, Cargo.lock, specs/epics/e06-acp-daily-use/PLAN.md only lines 1–45, specs/product/SCOPE_LATEST.yaml and specs/security/epics/e06/THREAT_MODEL.md. Read the supplied sealed source manifest and all three E06 story requirements. E05 remained out of scope."
+    },
+    {
+      "area": "Exclusive authority and atomic admission",
+      "result": "PASS",
+      "evidence": "src/daemon.rs:490 routes ACP mutations through current-control authorization and Authority::admit_acp; src/control.rs:1180–1230 serializes the checked generation with commit. src/acp.rs:667 and :770 separate preparation from authoritative publication and reject stale targets, duplicate call IDs and invalid state before admission."
+    },
+    {
+      "area": "Force, cancelled claims and human control",
+      "result": "PASS",
+      "evidence": "Inspected src/control.rs claim, cancellation, offer, consent and departure handling. Force changes authority without implicitly interrupting or terminating admitted work. Ordinary pending-claim cancellation grants nobody; conditional keep/withdraw preserves the human grant and requires explicit external rearming. Corresponding retained-work and original-connection cases appear in tests/acp.rs and tests/pty_control/native.rs."
+    },
+    {
+      "area": "Exact question and permission responders",
+      "result": "PASS",
+      "evidence": "src/acp.rs:2217 validates form mode/schema and exact session-or-outstanding-request scope; permission handling validates the exact session/tool and advertised option IDs. Commit binds interaction ID/revision and admits one winner. Typed wire IDs and writer-completion stamps prevent stale replies from consuming a reused responder; src/acp.rs:2040 orders peer withdrawal against an admitted selection."
+    },
+    {
+      "area": "Authentication and conversation privacy",
+      "result": "PASS",
+      "evidence": "Authentication requires an explicit advertised supported agent method; no automatic login or unsupported filesystem/terminal delegation was found. Broker projections separate metadata from opt-in content and omit raw provider errors, stderr and transport credentials. Reviewed private-runtime directory/socket checks in src/client.rs and src/daemon.rs. No real authentication material was read."
+    },
+    {
+      "area": "Trusted profiles, argv and executable resolution",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs bounds profiles/argv/defaults and resolves an absolute executable or a single executable name using only absolute daemon-PATH directories. Executable checks follow symlinks without replacing the invocation spelling. src/acp.rs:1370 launches Command with separate arguments, not shell interpolation; launch is explicit and missing executables do not trigger installation or fallback."
+    },
+    {
+      "area": "Closed settings and exact advertised identifiers",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs accepts only bounded model/mode/effort/options inputs, rejects duplicate or ambiguous advertised metadata and selects exact offered option IDs. Settings are acknowledged sequentially before readiness; unsupported, missing, conflicting or mismatched settings fail explicitly. Inspected tests/acp/omp.rs and tests/acp/profiles.rs for these contracts."
+    },
+    {
+      "area": "Truthful settings and policy presentation",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs:212 projects requested settings separately from reported/current-or-unreported values, application phase and failures. Later drift is represented as changed rather than silently certified. The native agent/launch views preserve this distinction and do not infer a permission guarantee, cheap-model guarantee or provider policy from requested configuration."
+    },
+    {
+      "area": "Exact surviving-target recovery",
+      "result": "PASS",
+      "evidence": "src/tui.rs recovery validates daemon identity and the retained ACP agent/instance/connection/session tuple before rebinding observation. A null bootstrap session can become the acknowledged session only on the same lifetime; a known session cannot be substituted. Missing/ended targets do not fall back to same-name replacements, and recovery does not call ensure_daemon or relaunch the agent."
+    },
+    {
+      "area": "Both connection lifetimes and suspended UI are fenced",
+      "result": "PASS",
+      "evidence": "src/tui.rs:35 uses a conservative wall-clock pause boundary, including backward-clock failure. The attached loop checks pause/liveness before heartbeat and input. src/tui/control.rs:192–195 checks the worker stop flag, UI heartbeat, authority socket and observation socket before queued work; :256–260 repeats those checks after the read half of a compound claim."
+    },
+    {
+      "area": "Application-input gating and no replay",
+      "result": "PASS",
+      "evidence": "Reviewed key/repeat, literal-prefix, paste, mouse, focus, consent and editor routes in src/tui.rs, src/tui/control.rs and src/tui/agent.rs. Observer/stale input cannot become application input after a new grant. Drafts and selection bindings are discarded on identity/capability change; uncertain transport outcomes are not retried, rebound or restored as fresh submissions."
+    },
+    {
+      "area": "Acknowledged-launch continuity without duplication",
+      "result": "PASS",
+      "evidence": "src/tui.rs records successful launch identity before a later snapshot can fail; NativeControl::stop drains completed replies only to salvage a successful launch receipt. It does not salvage/replay old actions or ownership offers. tests/acp/native/recovery_edges.rs covers acknowledged-launch recovery across both authority and observation loss."
+    },
+    {
+      "area": "Bounded observer setup and cleanup",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs:162 validates the expected daemon and observation lifetime, and obtains its shutdown handle before controller creation. :379 stops and joins the old worker. Recovered-observer cleanup uses the guarded idle-controller close path; src/control.rs:1000–1090 rejects closing a controller that still owns targets or has pending claims, rather than releasing or cancelling that state."
+    },
+    {
+      "area": "Structural geometry before recovery readiness",
+      "result": "PASS",
+      "evidence": "src/tui.rs drains queued recovery input, reads current terminal geometry after blocking setup/registration, reconciles resize and paints before announcing readiness. Screen deltas validate generation and dimensions before applying cached cells. src/tui/view.rs retains the structural three-row header boundary; tests/pty_control/native.rs:1958–2007 inspects registration-time resize recovery."
+    },
+    {
+      "area": "Hostile rendering remains inert",
+      "result": "PASS",
+      "evidence": "src/acp.rs:2812 and :2836 sanitize control/directional content and omit raw metadata channels. src/tui/agent.rs uses bounded inert text/JSON rendering rather than forwarding agent escape sequences. Inspected native rendering tests asserting title/clipboard/CSI payloads never become outer-terminal effects; deliberate local clipboard gestures remain separate."
+    },
+    {
+      "area": "Frame, queue, content and identity bounds",
+      "result": "PASS",
+      "evidence": "Reviewed 1 MiB ACP framing, bounded ingress/egress/RPC queues, 4 MiB retained-content budgets, interaction/schema/choice limits, 64 KiB local content and lifetime call tombstones in src/acp.rs. OMP tool IDs have their distinct bounded opaque-ID allowance rather than weakening local capability IDs. Capacity reservation precedes interaction/work publication; live responders are not silently evicted."
+    },
+    {
+      "area": "Owned-process cleanup and retained uncertainty",
+      "result": "PASS",
+      "evidence": "src/acp.rs:1370 owns the child, original endpoints, cancellation wakeup and workers through teardown; src/runtime.rs:595–825 qualifies process ownership by kernel birth identity and rescans the owned tree before termination. src/acp.rs:324 keeps incomplete/process-identity cleanup charged. Delivery, response submission and agent application remain distinct, with unresolved work/cleanup retained as unknown rather than manufactured success."
+    },
+    {
+      "area": "Historical native-settlement and runtime-proof boundaries",
+      "result": "PASS",
+      "evidence": "The native unknown-settlement blocker remains explicit: tests/pty_control/native.rs includes a zero-warning conditional case that must not fabricate an offer. README and story requirements preserve that unresolved limitation. tests/acp.rs:31–34 marks actual OMP acceptance ignored/opt-in; its presence, deterministic peers, plan approval and parent verification were not counted as observed live interop or complete daily-use acceptance."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for this static security review: all 32 frozen paths and narrowly related authority/process contracts were reviewed. No supported new Must-fix or Should-fix finding survived source-to-sink tracing and inspection of nearby controls. Score is 100 × 20/20 static checklist items. This is not a runtime acceptance or complete E06 daily-use PASS; actual installed-OMP same-instance interop and the historically unresolved native application-settlement boundary remain separate acceptance obligations.",
+  "limits": "Read-only source inspection only. No edits, builds, tests, lint, formatting, shell/payload execution, provider/network calls, daemon/config/auth operations, commits or additional agents/review runs. No real authentication/private retired fixtures or prior review/audit/runtime reports were inspected; PLAN content after line 45 was excluded. Manifest hashes were not independently recomputed. Test assertions were reviewed as source, not exercised evidence. Actual installed OMP behavior, live genuine-question/permission effects, platform cleanup/geometry behavior and provider usage enforcement were not observed. Dependency provenance was inspected locally; no external vulnerability database or dependency-source audit was performed."
+}

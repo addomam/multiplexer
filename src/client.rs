@@ -28,15 +28,78 @@ impl std::fmt::Display for DaemonError {
 
 impl std::error::Error for DaemonError {}
 
+/// A stream can no longer be used safely, unlike an explicit daemon rejection.
+#[derive(Debug)]
+pub(crate) struct ConnectionError(anyhow::Error);
+
+impl std::fmt::Display for ConnectionError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, formatter)
+    }
+}
+
+impl std::error::Error for ConnectionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.0.as_ref())
+    }
+}
+
+pub(crate) fn connection_lost(message: &'static str) -> anyhow::Error {
+    ConnectionError(anyhow::anyhow!(message)).into()
+}
+
+pub(crate) fn is_connection_error(error: &anyhow::Error) -> bool {
+    error.downcast_ref::<ConnectionError>().is_some()
+}
+
+pub(crate) fn stream_connected(stream: &UnixStream) -> bool {
+    let mut state = libc::pollfd {
+        fd: stream.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    if unsafe { libc::poll(&mut state, 1, 0) } < 0 {
+        return std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted;
+    }
+    if state.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 {
+        return false;
+    }
+    let mut byte = 0u8;
+    let count = unsafe {
+        libc::recv(
+            stream.as_raw_fd(),
+            (&mut byte as *mut u8).cast(),
+            1,
+            libc::MSG_PEEK | libc::MSG_DONTWAIT,
+        )
+    };
+    count > 0
+        || count < 0
+            && matches!(
+                std::io::Error::last_os_error().kind(),
+                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::Interrupted
+            )
+}
+
 pub(crate) struct Connection {
     reader: BufReader<UnixStream>,
     writer: BufWriter<UnixStream>,
     response: String,
 }
 
+impl Drop for Connection {
+    fn drop(&mut self) {
+        // Shutdown handles may outlive this owning connection. In particular,
+        // a stopped native worker must invalidate its socket even while the
+        // observation loop is blocked and has not dropped its handle yet.
+        let _ = self.reader.get_ref().shutdown(std::net::Shutdown::Both);
+    }
+}
+
 impl Connection {
     pub(crate) fn connect(socket: &Path) -> Result<Self> {
         let stream = UnixStream::connect(socket)
+            .map_err(|error| ConnectionError(error.into()))
             .with_context(|| format!("cannot connect to daemon at {}", socket.display()))?;
         stream.set_write_timeout(Some(Duration::from_secs(2)))?;
         Ok(Self {
@@ -46,7 +109,29 @@ impl Connection {
         })
     }
 
+    pub(crate) fn shutdown_handle(&self) -> Result<UnixStream> {
+        Ok(self.reader.get_ref().try_clone()?)
+    }
+
+    pub(crate) fn connected(&self) -> bool {
+        stream_connected(self.reader.get_ref())
+    }
+
     pub(crate) fn request(
+        &mut self,
+        request: &impl serde::Serialize,
+        timeout: Duration,
+    ) -> Result<Value> {
+        self.request_inner(request, timeout).map_err(|error| {
+            if error.downcast_ref::<DaemonError>().is_some() {
+                error
+            } else {
+                ConnectionError(error).into()
+            }
+        })
+    }
+
+    fn request_inner(
         &mut self,
         request: &impl serde::Serialize,
         timeout: Duration,

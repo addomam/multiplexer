@@ -1,0 +1,60 @@
+{
+  "scope": "e04s02-genuine-forms-and-permissions",
+  "round": 1,
+  "reviewer": "E04S02Security1",
+  "reviewed_source": "specs/verifications/e04s02-round1-source.json",
+  "report": {
+    "coverage_summary": "RESULT: No reportable production security findings at confidence ≥8/10. No proven violation of S02's explicit P0 resource, progress or owned-cleanup contracts was identified for separate correctness reporting. This is the security-specialist report, not the separate 32-check code-review score or full-epic acceptance.\n\nReviewed the current S02 implementations in /Users/addomam/projects/amux-acp-build against the supplied frozen-source manifest and predecessor 8886c2b. Read the brief, threat model, security exclusions, approved integration/story contracts, test plan, self-audit and build evidence. Examined the complete production broker/editor implementations, all S02 integration cases and the deterministic peer; followed relevant unchanged authority, daemon, native-dispatch, CLI/client and process-ownership paths.\n\nAuthorization/admission: traced captured native/API envelopes through src/daemon.rs:441-460, current capability checks in src/control.rs:831-846 and 1194-1213, and broker preparation/commit. Exact target/instance/connection/session, generation, unique call and interaction/revision checks precede canonical selection. Competing responses share authority→ACP ordering, and losing decisions do not publish accepted work or wire responses. Native drafts retain their original authority; original-connection provenance remains separately enforced for native activity/view facts.\n\nParser/schema/responders: traced untrusted stdout through pre-accumulation framing, bounded FIFO and official envelopes into incoming_request, parse_form and parse_permission. Raw form schemas are checked before permissive typed decoding; answer validation is shared. Request-scoped forms retain their original typed outbound scope after parent completion. Typed inbound IDs, in-flight reservations and stamped responder identity prevent bookkeeping from releasing a replacement responder. Unsupported delegation/URL methods take explicit error paths, not filesystem, browser or terminal execution paths.\n\nCancellation/resources/cleanup: examined pre-publication frame/content reservations, selected-response exclusion, late-request nonselectability and confirmation only from the original prompt response. Reviewed queued/in-flight charges, pending/completed retention, canonical content versus native metadata headroom, default/unset accounting, independent writer/consumer behavior, and outside-lock birth-qualified owned cleanup. No concrete P0 contract violation survived static tracing.\n\nRendering/privacy: traced agent-controlled question/schema/tool/option/transcript data to bounded inert ratatui presentation, including control/bidi neutralization. Default inspection/global events use metadata projections; schema, questions and selections require explicit content inspection. Raw provider errors are reduced to safe categories/codes. No supported command-injection, unintended delegation or secret-exposure path was established under the trusted same-user local-control model.\n\nEvidence: read selected parent-authored bootstrap, rich-control, native/API race, interrupt and post-repair default/projection-budget records. Their synthetic-peer outcomes and cleanup receipts are supporting reported evidence, not observations from this review. Parent-reported workspace372 and S02 integration19/library22 results were NOT RUN by me. No payloads, builds, tests, linters, formatters, network, adapter, model or authentication calls were executed; repository files were not modified. No sandbox, real-provider, Linux-runtime, S03/S04 or publication security assurance is claimed.",
+    "findings": [],
+    "reviewed_paths": [
+      "src/acp.rs",
+      "src/tui/agent.rs",
+      "src/control.rs",
+      "src/daemon.rs",
+      "src/tui.rs",
+      "src/tui/control.rs",
+      "src/client.rs",
+      "src/cli.rs",
+      "src/runtime.rs",
+      "tests/acp.rs",
+      "tests/fixtures/acp_peer.rs",
+      "README.md",
+      "CHANGELOG.md",
+      "CONVENTIONS.md",
+      "specs/security/epics/e04/THREAT_MODEL.md",
+      "specs/epics/e04-acp-agent-interaction/PLAN.md",
+      "specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+      "specs/epics/e04-acp-agent-interaction/e04s02-story.md",
+      "specs/epics/e04-acp-agent-interaction/e04s02-tasks.yaml",
+      "specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+      "specs/verifications/e04s02-round1-source.json",
+      "specs/verifications/AUDIT-e04s02.md",
+      "specs/verifications/e04s02-build.md",
+      "specs/verifications/e04s02-bootstrap-native-attempt2.json",
+      "specs/verifications/e04s02-rich-native.json",
+      "specs/verifications/e04s02-form-native-first.json",
+      "specs/verifications/e04s02-native-interrupt.json",
+      "specs/verifications/e04s02-native-schema-defaults-after-attempt2.json",
+      "specs/verifications/e04s02-native-projection-budget-after-attempt2.json"
+    ],
+    "deferred": [
+      {
+        "reason": "Dynamic exploit reproduction and independent build/test/runtime/cleanup verification were deliberately not performed under the read-only assignment. Reviewed parent evidence is synthetic-peer evidence and does not establish live-provider compatibility or sandbox enforcement.",
+        "paths": [
+          "src/acp.rs",
+          "src/tui/agent.rs",
+          "tests/acp.rs",
+          "specs/verifications/e04s02-build.md"
+        ]
+      },
+      {
+        "reason": "Available tools did not provide arbitrary repository Git execution or hash computation. The requested git diff against 8886c2b and source-manifest hashes were not independently recomputed; review instead examined the complete current broker/editor implementations and relevant cross-file paths in the designated frozen worktree.",
+        "paths": [
+          "specs/verifications/e04s02-round1-source.json",
+          "src/acp.rs",
+          "src/tui/agent.rs"
+        ]
+      }
+    ]
+  }
+}

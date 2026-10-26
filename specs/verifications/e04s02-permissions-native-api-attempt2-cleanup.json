@@ -1,0 +1,8 @@
+{
+  "failure_record": "specs/verifications/e04s02-permissions-native-api-attempt2.json",
+  "cause": "Rendered surface correctly highlights the exact reject_always option, but the probe ignored the leading box border in its row selector. Strip only the observed border/space prefix. No product change.",
+  "peer_absent_after_shutdown": true,
+  "root_no_holders": true,
+  "private_root_removed": true,
+  "original_failed_proof_retained": true
+}

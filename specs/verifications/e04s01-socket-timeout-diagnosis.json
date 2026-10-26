@@ -1,0 +1,39 @@
+{
+  "status": "diagnosis complete; no source edits",
+  "confirmed": [
+    "The timeout is not zero. Production Connection::request callers are src/client.rs:144 (5\u2013305 seconds, default35), src/tui.rs:73 (same bounds), src/tui.rs:112\u2013124 (screen35seconds), and src/tui/control.rs:213,224,1570 (RPC_TIMEOUT=3seconds at line24). Client unit-test callers use2seconds. Bounds cannot overflow: min300000 precedes +5000.",
+    "Installed Rust std sys/net/connection/socket/unix.rs:385\u2013408 converts these durations to valid timeval values. Zero duration instead produces the distinct Rust error 'cannot set a 0 duration timeout', not recorded OS errno22.",
+    "macOS peer disconnection explains the exact error with a valid35second timeout. Parent's actual socketpair probe, specs/verifications/e04s01-darwin-socket-probe.json, establishes success before peer close and errno22 after it. Apple XNU sosetoptlock rejects setsockopt with EINVAL once both SS_CANTRCVMORE and SS_CANTSENDMORE are set; UNIX-stream unp_disconnect sets these flags on both peers.",
+    "Daemon expiration is intentional, not an inferred provider behavior: README.md:132 explicitly documents that persistent clients expire after five seconds without a request, including paused/output-blocked TUI clients. src/daemon.rs:1855\u20131874 uses an absolute whole-frame deadline; :1905 resets it to now+5seconds before read_line, including waiting for the first byte of the next persistent request. Timeout propagates out of serve; :2077\u20132078 drops its result, so empty daemon.log does not disprove expiration. Reader/writer drop and ClientSlot::drop (:30\u201336) remove all accepted-endpoint clones.",
+    "Connection ownership has no observed fd-lifetime bug: client.rs:38\u201345 connects one UnixStream and creates an owned try_clone for BufReader; BufWriter owns the original. Both refer to one socket, socket options are shared, and neither endpoint is raw-closed or replaced in the TUI. Observation Connection is RefCell-owned by the main UI thread; the independent control Connection is exclusively moved into its FIFO worker.",
+    "The recorded existing ACP surface excludes initial registration failure. Native-control worker errors are caught by poll and mark disconnected (control.rs:400\u2013429), not returned from run. Observation failures can escape via snapshot polling (tui.rs:868), through run to main.rs:2\u20134 and exit1. ACP-inspect errors at tui.rs:840\u2013843 are displayed/caught; subsequent snapshot failure is fatal. For the recorded still-active ACP view, the native-screen path is skipped. Failing set_read_timeout occurs before request serialization/write, so that particular failing request was not sent."
+  ],
+  "ranked_hypotheses": [
+    {
+      "rank": 1,
+      "hypothesis": "Smoke-harness outer-PTY backpressure blocked TUI drawing; observation requests stopped for more than five seconds; daemon intentionally expired the persistent observation connection; next valid35second timeout setsockopt returned EINVAL; snapshot propagation exited1.",
+      "evidence": "Parent confirms foreground smoke Eval stopped draining after Total57 while many tool calls ran. TUI display.draw at src/tui.rs:903\u2013916 is synchronous. Existing native fixture specifically prevents this with independent drain_outer (tests/pty_control/native.rs:35\u201365,216\u2013229). The OS error mechanism and daemon deadline are confirmed; original smoke lacks thread/socket timestamps, so exact blocking interval remains [INFERENCE]."
+    },
+    {
+      "rank": 2,
+      "hypothesis": "Another daemon connection teardown (for example2second response-write deadline) produced the same already-disconnected observation socket.",
+      "evidence": "Daemon writer has an absolute2second response deadline (:1877\u20131881,1938). Lower-ranked because the reported harness drainage gap directly explains idle expiration; recorded logs do not retain serve errors to distinguish these paths."
+    }
+  ],
+  "parent_runtime_experiment": {
+    "purpose": "Discriminate harness-induced starvation without modifying src/client.rs or changing production deadline/error handling.",
+    "steps": [
+      "Run the same synthetic private ACP smoke under a persistent private Zsh host, but start a dedicated PTY master reader before launching the TUI and keep it alive independently across every Eval return, tool call, daemon-state wait, and assertion. Follow existing Attachment/drain_outer: bounded retained capture but continue draining after retention cap; never hold the screen/capture lock across file I/O or parent waits.",
+      "Repeat API total42 then native human total57. After57, deliberately leave the foreground driver idle for longer than five seconds while the independent drainer remains running. Record drainer heartbeat/bytes and TUI liveness; then type a distinctive local draft, capture it, and exercise subsequent ownership steps. Keep daemon/host/reader cleanup private and explicit.",
+      "If it still fails while continuously drained, capture the live UI thread stack before releasing/reaping it. A stack inside terminal write/draw distinguishes output blockage; a live event/RPC stack shifts investigation. At the timeout failure, temporary diagnostic instrumentation should preserve original errno first, then record timeout seconds/nanoseconds, reader/writer fd, request caller/type, fcntl F_GETFD/F_GETFL, getsockopt SO_TYPE, poll revents and non-consuming recv(MSG_PEEK|MSG_DONTWAIT). Do not use SO_ERROR (clears pending error), consume stream bytes, retry requests, or alter timeout.",
+      "To establish the daemon-side reason if needed, parent can temporarily retain serve's error plus connection ID and elapsed-last-frame time instead of discarding it at daemon.rs:2078; distinguish client-frame deadline/read WouldBlock from response write timeout. No permanent diagnostics/workaround recommended."
+    ]
+  },
+  "lsp": "Existing isolated-worktree reference limitation is recorded in specs/verifications/AUDIT-e04s01.md:43: symbols work but references return empty despite known callers, even after file-specific reload. Current mounted tool inventory has no LSP route. Used exhaustive source callsite/type searches, not empty-reference proof.",
+  "sources": [
+    "https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/uipc_socket.c#L4754-L4759",
+    "https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/uipc_usrreq.c#L1704-L1718",
+    "https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/uipc_socket2.c#L278-L281"
+  ],
+  "verification": "No builds/tests/lint/formatters or runtime probes executed by this worker. No client fix justified. Parent owns the continuously-drained private smoke; existing focused regression command if needed afterward: cargo test --test pty_control actual_native_outer_output_drains_while_test_waits_only_on_daemon -- --exact (use full native:: qualified test name with --exact)."
+}

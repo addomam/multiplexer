@@ -43,3 +43,11 @@ Use command-scoped unsigned Git commits; do not alter global signing/auth config
 - [Unchanged failed complete-broker report](../verifications/e03-complete-broker-acceptance.json)
 - [Build evidence and exact exercised boundaries](../verifications/e03-integration-build.md)
 - [Explicit amendment to the approved Plan](../epics/e03-agent-interaction/PLAN.md#user-authorized-delivery-amendment--2026-10-22)
+
+## E04 post-cap local main integration
+
+The user subsequently says **“ok sick. this looks great. Let's merge this and keep going”** after the definite-rejection repair report. Accept the verified ACP delivery for local main integration. Actual controlling-PTY correction49/cancel32 and source-bound resource-bounded full1803 pass; real Codex/Grok OAuth1659 remains attributed to round4, not a fresh-source provider rerun. See `../verifications/e04-main-landing.json`.
+
+This resolves the pending human delivery decision after the original5/5 and supplemental1/1 review budgets. Their FAIL reports and numerical scores remain untouched; no independent post-repair PASS or user source inspection is claimed. All approved runtime, privacy and owned-cleanup requirements remain. No supported HIGH security finding, uncertain transport replay, safe-grant boundary or historical e03 failing acceptance is excepted.
+
+Use the approved Plan's verification gates and preserve the recorded coverage-workflow exception; no new coverage percentage is asserted. Continue with the previously requested thin non-ACP integration API scope on an isolated branch. No additional provider usage, global daemon/config/auth changes, push, tag or release is authorized by this local merge instruction.

@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "scope": "integrated E06 Rust workspace before live OMP acceptance and independent review",
+  "job": "bg_278",
+  "raw_evidence": "artifact://2058",
+  "command": "cargo clean -p terminal-showcase && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --all -- --check",
+  "exit": 0,
+  "seconds": 132.01,
+  "tests": {"passed": 426, "suites": 30, "ignored": 12},
+  "strict_clippy": "passed",
+  "all_targets_check": "passed",
+  "workspace_build": "passed",
+  "format_check": "passed",
+  "cache_repair": "Only terminal-showcase package artifacts were cleaned after its previously cached test executable embedded the old relocated CARGO_BIN_EXE path; no showcase source changed.",
+  "previous_failures_preserved": ["artifact://2051", "artifact://2056"],
+  "actual_provider_requests": 0,
+  "live_acceptance": "pending",
+  "independent_review": "pending",
+  "historical_review_caps": "unchanged"
+}

@@ -1,0 +1,71 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 12,
+  "passed_items": 12,
+  "checklist": [
+    {
+      "area": "Trusted argv and explicit profile launch",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs:10-153, src/projects.rs profile schema/validation/configure_global, src/cli.rs ACP commands, src/tui/launch.rs and src/daemon.rs:294-487: executable resolution and execution are shell-free; raw argv requires an absolute executable; configuration, names, argv and settings have explicit bounds. Trusted same-user operator execution is not classified as injection."
+    },
+    {
+      "area": "Closed, advertised startup settings and truthful reporting",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs validates closed requested fields, resolves exact advertised category/option/choice identities, serializes original-session setters and checks acknowledgements and cross-setting drift. src/acp.rs:1905-2034 keeps prompt admission unavailable until configuration completes. Unreported defaults and subsequent configuration changes remain explicit. Reviewed tests/acp/omp.rs and tests/acp/profiles.rs as source, not executed proof."
+    },
+    {
+      "area": "Capability-gated application routes",
+      "result": "PASS",
+      "evidence": "src/daemon.rs:490-514,1286-1530; src/control.rs:831-849,1194-1254; src/acp.rs prepare/commit: every ACP mutation passes current capability and generation checks, then exact target validation at the serialized commit. Native and ACP target kinds cannot substitute for one another."
+    },
+    {
+      "area": "Force, cancellation, conditional keep and withdrawal",
+      "result": "PASS",
+      "evidence": "Reviewed src/control.rs claim/handle/admission transitions and src/tui/control.rs ownership panels/warnings. Force changes authority without invoking ACP interruption or process termination; ordinary pending cancellation grants nobody; conditional keep/withdraw preserves human control. Previously admitted work retains its original identities. Reviewed corresponding tests/acp.rs, tests/acp/native/acceptance.rs and tests/pty_control/native.rs assertions."
+    },
+    {
+      "area": "Original native attachment provenance",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs:162-404,524-548,1143-1303 and existing src/control.rs report_view/is_original_native/consent consumers: native view, activity, consent and keep remain bound to the original live connection and relevant serial/activity revisions. A copied capability does not manufacture original-attachment activity or consent."
+    },
+    {
+      "area": "Exact daemon, instance, connection and session continuity",
+      "result": "PASS",
+      "evidence": "src/tui.rs Resume::validate and attached recovery; src/tui/control.rs:162-170,356-358; src/acp.rs Instance::exact: recovery rejects daemon/instance/connection replacement and established-session changes. Only a previously unknown session may become established on the same original tuple. Recovery connects to the existing socket and disables automatic acquisition; it does not launch a replacement agent or daemon."
+    },
+    {
+      "area": "Draft, queued-input and launch-receipt recovery",
+      "result": "PASS",
+      "evidence": "src/tui/agent.rs binding/sync/capture paths, src/tui.rs event routing and teardown, src/tui/control.rs worker/stop: intercepted application input cannot fall through to a PTY or be replayed under a new grant. Old workers are fenced and joined; only an already parsed successful launch target is salvaged. Reviewed tests/acp/native/daily_use.rs and recovery_edges.rs, including paused claims, bootstrap establishment and queued launch receipts."
+    },
+    {
+      "area": "Genuine OMP cancellation and exact opaque interaction identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs:1773-2330 validates original sessions, typed RPC IDs, fresh canonical interaction IDs/revisions and exact offered permission IDs. Incoming $/cancel_request serializes against an already admitted winner without becoming a human permission or prompt interrupt. Standard tool updates, elicitation and permission paths preserve complete tool IDs under the separate4-KiB bound. Reviewed OMP-shaped fixture branches and tests/acp/omp.rs; inspected existing src/acp/grok.rs as a relevant consumer."
+    },
+    {
+      "area": "Hostile human-facing content and deliberate responses",
+      "result": "PASS",
+      "evidence": "Reviewed src/acp.rs inert projections; src/tui/agent.rs display_value/push_inert, form review and permission capture; src/tui.rs clip_label; src/tui/control.rs safe/force presentation; src/tui/view.rs rendering. ACP escape/control/bidi content stays data, displayed labels do not replace protocol identities, paste only edits drafts, and permission/form actions require deliberate captured authority."
+    },
+    {
+      "area": "Bounded transport, queues, retained work and content",
+      "result": "PASS",
+      "evidence": "src/acp.rs frame/ingress/egress/RPC/responder/call/history/interaction limits include queued and in-flight charges; live responders are not evicted as completed history. src/client.rs validates complete bounded response frames; src/daemon.rs serve bounds complete request frames and response writes. Inspected related transport/capacity/identity regression source in tests/acp.rs and tests/fixtures/acp_peer.rs."
+    },
+    {
+      "area": "Owned process, pipe and native-client cleanup",
+      "result": "PASS",
+      "evidence": "src/acp.rs PipeCancellation/PipeIo/run/finish/cleanup, src/client.rs owning-connection shutdown, src/tui/control.rs stop/Drop, src/tui.rs Restore, daemon shutdown and existing src/runtime.rs ProcessTree: cleanup retains original endpoints, cancels and joins workers, uses birth-qualified owned process identities, and keeps uncertain cleanup retained and capacity-charged. Native harnesses distinguish cleanup observations from fallback."
+    },
+    {
+      "area": "Configuration/privacy boundaries, manifests and optional provider driver",
+      "result": "PASS",
+      "evidence": "Reviewed all23 manifest-listed code/test paths and relevant sections of all8 listed docs/manifests, including src/lib.rs, Cargo.toml/Cargo.lock, conventions, settled PLAN lines1-45, scope, threat model, README and CHANGELOG. Also statically reviewed tests/acp/native/omp_live.rs and credential-free local://e06-provider-gate.mjs and local://e06-live-launcher.sh for private inputs, model/effort/route/request/token/time bounds, category-only reporting and cleanup. No credential or raw provider/session data accessed."
+    }
+  ],
+  "findings": [],
+  "summary": "Fresh independent round3 read-only security source review found no supported E06 vulnerability meeting the required causal-path and confidence threshold. Twelve applicable source-review areas passed:12/12×100=100%. No Must-fix, Should-fix or Consider finding survives. This is a source-security PASS, not complete E06 acceptance, real-provider compatibility certification or authorization to integrate or publish.",
+  "limits": "No builds, tests, linters, formatters, runtime/CLI/version/browser/provider/network calls, payload execution or edits were performed. Test files were inspected statically; supplied parent runtime observations were neither rerun nor independently revalidated. Review used the supplied frozen manifest/base/branch context rather than independently recomputing Git state or hashes. No earlier review reports, dispositions, self-audits, verdicts or PLAN material after line45 were consulted. Genuine installed OMP/provider behavior remains outside this source-only conclusion: complete real-provider acceptance is not passed;8 of9 authorized requests are already spent,1 remains, and no fresh run is authorized. The optional fresh-run guard is not aggregate-budget authorization. Historical native PTY application-settlement limitations and review caps remain unchanged. No main commit, merge, push, release or global auth/config/daemon changes are authorized."
+}

@@ -56,19 +56,25 @@ struct View {
     reported: bool,
     serial: u64,
     terminal: Option<String>,
+    target_kind: TargetKind,
     focused: Option<bool>,
 }
 
 impl View {
     fn public(&self) -> Value {
-        json!({
+        let mut view = json!({
             "controller_id": self.controller_id,
             "connected": self.connected,
             "reported": self.reported,
             "serial": self.serial,
-            "terminal": self.terminal,
             "focused": self.focused,
-        })
+        });
+        if self.target_kind == TargetKind::Acp {
+            view["target"] = json!({"kind":"acp","id":self.terminal});
+        } else {
+            view["terminal"] = json!(self.terminal);
+        }
+        view
     }
 }
 
@@ -115,9 +121,48 @@ pub(crate) struct Authority {
     reference: String,
 }
 
+fn acp_id(target: &Value) -> Result<&str> {
+    object_shape(target, &["kind", "id"], &["kind", "id"])?;
+    ensure!(
+        target["kind"] == "acp",
+        "wrong-target-kind: ACP target required"
+    );
+    let id = string(target, "id")?;
+    ensure!(id.len() <= 256, "invalid-request: target ID exceeds limit");
+    Ok(id)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TargetKind {
+    Pty,
+    Acp,
+}
+
+/// A concrete ACP lifetime, not an owner capability. Callbacks are memory-only:
+/// startup/failure publication must share the target -> broker ordering point.
+#[derive(Clone, Debug)]
+pub(crate) struct AcpLifetime {
+    target: TargetRef,
+}
+
+impl AcpLifetime {
+    pub(crate) fn with_live<T>(&self, commit: impl FnOnce() -> Result<T>) -> Result<T> {
+        let target = self.target.lock();
+        target.require_live()?;
+        commit()
+    }
+
+    pub(crate) fn end(&self, commit: impl FnOnce()) {
+        let mut target = self.target.lock();
+        commit();
+        target.end(Instant::now());
+    }
+}
+
 #[derive(Debug)]
 struct Target {
     terminal: String,
+    kind: TargetKind,
     alive: bool,
     generation: u64,
     owner: Option<Owner>,
@@ -285,6 +330,10 @@ impl Registry {
     }
 
     pub(crate) fn add_target(&mut self, terminal: &str) {
+        self.add_kind(terminal, TargetKind::Pty);
+    }
+
+    fn add_kind(&mut self, terminal: &str, kind: TargetKind) {
         let mut generation = 0;
         if let Some(previous) = self.targets.remove(terminal) {
             self.with_target(previous.clone(), |target| {
@@ -308,6 +357,7 @@ impl Registry {
             terminal.to_owned(),
             Arc::new(Mutex::new(Target {
                 terminal: terminal.to_owned(),
+                kind,
                 alive: true,
                 generation,
                 owner: None,
@@ -326,6 +376,30 @@ impl Registry {
                 events: Vec::new(),
             })),
         );
+    }
+
+    pub(crate) fn add_acp_target(&mut self, id: &str) -> Result<AcpLifetime> {
+        ensure!(
+            !self.targets.contains_key(id),
+            "invalid-request: target already exists"
+        );
+        self.add_kind(id, TargetKind::Acp);
+        Ok(AcpLifetime {
+            target: self.targets[id].clone(),
+        })
+    }
+
+    pub(crate) fn end_acp(&mut self, id: &str, commit: impl FnOnce()) -> Result<()> {
+        let target = self.target(id)?;
+        self.with_target(target, |target| {
+            ensure!(
+                target.kind == TargetKind::Acp,
+                "wrong-target-kind: ACP target required"
+            );
+            commit();
+            target.end(Instant::now());
+            Ok(())
+        })
     }
 
     pub(crate) fn end_target(&mut self, terminal: &str) {
@@ -383,6 +457,7 @@ impl Registry {
             reported: false,
             serial: 0,
             terminal: None,
+            target_kind: TargetKind::Pty,
             focused: None,
         });
         self.controllers.insert(
@@ -414,21 +489,26 @@ impl Registry {
 
     fn claim_at(&mut self, request: &Value, now: Instant) -> Result<Value> {
         let mode = string(request, "mode")?;
+        let target_field = if request.get("target").is_some() {
+            "target"
+        } else {
+            "terminal"
+        };
         match mode {
             "cooperative" => {
                 request_shape(
                     request,
                     "ownership-claim",
-                    &["controller", "terminal", "observed", "mode", "when"],
-                    &["controller", "terminal", "observed", "mode", "when"],
+                    &["controller", target_field, "observed", "mode", "when"],
+                    &["controller", target_field, "observed", "mode", "when"],
                 )?;
                 validate_when(&request["when"])?;
             }
             "force" => request_shape(
                 request,
                 "ownership-claim",
-                &["controller", "terminal", "observed", "mode"],
-                &["controller", "terminal", "observed", "mode"],
+                &["controller", target_field, "observed", "mode"],
+                &["controller", target_field, "observed", "mode"],
             )?,
             _ => bail!("invalid-request: unknown ownership mode"),
         }
@@ -441,9 +521,14 @@ impl Registry {
             .ok_or_else(|| anyhow::anyhow!("stale-handle: controller is closed"))?;
         let identity = controller.identity.clone();
         let history_full = controller.claims.len() >= CLAIM_HISTORY_LIMIT;
-        let terminal = string(request, "terminal")?;
+        let (terminal, kind) = if target_field == "target" {
+            (acp_id(&request["target"])?, TargetKind::Acp)
+        } else {
+            (string(request, "terminal")?, TargetKind::Pty)
+        };
         let target = self.target(terminal)?;
         self.with_target(target, |target| {
+            ensure!(target.kind == kind, "wrong-target-kind: target selector does not match");
             target.require_live()?;
             target.compare(&request["observed"])?;
             if mode == "force" {
@@ -952,10 +1037,10 @@ impl Registry {
             .filter_map(|(id, target)| {
                 let target = target.lock();
                 let claim = target.claims.get(id)?;
-                Some(
-                    json!({"claim":capability("claim", &claim.reference), "claim_id":claim.id,
-                "terminal":target.terminal, "purpose":claim.purpose(), "phase":claim.phase}),
-                )
+                let mut state = json!({"claim":capability("claim", &claim.reference),
+                    "claim_id":claim.id,"purpose":claim.purpose(),"phase":claim.phase});
+                target.identify(&mut state);
+                Some(state)
             })
             .collect();
         Ok(
@@ -1007,22 +1092,42 @@ impl Registry {
         connection: u64,
         now: Instant,
     ) -> Result<Value> {
+        let target_field = if value.get("target").is_some() {
+            "target"
+        } else {
+            "terminal"
+        };
         object_shape(
             value,
-            &["serial", "terminal", "focused"],
-            &["serial", "terminal", "focused"],
+            &["serial", target_field, "focused"],
+            &["serial", target_field, "focused"],
         )?;
         let serial = value["serial"]
             .as_u64()
             .ok_or_else(|| anyhow::anyhow!("invalid-request: view serial must be a counter"))?;
-        let terminal = match &value["terminal"] {
-            Value::Null => None,
-            Value::String(terminal) if !terminal.is_empty() => {
-                self.target(terminal)?.lock().require_live()?;
-                Some(terminal.clone())
-            }
-            _ => bail!("invalid-request: view terminal must be a terminal ID or null"),
+        let target_kind = if target_field == "target" {
+            TargetKind::Acp
+        } else {
+            TargetKind::Pty
         };
+        let terminal = if target_kind == TargetKind::Acp {
+            Some(acp_id(&value["target"])?.to_owned())
+        } else {
+            match &value["terminal"] {
+                Value::Null => None,
+                Value::String(terminal) if !terminal.is_empty() => Some(terminal.clone()),
+                _ => bail!("invalid-request: view terminal must be a terminal ID or null"),
+            }
+        };
+        if let Some(id) = &terminal {
+            let target = self.target(id)?;
+            let target = target.lock();
+            ensure!(
+                target.kind == target_kind,
+                "wrong-target-kind: view selector does not match"
+            );
+            target.require_live()?;
+        }
         let focused = match value["focused"] {
             Value::Null => None,
             Value::Bool(focused) => Some(focused),
@@ -1046,6 +1151,7 @@ impl Registry {
         view.serial = serial;
         view.reported = true;
         view.terminal = terminal.clone();
+        view.target_kind = target_kind;
         view.focused = focused;
         let view = view.clone();
         self.change_view(id, Some(view), now);
@@ -1081,6 +1187,32 @@ impl Registry {
 }
 
 impl Authority {
+    pub(crate) fn controller_id(&self) -> &str {
+        &self.controller_id
+    }
+
+    pub(crate) fn admit_acp<T>(
+        &self,
+        end_target: bool,
+        connection: u64,
+        commit: impl FnOnce(u64) -> Result<T>,
+    ) -> Result<T> {
+        let mut target = self.target.lock();
+        self.check_locked(&target)?;
+        ensure!(
+            target.kind == TargetKind::Acp,
+            "wrong-target-kind: ACP target required"
+        );
+        let result = commit(self.generation)?;
+        if target.is_original_native(&self.controller_id, connection) {
+            target.record_activity(Instant::now());
+        }
+        if end_target {
+            target.end(Instant::now());
+        }
+        Ok(result)
+    }
+
     pub(crate) fn check(&self) -> Result<()> {
         self.check_locked(&self.target.lock())
     }
@@ -1143,6 +1275,10 @@ impl Authority {
     fn forward_native_at(&self, now: Instant) -> Result<()> {
         let mut target = self.target.lock();
         self.check_locked(&target)?;
+        ensure!(
+            target.kind == TargetKind::Pty,
+            "wrong-target-kind: PTY input required"
+        );
         if target.native_batch.is_some() {
             return Ok(());
         }
@@ -1182,6 +1318,10 @@ impl Authority {
         };
         let mut target = self.target.lock();
         self.check_locked(&target)?;
+        ensure!(
+            target.kind == TargetKind::Pty,
+            "wrong-target-kind: native action required"
+        );
         ensure!(
             !target.dispatched.contains(call_id),
             "invalid-request: call was already forwarded"
@@ -1298,6 +1438,16 @@ impl Target {
             .collect()
     }
 
+    fn identify(&self, value: &mut Value) {
+        match self.kind {
+            TargetKind::Pty => value["terminal"] = json!(self.terminal),
+            TargetKind::Acp => {
+                value["target"] = json!({"kind":"acp","id":self.terminal});
+                value["settlement_boundary"] = json!("input-admission");
+            }
+        }
+    }
+
     fn snapshot(&self, now: Instant) -> Value {
         let now = self.clock_sample.map_or(now, |previous| previous.max(now));
         let owner = self.owner.as_ref().map(|owner| json!({
@@ -1318,10 +1468,15 @@ impl Target {
                 public
             });
         let views: Vec<_> = self.views.values().map(View::public).collect();
-        json!({"terminal":self.terminal,
+        let mut snapshot = json!({
             "observed":{"generation":self.generation,"reservation_id":self.reservation},
-            "owner":owner, "reservation":reservation, "unsettled":self.unsettled(now),
-            "activity_revision":self.activity_revision,"view_revision":self.view_revision,"views":views})
+            "owner":owner, "reservation":reservation,
+            "activity_revision":self.activity_revision,"view_revision":self.view_revision,"views":views});
+        self.identify(&mut snapshot);
+        if self.kind == TargetKind::Pty {
+            snapshot["unsettled"] = json!(self.unsettled(now));
+        }
+        snapshot
     }
 
     fn emit(&mut self, kind: &str, mut data: Value, now: Instant) {
@@ -1356,12 +1511,18 @@ impl Target {
             .checked_add(1)
             .expect("ownership generation exhausted");
         let reference = mint();
-        let unsettled = self.unsettled(now);
         let mut receipt = json!({"kind":"control","control":capability("control", &reference),
-            "terminal":self.terminal,"generation":self.generation,"mode":mode,"unsettled":unsettled});
+            "generation":self.generation,"mode":mode});
+        self.identify(&mut receipt);
+        if self.kind == TargetKind::Pty {
+            receipt["unsettled"] = json!(self.unsettled(now));
+        }
         if mode == "forced" {
-            receipt["warning"] =
-                json!({"code":"prior-calls-may-apply","calls":receipt["unsettled"]});
+            receipt["warning"] = if self.kind == TargetKind::Acp {
+                json!({"code":"accepted-work-may-continue","settlement_boundary":"input-admission"})
+            } else {
+                json!({"code":"prior-calls-may-apply","calls":receipt["unsettled"]})
+            };
         }
         self.owner = Some(Owner {
             identity: identity.clone(),
@@ -1478,7 +1639,8 @@ impl Target {
                 }) {
                     if !view.reported || view.focused.is_none() {
                         unknown = true;
-                    } else if view.terminal.as_deref() == Some(self.terminal.as_str())
+                    } else if view.target_kind == self.kind
+                        && view.terminal.as_deref() == Some(self.terminal.as_str())
                         && view.focused == Some(true)
                     {
                         return "ineligible";
@@ -1821,8 +1983,9 @@ impl Target {
     fn claim_state(&self, id: &str, now: Instant) -> Value {
         let claim = &self.claims[id];
         let mut state = json!({"kind":"claim-state", "claim":capability("claim", &claim.reference),
-            "claim_id":claim.id,"purpose":claim.purpose(),"phase":claim.phase,"terminal":self.terminal,
+            "claim_id":claim.id,"purpose":claim.purpose(),"phase":claim.phase,
             "ownership":self.snapshot(now),"blockers":self.blockers(id, now)});
+        self.identify(&mut state);
         if claim.phase == "offered" {
             let offer = claim.offer.as_ref().expect("offered claim has an offer");
             state["offer"] = capability("offer", &offer.reference);

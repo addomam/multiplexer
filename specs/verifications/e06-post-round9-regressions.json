@@ -1,0 +1,83 @@
+{
+  "type": "runtime-verification",
+  "context": "E06 repaired-source nonlive acceptance; not installed-provider or source acceptance",
+  "job": "bg_353",
+  "status": "passed",
+  "exit": 0,
+  "wall_seconds": 249.81,
+  "raw": "artifact://2585",
+  "workspace": {
+    "passed": 449,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default": {
+    "passed": 338,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "checks": [
+    "cargo fmt --all",
+    "cargo build --example acp_fixture",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test --workspace",
+    "cargo test",
+    "cargo check --workspace --all-targets",
+    "cargo check --all-targets",
+    "cargo build --workspace",
+    "cargo fmt --all -- --check"
+  ],
+  "actual_cursor_showcase": {
+    "passed": 1,
+    "seconds": 3.98
+  },
+  "preserved_unknown_native_settlement_guards": {
+    "passed": 2,
+    "seconds": [
+      0.83,
+      0.82
+    ],
+    "safe_grant_unknown": "blocked"
+  },
+  "e06": {
+    "groups": [
+      13,
+      13,
+      13
+    ],
+    "extra_worker_native": 3,
+    "unique_nonlive": 42,
+    "exact_profile_and_reconnect_overlap": true,
+    "live_ignored": 1,
+    "live_acceptance": "failing"
+  },
+  "independent_final_binary": {
+    "evidence": "specs/verifications/e06-native-cli-smoke-final.json",
+    "sha256": "c211a2ccebdf389b64f9f096c85e1db23fe71b4757ef81234bcc05156a546a6d",
+    "provider_calls": 0
+  },
+  "historical_failures_preserved": [
+    "bg_343 setup-not-RED",
+    "bg_344 actual launch-edit RED",
+    "bg_346",
+    "bg_347",
+    "bg_349 unread-kernel-F10",
+    "bg_350 failed introduced-blocking-stdin candidate"
+  ],
+  "intermediate_proofs": [
+    "bg_345 launch13 GREEN",
+    "bg_348 launch13 GREEN",
+    "bg_351 corrected reader13 GREEN",
+    "bg_352 complete449/338 with preexisting vendor warning"
+  ],
+  "provider_accounting": {
+    "requests": 8,
+    "cap": 9,
+    "remaining": 1,
+    "new_requests": 0
+  },
+  "source_review": "awaiting final round10; all task gates still failing",
+  "historical_caps": "unchanged"
+}

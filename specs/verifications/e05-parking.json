@@ -1,0 +1,32 @@
+{
+  "status": "parked-by-user-not-implemented",
+  "reason": "Current consumers support ACP; installed OMP18.12.6 already ships ACP. Defer a second protocol until a concrete non-ACP consumer needs it.",
+  "authorization": "yeah agreed on parking e05 ... 1, 2, and 3 all sound good, do them",
+  "preserved": [
+    {
+      "source": "specs/product/SCOPE_LATEST.yaml",
+      "preserved": "specs/product/SCOPE_E05.yaml",
+      "sha256": "be69e3a8e847318a2885c747112b035d53ecbc67709cf7dab404fb16831b0650"
+    },
+    {
+      "source": "specs/planning-context.yaml",
+      "preserved": "specs/planning-context-e05.yaml",
+      "sha256": "3ae12542883ebc2d4af95660326357270af6c28222bc31e337080166ac971eaa"
+    },
+    {
+      "source": "specs/IMPACT_LATEST.md",
+      "preserved": "specs/IMPACT-e05.md",
+      "sha256": "d03fbb2ce04dc98f7e25a3cd16d7ac719ffea9555f1113ca7e4ce6ce2cf2283d"
+    },
+    {
+      "source": "specs/PLAN-AUDIT_LATEST.md",
+      "preserved": "specs/PLAN-AUDIT-e05.md",
+      "sha256": "530645272456c650e5e066eb10bfd5940afa2fa01767ad2e398a91f7f93d273f"
+    }
+  ],
+  "plan_review": "PASS-round2-100-100-contract-and-plan-only",
+  "tasks": "all-17-still-failing-no-runtime-acceptance",
+  "historical_review_caps": "unchanged",
+  "next": "e06-acp-daily-use",
+  "unmerged_work_discarded": false
+}

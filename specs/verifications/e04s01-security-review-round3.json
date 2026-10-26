@@ -1,0 +1,58 @@
+{
+  "coverage_summary": "Verdict: PASS for the independent, scoped static security review of e04s01-local-conversation-transport, round3, CURRENT WORKING TREE at /Users/addomam/projects/amux-acp-build. Reporting threshold: confidence >=8/10. Findings: 0 must-fix, 0 should-fix, 0 consider. Requested scoring: total_items=32; score=100*(32-0-0)/32=100. This security verdict does not replace the independent A/B code-review gates or establish story acceptance.\n\nExamined boundaries and evidence: (1) daemon ACP dispatch authorizes the target-bound capability, derives controller identity server-side, and enters Authority::admit_acp; that same target guard rechecks current authority and encloses exact tuple/generation/lifecycle/capacity validation and canonical memory admission. Close ends authority before unlocking. (2) AgentView captures target/control/generation at edit time, clears mismatched drafts, and emits immutable action envelopes. The local queue returns synchronously rejected envelopes; restoration requires the original binding, with deliberate Enter required. Queued or transport-uncertain actions are not automatically replayed. Active ACP key/paste/mouse/focus/prefix routes do not fall through to native input. (3) Adapter frames are capped before accumulation; ingress and egress account for in-flight ownership, outgoing RPCs are registered before writer visibility, and a separate FIFO application consumer processes responses without waiting on prompt/bootstrap RPC completion. Unsupported requests receive explicit bounded errors; s01 does not advertise forms or filesystem/terminal delegation. (4) Conversation/tool/plan data passes through inert rendering and bounded display functions before ratatui output; adapter launch uses absolute executable argv directly, without shell interpolation. (5) Startup publication and transport failure use the target lifetime ordering point. Explicit close/shutdown perform owned process cleanup and worker joins outside authority/topology/state locks. Inspected the reused birth-qualified ProcessTree and unreaped-child group fallback; force and ordinary claim cancellation do not signal the adapter. Failed-open rollback excludes admitted-close history and uncertain cleanup. (6) Global snapshot/events use metadata-only projections, omit transcript/environment/private capability references, and retain protocol error codes rather than raw provider error messages/data. Content inspection is explicit and cursor-bounded.\n\nRead the required contract/threat/test/evidence documents and relevant dependency pins. Inspected real-daemon fixture tests for identity rejection, retained work across transfer/socket loss, explicit auth/interrupt, malformed/flooded/stalled transport, privacy, history gaps, capacity and owned cleanup, plus selected native provenance/privacy/presentation regressions. These were source inspections, not reviewer-executed verification. Applied the skill's exclusion rules; no concrete exploitable security path survived. Same-user daemon access and agent-owned tools are not a sandbox. No source edits, commits, index mutations, builds, tests, linters, formatters, payload execution, network calls, reviewer contact, or live provider/auth/model launches were performed. Zero findings is not proof of live compatibility or complete runtime acceptance.",
+  "findings": [],
+  "reviewed_paths": [
+    "/Users/addomam/projects/amux-acp-build/CONVENTIONS.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-story.md",
+    "/Users/addomam/projects/amux-acp-build/specs/epics/e04-acp-agent-interaction/e04s01-tasks.yaml",
+    "/Users/addomam/projects/amux-acp-build/specs/adr/0004-acp-authoritative-input.md",
+    "/Users/addomam/projects/amux-acp-build/specs/security/epics/e04/THREAT_MODEL.md",
+    "/Users/addomam/projects/amux-acp-build/specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/AUDIT-e04s01.md",
+    "/Users/addomam/projects/amux-acp-build/specs/verifications/e04s01-build.md",
+    "/Users/addomam/projects/amux-acp-build/Cargo.toml",
+    "/Users/addomam/projects/amux-acp-build/Cargo.lock",
+    "/Users/addomam/projects/amux-acp-build/src/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/src/cli.rs",
+    "/Users/addomam/projects/amux-acp-build/src/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/daemon.rs",
+    "/Users/addomam/projects/amux-acp-build/src/lib.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/agent.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/control.rs",
+    "/Users/addomam/projects/amux-acp-build/src/tui/view.rs",
+    "/Users/addomam/projects/amux-acp-build/src/client.rs",
+    "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/acp.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/fixtures/acp_peer.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/pty_control.rs",
+    "/Users/addomam/projects/amux-acp-build/tests/pty_control/native.rs"
+  ],
+  "deferred": [
+    {
+      "reason": "Runtime verification was prohibited. Recorded parent verification and smoke results were not independently rerun; actual adapter/provider compatibility, platform race behavior and complete acceptance remain unproved by this review.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/tests/acp.rs",
+        "/Users/addomam/projects/amux-acp-build/tests/pty_control/native.rs"
+      ]
+    },
+    {
+      "reason": "Forms/permissions completion belongs to s02; broader lifecycle API, thin non-ACP API, and the unresolved native e03 application fence remain outside this s01 security verdict. Supporting client/runtime/native-test paths were examined only in relevant bounded sections.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/src/client.rs",
+        "/Users/addomam/projects/amux-acp-build/src/runtime.rs",
+        "/Users/addomam/projects/amux-acp-build/tests/pty_control.rs",
+        "/Users/addomam/projects/amux-acp-build/tests/pty_control/native.rs"
+      ]
+    },
+    {
+      "reason": "Dependency review was limited to the pinned schema-only integration and relevant lockfile entries. No online advisory lookup, dependency scanner or full transitive dependency source audit was performed.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp-build/Cargo.toml",
+        "/Users/addomam/projects/amux-acp-build/Cargo.lock"
+      ]
+    }
+  ]
+}

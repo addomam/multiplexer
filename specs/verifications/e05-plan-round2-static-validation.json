@@ -1,0 +1,15 @@
+{
+  "scope": "e05 repaired contract/Plan round2",
+  "status": "PASS-static-not-runtime",
+  "strict_yaml_files": 12,
+  "twenty_section_stories": 4,
+  "failing_tasks": 17,
+  "mapped_scenarios": 21,
+  "future_expected_cases": 21,
+  "future_commands_shell_syntax_checked": 6,
+  "runtime_source_manifest_matches": "22/22",
+  "new_regression_obligation": "e05s04_omp_approval_correlation mapped to all offline S04 steps/final gate; genuine SDK IDs, explicit effective policy, actual overlapping deny/allow effects and timeout/cancel fail-close",
+  "new_runtime_SDK_provider_executions": 0,
+  "historical_caps": "unchanged",
+  "limits": "Static parser/mapping/metadata/reference/shell-syntax/source-hash checks only; actual wrapper, model and new runtime tests remain failing/unexecuted."
+}

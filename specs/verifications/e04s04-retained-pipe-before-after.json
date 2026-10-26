@@ -1,0 +1,57 @@
+{
+  "scope": "S04-OPS-01-owned-pipe-cleanup",
+  "test": "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
+  "RED": {
+    "commit": "9c46d0b",
+    "job": "bg_214",
+    "artifact": "artifact://1449",
+    "exit_code": 101,
+    "passed": 0,
+    "failed": 1,
+    "test_seconds": 12.76,
+    "observed": "Canonical close admission, captured peer absent, reparented different-session retainer alive; client timeout. Only explicit endpoint release completed original cleanup."
+  },
+  "GREEN": {
+    "commit": "6a94038",
+    "job": "bg_215",
+    "exit_code": 0,
+    "passed": 1,
+    "failed": 0,
+    "test_seconds": 3.14,
+    "observed": "Both explicit close and direct shutdown complete while retainer remains alive; no EOF/fallback dependency. Cleanup stays failed/incomplete and charged;7 siblings fill remaining slots and another open fails capacity; independent actual arithmetic42; daemon0 before explicit retainer release/PID absence, sentinel survives and private socket/root removed."
+  },
+  "red_isolation": {
+    "observed_git_log": [
+      "6a94038 fix(acp): interrupt owned pipe workers during cleanup",
+      "9c46d0b test(acp): expose retained-pipe cleanup deadlock"
+    ],
+    "actual_red_diff_tree_paths": [
+      "tests/acp/acceptance.rs",
+      "tests/fixtures/acp_peer.rs"
+    ],
+    "bundled_TDD_script": "repository has no bundled bigpowers scripts; no script execution or synthetic PASS claimed"
+  },
+  "actual_outside_test": "specs/verifications/e04s04-retained-pipe-runtime.json",
+  "full_gates": {
+    "artifact": "artifact://1457",
+    "job": "bg_216",
+    "exit_code": 0,
+    "counts": {
+      "selected": 8,
+      "workspace": 392,
+      "workspace_suites": 30,
+      "workspace_ignored": 10,
+      "default": 281,
+      "default_suites": 12,
+      "default_ignored": 7,
+      "showcase_exact": 1,
+      "native_exact_guards": 2,
+      "omp": 8,
+      "omp_assertions": 49
+    },
+    "wall_seconds": 218.86
+  },
+  "next_review": "round2-required-no-cap-reset",
+  "all_S04_tasks": "failing",
+  "real_provider_runs": 0
+}

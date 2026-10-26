@@ -1,0 +1,50 @@
+{
+  "scope": "e04s03-build-round1",
+  "branch": "feat/acp-agent-interaction",
+  "worktree": "/Users/addomam/projects/amux-acp-build",
+  "head": "a71cc1e6454256973258e0ee30dffebbd8af427a",
+  "production_baseline": "f87ec7b",
+  "production_changes": false,
+  "production_change_basis": "Only the src/acp.rs cfg(test) admission case changed in production-source paths; transport/authority/daemon/client/TUI implementation is unchanged. Test-only checkpoint9638f68 and reviewed diff artifact1326 preserve the scope.",
+  "working_source_delta_after_head": [
+    "src/acp.rs: remove two method/text forwarding assertions; retain admission/revocation and exact RPC identity",
+    "tests/acp/native.rs: require successful original-leader observation before group signal; wait rendered foreground readiness before a new deliberate prompt",
+    "README.md and CHANGELOG.md: actual ownership behavior and evidence"
+  ],
+  "sha256": {
+    "src/acp.rs": "d0582a16a3867d4b2b90a89d4f156f9d9691fa8a4acdf986212b9dc6d87e577a",
+    "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+    "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+    "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+    "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+    "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+    "src/tui/agent.rs": "31c38bc46b09a77fe1856bfe691b46eb986513fe7bc43b6346654cd25a8ad3d7",
+    "tests/acp.rs": "112b25882fbc4c90c81a278545893ec448298d90e3fc0590ca5473002ed9617b",
+    "tests/acp/native.rs": "055894a7c0286c5fd64e4ae4a88c3e544f3b7a0a9df5f17134d86809e1312493",
+    "tests/fixtures/acp_peer.rs": "5cf84d7b6f4c97de7f57044cdeee9c6915211878554b54d8fb7ac90115dcb5cf",
+    "README.md": "6d3315dff8773c374e8a1cbf82822c728615d6703a5d0033d7b69ecedd43f323",
+    "CHANGELOG.md": "0be55c9903ecc707ad202e9fe920d54e3946076c84499c57b5d57f556f76c083",
+    "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+    "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb"
+  },
+  "actual_verification": {
+    "current": "artifact://1346",
+    "library": 1,
+    "integration": 11,
+    "workspace_passed": 384,
+    "workspace_suites": 30,
+    "ignored": 10,
+    "strict_clippy_check_build_fmt": "passed",
+    "omp_tests": 8,
+    "omp_assertions": 49,
+    "zsh_syntax": "passed",
+    "native_pty_regression": "artifact://1337",
+    "native_filter_passed": 19,
+    "pty_control_passed": 34,
+    "conditional_runtime": "specs/verifications/e04s03-conditional-native-attempt3.json",
+    "handoff_runtime": "specs/verifications/e04s03-handoff-native-attempt2.json"
+  },
+  "live_checks": "not-authorized-not-run",
+  "review": "not-run",
+  "historical_caps": "unchanged"
+}

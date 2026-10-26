@@ -1,0 +1,60 @@
+{
+  "round": 5,
+  "max_rounds": 5,
+  "source": "specs/verifications/e04s01-round5-source.json",
+  "denominator": 32,
+  "counts": {
+    "A": {
+      "must_fix": 0,
+      "should_fix": 1,
+      "consider": 0
+    },
+    "B": {
+      "must_fix": 0,
+      "should_fix": 0,
+      "consider": 0
+    }
+  },
+  "scores": {
+    "A": 96.875,
+    "B": 100.0
+  },
+  "numerical_and_gate": "PASS",
+  "acceptance": "numerical-gate-passed-sole-nonblocking-P2-repaired-and-verified",
+  "disposition": "Raw reports remain unchanged: A classifies one P2 should-fix and overall incorrect; B has no findings. The approved AND rule passes at 96.875/100 with zero must-fix. The P2 was reproduced in both malformed and wrong-session cases, repaired, and verified through regression tests, actual CLI and full workspace gates. An initial precautionary human-decision hold was cleared after checking the actual approved rule; no zero-should-fix or mandatory post-P2-review requirement is invented. No sixth round, cap reset or independent PASS of the later repair is claimed.",
+  "post_review_repair": {
+    "red_artifact": "artifact://1165",
+    "red_cases_failed": 2,
+    "repaired_cases_passed": 2,
+    "existing_explicit_interrupt_passed": 1,
+    "full_artifact": "artifact://1171",
+    "workspace_passed": 343,
+    "runtime_evidence": "specs/verifications/e04s01-cancel-invalid-permission-cli.json",
+    "source": "specs/verifications/e04s01-post-review-source.json",
+    "independently_reviewed_after_repair": false
+  },
+  "reports": {
+    "A": {
+      "overall_correctness": "incorrect",
+      "explanation": "Static review only; parent tests and PTY frames were read, not re-executed. One should-fix: a cancelling session/request_permission whose params fail decode or whose session does not match returns from apply before any JSON-RPC response is queued, so consume closes the instance and the in-flight prompt becomes unknown. No actionable Fowler smell. Same-view inspect-cache retention, force-as-authority-only, and the in-flight consumer lock are deliberate and fail closed.",
+      "confidence": 0.86,
+      "findings": [
+        {
+          "title": "Respond to invalid cancel-time permission requests",
+          "body": "Classification: should-fix (P2). While the foreground prompt is already cancelling, apply decodes session/request_permission with ? and ensure!s the session id before enqueueing Cancelled (src/acp.rs:1218-1223). A payload that does not decode as RequestPermissionRequest, or a session id that is not the live session, returns Err after the request id is known. consume treats that Err as transport loss and State::close marks unfinished work unknown, clears outstanding, and drains output, so that id never gets invalid_params or method_not_found. A compliant permission for the current session is unaffected; a late or malformed permission during an explicit interrupt fails the session instead of answering the request. The adjacent else branch already enqueues an explicit error and continues. Once request.id is validated, enqueue acp::Error::invalid_params() for that id and return Ok; do not close the session for this payload.",
+          "priority": 2,
+          "confidence": 0.88,
+          "file_path": "src/acp.rs",
+          "line_start": 1218,
+          "line_end": 1223
+        }
+      ]
+    },
+    "B": {
+      "overall_correctness": "correct",
+      "explanation": "No must-fix or should-fix defect: exact-tuple admission, authority-only force/cancel, explicit interrupt, input gating, and the round-5 inspect banner (null cache says no confirmed projection; same-view cache says last confirmed projection; view change drops the prior binding) match the frozen source and recorded frames. No actionable Fowler smell; the long broker and TUI loop are the approved cohesive boundary, not a defect. Static review only of the frozen working tree and parent-recorded frames; no independent build, test, or live provider execution.",
+      "confidence": 0.86,
+      "findings": []
+    }
+  }
+}

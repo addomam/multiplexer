@@ -1,0 +1,111 @@
+type: feat
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
+story_id: e04s01
+title: Shared ACP session and conversation view
+spec: e04s01-story.md
+status: passing
+bcps: 8
+risk: P0
+tasks:
+- id: 1
+  description: Open one separate ACP target end to end through real CLI/daemon with returned initial authority, asynchronous
+    initialize/newSession, basic human view and exact-session prompt stream; use standalone non-production acp_fixture stdio peer.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-01
+  - SC-e04s01-P0-02
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 2
+  description: "Implement initial exact-identity atomic authority\u2192ACP admission, duplicate call rejection, foreground\
+    \ busy semantics and retained RPC mapping through caller loss; no initially unguarded route."
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-02
+  - SC-e04s01-P0-03
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 3
+  description: Implement bounded owned stdio/FIFO using official schema payloads; prove newline-free, malformed, ingress/egress/reservation/in-flight/stall
+    failures and responsive concurrent daemon operations.
+  verify: "cargo build --example acp_fixture && cargo test --lib acp && cargo test --test acp e04s01_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-04
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 4
+  description: Implement exact explicit agent-type authenticate progression, error/closure foreground release, metadata-only
+    snapshots and incremental content/history; continue draining capped stderr.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-03
+  - SC-e04s01-P1-06
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 5
+  description: Implement owned child/descendant startup/publication/explicit ACP close/daemon shutdown cleanup outside locks;
+    test failed capture, late publication and unrelated sentinels before fallback. Native shell close/remove must preserve ACP views; no project-close API.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-05
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 6
+  description: Integrate actual native attachment/CLI surface and all initial input-kind rejection routes; exercise private
+    runtime smoke, preserve existing ownership/native broker regressions and write redacted evidence.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s01_ -- --nocapture && cargo test --test pty_control --test agent_interaction"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s01-P0-01
+  - SC-e04s01-P0-02
+  - SC-e04s01-P1-06
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+evidence: specs/verifications/e04s01-build.md

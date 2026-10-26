@@ -1,0 +1,32 @@
+{
+  "scope": "e04s02-genuine-forms-and-permissions",
+  "round": 1,
+  "reviewer": "E04S02ReviewA1",
+  "reviewed_source": "specs/verifications/e04s02-round1-source.json",
+  "capture": "Complete original automatic task delivery; retained before same-round rubric supplement",
+  "report": {
+    "overall_correctness": "correct",
+    "explanation": "Checks were NOT RUN by this reviewer. Parent evidence only: artifact://1266 workspace 372 pass / 30 suites / 10 ignored, strict clippy+check+build+fmt, Bun 8/49, zsh -n pass; artifact://1269 22 library + 19 e04s02 cases; synthetic-stdio CLI/controlling-PTY proofs cited in the brief (not a live provider). Score 100 = 100*(32-0)/32. must-fix 0, should-fix 0. Consider findings do not fail a check. Overall correct: no release-blocking defect in the frozen candidate. All 32 checks pass. Fowler smells (Long Method in Broker::commit, Interaction::event, Interaction::rebuild) and the editor's parallel draft-size estimate are not check failures. Limitations: no live adapter/auth/model proof, S03/S04 unperformed, historical e03 native fence not repaired, view reconciliation bounded by 1088 records without an asymptotic claim.",
+    "confidence": 0.86,
+    "findings": [
+      {
+        "title": "Refresh cached request-parent state",
+        "body": "Consider only; does not fail check 24. When an outstanding parent RPC completes, Interaction::content emits a new scope_parent_state, but AgentView::sync_interactions treats a hit on state/selected_work_id/delivery/application/selection as immutable and does not copy scope_parent_state. The field is not rendered and is not consulted by pending() or admission, so the human still sees the official scope and cannot submit a rebound answer. Copy that key with the other mutable canonical fields if a later surface displays it.",
+        "priority": 3,
+        "confidence": 0.9,
+        "file_path": "src/tui/agent.rs",
+        "line_start": 355,
+        "line_end": 364
+      },
+      {
+        "title": "Keep boolean unset distinct on first Space",
+        "body": "Consider only; does not fail check 11. Space on an unset boolean uses unwrap_or(false) and therefore stores true. Unset remains None until that press, and a second Space reaches false, so false, zero, and empty are not collapsed into omission and F4 can unset again. A first Space that leaves the field unset, or that sets false when the current value is absent, would make the one-press path match the unset/false distinction already used for text.",
+        "priority": 3,
+        "confidence": 0.84,
+        "file_path": "src/tui/agent.rs",
+        "line_start": 1459,
+        "line_end": 1466
+      }
+    ]
+  }
+}

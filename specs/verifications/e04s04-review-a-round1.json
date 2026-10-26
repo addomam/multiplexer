@@ -1,0 +1,16 @@
+{
+  "total_items": 32,
+  "must_fix": [],
+  "should_fix": [],
+  "consider": [],
+  "score": 100,
+  "recommendation": "PASS",
+  "source_hashes_matched": 17,
+  "checks_run": false,
+  "scope_status": "local-task1-3-implemented-flow-PASS; task4-live-adapters-unapproved-unimplemented-not-run; whole-story-FAILING",
+  "explanation": "Independent SHA256 of the 17 frozen working-tree files matched 17/17; production and dependency bytes are unchanged from baseline 5311409. The six private-daemon cases and one controlling-PTY trace observe real form values 7/11/5, all four permission dispositions, reused wire IDs with fresh responders, authority-only force, stale API and physical rejection, held 64KiB admission, cleanup before fixture fallback, and unknown close/shutdown without inventing application. No e04s04_live_adapters driver or fake ignored substitute exists, and evidence does not treat a zero-case filter as success. Supported security findings 0 and operational findings 0 at confidence >= 8. Checks were not run; parent artifact 1399 and the outside-test/native-fence records are cited evidence only. Historical e03 fence, all32 failure, and review caps remain unchanged.",
+  "fowler_smells": [
+    "Long Method: the two acceptance functions are single cohesive end-to-end traces, consistent with existing native tests and the 12-line CONVENTIONS; splitting them would hide ordering proof.",
+    "Switch Statements: s04-complete and s04-stalled-descendants extend the existing fixture mode ladder; a plugin or mode framework is forbidden by CONVENTIONS and is not warranted."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "status": "passed-repaired-consumer-gate",
+  "source_before": "specs/verifications/e06-review-round3-source.json",
+  "all_reviews_read": true,
+  "review_findings": 4,
+  "causal_RED": {
+    "job": "bg_312",
+    "raw": "artifact://2251",
+    "exit": 101,
+    "wall_seconds": 18.26,
+    "passed": 27,
+    "failed": 5,
+    "ignored": 1,
+    "failures": [
+      "registration-time queued keys emitted1ownership-claim instead of0",
+      "explicit exact ID among duplicate categories failed readiness",
+      "two distinct exact IDs in shared category failed readiness",
+      "symlink invocation identity failed readiness",
+      "native delimited inherited options did not launch"
+    ],
+    "provider_calls": 0
+  },
+  "first_GREEN_attempt": {
+    "job": "bg_313",
+    "raw": "artifact://2253",
+    "exit": 101,
+    "wall_seconds": 19.06,
+    "passed": 30,
+    "failed": 2,
+    "ignored": 1,
+    "failures": [
+      "new test incorrectly pinned independent option setter order; removed incidental wire-sequence assertions rather than repinning, retained concrete reported values/readiness/real arithmetic effects",
+      "delimited fixture readiness still failed; next run explicitly rebuilds modified acp_fixture example before selection"
+    ],
+    "second_failure_cause": "[INFERENCE] targeted integration test did not rebuild the newly modified example artifact; no additional production defect asserted",
+    "provider_calls": 0
+  },
+  "repairs": {
+    "exact_settings": "retain exact option:<ID> bookkeeping/current checks; legacy mode setter carries resolved concrete key and synchronizes only unique equivalent option; semantic/exact conflicts preserved",
+    "profile_invocation": "follow metadata without substituting canonical executable target",
+    "native_options": "untouched options override empty, inherit structured defaults without delimiters round-trip",
+    "recovery_input": "one bounded drain after first fresh observer paint, after registration/projection blocking work, safe quit/overflow preserved; announce Reconnected only on subsequent paint, no replay"
+  },
+  "aggregate_provider_accounting": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "historical_review_caps": "unchanged",
+  "GREEN": {
+    "job": "bg_314",
+    "raw": "artifact://2255",
+    "exit": 0,
+    "wall_seconds": 12.74,
+    "passed": 32,
+    "ignored_live": 1,
+    "fixture_example_explicitly_rebuilt": true,
+    "additional_production_change_after_first_green_attempt": false
+  },
+  "full_gate": "specs/verifications/e06-round4-regressions.json",
+  "immutable_native_smoke": "specs/verifications/e06-native-cli-smoke-round4.json"
+}

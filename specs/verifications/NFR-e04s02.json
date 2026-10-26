@@ -1,0 +1,50 @@
+{
+  "type": "verification",
+  "context": "specs/epics/e04-acp-agent-interaction/context.yaml",
+  "story_id": "e04s02",
+  "platform": "macOS arm64",
+  "scope": "local synthetic-peer ACP forms and permission candidate",
+  "decision": "GO_local_S02_only_independent_round1_100_100_zero_supported_security_findings",
+  "source": "e04s02-round1-source.json",
+  "performance": {
+    "status": "PASS_local_boundedness_and_progress_contract",
+    "threshold_source": "specs/tech-architecture/e04-TEST_PLAN_LATEST.md resource/performance/privacy NFRs and approved PLAN.md",
+    "numeric_latency_or_throughput_threshold": null,
+    "observed": [
+      "Current372-test workspace run preserves existing stalled-writer, hostile-transport and concurrent snapshot/ownership/cleanup boundaries.",
+      "Current19-case S02 integration run completed4.94s; this is test duration, not application latency or throughput certification.",
+      "Actual native near-capacity projection with4,194,176 canonical bytes plus bounded server metadata remains editable and original prompt reaches285/count5.",
+      "Native65th interaction after64 completed records remains editable without evicting a live responder."
+    ],
+    "budgets": {"frame_bytes": 1048576, "canonical_interaction_content_bytes": 4194304, "live_responders": 64, "completed_records": 1024, "fields_per_form": 64, "offered_form_options": 256, "submitted_answer_bytes": 65536},
+    "limitations": ["No quantitative end-to-end latency/throughput SLA or process RSS measurement is asserted.", "Resource tests and actual progress observations are the specified contract, not absence-of-panic or source-text checks."]
+  },
+  "reliability": {
+    "status": "PASS_local_original_identity_and_truthful_failure_contract",
+    "observed": [
+      "Both API/native first-winner orders for genuine forms and permissions yield one canonical selection and no losing accepted history.",
+      "Original request-scoped bootstrap/auth/prompt work and responder survive parent completion and typed wire-ID reuse without rebinding.",
+      "Actual native Ctrl-C validates pending and late mandatory Cancel/Cancelled replies, retaining cancelling until original prompt returns cancelled.",
+      "Malformed/unsupported schemas and URL/fs/terminal requests receive explicit errors; EOF/write failure never becomes agent application.",
+      "Every successful actual probe observes peer absence/owned-worker joins before fallback, normal exits/termios restoration, unrelated sentinel survival and private-root removal."
+    ],
+    "evidence": ["e04s02-native-interrupt.json", "e04s02-bootstrap-native-attempt2.json", "e04s02-permissions-native-api-attempt3.json", "e04s02-form-api-first.json", "e04s02-form-native-first.json", "e04s02-permission-api-first.json", "e04s02-permission-native-first.json", "e04s02-native-schema-defaults-after-attempt2.json", "e04s02-native-projection-budget-after-attempt2.json"],
+    "limitations": ["Failed feature/driver records are preserved individually, including their actual cleanup/fallback outcomes, and are not merged into passing terminal verdicts.", "Current-source accounting proofs postdate earlier unaffected interaction captures; no claim that all captures use one source snapshot."]
+  },
+  "operability": {
+    "status": "PASS_local_safe_observation_and_cleanup_contract",
+    "observed": [
+      "Canonical inspection separates metadata from opt-in bounded content, with explicit work/delivery/application states and history truncation.",
+      "Native view renders actual exact interaction and retained work, explicit review/selection and local validation limitations; no optimistic accepted history.",
+      "Scoped evidence credential/control-ref scan found no matches; real provider content/auth/environment and raw transport are not recorded.",
+      "Both worker commits are retained in f87ec7b; clean worktrees were removed without force after graceful OMP/MCP exit. Six owned PIDs, both worktrees/workspaces/tabs are absent; branches retained."
+    ],
+    "evidence": ["e04s02-build.md", "AUDIT-e04s02.md", "e04s02-rich-native.json", "e04s02-native-form-decline.json", "e04s02-native-form-cancel.json", "e04s02-worker-retirement.json"],
+    "limitations": ["Independent static security review found no supported findings; no runtime/provider security certification is asserted.", "Optional bundled blind-spot/completeness/trace/wiki helper scripts are absent; their checks are skipped, not passed."]
+  },
+  "terminal_verdicts": {"complete_current_run": "artifact://1266", "exact_story_run": "artifact://1269"},
+  "live_provider_auth_model_runs": false,
+  "global_config_or_default_daemon_changes": false,
+  "main_merge_push_release": false,
+  "historical_e03s08_native_fence": "unchanged-failing"
+}

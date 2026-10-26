@@ -1,0 +1,224 @@
+{
+  "source": "specs/verifications/e06-review-round11-source.json",
+  "full_gate": "specs/verifications/e06-post-round10-regressions.json",
+  "review_status": "all-seven-task-gates-PASS-source-runtime-and-separate-genuine-OMP-acceptance",
+  "current_authorized_max_rounds": 12,
+  "tasks": [
+    {
+      "id": "e06s01-T1",
+      "command": "cargo test --test acp e06s01_ -- --nocapture",
+      "job": "bg_359",
+      "passed": 13,
+      "ignored_live": 1,
+      "status": "passing",
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s01-T2",
+      "command": "cargo test --test acp e06s01_live_omp -- --ignored --exact --nocapture",
+      "status": "passing",
+      "previous_failed_job": "bg_293",
+      "previous_failure_reason": "real native/API core effects passed, final generation blocked by now-repaired stricter private guard; eight requests spent, one of nine remains; fresh live run not authorized",
+      "latest_run": {
+        "execution": "foreground-single-contiguous-run",
+        "selected": 1,
+        "passed": 1,
+        "ignored": 0,
+        "seconds": 10.06,
+        "wall_seconds": 10.38,
+        "provider_requests": 4,
+        "evidence": "specs/verifications/e06-omp-live-final.json"
+      },
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s02-T1",
+      "command": "cargo test --test acp e06s02_ -- --nocapture",
+      "job": "bg_359",
+      "passed": 13,
+      "status": "passing",
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s02-T2",
+      "command": "cargo test --test acp native::daily_use::e06s02_native_profile_launch -- --exact --nocapture",
+      "job": "bg_359",
+      "passed": 1,
+      "independent_actual_cli_native": "specs/verifications/e06-native-cli-smoke-post-round10.json",
+      "status": "passing",
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s03-T1",
+      "command": "cargo test --test acp e06s03_ -- --nocapture",
+      "job": "bg_359",
+      "passed": 13,
+      "status": "passing",
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s03-T2",
+      "command": "cargo test --test acp native::daily_use::e06s03_native_reconnect -- --exact --nocapture",
+      "job": "bg_359",
+      "passed": 1,
+      "independent_actual_cli_native": "specs/verifications/e06-native-cli-smoke-post-round10.json",
+      "status": "passing",
+      "remaining_gate": null,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    },
+    {
+      "id": "e06s03-T3",
+      "command": "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo build --workspace && cargo fmt --all -- --check",
+      "job": "bg_359",
+      "counts_overlap": true,
+      "status": "passing",
+      "remaining_gate": null,
+      "runtime": "passed",
+      "prior_full_counts": {
+        "job": "bg_321",
+        "workspace": 441,
+        "default": 330,
+        "stage": "before round6 repairs; not current-source acceptance"
+      },
+      "workspace_passed": 451,
+      "default_passed": 340,
+      "source_review": "specs/verifications/e06-review-round11.json"
+    }
+  ],
+  "provider_accounting": {
+    "actual_requests": 12,
+    "aggregate_cap": 12,
+    "remaining": 0,
+    "latest_run": 4,
+    "authorization": "specs/verifications/e06-live-cap12-authorization.json",
+    "no_further_live_calls_authorized": true
+  },
+  "ignored_live_is_not_PASS": true,
+  "historical_review_caps": "unchanged",
+  "unique_nonlive_cases": 44,
+  "groups_and_exact_selections_overlap": true,
+  "live_selector_discovery": {
+    "command": "cargo test --test acp e06s01 -- --ignored --list",
+    "result": "e06s01_live_omp: test;1 test,0 benchmarks",
+    "exit": 0,
+    "wall_seconds": 0.34,
+    "executed_tests": 0,
+    "provider_requests": 0
+  },
+  "fixture_prerequisite": "cargo build --example acp_fixture; explicitly rebuilt before bg_359",
+  "additional_consumer_regressions": {
+    "worker_unit": "tui::control::tests::e06s03_queued_native_launch_is_fenced_by_observation_loss",
+    "actual_native": "native::e06s03_native_recovery_registration_resize_reconciles_surviving_geometry",
+    "job": "bg_359",
+    "passed": 5,
+    "overlap_full_suites": true,
+    "normal_lost_geometry": "native::e06s03_native_resize_without_notification_reconciles_before_force_consent",
+    "long_model_native": "native::daily_use::e06s02_native_long_model_settings_remain_readable_and_input_is_inert (in e06s02 group; physical viewport and inert input)",
+    "filtered_replies_force": "native::e06s03_native_filtered_terminal_replies_cannot_confirm_queued_force_enter",
+    "sustained_incomplete": "native::e06s03_native_sustained_incomplete_paste_yields_to_resize_and_disconnect"
+  },
+  "source_review": "specs/verifications/e06-review-round11.json",
+  "current_repair": {
+    "round": 10,
+    "status": "runtime-passed-awaiting-fresh-source11",
+    "evidence": "specs/verifications/e06-review-round10-repairs.json",
+    "causal_native_RED": "bg_354",
+    "focused_native_GREEN": "bg_356",
+    "dependency_units": {
+      "job": "bg_358",
+      "default": 3,
+      "event_stream": 3,
+      "unique": 3
+    },
+    "full_gate": {
+      "job": "bg_359",
+      "workspace": 451,
+      "default": 340,
+      "counts_overlap": true,
+      "raw": "artifact://2632"
+    },
+    "final_binary": "784097aaca1549afa9bbf40b3b9236d5365154dc8a7f8267c1c250aaf7f02278",
+    "actual_native": "specs/verifications/e06-native-cli-smoke-post-round10.json",
+    "provider_calls": 0
+  },
+  "previous_review": {
+    "round": 9,
+    "max": 10,
+    "status": "FAIL",
+    "scores": [
+      96.875,
+      100,
+      100
+    ],
+    "source_files": 32,
+    "hashes_matched": true,
+    "evidence": "specs/verifications/e06-review-round9.json"
+  },
+  "current_review": {
+    "round": 11,
+    "max": 12,
+    "status": "PASS-source-only",
+    "scores": [
+      100,
+      100,
+      100
+    ],
+    "findings": 0,
+    "source_files": 92,
+    "hashes_matched": 92,
+    "source": "specs/verifications/e06-review-round11-source.json",
+    "report": "specs/verifications/e06-review-round11.json"
+  },
+  "previous_round9_repair": {
+    "status": "round9-repair-runtime-passed-round10-found-two-supported-input-boundary-defects",
+    "finding": "E06-R9-01",
+    "decision": "Reject complete edits; retain per-field rejection until deliberate correction; preserve legal JSON whitespace",
+    "setup_failure_not_RED": "bg_343",
+    "causal_RED": {
+      "job": "bg_344",
+      "raw_evidence": "artifact://2539"
+    },
+    "focused_GREEN": {
+      "job": "bg_345",
+      "passed": 13,
+      "raw_evidence": "artifact://2541"
+    },
+    "current_full_gate": {
+      "job": "bg_353",
+      "status": "passed",
+      "raw_evidence": "artifact://2585",
+      "workspace": 449,
+      "default": 338,
+      "counts_overlap": true
+    },
+    "preserved_failed_runs": [
+      "bg_346",
+      "bg_347",
+      "bg_349",
+      "bg_350 introduced blocking-stdin candidate, not21 original defects"
+    ],
+    "native_readiness_repair": "Wait for exact rendered new ready target/session; preserve bounded Mio readiness cursor and zero-time level check before rereading borrowed blocking stdin; no key retries, new thread or shell-fd flag changes",
+    "final_binary": "c211a2ccebdf389b64f9f096c85e1db23fe71b4757ef81234bcc05156a546a6d",
+    "provider_calls": 0
+  },
+  "previous_round10_review": {
+    "round": 10,
+    "max": 10,
+    "status": "FAIL-cap-exhausted",
+    "scores": [
+      94.44444444444444,
+      100,
+      92
+    ],
+    "source_files": 92,
+    "hashes_matched": true,
+    "source": "specs/verifications/e06-review-round10-source.json",
+    "evidence": "specs/verifications/e06-review-round10.json",
+    "supported_logical_findings": 2
+  }
+}

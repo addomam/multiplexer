@@ -22,6 +22,11 @@ enum Command {
     Attach {
         terminal: Option<String>,
     },
+    /// Open, inspect or attach an amux-owned ACP conversation.
+    Acp {
+        #[command(subcommand)]
+        command: AcpCommand,
+    },
     /// Run the local daemon in the foreground.
     Daemon {
         #[arg(long)]
@@ -161,10 +166,146 @@ enum Command {
     },
 }
 
+#[derive(clap::Args)]
+struct AcpStart {
+    /// ACP profile: omp, codex, grok, or a configured profile.
+    profile: String,
+    /// Exact project ID or unambiguous project name.
+    #[arg(long)]
+    project: String,
+    #[arg(long)]
+    name: Option<String>,
+    #[arg(long)]
+    cwd: Option<String>,
+    #[arg(long)]
+    model: Option<String>,
+    #[arg(long)]
+    mode: Option<String>,
+    #[arg(long)]
+    effort: Option<String>,
+    /// Advertised config option ID=choice ID; repeat for distinct options.
+    #[arg(long = "option", value_name = "ID=VALUE")]
+    options: Vec<String>,
+    /// JSON object of exact option ID:choice ID pairs, including delimiter-containing IDs.
+    #[arg(long, value_name = "JSON")]
+    options_json: Option<String>,
+    /// Explicit external controller JSON; returns JSON instead of attaching.
+    #[arg(long)]
+    controller: Option<String>,
+}
+
+impl AcpStart {
+    fn request(self) -> Result<Value> {
+        let mut settings = serde_json::Map::new();
+        for (key, value) in [
+            ("model", self.model),
+            ("mode", self.mode),
+            ("effort", self.effort),
+        ] {
+            if let Some(value) = value {
+                settings.insert(key.into(), Value::String(value));
+            }
+        }
+        let mut options = self
+            .options_json
+            .as_deref()
+            .map(crate::acp_profiles::parse_options_json)
+            .transpose()?
+            .unwrap_or_default();
+        for option in self.options {
+            let (id, value) = option
+                .split_once('=')
+                .context("--option requires ID=VALUE")?;
+            anyhow::ensure!(
+                !id.is_empty() && !value.is_empty(),
+                "--option requires nonempty ID=VALUE"
+            );
+            anyhow::ensure!(!options.contains_key(id), "duplicate --option ID");
+            options.insert(id.into(), Value::String(value.into()));
+        }
+        if !options.is_empty() {
+            settings.insert("options".into(), Value::Object(options));
+        }
+        let controller = self
+            .controller
+            .map(|text| serde_json::from_str::<Value>(&text))
+            .transpose()
+            .context("invalid controller JSON")?;
+        Ok(
+            json!({"op":"acp-open","agent":self.profile,"project":self.project,
+            "name":self.name,"cwd":self.cwd,"settings":settings,"controller":controller}),
+        )
+    }
+}
+
+#[derive(Subcommand)]
+enum AcpCommand {
+    /// Launch a profile and attach a human controller to that same instance.
+    Start(AcpStart),
+    /// List configured and built-in profiles without exposing adapter argv.
+    Profiles,
+    /// Start one owned stdio adapter; command argv follows --.
+    Open {
+        #[arg(long)]
+        project: String,
+        #[arg(long)]
+        controller: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        cwd: Option<String>,
+        #[arg(last = true, required = true, num_args = 1.., allow_hyphen_values = true)]
+        command: Vec<String>,
+    },
+    /// Inspect an exact target tuple; content is explicit opt-in.
+    Inspect {
+        target: String,
+        #[arg(long)]
+        content: bool,
+        #[arg(long)]
+        after: Option<u64>,
+    },
+    /// Attach a human view to the same live ACP instance.
+    Attach { view: String },
+}
+
 fn request_for(command: Command) -> Result<Value> {
     let mut value = match command {
         Command::Api { request } => {
             serde_json::from_str::<Value>(&request).context("invalid API JSON")?
+        }
+        Command::Acp {
+            command: AcpCommand::Start(start),
+        } => start.request()?,
+        Command::Acp {
+            command: AcpCommand::Profiles,
+        } => json!({"op":"acp-profiles"}),
+        Command::Acp {
+            command:
+                AcpCommand::Open {
+                    project,
+                    controller,
+                    name,
+                    cwd,
+                    command,
+                },
+        } => {
+            let controller = serde_json::from_str::<Value>(&controller)
+                .context("invalid controller handle JSON")?;
+            json!({"op":"acp-open","project":project,"controller":controller,
+                "name":name,"cwd":cwd,"command":command})
+        }
+        Command::Acp {
+            command:
+                AcpCommand::Inspect {
+                    target,
+                    content,
+                    after,
+                },
+        } => {
+            let target =
+                serde_json::from_str::<Value>(&target).context("invalid ACP target JSON")?;
+            json!({"op":"acp-inspect","target":target,"include_content":content,"after":after})
         }
         Command::Snapshot => json!({"op":"snapshot"}),
         Command::Open {
@@ -280,6 +421,28 @@ pub fn run() -> Result<()> {
         Some(Command::Attach { terminal }) => {
             crate::client::ensure_daemon(&socket)?;
             crate::tui::run(&socket, terminal)
+        }
+        Some(Command::Acp {
+            command: AcpCommand::Start(start),
+        }) if start.controller.is_none() => {
+            crate::client::ensure_daemon(&socket)?;
+            let launch = request_for(Command::Acp {
+                command: AcpCommand::Start(start),
+            })?;
+            crate::tui::start(&socket, launch)
+        }
+        Some(Command::Acp {
+            command: AcpCommand::Attach { view },
+        }) => {
+            crate::client::ensure_daemon(&socket)?;
+            let snapshot = crate::client::request(&socket, json!({"version":1,"op":"snapshot"}))?;
+            anyhow::ensure!(
+                snapshot["agent_views"]
+                    .as_array()
+                    .is_some_and(|views| views.iter().any(|agent| agent["id"] == view)),
+                "wrong-target-kind: exact ACP view ID required"
+            );
+            crate::tui::run(&socket, Some(view))
         }
         Some(Command::Daemon { projects_dir }) => crate::daemon::run(&socket, projects_dir),
         Some(Command::Internal { args }) => crate::integration::helper(&args),

@@ -1,0 +1,30 @@
+{
+  "status": "passed-after-scratch-driver-only-repairs",
+  "final_surface": "artifact://2222",
+  "final_receipt": "specs/verifications/e06-native-cli-smoke.json",
+  "production_changes_for_driver_failures": false,
+  "provider_requests": 0,
+  "failures": [
+    {
+      "stage": "external force request",
+      "cause": "Scratch driver incorrectly sent full ACP instance/session tuple to generic ownership target; actual closed ownership kind/id contract rejected unknown field.",
+      "original_peer": 57720,
+      "cleanup": "peer absent, recursive lsof empty, owned failure root removed"
+    },
+    {
+      "stage": "native arithmetic readiness",
+      "cause": "Scratch driver waited for owner/settings visibility but not actual ready lifecycle; no arithmetic effect artifact was produced. Added explicit canonical ready fence before any positive input.",
+      "classification": "driver readiness gap; no production defect asserted",
+      "original_peer": 67301,
+      "cleanup": "peer absent, recursive lsof empty, owned failure root removed"
+    },
+    {
+      "stage": "ACP prompt request",
+      "cause": "Scratch driver used generation instead of documented owner_generation; actual closed ACP schema rejected it. Reused exact existing action builder shape for prompt and close.",
+      "original_peer": 77598,
+      "cleanup": "peer absent, recursive lsof empty, owned failure root removed"
+    }
+  ],
+  "final_proof": "actual built human acp start/attach, real controlling PTYs with pinned Zsh hosts, native42 then API57 on original tuple/PID, old draft not replayed, observer reattach, normal termios/TUI/host/drainer/peer/daemon/socket/root cleanup and sentinel survival before fallback",
+  "private_auth_fixture": "already retired; these scratch scenarios had no credential copy or provider access"
+}

@@ -1,0 +1,90 @@
+{
+  "status": "PASS",
+  "provider_calls": 0,
+  "auth_read": false,
+  "source": "6b38b77 plus equivalent strict-lint condition and explicit descriptor release before charge publication; exact final-source gate1515",
+  "cases": [
+    {
+      "mode": "s04-idle-stdin-retainer",
+      "close_first": true,
+      "resource": {
+        "failure": "cleanup",
+        "stderr_truncated": false,
+        "cleanup_complete": false
+      },
+      "snapshot_responsive": true,
+      "daemon_exit": 0,
+      "daemon_exit_before_retainer_release": true,
+      "peer_absent_before_release": true,
+      "retainer_absent_after_explicit_release": true,
+      "retainer_identity": {
+        "parent": 1,
+        "session": 33856,
+        "intermediary": 33856
+      },
+      "sentinel_alive_until_own_termination": true,
+      "sentinel_exit": -15,
+      "socket_removed": true,
+      "root_removed": true,
+      "fallback_signals": [],
+      "seconds": 0.49791624999488704,
+      "shutdown_seconds": 0.2535375420120545,
+      "native_pty_started": false,
+      "drainer_started": false
+    },
+    {
+      "mode": "s04-idle-stdin-retainer",
+      "close_first": false,
+      "resource": null,
+      "snapshot_responsive": true,
+      "daemon_exit": 0,
+      "daemon_exit_before_retainer_release": true,
+      "peer_absent_before_release": true,
+      "retainer_absent_after_explicit_release": true,
+      "retainer_identity": {
+        "parent": 1,
+        "session": 33884,
+        "intermediary": 33884
+      },
+      "sentinel_alive_until_own_termination": true,
+      "sentinel_exit": -15,
+      "socket_removed": true,
+      "root_removed": true,
+      "fallback_signals": [],
+      "seconds": 0.27150637499289587,
+      "shutdown_seconds": 0.2571078749897424,
+      "native_pty_started": false,
+      "drainer_started": false
+    },
+    {
+      "mode": "s04-stdout-retainer",
+      "close_first": false,
+      "resource": {
+        "failure": "cleanup",
+        "stderr_truncated": false,
+        "cleanup_complete": false
+      },
+      "snapshot_responsive": true,
+      "daemon_exit": 0,
+      "daemon_exit_before_retainer_release": true,
+      "peer_absent_before_release": true,
+      "retainer_absent_after_explicit_release": true,
+      "retainer_identity": {
+        "parent": 1,
+        "session": 33905,
+        "intermediary": 33905
+      },
+      "sentinel_alive_until_own_termination": true,
+      "sentinel_exit": -15,
+      "socket_removed": true,
+      "root_removed": true,
+      "fallback_signals": [],
+      "seconds": 0.48678220799774863,
+      "shutdown_seconds": 0.251203332998557,
+      "native_pty_started": false,
+      "drainer_started": false
+    }
+  ],
+  "note": "Actual built CLI and private daemons; no PTY/drainer started. Elapsed observations are not latency guarantees.",
+  "source_commit": "6a5d9af"
+}

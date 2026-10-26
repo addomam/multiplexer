@@ -1,0 +1,26 @@
+{
+  "status": "passed-offline-not-live-provider-acceptance",
+  "job": "bg_292",
+  "exit": 0,
+  "selected": 1,
+  "test_seconds": 2.71,
+  "wall_seconds_including_compile": 3.68,
+  "actual_installed_server": "OMP18.12.6",
+  "synthetic_provider_responses": 4,
+  "actual_provider_requests": 0,
+  "network_policy": "OS sandbox deny-default with no network allowance",
+  "proof": {
+    "genuine_builtin_ask_through_native_editor": true,
+    "api_force_preserves_exact_pending_permission": true,
+    "exact_offered_reject_once_no_file_effect": true,
+    "exact_offered_allow_once_expected_file_effect": true,
+    "same_original_target_session_pid_work_rpc": true,
+    "normal_end_turn_no_implicit_interrupt": true,
+    "native_termios_host_drainer_and_original_agent_cleanup": true,
+    "daemon_socket_root_removed_and_unrelated_sentinel_survived": true
+  },
+  "first_attempt": {"job":"bg_291","status":"failed","exit":101,"test_seconds":1.93,"wall_seconds":3.98,"category":"permission-selection-changed","cause":"Fixture used wire-envelope outcome.optionId instead of the established canonical selection.option_id contract.","normal_owned_cleanup":"passed","actual_provider_requests":0},
+  "temporary_entrypoint": "Removed after actual smoke; permanent live driver retains scenario and independent real-budget validation. No offline bypass or fake provider path ships in production.",
+  "scope_limit": "The real installed OMP server, native UI, permission/tool effects and cleanup are exercised. Model responses are synthetic; this does not close the live-provider task.",
+  "private_auth_prompt_response_arguments_or_handles_recorded": false
+}

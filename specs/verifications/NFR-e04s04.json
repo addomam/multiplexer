@@ -1,0 +1,159 @@
+{
+  "scope": "e04s04-complete-Codex-Grok-live-integration",
+  "status": "runtime-PASS-user-accepted-postcap-local-delivery-not-new-independent-PASS",
+  "source": "specs/verifications/e04s04-rejection-recovery.json",
+  "source_commit": "66b5293",
+  "production_changes": [
+    "src/acp.rs",
+    "src/acp/grok.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs"
+  ],
+  "dependency_changes": false,
+  "current_contiguous_verification": "artifact://1803",
+  "current_independent_review": "supplemental1-FAIL-finding-locally-repaired-not-independently-cleared",
+  "current_operational_must_fix": "E04S04-OPS-S1-01-locally-fixed-verified-user-accepted-not-independently-recleared",
+  "actual_counterexample": "specs/verifications/e04s04-idle-pipe-before.json",
+  "wall_seconds": 618.33,
+  "counts": {
+    "selected": 1,
+    "workspace": 402,
+    "workspace_suites": 30,
+    "workspace_ignored": 11,
+    "default": 291,
+    "default_suites": 12,
+    "default_ignored": 8,
+    "showcase_exact": 1,
+    "native_exact_guards": 2,
+    "omp": 8,
+    "omp_assertions": 49
+  },
+  "named_cases": [
+    "acceptance::e04s04_shutdown_of_canonically_admitted_held_input_reaps_without_application",
+    "acceptance::e04s04_canonical_close_admission_precedes_shutdown_with_held_input_and_owned_tree",
+    "acceptance::e04s04_provider_error_and_stderr_pressure_preserve_private_state_and_independent_effects",
+    "acceptance::e04s04_held_stdin_descendants_allow_parallel_snapshot_force_and_unrelated_computation",
+    "acceptance::e04s04_complete_forms_and_all_permission_dispositions_keep_exact_originals_across_force",
+    "native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs",
+    "acceptance::e04s04_retained_endpoint_truth_after_stdout_reader_failure",
+    "acceptance::e04s04_retained_endpoint_truth_for_idle_stdin_close_and_shutdown",
+    "acceptance::e04s04_retained_orphan_stdio_cannot_pin_close_or_daemon_shutdown",
+    "acceptance::e04s04_hostile_frames_fail_only_their_instance_while_other_session_computes",
+    "native::acceptance::e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable",
+    "native::acceptance::e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering",
+    "native::acceptance::e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_cancel"
+  ],
+  "previous_review": {
+    "evidence": "specs/verifications/e04s04-build-review-round1.json",
+    "AND_gate": "FAIL",
+    "supported_security_findings": 0,
+    "operational_must_fix": 1,
+    "repair": "specs/verifications/e04s04-retained-pipe-before-after.json",
+    "independent_clearance": "round2-FAIL-additional-endpoint-truth-must-fix"
+  },
+  "actual_repair_runtime": "specs/verifications/e04s04-retained-pipe-runtime.json",
+  "observed_repair": {
+    "close_seconds": 0.224,
+    "shutdown_seconds": [
+      0.268,
+      0.258
+    ],
+    "no_EOF_dependency": true,
+    "daemon_exit_before_retainer_release": [
+      0,
+      0
+    ],
+    "captured_peer_and_explicitly_released_retainer_absent": true,
+    "cleanup_incomplete_and_capacity_charge_preserved": true,
+    "independent_arithmetic": 42,
+    "root_socket_cleanup_without_fallback": true,
+    "sentinel_survived_until_owned_reap": true,
+    "native_tui_or_drainer_started": false,
+    "performance_guarantee_or_benchmark": false
+  },
+  "earlier_complete_native": {
+    "evidence": "specs/verifications/e04s04-complete-native-attempt1.json",
+    "source_gate": "artifact://1399-before-pipe-repair",
+    "values": [
+      49,
+      49,
+      57
+    ],
+    "actual_CLI_controlling_PTY": true,
+    "current_repaired_source_native_acceptance_case": "passed-at1721"
+  },
+  "resource_boundaries": {
+    "frames_bytes": 1048576,
+    "queues_and_content_bytes": 4194304,
+    "charged_instance_limit": 8,
+    "additional_cancellation_descriptors_per_instance": 2,
+    "all_workers_joined_no_detach": true,
+    "uncaptured_retained_endpoint_cleanup": "failed-incomplete-retained-and-charged",
+    "known_ProcessTree_changed": false,
+    "original_stdio_owner": "all3 retained until final probes after joins; descriptors dropped before cleanup/charge publication"
+  },
+  "privacy": "User-authorized existing Codex/Grok OAuth copied into0700/0600 private homes; cleared API-key env, safe metadata-only public evidence. All owned auth/config/transcript/effect runtime files removed after observed PID absence/no open holders. No global auth/config/default-daemon changes or Claude execution.",
+  "owned_herdr_cleanup": "specs/verifications/e04s04-worker-retirement.json",
+  "native_fence": {
+    "evidence": "specs/verifications/e04s04-native-fence.json",
+    "current_exact_guards_passed": 2,
+    "settlement_repaired": false
+  },
+  "unclaimed": [
+    "unexercised adapter/provider/auth/model combinations beyond pinned Codex/Grok matrix",
+    "whole-story independent clearance; final cap5 exhausted, human review/decision required",
+    "Linux/MSRV/RSS/latency/CI/coverage-percentage proof",
+    "native upstream fence repair",
+    "ACP publication"
+  ],
+  "live_task": {
+    "status": "complete-real-matrix-PASS-on-round4-source-user-accepted-local-delivery",
+    "required_test": "e04s04_live_adapters",
+    "command_available_or_executed": true,
+    "prerequisites": "specs/verifications/e04s04-live-prerequisites.json",
+    "private_setup": "specs/verifications/e04s04-private-setup.json",
+    "installed_closure_captured": true,
+    "evidence": "specs/verifications/e04s04-live-codex-grok.json",
+    "actual_artifact": "artifact://1659",
+    "executed": 1,
+    "passed": 1,
+    "primary_real_rows": 8,
+    "private_OAuth_runtime_removed": true
+  },
+  "historical_caps": "unchanged",
+  "new_live_provider_runs": "Authorized Codex/Grok only; bounded prompt counts in live evidence, not a charged-provider-call total",
+  "endpoint_truth_RCA": "specs/verifications/e04s04-endpoint-truth-before-after.json",
+  "actual_endpoint_truth_runtime": "specs/verifications/e04s04-endpoint-truth-runtime.json",
+  "previous_round2": {
+    "evidence": "specs/verifications/e04s04-build-review-round2.json",
+    "AND_gate": "FAIL",
+    "supported_security_findings": 0,
+    "operational_must_fix": 1,
+    "next_round": 3
+  },
+  "current_supported_security_findings": 0,
+  "local_tasks": {
+    "1": "passing-runtime-and-user-postcap-delivery-decision",
+    "2": "passing-runtime-and-user-postcap-delivery-decision",
+    "3": "passing-runtime-and-user-postcap-delivery-decision",
+    "4": "passing-real-Codex-Grok-on-round4-source-no-provider-rerun"
+  },
+  "independent_clearance_round": "none-supplemental1-failed-new-must-fix",
+  "next_changed_source_round": "none-caps-preserved-human-local-delivery-decision-accepted",
+  "private_setup_scope": "Historical setup-only evidence retained; later user explicitly authorized private Codex/Grok OAuth/cheap live execution, not global changes or publication.",
+  "previous_local_baseline": {"source":"6a5d9af","artifact":"artifact://1515","review":"specs/verifications/e04s04-build-review-round3.json"},
+  "current_CLI_smoke": "specs/verifications/e04s04-grok-codec-cli.json",
+  "final_native_guard_job": "bg_260",
+  "current_Other_recovery": "specs/verifications/e04s04-other-recovery.json",
+  "actual_final_binary_CLI": "specs/verifications/e04s04-reply-budget-recovery.json",
+  "previous_round4": {"evidence":"specs/verifications/e04s04-build-review-round4.json","numeric_AND":"PASS","acceptance":"FAIL-pending-native-Other-repair","scores":[96.875,96.875],"disposition":"accepted same consumer defect from both reviewers; actual RED, pre-capture repair and current full/native/CLI proof; fresh final review required"},
+  "live_source_binding": "Real1659 ran on round4 source; no new provider call. Current actual-native recovery/full1803 proof is local and never relabelled a model rerun.",
+  "reply_budget_repair": "specs/verifications/e04s04-reply-budget-recovery.json",
+  "final_review": "specs/verifications/e04s04-build-review-supplemental1.json",
+  "supplemental_review": {"code_scores":[100,100],"specialist_score":96.875,"supported_security_findings":0,"operational_must":1,"original_reply_budget_defect":"independently-cleared","original_cycle":"exhausted5-of5-preserved","additional_used":1,"additional_allowed":1,"cap_reset":false},
+  "supplemental_runtime": "specs/verifications/e04s04-supplemental1-runtime.json",
+  "retained_admission_CLI": {"evidence":"specs/verifications/e04s04-retained-admission-cli.json","pending":6,"retained_bytes":4162387,"remaining_bytes":31917,"rejected_notes_bytes":40960,"rejected_call_no_work_or_wire":true,"same_grant_smaller_answer":"PASS","original_RPC_completed":true,"native_latch":"original-CLI-static-trace-only-new-native-repair-proof-is-separate","owned_cleanup_before_fallback":"PASS","provider_calls":0},
+  "native_rejection_recovery": {"evidence":"specs/verifications/e04s04-rejection-recovery.json","status":"locally-fixed-actual-native-and-resource-bounded-full-PASS","focused_native":1,"continuations":["correction49","cancel32"],"full":"artifact://1803","initial_parallel_failure":"artifact://1799","suite_test_threads":1,"internal_race_concurrency":"unchanged","provider_calls":0,"new_independent_clearance":false},
+  "human_delivery_authorization": "specs/verifications/e04-main-landing.json"
+}

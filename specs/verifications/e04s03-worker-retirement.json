@@ -1,0 +1,41 @@
+{
+  "scope": "e04s03-owned-herdr-workers",
+  "retired_at": "2026-10-24T07:10:51.297277+00:00",
+  "safe_integration": "eb2d0b2",
+  "worker_commits": [
+    "62874f299f112e70fb02a7a8a206badba878b52f",
+    "61812ca700de54abd1975f47ca05db0652e9ab8b",
+    "a71cc1e6454256973258e0ee30dffebbd8af427a"
+  ],
+  "ancestry_checked_before_removal": true,
+  "worker_worktrees_clean_before_removal": true,
+  "graceful_shutdown": "Ctrl-D delivered; exact original Zsh foreground observed before worktree removal",
+  "owned_process_ids": [
+    38983,
+    39035,
+    39720,
+    39729,
+    39780,
+    39781
+  ],
+  "owned_process_ids_absent": true,
+  "worktrees_absent": true,
+  "workspace_tab_absence": [
+    {
+      "workspace": "w1V",
+      "observed": "workspace_not_found",
+      "output": "{\"error\":{\"code\":\"workspace_not_found\",\"message\":\"workspace w1V not found\"},\"id\":\"cli:tab:list\"}\n\n\nWall time: 0.14 seconds\n\nCommand exited with code 1"
+    },
+    {
+      "workspace": "w1W",
+      "observed": "workspace_not_found",
+      "output": "{\"error\":{\"code\":\"workspace_not_found\",\"message\":\"workspace w1W not found\"},\"id\":\"cli:tab:list\"}\n\n\nWall time: 0.04 seconds\n\nCommand exited with code 1"
+    }
+  ],
+  "forced": false,
+  "worker_branches": "retained",
+  "unmerged_work_discarded": false,
+  "source_changed_after_review": false,
+  "live_provider_runs": 0,
+  "ACP_main_publication": "not-authorized-not-run"
+}

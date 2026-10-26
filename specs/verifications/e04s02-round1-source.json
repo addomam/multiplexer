@@ -1,0 +1,24 @@
+{
+  "scope": "e04s02-genuine-forms-and-permissions",
+  "round": 1,
+  "branch": "feat/acp-agent-interaction",
+  "worktree": "/Users/addomam/projects/amux-acp-build",
+  "diff_base": "8886c2b",
+  "pending_integration": true,
+  "backend_commit": "388da67b06b2b39daccbef14200d483d8b614c0b",
+  "editor_commit": "c2a12d660e6a07e20295fcc432093f10675e752a",
+  "parent_repairs": ["auth-test-bootstrap-read-resynchronization", "native-live-plus-completed-record-bound", "native-content-versus-metadata-accounting", "declared-default-versus-answer-budget", "unset-field-and-newly-set-draft-accounting"],
+  "sha256": {
+    "src/acp.rs": "8271ef33617489fe74b2d7e0563174383c599bf8d76db846504b9c7603da7511",
+    "src/tui/agent.rs": "31c38bc46b09a77fe1856bfe691b46eb986513fe7bc43b6346654cd25a8ad3d7",
+    "tests/acp.rs": "cdc63ca4fe315e69021de8712ccd86a34b78f2547087e05eab784087606c9597",
+    "tests/fixtures/acp_peer.rs": "89dc7da79c3f83abde8f3883d441ec5f5c1d55072a20571c5378220b48fe1ab3",
+    "README.md": "41da8763fc3afd2652b49820323dc226235ff4c834ce56e63049259ccb93c186",
+    "CHANGELOG.md": "20c5f3ae56eb246c7ca7b96ce4e3b1599e02cb0ce41259a79c3db3b6e02b24f9"
+  },
+  "current_complete_run": {"artifact": "artifact://1266", "workspace_passed": 372, "suites": 30, "ignored": 10, "strict_clippy_check_build_fmt": "passed", "omp_passed": 8, "omp_assertions": 49, "zsh_syntax": "passed"},
+  "exact_story_run": {"artifact": "artifact://1269", "acp_library_passed": 22, "s02_integration_passed": 19},
+  "independent_review": "pending",
+  "live_provider_auth_model_runs": false,
+  "publication_authorized": false
+}

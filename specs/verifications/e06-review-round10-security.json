@@ -1,0 +1,159 @@
+{
+  "verdict": "FAIL",
+  "score": 92,
+  "total_items": 25,
+  "passed_items": 23,
+  "checklist": [
+    {
+      "area": "Frozen scope and bounded requirements",
+      "result": "PASS",
+      "evidence": "Reviewed the manifest's 92 paths: 24 first-party code/test files, eight first-party documentation/manifests, and 60 vendor files. Read CONVENTIONS.md, README.md, CHANGELOG.md, Cargo.toml, Cargo.lock, SCOPE_LATEST.yaml, E06 THREAT_MODEL.md, and PLAN.md lines 1–45 only. Branch/base and release provenance are manifest assertions, not independently executed Git/hash checks."
+    },
+    {
+      "area": "Explicit CLI/native profile launch",
+      "result": "PASS",
+      "evidence": "src/cli.rs, src/tui/launch.rs, src/tui/control.rs, and src/daemon.rs preserve explicit project/profile/settings selection and launch through the original registered native controller; noninteractive launch requires an explicit controller."
+    },
+    {
+      "area": "Shell-free executable resolution and symlink invocation identity",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs resolves absolute executables or bare commands through absolute PATH entries without shell expansion; src/acp.rs uses Command::new plus separate args. Executable symlink paths are retained instead of canonicalizing away an invocation-sensitive basename. tests/acp/profiles.rs includes symlink and fallback assertions."
+    },
+    {
+      "area": "Profile/configuration validation and budgets",
+      "result": "PASS",
+      "evidence": "src/projects.rs and src/acp_profiles.rs validate a bounded profile map, bounded argv, closed settings, and safe profile labels before publishing configuration. Configuration persistence remains separate from in-memory agent/session state."
+    },
+    {
+      "area": "Truthful requested/reported/unreported settings",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs projects requested settings separately from reported capabilities/current values, distinguishes agent-default/unreported and changed states, and does not turn unavailable settings or unknown permission policy into an affirmative guarantee."
+    },
+    {
+      "area": "Exact advertised setting identities",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs resolves exact advertised option/choice identities; ambiguous semantic categories fail rather than selecting a guessed option. src/acp_profiles.rs rejects duplicate explicit JSON option keys. src/tui/launch.rs preserves explicit JSON option identities."
+    },
+    {
+      "area": "Acknowledged settings before prompt admission",
+      "result": "PASS",
+      "evidence": "src/acp.rs configure_next keeps lifecycle starting until original setting RPCs complete. src/acp/settings.rs requires value-confirming configOptions responses, allows the documented legacy mode acknowledgement shape, and rejects rejected, conflicting, displaced, or unconfirmed requested settings."
+    },
+    {
+      "area": "Same-live-agent questions and permission responses",
+      "result": "PASS",
+      "evidence": "src/acp.rs retains original request IDs/responders, checks exact session/request scope, and admits only advertised permission option IDs. cancel_incoming withdraws the matching pending responder without replacing an already admitted response or interrupting its parent prompt. tests/acp/omp.rs and tests/fixtures/acp_peer.rs cover these protocol boundaries; fixtures are not genuine-provider evidence."
+    },
+    {
+      "area": "Opaque tool-call identity preservation",
+      "result": "PASS",
+      "evidence": "src/acp.rs separates the 4-KiB upstream tool-call-ID bound from local/settings ID bounds, validates permission/form scopes, and retains full upstream identities rather than truncating or substituting them."
+    },
+    {
+      "area": "Per-target exclusivity and Force semantics",
+      "result": "PASS",
+      "evidence": "src/daemon.rs acp_action and the narrowly followed unchanged src/control.rs authorize the exact current target/control generation and recheck under the target lock at admission. Force changes authority without implicitly submitting ACP interrupt/close or killing the agent. The separate native presentation-drain defect is recorded below."
+    },
+    {
+      "area": "Pending cancellation retains admitted calls and grants nobody",
+      "result": "PASS",
+      "evidence": "Followed src/tui/control.rs cancellation requests through unchanged src/control.rs claim/handle transitions and src/acp.rs retained work. Cancellation revokes the pending claim/authority transition without treating outstanding admitted work as settled or manufacturing a new winner."
+    },
+    {
+      "area": "Keep/withdraw and external reacquisition policy",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs routes keep/withdraw on the original FIFO connection; unchanged src/control.rs validates conditional view/activity provenance and retains explicit external acceptance/reacquisition policy. No new automatic scheduling policy was identified."
+    },
+    {
+      "area": "Ordinary application-input authorization",
+      "result": "PASS",
+      "evidence": "src/tui.rs, src/tui/control.rs, and src/tui/agent.rs route key, paste, mouse, prompt, authentication, answer, permission, interrupt, and close mutations through captured/current authority. Observer input is consumed instead of forwarded or buffered for later replay. This item excludes the faulty recovery/consent drain assessed separately."
+    },
+    {
+      "area": "Exact recovery identity continuity",
+      "result": "PASS",
+      "evidence": "src/tui.rs Resume::validate checks daemon, target ID, instance ID, connection generation, and established session ID; only initial session establishment may advance a null session identity. src/tui/agent.rs discards drafts on binding/generation changes. Missing/ended/replaced targets are not substituted by name."
+    },
+    {
+      "area": "No recovery relaunch, duplicate launch, or daemon resurrection",
+      "result": "PASS",
+      "evidence": "src/tui.rs recovery reconnects with Connection::connect to the existing socket, consumes the launch request once, and does not call ensure_daemon during recovery. Acknowledged launch identity survives subsequent observation failure. src/client.rs separates ordinary startup readiness from existing-connection recovery."
+    },
+    {
+      "area": "Recovery input discard and consent/Force drain semantics",
+      "result": "FAIL",
+      "evidence": "R10-S1: src/tui.rs:1286 and :1322 treat a false zero-time event poll as a fully drained input boundary. vendor/crossterm/src/event/read.rs:65–90 can return false after one filtered internal terminal reply while parsed application events remain queued. Recovery can consequently classify old shortcuts as fresh, and presentation can advance with an old confirmation still queued."
+    },
+    {
+      "area": "Bounded native input-reader readiness",
+      "result": "FAIL",
+      "evidence": "R10-S2: vendor/crossterm/src/event/source/unix/mio.rs:107–136 loops over a ready TTY without checking the requested deadline or imposing a work/byte bound when parsing produces no complete event. The outer elapsed check cannot bound this inner loop."
+    },
+    {
+      "area": "Inherited blocking descriptors and parent-shell flags",
+      "result": "PASS",
+      "evidence": "The patched vendor/crossterm/src/event/source/unix/mio.rs uses a zero-time level-readiness check before revisiting the potentially blocking borrowed TTY. It does not apply F_SETFL/O_NONBLOCK to shared parent-shell descriptors. vendor/crossterm/src/terminal/sys/unix.rs retains raw-mode restoration rather than changing parent open-file flags."
+    },
+    {
+      "area": "Untrusted ACP content and native rendering",
+      "result": "PASS",
+      "evidence": "src/acp.rs sanitizes projected labels/content; src/tui/agent.rs renders content as data and preserves escaped/inert control display. src/tui/view.rs consumes bounded emulator cells rather than executing provider strings as host terminal commands. No source-to-host-command injection path survived review."
+    },
+    {
+      "area": "Retained delivery, uncertainty, and content budgets",
+      "result": "PASS",
+      "evidence": "src/acp.rs maintains separate delivery/outcome evidence, bounded frames/queues/history/interactions, retained unknown work, and resource charges until cleanup is actually classified. Socket failure is not converted into successful application delivery or a replay instruction."
+    },
+    {
+      "area": "Owned process/endpoints/worker cleanup",
+      "result": "PASS",
+      "evidence": "src/acp.rs retains original stdio endpoints, explicit pipe cancellation, joined workers, captured process identity, and uncertain cleanup charges. The reviewed cleanup ordering terminates owned descendants before reaping and avoids post-reap process-group signaling. src/daemon.rs closes connections and waits for in-flight ownership before shutdown."
+    },
+    {
+      "area": "Privacy and live-harness isolation boundaries",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs catalog projection excludes command argv/environment/auth; src/acp.rs removes inherited wrapper integration variables. Static review of tests/acp/native/omp_live.rs found explicit private-input ownership/mode checks and sanitized failure/result categories. No actual private inputs, auth, provider requests, or runtime evidence were accessed."
+    },
+    {
+      "area": "Historical unknown native application settlement",
+      "result": "PASS",
+      "evidence": "Followed src/daemon.rs and unchanged src/control.rs retained PTY call/unknown-settlement handling. Unknown application settlement remains unsafe and is not treated as acknowledgement, cooperative settlement, or permission to replay. This is preservation/truthfulness only—not approval of the historical native limitation or force-only acceptance."
+    },
+    {
+      "area": "First-party implementation and regression-source coverage",
+      "result": "PASS",
+      "evidence": "Reviewed src/{acp.rs,acp/settings.rs,acp_profiles.rs,cli.rs,client.rs,daemon.rs,lib.rs,projects.rs,tui.rs,tui/agent.rs,tui/control.rs,tui/launch.rs,tui/view.rs}; tests/{acp.rs,acp/native.rs,acp/native/acceptance.rs,acp/native/daily_use.rs,acp/native/omp_live.rs,acp/omp.rs,acp/profiles.rs,fixtures/acp_peer.rs,pty_control/native.rs,acp/native/recovery_edges.rs,shell_races.rs}. Existing assertions cover normal queued input, lifecycle faults, exact identity, stock-shell behavior, and cleanup, but do not establish the filtered-zero-poll or incomplete-sequence reader properties in R10-S1/R10-S2. Nothing was executed."
+    },
+    {
+      "area": "Vendored release integration and all vendor-path coverage",
+      "result": "PASS",
+      "evidence": "Reviewed all 60 manifest-listed vendor/crossterm paths at integration/source-surface level: Cargo.toml, LICENSE, README.md; all ten examples; src/{ansi_support.rs,command.rs,cursor.rs,cursor/sys.rs,cursor/sys/unix.rs,cursor/sys/windows.rs,event.rs,event/filter.rs,event/read.rs,event/source.rs,event/source/unix.rs,event/source/unix/mio.rs,event/source/unix/tty.rs,event/source/windows.rs,event/stream.rs,event/sys.rs,event/sys/unix.rs,event/sys/unix/parse.rs,event/sys/unix/waker.rs,event/sys/unix/waker/mio.rs,event/sys/unix/waker/tty.rs,event/sys/windows.rs,event/sys/windows/parse.rs,event/sys/windows/poll.rs,event/sys/windows/waker.rs,event/timeout.rs,lib.rs,clipboard.rs,macros.rs,style.rs,style/attributes.rs,style/content_style.rs,style/styled_content.rs,style/stylize.rs,style/sys.rs,style/sys/windows.rs,style/types.rs,style/types/attribute.rs,style/types/color.rs,style/types/colored.rs,style/types/colors.rs,terminal.rs,terminal/sys.rs,terminal/sys/file_descriptor.rs,terminal/sys/unix.rs,terminal/sys/windows.rs,tty.rs}. Used the sealed provenance for the 57 release-identical files; scrutinized the three changed files Cargo.toml, event/source/unix/mio.rs, and terminal/sys/unix.rs and their active Unix consumer chain. The first-party Cargo patch/lock selects this vendored integration; the two functional defects are scored separately."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R10-S1",
+      "category": "should-fix",
+      "priority": "P1",
+      "file": "src/tui.rs",
+      "line": 1286,
+      "title": "A filtered zero-time poll is incorrectly used as a recovery and consent drain",
+      "impact": "Queued pre-recovery native shortcuts can survive the recovery fence and be interpreted as deliberate fresh control requests. The same false-drain predicate can promote a painted Force warning to Confirmable or submit conditional consent while previously queued human input remains pending. This undermines fresh-human-provenance and no-replay guarantees; it is separate from historical unknown PTY application settlement.",
+      "evidence": "vendor/crossterm/src/event/read.rs:65–90 reads one source event, filters CursorPosition/KeyboardEnhancementFlags/PrimaryDeviceAttributes out through EventFilter, then returns false because the zero-duration deadline has elapsed—even when UnixInternalEventSource.parser still contains subsequent application events. The patched mio source returns the next parsed internal event first at lines 73–75. At src/tui.rs:1285–1304, two such false polls suffice to end the recovery drain and its final pending-input check; line 1315 clears drain_recovered_input. Thus terminal replies followed by an already queued control shortcut can cross that boundary. src/tui.rs:1322–1325 also calls authority.after_draw on the same false result; src/tui/control.rs:1261–1311 then promotes ForcePresentation::Drawn to Confirmable and queues eligible consent, and :1105–1115 accepts Enter as a Force claim. [INFERENCE from static control flow] An outer-input stream containing enough filtered terminal replies ahead of a queued shortcut/Enter can satisfy these checks without the queued human event being drained. Existing tests check ordinary queued keys, not this interleaving.",
+      "fix": "Do not equate the filtered public poll(false) result with an empty input boundary. Implement a bounded, explicit drain/readiness operation that inspects all already buffered source events and pending TTY input, continues past filtered terminal replies, and distinguishes genuinely empty from deadline/work-budget exhaustion. Keep recovery and consent/Force presentation fenced on an inconclusive result. Add regression coverage with terminal replies preceding queued control shortcuts and prepaint Enter, verifying no fresh claim, consent, or Force admission."
+    },
+    {
+      "id": "R10-S2",
+      "category": "should-fix",
+      "priority": "P2",
+      "file": "vendor/crossterm/src/event/source/unix/mio.rs",
+      "line": 107,
+      "title": "Ready TTY input can bypass the native reader deadline indefinitely",
+      "impact": "The explicitly required bounded native input-reader contract is not met. A continuously ready incomplete terminal sequence can monopolize an event::poll call, preventing the TUI from reaching its pause/disconnect checks, bounded recovery drain, safe-quit handling, or later resize tokens. This is an input-side availability/boundedness defect, not a claim that provider output can execute host commands.",
+      "evidence": "The elapsed-time check at mio.rs:84 runs only outside processing the retained readiness batch. Inside TTY_TOKEN, lines 107–136 repeatedly perform zero-time readiness, read, and parse; there is no elapsed check or byte/work cap if parser.next returns None. Parser::advance at :213–231 retains incomplete sequences. vendor/crossterm/src/event/sys/unix/parse.rs:813–821 returns None for an unterminated bracketed paste, regardless of how much content has accumulated. [INFERENCE from static control flow] A terminal-input producer that keeps such a paste/sequence ready can therefore keep the inner loop running beyond a finite or zero requested timeout; the caller's 1024-event bound is ineffective because no complete event is returned. The level-readiness check avoids an ordinary idle blocking read but does not bound this work.",
+      "fix": "Bound work within each TTY readiness visit and honor the caller deadline even when parsing produces no event. Retain the current readiness token/parser state when yielding so unread edge-triggered input is not lost; make budget exhaustion distinguishable from a proven empty drain so it cannot recreate R10-S1. Preserve parent-shell descriptor flags. Add source-level regression cases for finite/zero polls on sustained incomplete input, subsequent resize/wakeup progress, and safe recovery behavior."
+    }
+  ],
+  "summary": "FAIL: 23 of 25 checklist items passed; score = 100 × 23/25 = 92. Reviewed all 92 frozen paths and narrow unchanged authority references. Two supported Should-fix source-integration findings remain: filtered zero-time polling is not a valid human-input drain, and the patched TTY reader lacks an inner-loop bound. Neither finding waives or repackages historical unknown native application settlement. No optional considerations are reported.",
+  "limits": "Read-only static source review only. No edits, shell/source execution, builds, tests, lint, formatting, network/provider calls, daemon/config/auth operations, payload execution, commits, or independent hash/Git verification were performed. Actual auth/private inputs, retired private fixtures, previous reviews/audits, runtime reports, saved handoff/state, execution logs, and PLAN.md after line 45 were not consulted. Released-source identity and baseline provenance were taken from the sealed manifest; inactive/release-identical vendor files received integration/surface review, not a fresh upstream certification. Source assertions and deterministic fixtures do not establish installed OMP same-instance live acceptance, provider approval, runtime cleanup, or native application settlement. Findings describe statically derived paths, not observed exploit executions."
+}

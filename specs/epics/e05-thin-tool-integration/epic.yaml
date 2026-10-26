@@ -1,0 +1,30 @@
+id: e05
+type: epic
+context: context.yaml
+title: Language-neutral thin tool integration
+status: parked-by-explicit-user-decision-not-implemented
+scope: ../../product/SCOPE_E05.yaml
+architecture: ../../adr/0005-thin-tool-integration.md
+contract: ../../contracts/tool-integration-v1.md
+adapter_contract: ../../contracts/omp-tool-adapter.md
+impact: ../../IMPACT-e05.md
+plan: PLAN.md
+test_plan: ../../testing/e05-TEST_PLAN.md
+threat_model: ../../security/epics/e05/THREAT_MODEL.md
+priority: explicit-user-next-initiative-after-local-ACP-landing
+phase_gates:
+  contract_and_plan: two-fresh-independent-reviews-min94-zero-must-fix-max5-e05-only-rounds
+  build: explicit-user-Plan-to-Build-approval-after-independent-pass
+  live_acceptance: separately-approved-exact-harness-model-auth-call-and-spend-budget
+  main_integration_push_release: not-authorized
+historical_caps_and_native_fence: unchanged
+stories:
+  - {id: e05s01, title: Launch and converse with one tool instance, bcps: 8, risk: P0, delta: ADDED, status: failing, spec: e05s01-story.md, tasks: e05s01-tasks.yaml}
+  - {id: e05s02, title: Genuine questions and permission decisions, bcps: 8, risk: P0, delta: ADDED, status: failing, spec: e05s02-story.md, tasks: e05s02-tasks.yaml}
+  - {id: e05s03, title: Ownership handoff and truthful recovery, bcps: 8, risk: P0, delta: MODIFIED, status: failing, spec: e05s03-story.md, tasks: e05s03-tasks.yaml}
+  - {id: e05s04, title: Independent consumers and complete acceptance, bcps: 8, risk: P0, delta: ADDED, status: failing, spec: e05s04-story.md, tasks: e05s04-tasks.yaml}
+plan_status: preserved-independent-round2-PASS-not-runtime-acceptance
+plan_review: ../../verifications/e05-plan-review-round2.json
+implementation_started: false
+integration_owner: parent
+parking_evidence: ../../verifications/e05-parking.json

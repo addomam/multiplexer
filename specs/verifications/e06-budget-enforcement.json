@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "actual_provider_calls": 0,
+  "synthetic_concurrency": {
+    "kind": "synthetic-offline-enforcement",
+    "actual_provider_calls": 0,
+    "simultaneous_admitted": 4,
+    "output_caps": [
+      2000,
+      2000,
+      512,
+      2000
+    ],
+    "fifth_blocked": true,
+    "other_model_blocked": true,
+    "higher_effort_blocked": true,
+    "other_host_blocked": true
+  },
+  "synthetic_deadline": {
+    "kind": "synthetic-no-auth-no-network-deadline",
+    "exit": 124,
+    "deadline_expired": true,
+    "model_requests": 0,
+    "seconds": 1
+  },
+  "actual_installed_OMP": {
+    "status": "passed",
+    "kind": "synthetic-auth-actual-installed-OMP-with-network-denied",
+    "actual_provider_calls": 0,
+    "capture": {
+      "kind": "actual-installed-OMP-synthetic-transport-no-network",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "max_output_tokens": 2000
+    },
+    "budget_model_requests": 1,
+    "budget_blocked_requests": 6,
+    "provider_reply": "synthetic-SSE-200",
+    "prompt_returned": true,
+    "notifications": 3,
+    "child_exit": 0
+  },
+  "source_flag": {
+    "name": "PI_REQUEST_COMPRESSION",
+    "value": "0",
+    "reason": "Pinned OMP request-compression source supports explicitly disabling zstd before the fail-closed JSON budget rewriter."
+  },
+  "scope": "No real OAuth in these probes; this is enforcement proof, not live provider acceptance."
+}

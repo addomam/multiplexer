@@ -1,0 +1,124 @@
+{
+  "status": "local-main-implementation-merged-post-merge-runtime-PASS",
+  "authorization": {
+    "user_request": "commit and merge",
+    "local_commit_and_main_merge": true,
+    "push": false,
+    "tag_or_release": false,
+    "new_live_provider_calls": false,
+    "global_config_auth_changes": false
+  },
+  "feature_branch": "feat/acp-daily-use",
+  "feature_worktree": "/Users/addomam/projects/amux-integration-api",
+  "main_worktree": "/Users/addomam/projects/amux-acp",
+  "main_before": "af745cdf4045af76a7a34a8bb4260e24057461ce",
+  "feature_base": "2195b05adf23ae26a80065ecdd6d9196e2915998",
+  "integration_strategy": "fast-forward-only-preserve-existing-history",
+  "author": {
+    "name": "Addison Omead Amiri",
+    "email": "gitlog@addomam.net"
+  },
+  "signing": {
+    "status": "unsigned-existing-user-authorized-command-scoped-fallback",
+    "configured_ssh_attempt": {
+      "failed": true,
+      "exit_code": 128,
+      "message": "1Password: agent returned an error; fatal: failed to write commit object"
+    },
+    "global_git_config_changed": false
+  },
+  "commit_message": "feat(acp): complete verified daily agent workflows",
+  "scope": "E06 implementation/tests/vendor repair/acceptance and parked E05 approved planning records; no unmerged work discarded",
+  "source_binding": {
+    "code_test_vendor_Cargo_paths": 86,
+    "matched_reviewed_hashes": 86,
+    "changed": 0,
+    "review": "specs/verifications/e06-review-round11.json"
+  },
+  "acceptance": "specs/verifications/e06-daily-use-verify.json",
+  "security": {
+    "report": "specs/security/REVIEW.md",
+    "independent": "specs/verifications/e06-review-round11-security.json",
+    "score": 100,
+    "findings": 0
+  },
+  "traceability": {
+    "verdict": "WAIVED",
+    "reason": "No repository traceability matrix/blind-spot data or bundled scripts",
+    "explicit_task_verify_evidence": "7/7 present",
+    "refutation_attempt": "Potential blocker would be passing live task with only ignored fixture proof; refuted by separately executed genuine installed-OMP same-instance acceptance receipt."
+  },
+  "coverage": {
+    "percentage": "not-measured-no-repository-percentage-gate-or-report",
+    "project_acceptance": "all7 task gates pass,44 distinct nonlive E06 cases,451 workspace tests and separate genuine live acceptance; no invented percentage claim"
+  },
+  "privacy": {
+    "bounded_credential_token_scan": "no matches",
+    "initial_unbounded_pattern_matches": "classified plain hyphenated task/status strings, not credentials"
+  },
+  "provider_accounting": {
+    "actual_requests": 12,
+    "cap": 12,
+    "remaining": 0
+  },
+  "ci_registry_release": "not-requested-not-run-not-claimed",
+  "precommit_whitespace": {
+    "initial_staged_check": "failed-before-commit",
+    "first_party": "removed only the extra blank EOF line from three owned E06 story files",
+    "vendor": "Released CRLF/trailing whitespace retained byte-for-byte to preserve54 unchanged release files and the approved six-file patch; not reformatted to satisfy a first-party whitespace check",
+    "final_check": "first-party staged paths excluding vendor"
+  },
+  "staged_scope": {
+    "files": 273,
+    "insertions": 34828,
+    "deletions": 887
+  },
+  "implementation_commit": {
+    "id": "f186891867faac5dde0ffd7cf5b88a622fcaa399",
+    "subject": "feat(acp): complete verified daily agent workflows",
+    "author": "Addison Omead Amiri <gitlog@addomam.net>",
+    "signature": "N-unsigned-authorized-fallback",
+    "files": 273,
+    "insertions": 34841,
+    "deletions": 887
+  },
+  "included_prior_planning_commit": "2195b05adf23ae26a80065ecdd6d9196e2915998",
+  "main_after_implementation": "f186891867faac5dde0ffd7cf5b88a622fcaa399",
+  "first_post_merge_smoke": {
+    "status": "FAILED-prerequisite-omission-not-production-defect-proof",
+    "command": "cargo build && target/debug/amux --help && target/debug/amux acp start --help && cargo test --test acp e06s02_ -- --nocapture && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 101,
+    "build_and_both_CLI_help_commands": "PASS",
+    "profile_cases": {
+      "passed": 1,
+      "failed": 12
+    },
+    "cause": "Fresh main target lacks examples/acp_fixture; documented cargo build --example acp_fixture was omitted.",
+    "source_evidence": "tests/acp/profiles.rs:8-12; specs/verifications/e06-task-verification.json fixture_prerequisite",
+    "raw": "artifact://2702",
+    "wall_seconds": 31.43
+  },
+  "post_merge_smoke": {
+    "status": "PASS",
+    "command": "cargo build --example acp_fixture && cargo test --test acp e06s02_ -- --nocapture && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 0,
+    "profile_native_cases": 13,
+    "profile_failed": 0,
+    "profile_seconds": 2.35,
+    "stock_OMP_cases": 8,
+    "stock_OMP_failed": 0,
+    "stock_OMP_assertions": 49,
+    "zsh_syntax": "PASS",
+    "wall_seconds": 3.52,
+    "actual_provider_requests": 0,
+    "raw": "artifact://2704"
+  },
+  "final_record": "A metadata-only feature-branch commit containing this receipt is fast-forwarded after the implementation; no direct main commit or history rewrite.",
+  "worktree_cleanup_policy": {
+    "command": "git worktree remove /Users/addomam/projects/amux-integration-api && git branch -d feat/acp-daily-use",
+    "preconditions": "Run only after metadata commit is safely fast-forwarded; use no force, reset, clean or unmerged deletion.",
+    "continuing_checkout": "/Users/addomam/projects/amux-acp"
+  },
+  "push_performed": false,
+  "global_git_config_changed": false
+}

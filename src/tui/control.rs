@@ -12,12 +12,15 @@ use ratatui::{
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet},
+    net::Shutdown,
+    os::unix::net::UnixStream,
     path::Path,
     sync::{
         Arc,
+        atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, SyncSender, TrySendError},
     },
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -38,12 +41,15 @@ enum Op {
     Keep,
     Activity,
     Input,
+    Acp,
+    Launch,
 }
 
 struct Grant {
     terminal: Arc<str>,
     handle: Value,
     generation: u64,
+    action_authority: Option<Value>,
 }
 
 pub(super) enum Input {
@@ -52,6 +58,7 @@ pub(super) enum Input {
 }
 
 enum Work {
+    Stop,
     Rpc {
         target: Arc<str>,
         op: Op,
@@ -59,11 +66,12 @@ enum Work {
     },
     Refresh {
         controller: Value,
-        targets: Vec<String>,
+        targets: Vec<(String, bool)>,
     },
     Claim {
         target: Arc<str>,
         controller: Value,
+        acp: bool,
     },
     Input {
         grant: Arc<Grant>,
@@ -75,6 +83,7 @@ struct Reply {
     target: Arc<str>,
     op: Op,
     result: Result<Value>,
+    rejected_action: Option<Value>,
 }
 
 #[derive(Clone)]
@@ -122,6 +131,7 @@ pub(super) struct NativeControl {
     tx: SyncSender<Work>,
     rx: Receiver<Reply>,
     controls: HashMap<String, Arc<Grant>>,
+    agent_targets: HashSet<String>,
     ownership: HashMap<String, Value>,
     claims: HashMap<String, Value>,
     uncertain: HashSet<String>,
@@ -139,29 +149,78 @@ pub(super) struct NativeControl {
     refresh_pending: bool,
     refreshed: Instant,
     connected: bool,
+    stop: Arc<AtomicBool>,
+    heartbeat: Arc<parking_lot::Mutex<SystemTime>>,
+    stream: UnixStream,
+    socket: std::path::PathBuf,
+    worker: Option<std::thread::JoinHandle<()>>,
+    auto_acquire: bool,
+    launched: Option<Value>,
 }
 
 impl NativeControl {
-    pub(super) fn register(path: &Path) -> Result<Self> {
+    pub(super) fn register(path: &Path, daemon: &Value, observation: UnixStream) -> Result<Self> {
         let mut connection = crate::client::Connection::connect(path)?;
+        let observed = rpc(&mut connection, &mut json!({"op":"snapshot"}))?;
+        if !daemon.is_string() || observed["daemon_id"] != *daemon {
+            return Err(crate::client::connection_lost(
+                "daemon changed before native registration",
+            ));
+        }
+        if !connection.connected() || !crate::client::stream_connected(&observation) {
+            return Err(crate::client::connection_lost(
+                "native registration lost its active attachment",
+            ));
+        }
+        let stream = connection.shutdown_handle()?;
         let created = rpc(
             &mut connection,
-            json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
+            &mut json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
         )?;
+        let stop = Arc::new(AtomicBool::new(false));
+        let worker_stop = stop.clone();
+        let heartbeat = Arc::new(parking_lot::Mutex::new(SystemTime::now()));
+        let worker_heartbeat = heartbeat.clone();
         let (tx, work) = mpsc::sync_channel(128);
         let (reply, rx) = mpsc::channel();
-        std::thread::Builder::new()
+        let worker = std::thread::Builder::new()
             .name("amux-native-control".into())
             .spawn(move || {
                 while let Ok(work) = work.recv() {
+                    // A sleeping UI cannot lend stale queued authority to a
+                    // worker which happens to resume first.
+                    if worker_stop.load(Ordering::Acquire)
+                        || super::pause_expired(*worker_heartbeat.lock())
+                        || !connection.connected()
+                        || !crate::client::stream_connected(&observation)
+                    {
+                        worker_stop.store(true, Ordering::Release);
+                        break;
+                    }
+                    let mut rejected_action = None;
                     let (target, op, result) = match work {
+                        Work::Stop => break,
                         Work::Rpc {
                             target,
                             op,
-                            request,
+                            mut request,
                         } => {
                             let serial = request["view"]["serial"].as_u64();
-                            let mut result = rpc(&mut connection, request);
+                            let mut result = rpc(&mut connection, &mut request);
+                            if op == Op::Acp
+                                && matches!(
+                                    request["op"].as_str(),
+                                    Some("acp-answer" | "acp-permission")
+                                )
+                                && result.as_ref().err().is_some_and(|error| {
+                                    error.downcast_ref::<crate::client::DaemonError>().is_some()
+                                })
+                            {
+                                // Daemon errors precede admission; transport failures
+                                // remain ambiguous. Return identity, never answer text.
+                                request.as_object_mut().unwrap().remove("values");
+                                rejected_action = Some(request);
+                            }
                             if let (Op::View, Some(serial), Ok(value)) = (op, serial, &mut result) {
                                 value["native_view_serial"] = json!(serial);
                             }
@@ -175,21 +234,44 @@ impl NativeControl {
                             Op::Refresh,
                             refresh(&mut connection, controller, targets),
                         ),
-                        Work::Claim { target, controller } => {
-                            // This is one deliberate request, not a retry of a
-                            // mutation. Polling may still describe a withdrawn
-                            // reservation, so observe on the original FIFO
-                            // connection immediately before creating the claim.
-                            let result = rpc(
-                                &mut connection,
-                                json!({"op":"state","terminal":target.as_ref()}),
-                            )
-                            .and_then(|state| {
+                        Work::Claim {
+                            target,
+                            controller,
+                            acp,
+                        } => {
+                            // One deliberate claim, not replayed application input.
+                            let state = if acp {
+                                rpc(&mut connection, &mut json!({"op":"snapshot"}))
+                                    .and_then(|snapshot| agent_state(&snapshot, &target))
+                            } else {
                                 rpc(
                                     &mut connection,
-                                    json!({"op":"ownership-claim","controller":controller,
-                                        "terminal":target.as_ref(),"observed":state["ownership"]["observed"],
-                                        "mode":"cooperative","when":{"kind":"now"}}),
+                                    &mut json!({"op":"state","terminal":target.as_ref()}),
+                                )
+                            };
+                            let result = state.and_then(|state| {
+                                // Observation can span a suspend or shutdown.
+                                // Recheck immediately before lending authority,
+                                // not only when dequeuing this compound work.
+                                if worker_stop.load(Ordering::Acquire)
+                                    || super::pause_expired(*worker_heartbeat.lock())
+                                    || !connection.connected()
+                                    || !crate::client::stream_connected(&observation)
+                                {
+                                    worker_stop.store(true, Ordering::Release);
+                                    return Err(crate::client::connection_lost(
+                                        "native claim observation outlived its active attachment",
+                                    ));
+                                }
+                                rpc(
+                                    &mut connection,
+                                    &mut addressed(
+                                        json!({"op":"ownership-claim","controller":controller,
+                                    "observed":state["ownership"]["observed"],
+                                    "mode":"cooperative","when":{"kind":"now"}}),
+                                        &target,
+                                        acp,
+                                    ),
                                 )
                             });
                             (target, Op::Claim, result)
@@ -229,7 +311,16 @@ impl NativeControl {
                         .as_ref()
                         .err()
                         .is_some_and(|e| e.downcast_ref::<crate::client::DaemonError>().is_none());
-                    if reply.send(Reply { target, op, result }).is_err() || transport_failed {
+                    if reply
+                        .send(Reply {
+                            target,
+                            op,
+                            result,
+                            rejected_action,
+                        })
+                        .is_err()
+                        || transport_failed
+                    {
                         break;
                     }
                 }
@@ -243,6 +334,7 @@ impl NativeControl {
             tx,
             rx,
             controls: HashMap::new(),
+            agent_targets: HashSet::new(),
             ownership: HashMap::new(),
             claims: HashMap::new(),
             uncertain: HashSet::new(),
@@ -260,53 +352,182 @@ impl NativeControl {
             refresh_pending: false,
             refreshed: Instant::now() - REFRESH_INTERVAL,
             connected: true,
+            stop,
+            heartbeat,
+            stream,
+            socket: path.to_owned(),
+            worker: Some(worker),
+            auto_acquire: true,
+            launched: None,
         })
     }
 
-    fn enqueue(&mut self, work: Work, status: &mut String) -> bool {
-        if !self.connected {
+    pub(super) fn recovered(&mut self) {
+        self.auto_acquire = false;
+    }
+
+    pub(super) fn connected(&self) -> bool {
+        self.connected
+            && !self.stop.load(Ordering::Acquire)
+            && crate::client::stream_connected(&self.stream)
+    }
+
+    pub(super) fn heartbeat(&self) {
+        *self.heartbeat.lock() = SystemTime::now();
+    }
+
+    pub(super) fn stop(&mut self) {
+        self.connected = false;
+        self.stop.store(true, Ordering::Release);
+        let _ = self.stream.shutdown(Shutdown::Both);
+        let _ = self.tx.try_send(Work::Stop);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+            // Joining fences all old work. Retain only an already parsed
+            // successful launch receipt as identity, never process replies as
+            // live authority or restore a draft during teardown.
+            for reply in self.rx.try_iter() {
+                if reply.op == Op::Launch
+                    && let Ok(opened) = reply.result
+                {
+                    self.launched = Some(opened);
+                }
+            }
+            if !self.auto_acquire
+                && let Ok(mut connection) = crate::client::Connection::connect(&self.socket)
+            {
+                // Existing close guards refuse owners and pending claims.
+                // Cleanup never releases authority or cancels a claim; an
+                // unavailable daemon leaves the registration retained.
+                let _ = rpc(
+                    &mut connection,
+                    &mut json!({"op":"control-handle","handle":self.controller,"method":"close"}),
+                );
+            }
+        }
+        self.controls.clear();
+        self.claims.clear();
+        self.warnings.clear();
+        self.panel = None;
+    }
+
+    pub(super) fn launch(&mut self, mut request: Value, status: &mut String) {
+        request["op"] = json!("acp-open");
+        request["controller"] = self.controller.clone();
+        if self.submit("", Op::Launch, request, status).is_ok() {
+            *status = "Launching ACP agent once on this original native connection".into();
+        }
+    }
+
+    pub(super) fn take_launched(&mut self) -> Option<Value> {
+        self.launched.take()
+    }
+
+    pub(super) fn launching(&self) -> bool {
+        self.busy.contains("")
+    }
+
+    fn enqueue(&mut self, work: Work, status: &mut String) -> Result<(), Work> {
+        if !self.connected() {
             *status =
                 "Unknown/resynchronizing: native connection lost; detach and attach afresh".into();
-            return false;
+            return Err(work);
         }
         match self.tx.try_send(work) {
-            Ok(()) => true,
-            Err(TrySendError::Full(_)) => {
-                *status = "backpressure: native input consumed, not queued for replay".into();
-                false
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(work)) => {
+                *status = "backpressure: action not queued; no automatic replay".into();
+                Err(work)
             }
-            Err(TrySendError::Disconnected(_)) => {
+            Err(TrySendError::Disconnected(work)) => {
                 self.disconnected(status);
-                false
+                Err(work)
             }
         }
     }
 
     fn disconnected(&mut self, status: &mut String) {
         self.connected = false;
+        self.stop.store(true, Ordering::Release);
+        let _ = self.stream.shutdown(Shutdown::Both);
+        self.claims.clear();
+        self.warnings.clear();
+        self.panel = None;
         self.controls.clear();
         self.uncertain.extend(self.ownership.keys().cloned());
         *status =
             "Unknown/resynchronizing: native connection lost; authority is not released".into();
     }
 
-    fn submit(&mut self, terminal: &str, op: Op, request: Value, status: &mut String) -> bool {
+    fn submit(
+        &mut self,
+        terminal: &str,
+        op: Op,
+        request: Value,
+        status: &mut String,
+    ) -> Result<(), Value> {
         let busy = !matches!(op, Op::View | Op::Consent | Op::Keep | Op::Activity);
         if busy && self.busy.contains(terminal) {
-            return false;
+            if matches!(op, Op::Acp) {
+                *status = "busy: pending control RPC; action not queued".into();
+            }
+            return Err(request);
         }
-        let sent = self.enqueue(
+        match self.enqueue(
             Work::Rpc {
                 target: Arc::from(terminal),
                 op,
                 request,
             },
             status,
-        );
-        if sent && busy {
-            self.busy.insert(terminal.to_owned());
+        ) {
+            Ok(()) => {
+                if busy {
+                    self.busy.insert(terminal.to_owned());
+                }
+                Ok(())
+            }
+            Err(Work::Rpc { request, .. }) => Err(request),
+            Err(_) => unreachable!("RPC enqueue returns its original owned work"),
         }
-        sent
+    }
+
+    pub(super) fn sync_agent_targets(&mut self, snapshot: &Value) {
+        let views = snapshot["agent_views"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        self.agent_targets
+            .retain(|id| views.iter().any(|view| view["id"] == *id));
+        for view in views {
+            if let Some(id) = view["id"].as_str()
+                && !self.agent_targets.contains(id)
+            {
+                self.agent_targets.insert(id.to_owned());
+            }
+        }
+    }
+
+    pub(super) fn acp_grant(&self, id: &str) -> Option<&Value> {
+        self.can_input(id)
+            .then(|| self.controls.get(id)?.action_authority.as_ref())
+            .flatten()
+    }
+
+    pub(super) fn acp_action(&mut self, request: Value, status: &mut String) -> Result<(), Value> {
+        let Some(id) = request["target"]["id"].as_str() else {
+            *status = "invalid-request: captured ACP target required".into();
+            return Err(request);
+        };
+        let id = id.to_owned();
+        // Already captured by the editor; never substitute the current token.
+        let result = self.submit(&id, Op::Acp, request, status);
+        if result.is_ok() {
+            // A new deliberate action supersedes the prior local rejection.
+            // Local enqueue still makes no claim of daemon or agent admission.
+            status.clear();
+        }
+        result
     }
 
     pub(super) fn report_view(&mut self, terminal: &str, focus: Option<bool>, status: &mut String) {
@@ -321,15 +542,26 @@ impl NativeControl {
             .serial
             .checked_add(1)
             .expect("native view serial exhausted");
-        let request = json!({"op":"control-handle","handle":self.controller,"method":"view",
-            "view":{"serial":serial,"terminal":if terminal.is_empty(){None}else{Some(terminal)},"focused":focus}});
-        if self.submit(terminal, Op::View, request, status) {
+        let view = addressed(
+            json!({"serial":serial,"focused":focus}),
+            terminal,
+            self.agent_targets.contains(terminal),
+        );
+        let request =
+            json!({"op":"control-handle","handle":self.controller,"method":"view","view":view});
+        if self.submit(terminal, Op::View, request, status).is_ok() {
             self.serial = serial;
             self.view = Some((terminal.to_owned(), focus));
         }
     }
 
-    pub(super) fn poll(&mut self, active: &str, status: &mut String) -> bool {
+    pub(super) fn poll(
+        &mut self,
+        active: &str,
+        status: &mut String,
+        mut rejected: impl FnMut(Value, Option<&Value>),
+    ) -> bool {
+        let controlled_before = self.can_input(active);
         let mut changed = false;
         loop {
             match self.rx.try_recv() {
@@ -372,6 +604,11 @@ impl NativeControl {
                                 if reply.op == Op::Consent {
                                     self.warnings.remove(terminal);
                                 }
+                                if terminal == active
+                                    && let Some(action) = reply.rejected_action
+                                {
+                                    rejected(action, self.acp_grant(terminal));
+                                }
                                 self.refreshed = Instant::now() - REFRESH_INTERVAL;
                             } else {
                                 self.disconnected(status);
@@ -389,6 +626,10 @@ impl NativeControl {
                 }
             }
         }
+        if controlled_before && !self.can_input(active) {
+            *status =
+                "Control unavailable; input blocked; intercepted input was not replayed".into();
+        }
         if self.connected && !self.refresh_pending && self.refreshed.elapsed() >= REFRESH_INTERVAL {
             let mut targets = HashSet::from([active.to_owned()]);
             targets.extend(self.controls.keys().cloned());
@@ -397,13 +638,21 @@ impl NativeControl {
                 targets.insert(panel.target.clone());
             }
             targets.remove("");
-            self.refresh_pending = self.enqueue(
-                Work::Refresh {
-                    controller: self.controller.clone(),
-                    targets: targets.into_iter().collect(),
-                },
-                status,
-            );
+            self.refresh_pending = self
+                .enqueue(
+                    Work::Refresh {
+                        controller: self.controller.clone(),
+                        targets: targets
+                            .into_iter()
+                            .map(|id| {
+                                let acp = self.agent_targets.contains(&id);
+                                (id, acp)
+                            })
+                            .collect(),
+                    },
+                    status,
+                )
+                .is_ok();
             self.refreshed = Instant::now();
         }
         changed
@@ -413,17 +662,29 @@ impl NativeControl {
         if op == Op::Input {
             return;
         }
+        if op == Op::Launch {
+            if let Some(id) = value["target"]["id"].as_str() {
+                self.agent_targets.insert(id.to_owned());
+                self.attempted.insert(id.to_owned());
+                self.cache_grant(&value);
+                self.launched = Some(value);
+            }
+            return;
+        }
         if op == Op::Refresh {
             if let Some(controls) = value["private"]["controls"].as_array() {
-                self.controls
-                    .retain(|target, _| controls.iter().any(|grant| grant["terminal"] == *target));
+                self.controls.retain(|target, _| {
+                    controls
+                        .iter()
+                        .any(|grant| target_id(grant) == Some(target.as_str()))
+                });
                 for grant in controls {
                     self.cache_grant(grant);
                 }
             }
             if let Some(states) = value["states"].as_array() {
                 for state in states {
-                    let Some(target) = state["ownership"]["terminal"].as_str() else {
+                    let Some(target) = target_id(&state["ownership"]) else {
                         continue;
                     };
                     if state["alive"] == false {
@@ -445,7 +706,7 @@ impl NativeControl {
             }
             if let Some(summaries) = value["private"]["claims"].as_array() {
                 for summary in summaries {
-                    let Some(target) = summary["terminal"].as_str() else {
+                    let Some(target) = target_id(summary) else {
                         continue;
                     };
                     if let Some(current) = self
@@ -459,7 +720,7 @@ impl NativeControl {
             }
             if let Some(claims) = value["claims"].as_array() {
                 for claim in claims {
-                    if let Some(target) = claim["terminal"].as_str() {
+                    if let Some(target) = target_id(claim) {
                         self.claims.insert(target.to_owned(), claim.clone());
                     }
                 }
@@ -473,7 +734,9 @@ impl NativeControl {
                 .as_ref()
                 .map(|(selected, _)| selected)
                 .filter(|selected| {
-                    !selected.is_empty() && !self.attempted.contains(selected.as_str())
+                    self.auto_acquire
+                        && !selected.is_empty()
+                        && !self.attempted.contains(selected.as_str())
                 })
                 .filter(|selected| self.ownership.contains_key(selected.as_str()))
                 .cloned();
@@ -482,19 +745,18 @@ impl NativeControl {
                 let ownership = &self.ownership[&selected];
                 if ownership["owner"].is_null()
                     && ownership["reservation"].is_null()
-                    && ownership["unsettled"].as_array().is_some_and(Vec::is_empty)
+                    && (ownership["settlement_boundary"] == "input-admission"
+                        || ownership["unsettled"].as_array().is_some_and(Vec::is_empty))
                 {
                     // Initial acquisition compares the unowned snapshot that
                     // made it eligible. Unlike a deliberate request, it must
                     // not adopt a newly arrived owner and ask them to yield.
-                    self.submit(
-                        &selected,
-                        Op::Claim,
-                        json!({"op":"ownership-claim","controller":self.controller,
-                            "terminal":selected,"observed":ownership["observed"],
-                            "mode":"cooperative","when":{"kind":"now"}}),
-                        status,
-                    );
+                    let _ = self.submit(&selected,
+                    Op::Claim,
+                    addressed(json!({"op":"ownership-claim","controller":self.controller,
+                        "observed":ownership["observed"],"mode":"cooperative","when":{"kind":"now"}}),
+                        &selected, ownership["target"]["kind"] == "acp"),
+                    status,);
                 }
             }
             return;
@@ -544,10 +806,7 @@ impl NativeControl {
     }
 
     fn cache_grant(&mut self, grant: &Value) {
-        if let Some(terminal) = grant["terminal"]
-            .as_str()
-            .filter(|_| grant["control"].is_object())
-        {
+        if let Some(terminal) = target_id(grant).filter(|_| grant["control"].is_object()) {
             if self
                 .controls
                 .get(terminal)
@@ -561,6 +820,11 @@ impl NativeControl {
                     terminal: Arc::from(terminal),
                     handle: grant["control"].clone(),
                     generation: grant["generation"].as_u64().unwrap_or(0),
+                    action_authority: (grant["target"]["kind"] == "acp").then(|| {
+                        json!({
+                            "control":grant["control"],"owner_generation":grant["generation"],
+                        })
+                    }),
                 }),
             );
         }
@@ -572,6 +836,16 @@ impl NativeControl {
                 || ownership["observed"]["generation"].as_u64() != Some(grant.generation)
         }) {
             self.controls.remove(terminal);
+        }
+        if self.panel.as_ref().is_some_and(|panel| {
+            panel.target == terminal && matches!(panel.kind, PanelKind::Force { .. })
+        }) && self.ownership.get(terminal).is_some_and(|previous| {
+            previous["observed"] != ownership["observed"]
+                || previous["settlement_boundary"] != ownership["settlement_boundary"]
+                || previous["unsettled"] != ownership["unsettled"]
+                || previous["retained_work"] != ownership["retained_work"]
+        }) {
+            self.invalidate_force_confirmation();
         }
         self.ownership.insert(terminal.to_owned(), ownership);
     }
@@ -595,22 +869,31 @@ impl NativeControl {
             })
             .collect();
         for (terminal, reference, offer) in ready {
-            if self.submit(
-                &terminal,
-                Op::Accept,
-                json!({"op":"control-handle","handle":offer,"method":"accept"}),
-                status,
-            ) {
+            if self
+                .submit(
+                    &terminal,
+                    Op::Accept,
+                    json!({"op":"control-handle","handle":offer,"method":"accept"}),
+                    status,
+                )
+                .is_ok()
+            {
                 self.offers.insert(reference);
             }
         }
     }
 
     fn can_input(&self, terminal: &str) -> bool {
-        self.connected && !self.uncertain.contains(terminal) && self.controls.contains_key(terminal)
+        self.connected()
+            && !self.uncertain.contains(terminal)
+            && self.controls.contains_key(terminal)
     }
 
     pub(super) fn input(&mut self, terminal: &str, input: Input, status: &mut String) {
+        if self.agent_targets.contains(terminal) {
+            *status = "ACP application input consumed; native forwarding is unavailable".into();
+            return;
+        }
         let length = match &input {
             Input::Bytes(bytes) => bytes.len(),
             Input::Paste(text) => text.len(),
@@ -627,7 +910,7 @@ impl NativeControl {
             return;
         }
         if let Some(grant) = self.controls.get(terminal).cloned() {
-            self.enqueue(Work::Input { grant, input }, status);
+            let _ = self.enqueue(Work::Input { grant, input }, status);
         }
     }
 
@@ -638,7 +921,7 @@ impl NativeControl {
         let Some(grant) = self.controls.get(terminal) else {
             return;
         };
-        self.submit(
+        let _ = self.submit(
             terminal,
             Op::Activity,
             json!({"op":"control-handle","handle":grant.handle,"method":"activity"}),
@@ -678,13 +961,17 @@ impl NativeControl {
             return;
         }
         self.attempted.insert(target.to_owned());
-        if self.enqueue(
-            Work::Claim {
-                target: Arc::from(target),
-                controller: self.controller.clone(),
-            },
-            status,
-        ) {
+        if self
+            .enqueue(
+                Work::Claim {
+                    target: Arc::from(target),
+                    controller: self.controller.clone(),
+                    acp: self.agent_targets.contains(target),
+                },
+                status,
+            )
+            .is_ok()
+        {
             self.busy.insert(target.to_owned());
         }
     }
@@ -752,7 +1039,14 @@ impl NativeControl {
                             let last = self
                                 .ownership
                                 .get(&target)
-                                .and_then(|o| o["unsettled"].as_array())
+                                .and_then(|o| {
+                                    o[if o["settlement_boundary"] == "input-admission" {
+                                        "retained_work"
+                                    } else {
+                                        "unsettled"
+                                    }]
+                                    .as_array()
+                                })
                                 .map_or(0, |calls| calls.len().saturating_sub(1));
                             self.call_offset = self.call_offset.saturating_add(1).min(last);
                             self.invalidate_force_confirmation();
@@ -786,7 +1080,7 @@ impl NativeControl {
                         _ => {}
                     },
                     PanelKind::Cancel { claim } if key.code == KeyCode::Enter => {
-                        self.submit(
+                        let _ = self.submit(
                             &target,
                             Op::Cancel,
                             json!({"op":"control-handle","handle":claim,"method":"cancel"}),
@@ -809,13 +1103,17 @@ impl NativeControl {
                                 kind: PanelKind::Progress,
                             });
                         } else if !matches!(presentation, ForcePresentation::Confirmable) {
-                            *status = "Force confirmation blocked: read the full warning; enlarge if needed, then press Enter again".into();
+                            *status = "Force confirmation blocked: wait for Enter Force control, or enlarge a clipped warning".into();
                         } else {
-                            self.submit(
+                            let _ = self.submit(
                                 &target,
                                 Op::Force,
-                                json!({"op":"ownership-claim","controller":self.controller,
-                                "terminal":target,"mode":"force","observed":observed}),
+                                addressed(
+                                    json!({"op":"ownership-claim","controller":self.controller,
+                            "mode":"force","observed":observed}),
+                                    &target,
+                                    self.ownership[&target]["target"]["kind"] == "acp",
+                                ),
                                 status,
                             );
                         }
@@ -832,9 +1130,9 @@ impl NativeControl {
                             *status = "stale-observation: owner/request changed; review the current panel before acting".into();
                         } else if let Some(grant) = self.controls.get(&target) {
                             if key.code == KeyCode::Char('y') && claim.is_some() {
-                                self.submit(&target, Op::Yield, json!({"op":"control-handle","handle":grant.handle,"method":"yield-to","claim_id":claim}), status);
+                                let _ = self.submit(&target, Op::Yield, json!({"op":"control-handle","handle":grant.handle,"method":"yield-to","claim_id":claim}), status);
                             } else if key.code == KeyCode::Char('r') && claim.is_none() {
-                                self.submit(&target, Op::Release, json!({"op":"control-handle","handle":grant.handle,"method":"release"}), status);
+                                let _ = self.submit(&target, Op::Release, json!({"op":"control-handle","handle":grant.handle,"method":"release"}), status);
                             }
                         }
                     }
@@ -942,7 +1240,7 @@ impl NativeControl {
             let Some(grant) = self.controls.get(&terminal) else {
                 continue;
             };
-            if !self.submit(&terminal, Op::Keep, json!({"op":"control-handle","handle":grant.handle,"method":"keep","claim_id":claim}), status) {
+            if self.submit(&terminal, Op::Keep, json!({"op":"control-handle","handle":grant.handle,"method":"keep","claim_id":claim}), status).is_err() {
                 // Never forward past an unsent keep in the acknowledgement
                 // window, including queue backpressure.
                 return (true, true);
@@ -959,8 +1257,9 @@ impl NativeControl {
         (consume, kept || keeping)
     }
 
-    pub(super) fn after_draw(&mut self, status: &mut String) {
+    pub(super) fn after_draw(&mut self, status: &mut String) -> bool {
         // The caller reaches this only after a successful frame and drained input.
+        let mut repaint = false;
         if let Some(Panel {
             kind: PanelKind::Force { presentation, .. },
             ..
@@ -968,6 +1267,7 @@ impl NativeControl {
             && matches!(presentation, ForcePresentation::Drawn)
         {
             *presentation = ForcePresentation::Confirmable;
+            repaint = true;
         }
         let ready: Vec<_> = self
             .warnings
@@ -992,19 +1292,23 @@ impl NativeControl {
             let Some(grant) = self.controls.get(&terminal) else {
                 continue;
             };
-            if !self.submit(
-                &terminal,
-                Op::Consent,
-                json!({"op":"control-handle","handle":grant.handle,"method":"consent-to",
-                "claim_id":claim,"view_serial":serial,"activity_revision":activity}),
-                status,
-            ) {
+            if self
+                .submit(
+                    &terminal,
+                    Op::Consent,
+                    json!({"op":"control-handle","handle":grant.handle,"method":"consent-to",
+                        "claim_id":claim,"view_serial":serial,"activity_revision":activity}),
+                    status,
+                )
+                .is_err()
+            {
                 continue;
             }
             if let Some(warning) = self.warnings.get_mut(&terminal) {
                 warning.pending = true;
             }
         }
+        repaint
     }
 
     fn remember_gesture(&mut self, kind: MouseEventKind) {
@@ -1093,6 +1397,7 @@ impl NativeControl {
         let name = snapshot["terminals"]
             .as_array()
             .and_then(|ts| ts.iter().find(|t| t["id"] == active))
+            .or_else(|| super::agent_view(snapshot, active))
             .and_then(|t| t["name"].as_str())
             .unwrap_or(active);
         let failure = snapshot["diagnostics"].as_array().and_then(|diagnostics| {
@@ -1220,6 +1525,16 @@ impl NativeControl {
     }
 
     fn draw_panel(&self, frame: &mut Frame<'_>, body: Rect, panel: &mut Panel) {
+        // Keep a completed presentation across an unchanged repaint, even if
+        // fresh input arrives during it. Facts, resize and scrolling invalidate
+        // separately; the fit check below still rejects a clipped warning.
+        let was_confirmable = matches!(
+            panel.kind,
+            PanelKind::Force {
+                presentation: ForcePresentation::Confirmable,
+                ..
+            }
+        );
         if let PanelKind::Force { presentation, .. } = &mut panel.kind {
             *presentation = ForcePresentation::Hidden;
         }
@@ -1273,7 +1588,16 @@ impl NativeControl {
                 lines.push(format!("Reservation: {reservation}"));
                 lines.push("Prior calls may still apply. Turn/process keeps running.".into());
                 self.call_lines(target, &mut lines, call_limit);
-                lines.push("Enter Force control · Esc Keep viewing".into());
+                // Never advertise an enabled action before its full paint and
+                // input-drain fence. A title arriving is not that receipt.
+                lines.push(
+                    if was_confirmable {
+                        "Enter Force control · Esc Keep viewing"
+                    } else {
+                        "Preparing force confirmation · Esc Keep viewing"
+                    }
+                    .into(),
+                );
                 "Force control?"
             }
         };
@@ -1305,7 +1629,11 @@ impl NativeControl {
             area,
         );
         if force_visible && let PanelKind::Force { presentation, .. } = &mut panel.kind {
-            *presentation = ForcePresentation::Drawn;
+            *presentation = if was_confirmable {
+                ForcePresentation::Confirmable
+            } else {
+                ForcePresentation::Drawn
+            };
         }
         if let (
             Some((claim, observed)),
@@ -1368,6 +1696,40 @@ impl NativeControl {
         if let Some(calls) = self
             .ownership
             .get(target)
+            .filter(|ownership| ownership["settlement_boundary"] == "input-admission")
+            .and_then(|ownership| ownership["retained_work"].as_array())
+        {
+            lines.push("ACP input-admission boundary; accepted work may continue.".into());
+            let offset = self.call_offset.min(calls.len().saturating_sub(1));
+            lines.push(format!(
+                "Canonical retained work {} / {} · ↑/↓ inspect",
+                offset,
+                calls.len()
+            ));
+            for call in calls.iter().skip(offset).take(limit) {
+                let outcome = match call["outcome"]["kind"].as_str() {
+                    Some("response") => safe(
+                        call["outcome"]["stop_reason"]
+                            .as_str()
+                            .unwrap_or("response"),
+                        24,
+                    ),
+                    Some("error") => format!("error {}", call["outcome"]["code"]),
+                    _ => "unknown".into(),
+                };
+                lines.push(format!(
+                    "#{} · generation {} · {} / {}",
+                    safe(call["call_id"].as_str().unwrap_or("?"), 48),
+                    call["owner_generation"],
+                    safe(call["state"].as_str().unwrap_or("unknown"), 24),
+                    outcome
+                ));
+            }
+            return;
+        }
+        if let Some(calls) = self
+            .ownership
+            .get(target)
             .and_then(|o| o["unsettled"].as_array())
         {
             let offset = self.call_offset.min(calls.len().saturating_sub(1));
@@ -1392,6 +1754,47 @@ impl NativeControl {
     }
 }
 
+impl Drop for NativeControl {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+fn target_id(value: &Value) -> Option<&str> {
+    if value["target"]["kind"] == "acp" {
+        value["target"]["id"].as_str()
+    } else {
+        value["terminal"].as_str()
+    }
+}
+
+fn addressed(mut value: Value, id: &str, acp: bool) -> Value {
+    if acp {
+        value["target"] = json!({"kind":"acp","id":id});
+    } else {
+        value["terminal"] = if id.is_empty() {
+            Value::Null
+        } else {
+            json!(id)
+        };
+    }
+    value
+}
+
+fn agent_state(snapshot: &Value, id: &str) -> Result<Value> {
+    let view = snapshot["agent_views"]
+        .as_array()
+        .and_then(|views| views.iter().find(|view| view["id"] == id))
+        .ok_or_else(|| crate::client::DaemonError {
+            code: "target-ended".into(),
+            message: "ACP view is unavailable".into(),
+        })?;
+    Ok(
+        json!({"alive":!matches!(view["lifecycle"].as_str(), Some("failed" | "closing" | "ended")),
+        "ownership":view["ownership"]}),
+    )
+}
+
 fn pending(claim: &Value) -> bool {
     matches!(
         claim["phase"].as_str(),
@@ -1414,55 +1817,77 @@ fn owner_label(ownership: &Value) -> String {
 fn safe(text: &str, max: usize) -> String {
     text.chars()
         .filter(|c| {
-            !c.is_control() && !matches!(*c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+            !c.is_control()
+                && !matches!(*c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+                    | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
         })
         .take(max)
         .collect()
 }
 
-fn rpc(connection: &mut crate::client::Connection, mut request: Value) -> Result<Value> {
+fn rpc(connection: &mut crate::client::Connection, request: &mut Value) -> Result<Value> {
     request["version"] = json!(1);
     request["persistent"] = json!(true);
-    connection.request(&request, RPC_TIMEOUT)
+    connection.request(request, RPC_TIMEOUT)
 }
 
 fn refresh(
     connection: &mut crate::client::Connection,
     controller: Value,
-    mut targets: Vec<String>,
+    targets: Vec<(String, bool)>,
 ) -> Result<Value> {
     let private = rpc(
         connection,
-        json!({"op":"control-handle","handle":controller,"method":"read"}),
+        &mut json!({"op":"control-handle","handle":controller,"method":"read"}),
     )?;
+    let mut targets: std::collections::BTreeMap<_, _> = targets.into_iter().collect();
     let mut claims = Vec::new();
     if let Some(summaries) = private["claims"].as_array() {
         for summary in summaries {
             if !pending(summary) {
                 continue;
             }
-            if let Some(target) = summary["terminal"].as_str() {
-                targets.push(target.to_owned());
+            if let Some(target) = target_id(summary) {
+                let acp = summary["target"]["kind"] == "acp";
+                targets
+                    .entry(target.to_owned())
+                    .and_modify(|old| *old |= acp)
+                    .or_insert(acp);
             }
             let state = rpc(
                 connection,
-                json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
+                &mut json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
             )?;
             claims.push(state);
         }
     }
     if let Some(controls) = private["controls"].as_array() {
         for control in controls {
-            if let Some(target) = control["terminal"].as_str() {
-                targets.push(target.to_owned());
+            if let Some(target) = target_id(control) {
+                let acp = control["target"]["kind"] == "acp";
+                targets
+                    .entry(target.to_owned())
+                    .and_modify(|old| *old |= acp)
+                    .or_insert(acp);
             }
         }
     }
-    targets.sort();
-    targets.dedup();
+    let agents = if targets.values().any(|acp| *acp) {
+        Some(rpc(connection, &mut json!({"op":"snapshot"}))?)
+    } else {
+        None
+    };
     let mut states = Vec::with_capacity(targets.len());
-    for target in targets {
-        match rpc(connection, json!({"op":"state","terminal":target})) {
+    for (target, acp) in targets {
+        let result = if acp {
+            agent_state(
+                agents.as_ref().expect("ACP snapshot was requested"),
+                &target,
+            )
+        } else {
+            rpc(connection, &mut json!({"op":"state","terminal":target}))
+        };
+        match result {
             Ok(state) => states.push(state),
             Err(error)
                 if error
@@ -1471,7 +1896,7 @@ fn refresh(
                         matches!(e.code.as_str(), "not-found" | "target-ended" | "exited")
                     }) =>
             {
-                states.push(json!({"alive":false,"ownership":{"terminal":target}}));
+                states.push(json!({"alive":false,"ownership":addressed(json!({}), &target, acp)}));
             }
             Err(error) => return Err(error),
         }
@@ -1497,4 +1922,92 @@ struct PasteInput<'a> {
     control: &'a Value,
     text: &'a str,
     paste: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{BufRead, BufReader, Write};
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::UnixListener;
+
+    #[test]
+    fn e06s03_queued_native_launch_is_fenced_by_observation_loss() {
+        struct Root(std::path::PathBuf);
+        impl Drop for Root {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        fn read(connection: &mut BufReader<UnixStream>) -> Option<Value> {
+            let mut line = String::new();
+            (connection.read_line(&mut line).unwrap() != 0)
+                .then(|| serde_json::from_str(&line).unwrap())
+        }
+        fn respond(connection: &mut BufReader<UnixStream>, value: Value) {
+            serde_json::to_writer(
+                connection.get_mut(),
+                &json!({"version":1,"ok":true,"result":value}),
+            )
+            .unwrap();
+            connection.get_mut().write_all(b"\n").unwrap();
+        }
+        let root = Root(std::path::PathBuf::from("/tmp").join(format!(
+            "amux-worker-loss-{}",
+            uuid::Uuid::new_v4().simple()
+        )));
+        std::fs::create_dir(&root.0).unwrap();
+        std::fs::set_permissions(&root.0, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let path = root.0.join("control.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        let (held, observed) = mpsc::channel();
+        let (release, waiting) = mpsc::channel();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(RPC_TIMEOUT)).unwrap();
+            stream.set_write_timeout(Some(RPC_TIMEOUT)).unwrap();
+            let mut connection = BufReader::new(stream);
+            assert_eq!(read(&mut connection).unwrap()["op"], "snapshot");
+            respond(&mut connection, json!({"daemon_id":"worker-loss-test"}));
+            assert_eq!(read(&mut connection).unwrap()["op"], "controller-create");
+            respond(
+                &mut connection,
+                json!({"controller":"private-test-controller","controller_id":"native-test"}),
+            );
+            assert_eq!(read(&mut connection).unwrap()["method"], "read");
+            held.send(()).unwrap();
+            waiting.recv_timeout(RPC_TIMEOUT).unwrap();
+            respond(&mut connection, json!({"controls":[],"claims":[]}));
+            let dispatched = read(&mut connection);
+            if dispatched.is_some() {
+                respond(&mut connection, json!({}));
+            }
+            dispatched.is_some_and(|request| request["op"] == "acp-open")
+        });
+        let (observation, observation_peer) = UnixStream::pair().unwrap();
+        let mut native =
+            NativeControl::register(&path, &json!("worker-loss-test"), observation).unwrap();
+        let mut status = String::new();
+        native.poll("", &mut status, |_, _| {});
+        observed.recv_timeout(RPC_TIMEOUT).unwrap();
+        native.launch(
+            json!({"op":"acp-open","project":"selected-project","agent":"selected-profile"}),
+            &mut status,
+        );
+        assert!(
+            native.launching(),
+            "the deliberate launch must already be queued"
+        );
+        // No UI poll/teardown runs while the older worker read is held. A
+        // fresh heartbeat cannot stand in for the lost observation socket.
+        native.heartbeat();
+        observation_peer.shutdown(Shutdown::Both).unwrap();
+        release.send(()).unwrap();
+        let launched_after_loss = server.join().unwrap();
+        native.stop();
+        assert!(
+            !launched_after_loss,
+            "queued launch crossed the original observation-loss fence"
+        );
+    }
 }

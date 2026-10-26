@@ -16,10 +16,12 @@ use std::{
     collections::HashSet,
     io::{self, Write},
     path::Path,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 
+mod agent;
 mod control;
+mod launch;
 mod view;
 use control::{Input, NativeControl};
 
@@ -28,6 +30,13 @@ const FRAME: Duration = Duration::from_millis(8);
 const INPUT_FRAME: Duration = Duration::from_millis(1);
 const INPUT_BURST: Duration = Duration::from_millis(50);
 const EVENTS_BEFORE_FRAME: usize = 32;
+const RESUME_GAP: Duration = Duration::from_secs(2);
+
+fn pause_expired(last: SystemTime) -> bool {
+    // Instant's Darwin uptime clock excludes system sleep. Wall-clock gaps
+    // catch machine suspend too; backward clock changes conservatively fence.
+    last.elapsed().map_or(true, |elapsed| elapsed >= RESUME_GAP)
+}
 
 struct Restore;
 impl Restore {
@@ -69,7 +78,7 @@ fn call(socket: &Session, mut request: Value) -> Result<Value> {
     let timeout = request["timeout_ms"].as_u64().unwrap_or(30000).min(300000) + 5000;
     socket
         .borrow_mut()
-        .request(&request, Duration::from_millis(timeout))
+        .request(&request, Duration::from_millis(timeout.min(3000)))
 }
 
 #[derive(serde::Serialize)]
@@ -119,7 +128,7 @@ fn refresh_screen(
             since,
             row_updates: true,
         },
-        Duration::from_secs(35),
+        Duration::from_secs(3),
     )?;
     if update["unchanged"] == true {
         return Ok(false);
@@ -454,6 +463,28 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
     for node in terminals {
         visit(node, 0, terminals, projects, query, &mut seen, &mut rows);
     }
+    if let Some(agents) = snapshot["agent_views"].as_array() {
+        for agent in agents {
+            let project = projects
+                .iter()
+                .find(|project| project["id"] == agent["project_id"]);
+            let label = format!(
+                "ACP · {} · {}\n{}",
+                text(agent, "name"),
+                text(agent, "lifecycle"),
+                project
+                    .map(|project| text(project, "name"))
+                    .unwrap_or("project")
+            );
+            if fuzzy(query, &label) {
+                rows.push(Row {
+                    id: text(agent, "id").to_owned(),
+                    label,
+                    depth: 0,
+                });
+            }
+        }
+    }
     rows
 }
 
@@ -462,7 +493,11 @@ fn clip_label(label: &str, cols: u16) -> String {
     let mut width = 0usize;
     label
         .chars()
-        .filter(|c| !c.is_control())
+        .filter(|c| {
+            !c.is_control()
+                && !matches!(*c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+                    | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        })
         .take_while(|c| {
             width += c.width().unwrap_or(0);
             width <= cols as usize
@@ -616,6 +651,64 @@ fn selected_text(screen: &Value, start: (u16, u16), end: (u16, u16)) -> String {
     result
 }
 
+fn agent_view<'a>(snapshot: &'a Value, id: &str) -> Option<&'a Value> {
+    snapshot["agent_views"]
+        .as_array()?
+        .iter()
+        .find(|view| view["id"] == id)
+}
+
+fn agent_target(view: &Value) -> Value {
+    json!({"kind":"acp","id":view["id"],"instance_id":view["instance_id"],
+        "connection_generation":view["connection_generation"],"session_id":view["session_id"]})
+}
+
+fn contains_view(snapshot: &Value, id: &str) -> bool {
+    agent_view(snapshot, id).is_some()
+        || snapshot["terminals"]
+            .as_array()
+            .is_some_and(|terminals| terminals.iter().any(|terminal| terminal["id"] == id))
+}
+
+fn resize_native(socket: &Session, snapshot: &Value, id: &str, size: (u16, u16)) -> Result<()> {
+    if agent_view(snapshot, id).is_none() && !id.is_empty() {
+        call(
+            socket,
+            json!({"op":"resize","terminal":id,"cols":size.0.clamp(2,500),
+            "rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+        )?;
+    }
+    Ok(())
+}
+
+fn open_from_view(snapshot: &Value, id: &str, omp: bool) -> Value {
+    if let Some(view) = agent_view(snapshot, id) {
+        json!({"op":"open","project":view["project_id"],"omp":omp})
+    } else {
+        open_window(id, omp)
+    }
+}
+
+fn close_agent(
+    authority: &mut NativeControl,
+    snapshot: &Value,
+    id: &str,
+    status: &mut String,
+) -> bool {
+    let Some(view) = agent_view(snapshot, id) else {
+        return false;
+    };
+    let Some(grant) = authority.acp_grant(id) else {
+        *status = "ACP observer: obtain control before explicitly closing this instance".into();
+        return true;
+    };
+    let request = json!({"op":"acp-close","target":agent_target(view),
+        "control":grant["control"],"owner_generation":grant["owner_generation"],
+        "call_id":uuid::Uuid::new_v4().to_string()});
+    let _ = authority.acp_action(request, status);
+    true
+}
+
 fn window_exited(snapshot: &Value, id: &str) -> bool {
     snapshot["terminals"].as_array().is_some_and(|ts| {
         ts.iter()
@@ -637,16 +730,14 @@ fn apply_window(
     request: Value,
     active: &mut String,
     snapshot: &mut Value,
+    resume: &mut Option<Resume>,
 ) -> Result<()> {
     let opens = request["op"] == "open";
     let result = call(socket, request)?;
     *snapshot = call(socket, json!({"op":"snapshot"}))?;
     if opens {
         *active = text(&result, "id").to_owned();
-    } else if !snapshot["terminals"]
-        .as_array()
-        .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
-    {
+    } else if !contains_view(snapshot, active) {
         *active = snapshot["terminals"]
             .as_array()
             .and_then(|ts| {
@@ -657,55 +748,279 @@ fn apply_window(
             .map(|t| text(t, "id").to_owned())
             .unwrap_or_default();
     }
+    Resume::select(resume, snapshot, active);
     Ok(())
 }
 
+#[derive(Clone)]
+struct Resume {
+    daemon: Value,
+    active: String,
+    target: Value,
+    detach_generation: u64,
+}
+
+#[derive(Debug)]
+struct AttachmentEnded(&'static str);
+
+impl std::fmt::Display for AttachmentEnded {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.0)
+    }
+}
+impl std::error::Error for AttachmentEnded {}
+
+impl Resume {
+    fn select(current: &mut Option<Self>, snapshot: &Value, active: &str) {
+        if current
+            .as_ref()
+            .is_none_or(|original| original.active != active)
+        {
+            *current = Some(Self::capture(snapshot, active));
+        }
+    }
+
+    fn capture(snapshot: &Value, active: &str) -> Self {
+        Self {
+            daemon: snapshot["daemon_id"].clone(),
+            active: active.to_owned(),
+            target: agent_view(snapshot, active)
+                .map(agent_target)
+                .unwrap_or_else(|| json!({"kind":"pty","id":active})),
+            detach_generation: snapshot["detach_generation"].as_u64().unwrap_or(0),
+        }
+    }
+
+    fn launched(snapshot: &Value, opened: &Value) -> Result<Self> {
+        Ok(Self {
+            daemon: snapshot["daemon_id"].clone(),
+            active: opened["target"]["id"]
+                .as_str()
+                .context("ACP launch has no exact target")?
+                .to_owned(),
+            target: opened["target"].clone(),
+            detach_generation: snapshot["detach_generation"].as_u64().unwrap_or(0),
+        })
+    }
+
+    fn validate(&mut self, snapshot: &Value) -> Result<()> {
+        if !self.daemon.is_string() || snapshot["daemon_id"] != self.daemon {
+            return Err(AttachmentEnded("Ended attachment: daemon replaced or continuity unreported; original work was not relaunched").into());
+        }
+        if self.target["kind"] == "acp" {
+            let Some(view) = agent_view(snapshot, &self.active) else {
+                return Err(AttachmentEnded(
+                    "Ended attachment: original ACP target is missing; no same-name substitution",
+                )
+                .into());
+            };
+            // Only initial session establishment may advance identity. A
+            // known session, instance, connection or daemon never follows a
+            // replacement, including across recovery.
+            if ["id", "instance_id", "connection_generation"]
+                .iter()
+                .any(|key| self.target[key] != view[key])
+                || (!self.target["session_id"].is_null()
+                    && self.target["session_id"] != view["session_id"])
+            {
+                return Err(AttachmentEnded("Ended attachment: exact original ACP instance/session changed; no automatic attachment").into());
+            }
+            if view["lifecycle"] == "ended" || view["lifecycle"] == "closing" {
+                return Err(AttachmentEnded(
+                    "Ended: original ACP agent ended; no replacement launched",
+                )
+                .into());
+            }
+            if self.target["session_id"].is_null() && !view["session_id"].is_null() {
+                self.target["session_id"] = view["session_id"].clone();
+            }
+        } else if !snapshot["terminals"].as_array().is_some_and(|terminals| {
+            terminals
+                .iter()
+                .any(|terminal| terminal["id"] == self.active && terminal["alive"] == true)
+        }) {
+            return Err(AttachmentEnded(
+                "Ended: original terminal is missing or exited; no replacement opened",
+            )
+            .into());
+        }
+        Ok(())
+    }
+}
+
+/// Start one ACP instance with the real original native controller, then attach.
+pub fn start(socket: &Path, launch: Value) -> Result<()> {
+    supervise(socket, None, Some(launch))
+}
+
 pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
-    let mut authority = NativeControl::register(socket)?;
-    let socket = &Session::new(crate::client::Connection::connect(socket)?);
+    supervise(socket, terminal, None)
+}
+
+fn supervise(path: &Path, mut terminal: Option<String>, mut launch: Option<Value>) -> Result<()> {
+    let _restore = Restore::enter()?;
+    let mut resume = None;
+    loop {
+        match attached(path, terminal.take(), launch.take(), &mut resume) {
+            Ok(()) => return Ok(()),
+            Err(error) => {
+                let ended = error.downcast_ref::<AttachmentEnded>().is_some();
+                if !ended && (!crate::client::is_connection_error(&error) || resume.is_none()) {
+                    return Err(error);
+                }
+                if !recovery_wait(&format!("{error:#}"), !ended)? {
+                    return Ok(());
+                }
+            }
+        }
+    }
+}
+
+fn recovery_wait(reason: &str, retry: bool) -> Result<bool> {
+    let mut display =
+        ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(io::stdout()))?;
+    // This is a new diff buffer over an existing alternate screen. Reset the
+    // physical surface too, so stale projection/error text cannot survive it.
+    display.clear()?;
+    let message = format!(
+        "{}\n{}\n\nLocal input, drafts, claim/consent state discarded. Broker work and questions retained; no mutation replay or automatic control acquisition.\nCtrl-Q / Esc quits safely.{}\n\n{}",
+        if retry {
+            "Disconnected · input fenced"
+        } else {
+            "Ended · original attachment unavailable"
+        },
+        if retry {
+            "Resynchronizing with the existing daemon socket only"
+        } else {
+            "Agent/daemon was not relaunched"
+        },
+        if retry {
+            " Reconnect waits for queued input to drain."
+        } else {
+            ""
+        },
+        clip_label(reason, 1024)
+    );
+    display.draw(|frame| {
+        frame.render_widget(ratatui::widgets::Clear, frame.area());
+        frame.render_widget(
+            ratatui::widgets::Paragraph::new(message.as_str())
+                .wrap(ratatui::widgets::Wrap { trim: false }),
+            frame.area(),
+        );
+    })?;
+    let mut quiet = Instant::now();
+    loop {
+        if event::poll(Duration::from_millis(50))? {
+            match event::read()? {
+                Event::Key(key)
+                    if key.kind != KeyEventKind::Release
+                        && (key.code == KeyCode::Esc
+                            || key.code == KeyCode::Char('q')
+                                && key.modifiers.contains(KeyModifiers::CONTROL)) =>
+                {
+                    return Ok(false);
+                }
+                _ => {}
+            }
+            quiet = Instant::now();
+        } else if retry && quiet.elapsed() >= Duration::from_millis(250) {
+            return Ok(true);
+        }
+    }
+}
+
+fn attached(
+    path: &Path,
+    terminal: Option<String>,
+    launch_request: Option<Value>,
+    resume: &mut Option<Resume>,
+) -> Result<()> {
+    let recovered = resume.is_some();
+    let socket = &Session::new(crate::client::Connection::connect(path)?);
     let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
+    if let Some(original) = resume.as_mut() {
+        original.validate(&snapshot)?;
+        if snapshot["detach_generation"].as_u64().unwrap_or(0) != original.detach_generation {
+            return Ok(());
+        }
+    }
+    let terminal = resume
+        .as_ref()
+        .map(|original| original.active.clone())
+        .or(terminal);
     let detach_generation = snapshot["detach_generation"].as_u64().unwrap_or(0);
     let terminals = snapshot["terminals"]
         .as_array()
         .context("snapshot has no terminals")?;
-    let mut active = if let Some(selector) = terminal {
-        let state = call(socket, json!({"op":"state","terminal":selector}))?;
-        state["id"]
-            .as_str()
-            .map(str::to_owned)
-            .or_else(|| {
-                terminals
-                    .iter()
-                    .find(|t| text(t, "id") == selector || text(t, "name") == selector)
-                    .map(|t| text(t, "id").to_owned())
-            })
-            .context("terminal state has no id")?
+    let mut active = if launch_request.is_some() {
+        String::new()
+    } else if let Some(selector) = terminal {
+        if agent_view(&snapshot, &selector).is_some() {
+            selector
+        } else {
+            let state = call(socket, json!({"op":"state","terminal":selector}))?;
+            state["id"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| {
+                    terminals
+                        .iter()
+                        .find(|t| text(t, "id") == selector || text(t, "name") == selector)
+                        .map(|t| text(t, "id").to_owned())
+                })
+                .context("terminal state has no id")?
+        }
     } else if let Some(first) = terminals
         .iter()
         .find(|t| t["alive"] == true)
         .or_else(|| terminals.first())
     {
         text(first, "id").to_owned()
+    } else if let Some(first) = snapshot["agent_views"]
+        .as_array()
+        .and_then(|views| views.first())
+    {
+        text(first, "id").to_owned()
     } else {
         text(&call(socket, json!({"op":"open"}))?, "id").to_owned()
     };
-    let _restore = Restore::enter()?;
+    *resume = Some(Resume::capture(&snapshot, &active));
     let mut display =
         ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(io::stdout()))?;
+    display.clear()?;
     let mut size = terminal::size()?;
     let mut geometry = view::geometry(ratatui::layout::Rect::new(0, 0, size.0, size.1));
-    call(
-        socket,
-        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+    resize_native(socket, &snapshot, &active, size)?;
+    // Observe, validate, select and finish fallible display setup before
+    // spending a controller registration on an automatic recovery attempt.
+    let mut authority = NativeControl::register(
+        path,
+        &snapshot["daemon_id"],
+        socket.borrow().shutdown_handle()?,
     )?;
+    if recovered {
+        authority.recovered();
+    }
+    authority.sync_agent_targets(&snapshot);
     let mut screen = Value::Null;
-    let mut picker = false;
+    let mut picker = active.is_empty();
     let mut prefix_pending = false;
     let mut query = String::new();
     let mut selected = 0usize;
     let mut offset = 0usize;
-    let mut status = String::new();
-    authority.report_view(&active, None, &mut status);
+    let mut status = if recovered {
+        "Reconnecting · observer snapshot; discarding queued input".to_owned()
+    } else {
+        String::new()
+    };
+    let mut launch_dialog: Option<launch::Dialog> = None;
+    if let Some(request) = launch_request {
+        authority.launch(request, &mut status);
+    }
+    if !active.is_empty() {
+        authority.report_view(&active, None, &mut status);
+    }
     let mut pending_parent: Option<(String, bool)> = None;
     let mut selection = None;
     let mut focused = true;
@@ -714,460 +1029,712 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     let mut dirty = true;
     let mut viewport = ScreenViewport::default();
     let mut surface = view::NativeSurface::default();
+    let mut agent = agent::AgentView::new();
+    let mut agent_projection = Value::Null;
+    let mut agent_error = String::new();
+    let mut agent_id = String::new();
+    let mut agent_after = 0;
+    let mut agent_at = Instant::now() - Duration::from_millis(100);
     let mut responsive_until = Instant::now();
     let mut urgent_frame = false;
     let mut queued_events = 0usize;
     let mut frame_at = Instant::now() - FRAME;
-    loop {
-        dirty |= authority.poll(&active, &mut status);
-        // Consume already received human events before changing native view
-        // facts. The picker never changes the selected-terminal provenance.
-        if !event::poll(Duration::ZERO).context("draining input before native view")? {
-            authority.report_view(&active, reported_focus, &mut status);
-        }
-        let interval = if !picker && Instant::now() < responsive_until {
-            INPUT_FRAME
-        } else {
-            FRAME
-        };
-        if (urgent_frame || frame_at.elapsed() >= interval)
-            && (screen.is_null()
-                || queued_events >= EVENTS_BEFORE_FRAME
-                || !event::poll(Duration::ZERO).context("checking queued client input")?)
-        {
-            if snapshot_at.elapsed() >= Duration::from_millis(500) {
+    let mut drain_recovered_input = recovered;
+    let mut tick = SystemTime::now();
+    let outcome = (|| -> Result<()> {
+        loop {
+            if pause_expired(tick) {
+                return Err(crate::client::connection_lost(
+                    "attachment resumed after a pause; old input fenced",
+                ));
+            }
+            tick = SystemTime::now();
+            if !socket.borrow().connected() || !authority.connected() {
+                return Err(crate::client::connection_lost(
+                    "observation or original native connection lost",
+                ));
+            }
+            authority.heartbeat();
+            Resume::select(resume, &snapshot, &active);
+            authority.sync_agent_targets(&snapshot);
+            let authority_changed = authority.poll(&active, &mut status, |action, grant| {
+                agent.sync(&agent_projection, grant);
+                agent.restore_unadmitted(action);
+            });
+            dirty |= authority_changed;
+            let launched = authority.take_launched();
+            if let Some(opened) = launched.as_ref() {
+                let continuity = Resume::launched(&snapshot, opened)?;
+                active.clone_from(&continuity.active);
+                *resume = Some(continuity);
+            }
+            if !authority.connected() {
+                return Err(crate::client::connection_lost(
+                    "original native control stream lost",
+                ));
+            }
+            if launched.is_some() {
                 snapshot = call(socket, json!({"op":"snapshot"}))?;
-                if snapshot["detach_generation"].as_u64().unwrap_or(0) != detach_generation {
-                    break;
-                }
-                snapshot_at = Instant::now();
-                if !snapshot["terminals"]
-                    .as_array()
-                    .is_some_and(|ts| ts.iter().any(|t| text(t, "id") == active))
-                {
-                    active = snapshot["terminals"]
-                        .as_array()
-                        .and_then(|ts| ts.first())
-                        .map(|t| text(t, "id").to_owned())
-                        .unwrap_or_default();
-                    picker = true;
-                    offset = 0;
-                    screen = Value::Null;
-                    selection = None;
-                }
+                authority.sync_agent_targets(&snapshot);
+                resume
+                    .as_mut()
+                    .expect("acknowledged launch")
+                    .validate(&snapshot)?;
+                screen = Value::Null;
+                selection = None;
+                offset = 0;
+                picker = false;
+                status = "ACP launched on this original native controller".into();
                 dirty = true;
             }
-            if !picker
-                && refresh_screen(
-                    socket,
-                    &mut screen,
-                    &mut viewport,
-                    &mut surface,
-                    &active,
-                    offset,
-                    size.1.saturating_sub(HEADER).max(2),
-                )?
-            {
-                dirty = true;
+            let is_agent = agent_view(&snapshot, &active).is_some();
+            if is_agent && agent_id != active {
+                agent_id.clone_from(&active);
+                agent_after = 0;
+                agent_projection = Value::Null;
+                agent_error.clear();
+                agent_at = Instant::now() - Duration::from_millis(100);
+                agent.sync(&Value::Null, None);
+            } else if !is_agent && !agent_id.is_empty() {
+                agent_id.clear();
+                agent_projection = Value::Null;
+                agent_after = 0;
+                agent_error.clear();
+                agent.sync(&Value::Null, None);
             }
-            if dirty {
-                let rows = tree_rows(&snapshot, &query);
-                selected = selected.min(rows.len().saturating_sub(1));
-                display
-                    .draw(|frame| {
-                        geometry = view::draw(
-                            frame, &screen, &surface, &snapshot, &active, picker, &rows, selected,
-                            &query, &status, offset, focused, selection,
-                        );
-                        authority.draw(
-                            frame, geometry, &active, &snapshot, picker, &query, &status, offset,
-                        );
-                    })
-                    .context("drawing terminal surface")?;
-                dirty = false;
-                if !event::poll(Duration::ZERO).context("draining input before native consent")? {
-                    authority.after_draw(&mut status);
-                }
-            }
-            frame_at = Instant::now();
-            urgent_frame = false;
-            queued_events = 0;
-        }
-        let wait = if urgent_frame {
-            Duration::ZERO
-        } else {
-            interval.saturating_sub(frame_at.elapsed())
-        };
-        if !event::poll(wait).context("polling client input")? {
-            continue;
-        }
-        let event = event::read().context("reading client input")?;
-        dirty = true;
-        urgent_frame = true;
-        queued_events += 1;
-        responsive_until = Instant::now() + INPUT_BURST;
-        if let Event::Mouse(mouse) = &event
-            && authority.mouse_consumed(mouse.kind)
-        {
-            continue;
-        }
-        let (consume_warning, reset_warning) =
-            authority.warning_event(&active, &event, &mut status);
-        if reset_warning {
-            prefix_pending = false;
-            pending_parent = None;
-        }
-        if consume_warning {
-            picker = active.is_empty();
-            query.clear();
-            selection = None;
-            continue;
-        }
-        let previous_prefix = prefix_pending;
-        if !matches!(
-            event,
-            Event::Key(KeyEvent {
-                kind: KeyEventKind::Release,
-                ..
-            })
-        ) {
-            prefix_pending = false;
-        }
-        let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
-        let rows = tree_rows(&snapshot, &query);
-        if let Event::Key(key) = &event
-            && key.kind != KeyEventKind::Release
-            && previous_prefix
-            && key.modifiers.contains(KeyModifiers::CONTROL)
-            && matches!(key.code, KeyCode::Char('l' | 'f'))
-        {
-            picker = false;
-            prefix_pending = false;
-            pending_parent = None;
-            authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
-            continue;
-        }
-        if authority.panel_event(&event, &mut status) {
-            continue;
-        }
-        match event {
-            Event::Resize(cols, rows) => {
-                size = (cols, rows);
-                // A picker is an overlay: even foreground resize is deferred until it closes.
-                if !picker {
-                    call(
+            if is_agent && agent_at.elapsed() >= Duration::from_millis(100) {
+                if let Some(view) = agent_view(&snapshot, &active) {
+                    let target = agent_target(view);
+                    if agent_projection["target"] != target {
+                        // A real identity reset must fetch its complete projection.
+                        // Failed reads retain the previous cache and captured draft.
+                        agent_after = 0;
+                    }
+                    match call(
                         socket,
-                        json!({"op":"resize","terminal":active,"cols":cols.clamp(2,500),"rows":rows.saturating_sub(HEADER).clamp(2,300)}),
-                    )?;
-                }
-            }
-            Event::FocusGained => {
-                focused = true;
-                reported_focus = Some(true);
-            }
-            Event::FocusLost => {
-                focused = false;
-                reported_focus = Some(false);
-            }
-            Event::Paste(paste) => {
-                if picker {
-                    authority.activity(&active, &mut status);
-                    query.push_str(&paste.replace(['\n', '\r'], " "));
-                    selected = 0;
-                } else {
-                    offset = 0;
-                    authority.input(&active, Input::Paste(paste), &mut status);
-                }
-            }
-            Event::Key(key) if key.kind != KeyEventKind::Release => {
-                if is_prefix(key, prefix) {
-                    if picker && previous_prefix && !active.is_empty() {
-                        picker = false;
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
-                        authority.input(
-                            &active,
-                            Input::Bytes(key_bytes(prefix, mode(&screen, "application_cursor"))),
-                            &mut status,
-                        );
-                    } else {
-                        authority.activity(&active, &mut status);
-                        picker = true;
-                        prefix_pending = true;
-                        query.clear();
-                        selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
-                        pending_parent = None;
-                    }
-                    continue;
-                }
-                if picker {
-                    authority.activity(&active, &mut status);
-                    let chosen = rows.get(selected).map(|r| r.id.clone());
-                    let control = key.modifiers.contains(KeyModifiers::CONTROL);
-                    let empty = active.is_empty()
-                        && snapshot["terminals"]
-                            .as_array()
-                            .is_none_or(|terminals| terminals.is_empty());
-                    let action = match key.code {
-                        KeyCode::Char('q') if control || empty => break,
-                        KeyCode::Esc if empty => break,
-                        KeyCode::Enter if empty => Some(open_window("", false)),
-                        KeyCode::Esc => {
-                            picker = active.is_empty();
-                            pending_parent = None;
-                            None
+                        json!({"op":"acp-inspect","target":target,
+                    "include_content":true,"after":agent_after,"limit":128}),
+                    ) {
+                        Ok(projection) => {
+                            agent_error.clear();
+                            agent_after = projection["content"]["through"]
+                                .as_u64()
+                                .unwrap_or(agent_after);
+                            agent_projection = projection;
                         }
-                        KeyCode::Up => {
-                            selected = selected.saturating_sub(1);
-                            None
-                        }
-                        KeyCode::Down => {
-                            selected = (selected + 1).min(rows.len().saturating_sub(1));
-                            None
-                        }
-                        KeyCode::Backspace => {
-                            query.pop();
-                            selected = 0;
-                            None
-                        }
-                        KeyCode::Enter => {
-                            if let Some(id) = chosen {
-                                if let Some((child, demote)) = pending_parent.take() {
-                                    Some(
-                                        json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":id}),
-                                    )
-                                } else {
-                                    active = id;
-                                    screen = Value::Null;
-                                    selection = None;
-                                    status.clear();
-                                    offset = 0;
-                                    picker = false;
-                                    None
-                                }
+                        Err(error) => {
+                            if crate::client::is_connection_error(&error) {
+                                return Err(error);
+                            }
+                            let code = error
+                                .downcast_ref::<crate::client::DaemonError>()
+                                .map(|error| error.code.as_str());
+                            if code == Some("stale-target") {
+                                // session/new can complete between a snapshot
+                                // and this read. Reconcile the exact attachment
+                                // before classifying it as ended; only reads
+                                // are refreshed, never a captured mutation.
+                                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                resume
+                                    .as_mut()
+                                    .context("ACP observation has no continuity target")?
+                                    .validate(&snapshot)?;
+                            } else if matches!(code, Some("target-ended" | "not-found")) {
+                                return Err(AttachmentEnded(
+                                    "Ended: original ACP target is no longer inspectable",
+                                )
+                                .into());
+                            }
+                            let cache_status = if agent_projection.is_null() {
+                                "no confirmed projection"
                             } else {
-                                None
-                            }
+                                "showing last confirmed projection"
+                            };
+                            agent_error = format!("ACP inspect failed; {cache_status}: {error:#}");
                         }
-                        KeyCode::Char('n') if control || empty => {
-                            Some(open_window(chosen.as_deref().unwrap_or(&active), false))
-                        }
-                        KeyCode::Char('o') if control => {
-                            Some(open_window(chosen.as_deref().unwrap_or(&active), true))
-                        }
-                        KeyCode::Char('p') if control => {
-                            chosen.map(|id| json!({"op":"promote","terminal":id}))
-                        }
-                        KeyCode::Char('x') if control => {
-                            chosen.map(|id| close_window(&snapshot, &id))
-                        }
-                        KeyCode::Char('r' | 'd') if control => {
-                            if let Some(id) = chosen {
-                                pending_parent = Some((id, key.code == KeyCode::Char('d')));
-                                status = "Select new parent and press Enter; Esc cancels".into();
-                            }
-                            None
-                        }
-                        KeyCode::Char(c)
-                            if !control && !key.modifiers.contains(KeyModifiers::ALT) =>
-                        {
-                            query.push(c);
-                            selected = 0;
-                            None
-                        }
-                        _ => None,
-                    };
-                    if let Some(request) = action {
-                        let opens = request["op"] == "open";
-                        match apply_window(socket, request, &mut active, &mut snapshot) {
-                            Ok(()) => {
-                                status.clear();
-                                offset = 0;
-                                screen = Value::Null;
-                                selection = None;
-                                if opens {
-                                    picker = false;
-                                }
-                                if active.is_empty() {
-                                    picker = true;
-                                }
-                            }
-                            Err(error) => status = format!("{error:#}"),
-                        }
-                    }
-                    if !picker {
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
-                    }
-                } else if window_exited(&snapshot, &active) {
-                    let request = match key.code {
-                        KeyCode::Char('n') | KeyCode::Enter => Some(open_window(&active, false)),
-                        KeyCode::Char('x') | KeyCode::Delete => {
-                            Some(close_window(&snapshot, &active))
-                        }
-                        KeyCode::Esc => {
-                            picker = true;
-                            None
-                        }
-                        _ => None,
-                    };
-                    if let Some(request) = request {
-                        match apply_window(socket, request, &mut active, &mut snapshot) {
-                            Ok(()) => {
-                                picker = active.is_empty();
-                                screen = Value::Null;
-                                offset = 0;
-                                selection = None;
-                                status.clear();
-                                if !picker {
-                                    call(
-                                        socket,
-                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                    )?;
-                                }
-                            }
-                            Err(error) => status = format!("{error:#}"),
-                        }
-                    }
-                } else if key.modifiers.contains(KeyModifiers::SHIFT)
-                    && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown)
-                {
-                    authority.activity(&active, &mut status);
-                    let page = size.1.saturating_sub(HEADER) as usize;
-                    offset = if key.code == KeyCode::PageUp {
-                        (offset + page).min(screen["history_size"].as_u64().unwrap_or(0) as usize)
-                    } else {
-                        offset.saturating_sub(page)
-                    };
-                } else {
-                    offset = 0;
-                    let bytes = key_bytes(key, mode(&screen, "application_cursor"));
-                    if !bytes.is_empty() {
-                        authority.input(&active, Input::Bytes(bytes), &mut status);
                     }
                 }
+                agent.sync(&agent_projection, authority.acp_grant(&active));
+                agent_at = Instant::now();
+                dirty = true;
+            } else if is_agent && authority_changed {
+                agent.sync(&agent_projection, authority.acp_grant(&active));
             }
-            Event::Mouse(mouse) => {
-                let application_mouse = mode(&screen, "mouse_click")
-                    || mode(&screen, "mouse_drag")
-                    || mode(&screen, "mouse_motion");
-                if picker || mouse.row < HEADER {
-                    authority.suppress_mouse(mouse.kind);
-                }
-                if (picker
-                    || mouse.row < HEADER
-                    || !application_mouse
-                    || mouse.modifiers.contains(KeyModifiers::SHIFT)
-                    || selection.is_some()
-                    || offset != 0)
-                    && !matches!(mouse.kind, MouseEventKind::Moved)
-                {
-                    authority.activity(&active, &mut status);
-                }
-                if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
-                    && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
-                {
-                    if picker && active.is_empty() {
+            // Consume already received human events before changing native view
+            // facts. The picker never changes the selected-terminal provenance.
+            if !active.is_empty()
+                && event::input_readiness().context("draining input before native view")?
+                    == event::InputReadiness::Empty
+            {
+                authority.report_view(&active, reported_focus, &mut status);
+            }
+            let interval = if !picker && Instant::now() < responsive_until {
+                INPUT_FRAME
+            } else {
+                FRAME
+            };
+            if (urgent_frame || frame_at.elapsed() >= interval)
+                && (screen.is_null()
+                    || drain_recovered_input
+                    || queued_events >= EVENTS_BEFORE_FRAME
+                    || !event::poll(Duration::ZERO).context("checking queued client input")?)
+            {
+                if snapshot_at.elapsed() >= Duration::from_millis(500) {
+                    snapshot = call(socket, json!({"op":"snapshot"}))?;
+                    if snapshot["detach_generation"].as_u64().unwrap_or(0) != detach_generation {
                         break;
                     }
-                    picker = !picker || active.is_empty();
-                    query.clear();
-                    pending_parent = None;
-                    selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
-                    status.clear();
-                    if !picker {
-                        call(
-                            socket,
-                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                        )?;
+                    if let Some(original) = resume.as_mut()
+                        && original.active == active
+                        && original.target["kind"] == "acp"
+                    {
+                        original.validate(&snapshot)?;
                     }
-                } else if picker {
-                    let empty = active.is_empty()
-                        && snapshot["terminals"]
+                    snapshot_at = Instant::now();
+                    if !contains_view(&snapshot, &active) {
+                        active = snapshot["terminals"]
                             .as_array()
-                            .is_none_or(|terminals| terminals.is_empty());
-                    if empty && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
-                        if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
-                            break;
-                        }
-                        if view::Geometry::hit(geometry.new, mouse.column, mouse.row) {
-                            match apply_window(
-                                socket,
-                                open_window("", false),
-                                &mut active,
-                                &mut snapshot,
-                            ) {
-                                Ok(()) => {
-                                    picker = false;
-                                    screen = Value::Null;
-                                    offset = 0;
-                                    selection = None;
-                                    status.clear();
-                                    call(
-                                        socket,
-                                        json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                    )?;
-                                }
-                                Err(error) => status = format!("{error:#}"),
+                            .and_then(|ts| ts.first())
+                            .map(|t| text(t, "id").to_owned())
+                            .unwrap_or_default();
+                        Resume::select(resume, &snapshot, &active);
+                        picker = true;
+                        offset = 0;
+                        screen = Value::Null;
+                        selection = None;
+                    }
+                    dirty = true;
+                }
+                if !picker
+                    && !is_agent
+                    && refresh_screen(
+                        socket,
+                        &mut screen,
+                        &mut viewport,
+                        &mut surface,
+                        &active,
+                        offset,
+                        size.1.saturating_sub(HEADER).max(2),
+                    )?
+                {
+                    dirty = true;
+                }
+                if dirty {
+                    let rows = tree_rows(&snapshot, &query);
+                    selected = selected.min(rows.len().saturating_sub(1));
+                    let shown_status = if is_agent && !agent_error.is_empty() {
+                        &agent_error
+                    } else {
+                        &status
+                    };
+                    let mut painted_size = size;
+                    display
+                        .draw(|frame| {
+                            let area = frame.area();
+                            painted_size = (area.width, area.height);
+                            geometry = view::draw(
+                                frame,
+                                &screen,
+                                &surface,
+                                &snapshot,
+                                &active,
+                                picker,
+                                &rows,
+                                selected,
+                                &query,
+                                shown_status,
+                                offset,
+                                focused,
+                                selection,
+                            );
+                            if is_agent && !picker {
+                                agent.draw(frame, geometry.body);
                             }
+                            if let Some(dialog) = &launch_dialog {
+                                dialog.draw(frame);
+                            }
+                            authority.draw(
+                                frame,
+                                geometry,
+                                &active,
+                                &snapshot,
+                                picker,
+                                &query,
+                                shown_status,
+                                offset,
+                            );
+                        })
+                        .context("drawing terminal surface")?;
+                    // SIGWINCH can coalesce or be lost; the actual painted
+                    // viewport is authoritative before consent becomes ready.
+                    if painted_size != size {
+                        size = painted_size;
+                        authority.panel_event(&Event::Resize(size.0, size.1), &mut status);
+                        if !picker {
+                            resize_native(socket, &snapshot, &active, size)?;
+                        }
+                        screen = Value::Null;
+                        dirty = true;
+                        urgent_frame = true;
+                        continue;
+                    }
+                    dirty = false;
+                    if drain_recovered_input {
+                        // Registration and the first projection can block.
+                        // Until this observer frame is painted, queued events
+                        // are recovery input, never deliberate new authority.
+                        let mut input_empty = false;
+                        for _ in 0..1024 {
+                            match event::input_readiness()? {
+                                event::InputReadiness::Empty => {
+                                    input_empty = true;
+                                    break;
+                                }
+                                event::InputReadiness::Pending => {}
+                                event::InputReadiness::Inconclusive => break,
+                            }
+                            if let Event::Key(key) = event::read()?
+                                && key.kind != KeyEventKind::Release
+                                && (key.code == KeyCode::Esc
+                                    || key.code == KeyCode::Char('q')
+                                        && key.modifiers.contains(KeyModifiers::CONTROL))
+                            {
+                                return Ok(());
+                            }
+                        }
+                        if !input_empty {
+                            // A fragment or bounded yield is not fresh-human
+                            // provenance. Keep draining without reconnect churn;
+                            // normal event reads below remain discard-only.
+                            dirty = true;
+                            urgent_frame = false;
+                            frame_at = Instant::now();
+                            queued_events = 0;
+                            continue;
+                        }
+                        // Resize is structural, not replayable application input.
+                        // Reconcile the kernel size after the blocking setup,
+                        // then paint and drain again before declaring readiness.
+                        let current_size = terminal::size()?;
+                        if current_size != size {
+                            size = current_size;
+                            resize_native(socket, &snapshot, &active, size)?;
+                            screen = Value::Null;
+                            dirty = true;
+                            urgent_frame = true;
+                            continue;
+                        }
+                        drain_recovered_input = false;
+                        status = "Reconnected · observer; request control deliberately; nothing replayed"
+                            .to_owned();
+                        dirty = true;
+                        urgent_frame = true;
+                        continue;
+                    }
+                    if event::input_readiness().context("draining input before native consent")?
+                        == event::InputReadiness::Empty
+                    {
+                        dirty = authority.after_draw(&mut status);
+                    }
+                }
+                frame_at = Instant::now();
+                urgent_frame = false;
+                queued_events = 0;
+            }
+            let wait = if urgent_frame {
+                Duration::ZERO
+            } else {
+                interval.saturating_sub(frame_at.elapsed())
+            };
+            if !event::poll(wait).context("polling client input")? {
+                continue;
+            }
+            let event = event::read().context("reading client input")?;
+            dirty = true;
+            urgent_frame = true;
+            queued_events += 1;
+            responsive_until = Instant::now() + INPUT_BURST;
+            if drain_recovered_input {
+                // A bounded drain may span frames, never turn old input into
+                // ordinary shortcuts while waiting for a conclusive boundary.
+                match event {
+                    Event::Key(key)
+                        if key.kind != KeyEventKind::Release
+                            && (key.code == KeyCode::Esc
+                                || key.code == KeyCode::Char('q')
+                                    && key.modifiers.contains(KeyModifiers::CONTROL)) =>
+                    {
+                        return Ok(());
+                    }
+                    Event::Resize(cols, rows) => {
+                        size = (cols, rows);
+                        resize_native(socket, &snapshot, &active, size)?;
+                        screen = Value::Null;
+                    }
+                    _ => {}
+                }
+                continue;
+            }
+            if let Event::Mouse(mouse) = &event
+                && authority.mouse_consumed(mouse.kind)
+            {
+                continue;
+            }
+            let (consume_warning, reset_warning) =
+                authority.warning_event(&active, &event, &mut status);
+            if reset_warning {
+                prefix_pending = false;
+                pending_parent = None;
+            }
+            if consume_warning {
+                picker = active.is_empty();
+                query.clear();
+                selection = None;
+                continue;
+            }
+            if let Some(dialog) = launch_dialog.as_mut() {
+                match &event {
+                    Event::Resize(cols, rows) => {
+                        size = (*cols, *rows);
+                        authority.panel_event(&event, &mut status);
+                    }
+                    Event::FocusGained => {
+                        focused = true;
+                        reported_focus = Some(true);
+                    }
+                    Event::FocusLost => {
+                        focused = false;
+                        reported_focus = Some(false);
+                    }
+                    Event::Paste(_)
+                    | Event::Key(KeyEvent {
+                        kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                        ..
+                    }) => authority.activity(&active, &mut status),
+                    _ => {}
+                }
+                match dialog.event(&event) {
+                    launch::Action::None => {}
+                    launch::Action::Cancel => launch_dialog = None,
+                    launch::Action::Submit(request) => {
+                        launch_dialog = None;
+                        authority.launch(request, &mut status);
+                    }
+                }
+                continue;
+            }
+            if authority.launching() {
+                match event {
+                    Event::Key(key)
+                        if key.kind != KeyEventKind::Release
+                            && key.code == KeyCode::Char('q')
+                            && key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
+                        break;
+                    }
+                    Event::Resize(cols, rows) => size = (cols, rows),
+                    Event::FocusGained => {
+                        focused = true;
+                        reported_focus = Some(true);
+                    }
+                    Event::FocusLost => {
+                        focused = false;
+                        reported_focus = Some(false);
+                    }
+                    _ => {}
+                }
+                continue;
+            }
+            let previous_prefix = prefix_pending;
+            if !matches!(
+                event,
+                Event::Key(KeyEvent {
+                    kind: KeyEventKind::Release,
+                    ..
+                })
+            ) {
+                prefix_pending = false;
+            }
+            let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
+            let rows = tree_rows(&snapshot, &query);
+            if picker
+                && !previous_prefix
+                && matches!(&event, Event::Key(key)
+            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('a')
+                && key.modifiers.contains(KeyModifiers::CONTROL))
+            {
+                authority.activity(&active, &mut status);
+                let source = rows
+                    .get(selected)
+                    .map(|row| row.id.as_str())
+                    .unwrap_or(&active);
+                match call(socket, json!({"op":"acp-profiles"}))
+                    .and_then(|catalog| launch::Dialog::new(&snapshot, source, catalog))
+                {
+                    Ok(dialog) => launch_dialog = Some(dialog),
+                    Err(error) => {
+                        if crate::client::is_connection_error(&error) {
+                            return Err(error);
+                        }
+                        status = format!("{error:#}");
+                    }
+                }
+                continue;
+            }
+            if let Event::Key(key) = &event
+                && key.kind != KeyEventKind::Release
+                && previous_prefix
+                && key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('l' | 'f'))
+            {
+                picker = false;
+                prefix_pending = false;
+                pending_parent = None;
+                authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
+                continue;
+            }
+            if authority.panel_event(&event, &mut status) {
+                continue;
+            }
+            let prefix_event = matches!(&event, Event::Key(key)
+            if key.kind != KeyEventKind::Release && is_prefix(*key, prefix));
+            if is_agent && !picker && !prefix_event {
+                match &event {
+                    Event::Resize(cols, rows) => size = (*cols, *rows),
+                    Event::FocusGained => {
+                        focused = true;
+                        reported_focus = Some(true);
+                    }
+                    Event::FocusLost => {
+                        focused = false;
+                        reported_focus = Some(false);
+                    }
+                    Event::Mouse(mouse)
+                        if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
+                            && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) =>
+                    {
+                        authority.activity(&active, &mut status);
+                        authority.suppress_mouse(mouse.kind);
+                        picker = true;
+                        query.clear();
+                        pending_parent = None;
+                        selected = rows.iter().position(|row| row.id == active).unwrap_or(0);
+                    }
+                    _ => {
+                        if matches!(
+                            &event,
+                            Event::Paste(_)
+                                | Event::Key(KeyEvent {
+                                    kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                                    ..
+                                })
+                        ) || matches!(&event, Event::Mouse(mouse) if !matches!(mouse.kind, MouseEventKind::Moved))
+                        {
+                            authority.activity(&active, &mut status);
+                        }
+                        if let Some(request) = agent.event(&event)
+                            && let Err(rejected) = authority.acp_action(request, &mut status)
+                        {
+                            agent.sync(&agent_projection, authority.acp_grant(&active));
+                            agent.restore_unadmitted(rejected);
+                        }
+                    }
+                }
+                // None means consumed/local navigation, never raw PTY fallback.
+                continue;
+            }
+            match event {
+                Event::Resize(cols, rows) => {
+                    size = (cols, rows);
+                    // A picker is an overlay: even foreground resize is deferred until it closes.
+                    if !picker {
+                        resize_native(socket, &snapshot, &active, size)?;
+                    }
+                }
+                Event::FocusGained => {
+                    focused = true;
+                    reported_focus = Some(true);
+                }
+                Event::FocusLost => {
+                    focused = false;
+                    reported_focus = Some(false);
+                }
+                Event::Paste(paste) => {
+                    if picker {
+                        authority.activity(&active, &mut status);
+                        query.push_str(&paste.replace(['\n', '\r'], " "));
+                        selected = 0;
+                    } else {
+                        offset = 0;
+                        authority.input(&active, Input::Paste(paste), &mut status);
+                    }
+                }
+                Event::Key(key) if key.kind != KeyEventKind::Release => {
+                    if is_prefix(key, prefix) {
+                        if picker && previous_prefix && !active.is_empty() {
+                            picker = false;
+                            resize_native(socket, &snapshot, &active, size)?;
+                            if !is_agent {
+                                authority.input(
+                                    &active,
+                                    Input::Bytes(key_bytes(
+                                        prefix,
+                                        mode(&screen, "application_cursor"),
+                                    )),
+                                    &mut status,
+                                );
+                            }
+                        } else {
+                            authority.activity(&active, &mut status);
+                            picker = true;
+                            prefix_pending = true;
+                            query.clear();
+                            selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
+                            pending_parent = None;
                         }
                         continue;
                     }
-                    if matches!(mouse.kind, MouseEventKind::ScrollUp) {
-                        selected = selected.saturating_sub(3);
-                    } else if matches!(mouse.kind, MouseEventKind::ScrollDown) {
-                        selected = (selected + 3).min(rows.len().saturating_sub(1));
-                    } else if view::Geometry::hit(geometry.body, mouse.column, mouse.row)
-                        && mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT
-                            < geometry.body.height / view::ROW_HEIGHT
-                        && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
-                    {
-                        let start = view::list_start(selected, geometry.body.height);
-                        if let Some(row) = rows.get(
-                            start
-                                + (mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT)
-                                    as usize,
-                        ) {
-                            if let Some((child, demote)) = pending_parent.take() {
-                                match call(
-                                    socket,
-                                    json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":row.id}),
-                                ) {
-                                    Ok(_) => {
-                                        snapshot = call(socket, json!({"op":"snapshot"}))?;
+                    if picker {
+                        authority.activity(&active, &mut status);
+                        let chosen = rows.get(selected).map(|r| r.id.clone());
+                        let control = key.modifiers.contains(KeyModifiers::CONTROL);
+                        let empty = active.is_empty()
+                            && snapshot["terminals"]
+                                .as_array()
+                                .is_none_or(|terminals| terminals.is_empty());
+                        let action = match key.code {
+                            KeyCode::Char('q') if control || empty => break,
+                            KeyCode::Esc if empty => break,
+                            KeyCode::Enter if empty => Some(open_window("", false)),
+                            KeyCode::Esc => {
+                                picker = active.is_empty();
+                                pending_parent = None;
+                                None
+                            }
+                            KeyCode::Up => {
+                                selected = selected.saturating_sub(1);
+                                None
+                            }
+                            KeyCode::Down => {
+                                selected = (selected + 1).min(rows.len().saturating_sub(1));
+                                None
+                            }
+                            KeyCode::Backspace => {
+                                query.pop();
+                                selected = 0;
+                                None
+                            }
+                            KeyCode::Enter => {
+                                if let Some(id) = chosen {
+                                    if let Some((child, demote)) = pending_parent.take() {
+                                        if agent_view(&snapshot, &id).is_some() {
+                                            status = "ACP views are not PTY parents".into();
+                                            None
+                                        } else {
+                                            Some(
+                                                json!({"op":if demote {"demote"} else {"reparent"},
+                                            "terminal":child,"parent":id}),
+                                            )
+                                        }
+                                    } else {
+                                        active = id;
+                                        Resume::select(resume, &snapshot, &active);
+                                        screen = Value::Null;
+                                        selection = None;
+                                        status.clear();
+                                        offset = 0;
+                                        picker = false;
+                                        None
                                     }
-                                    Err(error) => status = format!("{error:#}"),
+                                } else {
+                                    None
                                 }
-                            } else {
-                                active = row.id.clone();
-                                picker = false;
-                                offset = 0;
-                                screen = Value::Null;
-                                selection = None;
-                                status.clear();
-                                call(
-                                    socket,
-                                    json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                )?;
+                            }
+                            KeyCode::Char('n') if control || empty => Some(open_from_view(
+                                &snapshot,
+                                chosen.as_deref().unwrap_or(&active),
+                                false,
+                            )),
+                            KeyCode::Char('o') if control => Some(open_from_view(
+                                &snapshot,
+                                chosen.as_deref().unwrap_or(&active),
+                                true,
+                            )),
+                            KeyCode::Char('p') if control => chosen
+                                .filter(|id| agent_view(&snapshot, id).is_none())
+                                .map(|id| json!({"op":"promote","terminal":id})),
+                            KeyCode::Char('x') if control => chosen.and_then(|id| {
+                                if close_agent(&mut authority, &snapshot, &id, &mut status) {
+                                    None
+                                } else {
+                                    Some(close_window(&snapshot, &id))
+                                }
+                            }),
+                            KeyCode::Char('r' | 'd') if control => {
+                                if let Some(id) = chosen {
+                                    if agent_view(&snapshot, &id).is_some() {
+                                        status = "ACP views are not PTY parents or children".into();
+                                        continue;
+                                    }
+                                    pending_parent = Some((id, key.code == KeyCode::Char('d')));
+                                    status =
+                                        "Select new parent and press Enter; Esc cancels".into();
+                                }
+                                None
+                            }
+                            KeyCode::Char(c)
+                                if !control && !key.modifiers.contains(KeyModifiers::ALT) =>
+                            {
+                                query.push(c);
+                                selected = 0;
+                                None
+                            }
+                            _ => None,
+                        };
+                        if let Some(request) = action {
+                            let opens = request["op"] == "open";
+                            match apply_window(socket, request, &mut active, &mut snapshot, resume)
+                            {
+                                Ok(()) => {
+                                    status.clear();
+                                    offset = 0;
+                                    screen = Value::Null;
+                                    selection = None;
+                                    if opens {
+                                        picker = false;
+                                    }
+                                    if active.is_empty() {
+                                        picker = true;
+                                    }
+                                }
+                                Err(error) => {
+                                    if crate::client::is_connection_error(&error) {
+                                        return Err(error);
+                                    }
+                                    status = format!("{error:#}");
+                                }
                             }
                         }
-                    }
-                } else if window_exited(&snapshot, &active) {
-                    if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
-                        let request = if view::Geometry::hit(geometry.new, mouse.column, mouse.row)
-                        {
-                            Some(open_window(&active, false))
-                        } else if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
-                            Some(close_window(&snapshot, &active))
-                        } else {
-                            None
+                        if !picker {
+                            resize_native(socket, &snapshot, &active, size)?;
+                        }
+                    } else if window_exited(&snapshot, &active) {
+                        let request = match key.code {
+                            KeyCode::Char('n') | KeyCode::Enter => {
+                                Some(open_window(&active, false))
+                            }
+                            KeyCode::Char('x') | KeyCode::Delete => {
+                                Some(close_window(&snapshot, &active))
+                            }
+                            KeyCode::Esc => {
+                                picker = true;
+                                None
+                            }
+                            _ => None,
                         };
                         if let Some(request) = request {
-                            match apply_window(socket, request, &mut active, &mut snapshot) {
+                            match apply_window(socket, request, &mut active, &mut snapshot, resume)
+                            {
                                 Ok(()) => {
                                     picker = active.is_empty();
                                     screen = Value::Null;
@@ -1175,68 +1742,264 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
                                     selection = None;
                                     status.clear();
                                     if !picker {
-                                        call(
-                                            socket,
-                                            json!({"op":"resize","terminal":active,"cols":size.0.clamp(2,500),"rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
-                                        )?;
+                                        resize_native(socket, &snapshot, &active, size)?;
                                     }
                                 }
-                                Err(error) => status = format!("{error:#}"),
+                                Err(error) => {
+                                    if crate::client::is_connection_error(&error) {
+                                        return Err(error);
+                                    }
+                                    status = format!("{error:#}");
+                                }
                             }
                         }
-                    }
-                } else if mouse.row >= HEADER {
-                    let application_mouse = mode(&screen, "mouse_click")
-                        || mode(&screen, "mouse_drag")
-                        || mode(&screen, "mouse_motion");
-                    if application_mouse
-                        && !mouse.modifiers.contains(KeyModifiers::SHIFT)
-                        && offset == 0
-                        && selection.is_none()
+                    } else if key.modifiers.contains(KeyModifiers::SHIFT)
+                        && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown)
                     {
-                        let bytes = mouse_bytes(mouse, &screen);
-                        if !bytes.is_empty() {
-                            authority.application_mouse(&active, mouse.kind, bytes, &mut status);
-                        }
+                        authority.activity(&active, &mut status);
+                        let page = size.1.saturating_sub(HEADER) as usize;
+                        offset = if key.code == KeyCode::PageUp {
+                            (offset + page)
+                                .min(screen["history_size"].as_u64().unwrap_or(0) as usize)
+                        } else {
+                            offset.saturating_sub(page)
+                        };
                     } else {
-                        let point = (mouse.column, mouse.row - HEADER);
-                        match mouse.kind {
-                            MouseEventKind::ScrollUp => {
-                                offset = (offset + 3)
-                                    .min(screen["history_size"].as_u64().unwrap_or(0) as usize)
-                            }
-                            MouseEventKind::ScrollDown => offset = offset.saturating_sub(3),
-                            MouseEventKind::Down(MouseButton::Left) => {
-                                selection = Some((point, point))
-                            }
-                            MouseEventKind::Drag(MouseButton::Left) => {
-                                if let Some((_, end)) = selection.as_mut() {
-                                    *end = point;
-                                }
-                            }
-                            MouseEventKind::Up(MouseButton::Left) => {
-                                if let Some((start, _)) = selection.take() {
-                                    let selected = selected_text(&screen, start, point);
-                                    if !selected.is_empty() {
-                                        write!(
-                                            io::stdout(),
-                                            "\x1b]52;c;{}\x07",
-                                            base64(selected.as_bytes())
-                                        )?;
-                                        io::stdout().flush()?;
-                                        status = "Selection copied via OSC52 (terminal permission may be required)".into();
-                                    }
-                                }
-                            }
-                            _ => {}
+                        offset = 0;
+                        let bytes = key_bytes(key, mode(&screen, "application_cursor"));
+                        if !bytes.is_empty() {
+                            authority.input(&active, Input::Bytes(bytes), &mut status);
                         }
                     }
                 }
+                Event::Mouse(mouse) => {
+                    let application_mouse = mode(&screen, "mouse_click")
+                        || mode(&screen, "mouse_drag")
+                        || mode(&screen, "mouse_motion");
+                    if picker || mouse.row < HEADER {
+                        authority.suppress_mouse(mouse.kind);
+                    }
+                    if (picker
+                        || mouse.row < HEADER
+                        || !application_mouse
+                        || mouse.modifiers.contains(KeyModifiers::SHIFT)
+                        || selection.is_some()
+                        || offset != 0)
+                        && !matches!(mouse.kind, MouseEventKind::Moved)
+                    {
+                        authority.activity(&active, &mut status);
+                    }
+                    if view::Geometry::hit(geometry.switch, mouse.column, mouse.row)
+                        && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
+                    {
+                        if picker && active.is_empty() {
+                            break;
+                        }
+                        picker = !picker || active.is_empty();
+                        query.clear();
+                        pending_parent = None;
+                        selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
+                        status.clear();
+                        if !picker {
+                            resize_native(socket, &snapshot, &active, size)?;
+                        }
+                    } else if picker {
+                        let empty = active.is_empty()
+                            && snapshot["terminals"]
+                                .as_array()
+                                .is_none_or(|terminals| terminals.is_empty());
+                        if empty && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
+                            if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
+                                break;
+                            }
+                            if view::Geometry::hit(geometry.new, mouse.column, mouse.row) {
+                                match apply_window(
+                                    socket,
+                                    open_window("", false),
+                                    &mut active,
+                                    &mut snapshot,
+                                    resume,
+                                ) {
+                                    Ok(()) => {
+                                        picker = false;
+                                        screen = Value::Null;
+                                        offset = 0;
+                                        selection = None;
+                                        status.clear();
+                                        resize_native(socket, &snapshot, &active, size)?;
+                                    }
+                                    Err(error) => {
+                                        if crate::client::is_connection_error(&error) {
+                                            return Err(error);
+                                        }
+                                        status = format!("{error:#}");
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+                        if matches!(mouse.kind, MouseEventKind::ScrollUp) {
+                            selected = selected.saturating_sub(3);
+                        } else if matches!(mouse.kind, MouseEventKind::ScrollDown) {
+                            selected = (selected + 3).min(rows.len().saturating_sub(1));
+                        } else if view::Geometry::hit(geometry.body, mouse.column, mouse.row)
+                            && mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT
+                                < geometry.body.height / view::ROW_HEIGHT
+                            && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
+                        {
+                            let start = view::list_start(selected, geometry.body.height);
+                            if let Some(row) = rows.get(
+                                start
+                                    + (mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT)
+                                        as usize,
+                            ) {
+                                if let Some((child, demote)) = pending_parent.take() {
+                                    if agent_view(&snapshot, &row.id).is_some() {
+                                        status = "ACP views are not PTY parents".into();
+                                        continue;
+                                    }
+                                    match call(
+                                        socket,
+                                        json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":row.id}),
+                                    ) {
+                                        Ok(_) => {
+                                            snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                        }
+                                        Err(error) => {
+                                            if crate::client::is_connection_error(&error) {
+                                                return Err(error);
+                                            }
+                                            status = format!("{error:#}");
+                                        }
+                                    }
+                                } else {
+                                    active = row.id.clone();
+                                    Resume::select(resume, &snapshot, &active);
+                                    picker = false;
+                                    offset = 0;
+                                    screen = Value::Null;
+                                    selection = None;
+                                    status.clear();
+                                    resize_native(socket, &snapshot, &active, size)?;
+                                }
+                            }
+                        }
+                    } else if window_exited(&snapshot, &active) {
+                        if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
+                            let request =
+                                if view::Geometry::hit(geometry.new, mouse.column, mouse.row) {
+                                    Some(open_window(&active, false))
+                                } else if view::Geometry::hit(
+                                    geometry.close,
+                                    mouse.column,
+                                    mouse.row,
+                                ) {
+                                    Some(close_window(&snapshot, &active))
+                                } else {
+                                    None
+                                };
+                            if let Some(request) = request {
+                                match apply_window(
+                                    socket,
+                                    request,
+                                    &mut active,
+                                    &mut snapshot,
+                                    resume,
+                                ) {
+                                    Ok(()) => {
+                                        picker = active.is_empty();
+                                        screen = Value::Null;
+                                        offset = 0;
+                                        selection = None;
+                                        status.clear();
+                                        if !picker {
+                                            resize_native(socket, &snapshot, &active, size)?;
+                                        }
+                                    }
+                                    Err(error) => {
+                                        if crate::client::is_connection_error(&error) {
+                                            return Err(error);
+                                        }
+                                        status = format!("{error:#}");
+                                    }
+                                }
+                            }
+                        }
+                    } else if mouse.row >= HEADER {
+                        let application_mouse = mode(&screen, "mouse_click")
+                            || mode(&screen, "mouse_drag")
+                            || mode(&screen, "mouse_motion");
+                        if application_mouse
+                            && !mouse.modifiers.contains(KeyModifiers::SHIFT)
+                            && offset == 0
+                            && selection.is_none()
+                        {
+                            let bytes = mouse_bytes(mouse, &screen);
+                            if !bytes.is_empty() {
+                                authority.application_mouse(
+                                    &active,
+                                    mouse.kind,
+                                    bytes,
+                                    &mut status,
+                                );
+                            }
+                        } else {
+                            let point = (mouse.column, mouse.row - HEADER);
+                            match mouse.kind {
+                                MouseEventKind::ScrollUp => {
+                                    offset = (offset + 3)
+                                        .min(screen["history_size"].as_u64().unwrap_or(0) as usize)
+                                }
+                                MouseEventKind::ScrollDown => offset = offset.saturating_sub(3),
+                                MouseEventKind::Down(MouseButton::Left) => {
+                                    selection = Some((point, point))
+                                }
+                                MouseEventKind::Drag(MouseButton::Left) => {
+                                    if let Some((_, end)) = selection.as_mut() {
+                                        *end = point;
+                                    }
+                                }
+                                MouseEventKind::Up(MouseButton::Left) => {
+                                    if let Some((start, _)) = selection.take() {
+                                        let selected = selected_text(&screen, start, point);
+                                        if !selected.is_empty() {
+                                            write!(
+                                                io::stdout(),
+                                                "\x1b]52;c;{}\x07",
+                                                base64(selected.as_bytes())
+                                            )?;
+                                            io::stdout().flush()?;
+                                            status = "Selection copied via OSC52 (terminal permission may be required)".into();
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
-            _ => {}
+        }
+        Ok(())
+    })();
+    // Cancel before any local projection/draft destructors and before joining:
+    // the old worker may not drain queued authority after observation loss.
+    authority.stop();
+    if let Some(opened) = authority.take_launched() {
+        *resume = Some(Resume::launched(&snapshot, &opened)?);
+        if outcome
+            .as_ref()
+            .is_err_and(|error| error.downcast_ref::<AttachmentEnded>().is_some())
+        {
+            // An old view's Ended classification cannot decide the fate of a
+            // different acknowledged launch. Validate its exact target fresh.
+            return Err(crate::client::connection_lost(
+                "acknowledged ACP launch requires fresh continuity validation",
+            ));
         }
     }
-    Ok(())
+    outcome
 }
 
 #[cfg(test)]

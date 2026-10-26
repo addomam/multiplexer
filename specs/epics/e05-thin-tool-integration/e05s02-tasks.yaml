@@ -1,0 +1,103 @@
+story_id: e05s02
+type: task-ledger
+context: context.yaml
+status: failing
+future_commands_not_evidence: true
+tasks:
+- id: e05s02t01
+  title: boundary-regressions
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s01
+  change: Create RED behavior regressions for uncertain identities, boundaries, races
+    and cleanup before production changes; no wiring/default/source-text tests.
+  scenarios:
+  - SC-e05s02-P0-01
+  - SC-e05s02-P0-02
+  - SC-e05s02-P0-03
+  - SC-e05s02-P0-04
+  - SC-e05s02-P1-05
+  verify: cargo test --test tool_integration e05s02_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s02_original_responder_and_scope
+  - e05s02_first_winner_and_stale_reply
+  - e05s02_reply_budget_recovery
+  - e05s02_withdrawal_race
+  - e05s02_unsupported_schema_and_scope
+  zero_case_is_failure: true
+- id: e05s02t02
+  title: implementation
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s02t01
+  change: Implement only this story against the integrated concrete protocol/shared
+    broker contract, preserving ACP/native behavior and exact original responders.
+  scenarios:
+  - SC-e05s02-P0-01
+  - SC-e05s02-P0-02
+  - SC-e05s02-P0-03
+  - SC-e05s02-P0-04
+  - SC-e05s02-P1-05
+  verify: cargo test --test tool_integration e05s02_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s02_original_responder_and_scope
+  - e05s02_first_winner_and_stale_reply
+  - e05s02_reply_budget_recovery
+  - e05s02_withdrawal_race
+  - e05s02_unsupported_schema_and_scope
+  zero_case_is_failure: true
+- id: e05s02t03
+  title: runtime-smoke
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s02t02
+  change: Exercise the actual CLI/API/controlling-PTY surface and real arithmetic/file
+    effects outside test-only proof; observe original endpoints/processes/workers/sentinel
+    before fallback.
+  scenarios:
+  - SC-e05s02-P0-01
+  - SC-e05s02-P0-02
+  - SC-e05s02-P0-03
+  - SC-e05s02-P0-04
+  - SC-e05s02-P1-05
+  verify: cargo test --test tool_integration e05s02_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s02_original_responder_and_scope
+  - e05s02_first_winner_and_stale_reply
+  - e05s02_reply_budget_recovery
+  - e05s02_withdrawal_race
+  - e05s02_unsupported_schema_and_scope
+  zero_case_is_failure: true
+- id: e05s02t04
+  title: compatibility-evidence
+  status: failing
+  risk: P0
+  depends_on:
+  - e05s02t03
+  change: Run affected/full existing regression boundaries and record actual source-bound
+    commands/counts/smoke/cleanup; update shipped docs only for observed behavior.
+  scenarios:
+  - SC-e05s02-P0-01
+  - SC-e05s02-P0-02
+  - SC-e05s02-P0-03
+  - SC-e05s02-P0-04
+  - SC-e05s02-P1-05
+  verify: cargo test --test tool_integration e05s02_ -- --nocapture --test-threads=1
+  required_smoke: Actual changed CLI/API/controlling-PTY effects and cleanup; test
+    command alone is insufficient.
+  expected_cases:
+  - e05s02_original_responder_and_scope
+  - e05s02_first_winner_and_stale_reply
+  - e05s02_reply_budget_recovery
+  - e05s02_withdrawal_race
+  - e05s02_unsupported_schema_and_scope
+  zero_case_is_failure: true

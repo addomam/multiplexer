@@ -1,0 +1,94 @@
+{
+  "scope": "e04s04-implemented-local-tasks1-3-not-live-or-whole-story",
+  "review_round": 3,
+  "max_rounds": 5,
+  "AND_gate": "PASS",
+  "source_commit": "6a5d9af",
+  "source_manifest": "specs/verifications/e04s04-round3-source.json",
+  "reviewers": [
+    {
+      "name": "A",
+      "report": "specs/verifications/e04s04-review-a-round3.json",
+      "total_items": 32,
+      "individually_assessed": 32,
+      "must_fix_count": 0,
+      "should_fix_count": 0,
+      "consider_count": 0,
+      "score": 100,
+      "independent_source_hashes_matched": 19,
+      "checks_run_build_test_lint": false,
+      "attestation_location": "raw explanation full32-item rubric and explicit total/count footer"
+    },
+    {
+      "name": "B",
+      "report": "specs/verifications/e04s04-review-b-round3.json",
+      "total_items": 32,
+      "individually_assessed": 32,
+      "must_fix_count": 0,
+      "should_fix_count": 0,
+      "consider_count": 1,
+      "score": 100,
+      "independent_source_hashes_matched": 19,
+      "checks_run_build_test_lint": false,
+      "attestation_location": "raw explanation contains reviewer-authored full JSON32-item rubric and one Consider; top-level findings empty"
+    }
+  ],
+  "security": {
+    "report": "specs/security/epics/e04/e04s04-review-round3.json",
+    "supported_security_findings": 0,
+    "operational_must_fix": 0,
+    "total_items": 32,
+    "individually_assessed": 32,
+    "score": 100,
+    "independent_source_hashes_matched": 0,
+    "hash_limit": "No hashing/command device;19 entries read, no cryptographic equality claim",
+    "checks_run_build_test_lint": false
+  },
+  "dispositions": [
+    {
+      "finding": "S04-OPS-01",
+      "status": "locally-repaired-and-independently-cleared-round3",
+      "RED": "9c46d0b/artifact1449",
+      "repair": "6a94038",
+      "current_proof": "artifact1515 plus actual endpoint runtime"
+    },
+    {
+      "finding": "S04-OPS-02 and A round2 item25",
+      "status": "locally-repaired-and-independently-cleared-round3",
+      "RED": "8a71a14/artifact1498",
+      "repair": [
+        "6b38b77",
+        "6a5d9af"
+      ],
+      "current_proof": "two endpoint-truth cases/current1515/actual CLI3paths"
+    },
+    {
+      "finding": "A round2 item19 completed-I/O race Consider",
+      "status": "addressed-and-independently-cleared-round3",
+      "repair": "pre-syscall stop check, actual success counts retained; descriptor release before finish"
+    },
+    {
+      "finding": "B round3 item31 Consider: leave owner/E2E long methods intact",
+      "status": "accepted-no-source-change",
+      "reason": "No consumer defect; existing audit acknowledges long-method tradeoff. Splitting causal lifetime/acceptance sequences would hide ordering; do not add a framework."
+    }
+  ],
+  "source_frozen_during_review": true,
+  "source_bug_record": "Intentionally retains pre-review6a5d9af snapshot; this gate and current build evidence record independent disposition without changing reviewed bytes.",
+  "local_task_ledger_result": "tasks1-3 may now pass their actual runtime/security/review gates",
+  "live_task": {
+    "status": "failing-unapproved-unimplemented-unrun",
+    "root_exact_test": "e04s04_live_adapters",
+    "command_available": false,
+    "zero_case_cannot_pass": true,
+    "prerequisites": "specs/verifications/e04s04-live-prerequisites.json"
+  },
+  "whole_story": "failing",
+  "historical_rounds": [
+    "round1FAIL",
+    "round2FAIL"
+  ],
+  "historical_native_fence_and_caps": "unchanged",
+  "next_source_review_round": 4,
+  "ACP_publication": "not-authorized-not-performed"
+}

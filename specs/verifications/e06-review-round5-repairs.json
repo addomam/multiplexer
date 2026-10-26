@@ -1,0 +1,29 @@
+{
+  "finding": "E06-R5-01",
+  "status": "implemented-current-full-runtime-passed-source-review-cap-blocked",
+  "review": "specs/verifications/e06-review-round5.json",
+  "source": "specs/verifications/e06-post-round5-source.json",
+  "change": "move the existing fallible connection.shutdown_handle allocation before controller-create; no new abstraction or cleanup authority",
+  "static_cause": "try_clone can fail after the daemon registration side effect and before Self exists; allocation now precedes that side effect",
+  "descriptor_exhaustion_injected": false,
+  "runtime_red_claimed": false,
+  "normal_current_worker_unit": {
+    "passed": 1,
+    "seconds": 0,
+    "build_workspace": "passed"
+  },
+  "actual_native_cli": "specs/verifications/e06-native-cli-smoke-post-round5.json",
+  "full_gate_job": "bg_321",
+  "new_permanent_test": "none for mechanical ordering; existing causal worker, native setup/recovery and full regressions exercised",
+  "source_review_gate": "FAIL, cap5/max5 exhausted; no further review without explicit approval",
+  "tasks": "all seven remain failing until actual remaining gates",
+  "provider_calls": 0,
+  "aggregate_provider": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "main_merge_push_release": "not authorized",
+  "full_gate": "specs/verifications/e06-post-round5-regressions.json",
+  "full_gate_exit": 0
+}

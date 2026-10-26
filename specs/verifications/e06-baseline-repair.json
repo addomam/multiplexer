@@ -1,0 +1,11 @@
+{
+  "status":"preflight-passed-after-fixture-only-repair",
+  "before":{"job":"bg_263","artifact":"artifact://2015","exit":101,"signal":15,"seconds":2595.28,"status":"stalled-terminated-not-PASS"},
+  "repair":{"files":["tests/acp.rs","tests/acp/native.rs"],"changes":["Keep continuous PTY drainer active until host/group reap, then stop and join","Replace unconditional fixture fallback Child::wait with bounded try_wait in Host, Attachment and Sentinel","Only kill a daemon observed still running; never classify unknown reap as normal success"],"production_changes":false},
+  "focused":{"job":"bg_268","selector":"native::acceptance::e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs","passed":1,"failed":0,"test_seconds":2.35,"wall_seconds":4.40},
+  "preflight":{"job":"bg_269","artifact":"artifact://2020","command":"cargo test && cargo clippy --all-targets -- -D warnings && cargo build","exit":0,"wall_seconds":93.58,"passed":291,"suites":12,"ignored":8,"clippy":"passed","build":"passed"},
+  "interpretation":"Confirmed fixture cleanup needed bounded waits and a live drainer through teardown. Original application failure not established by the stack symbol. Existing native complete and full default project gates now pass; this is not E06 feature acceptance.",
+  "provider_calls":0,
+  "historical_review_caps":"unchanged",
+  "global_config_auth_daemon":"unchanged"
+}

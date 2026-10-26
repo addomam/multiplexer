@@ -1,0 +1,9 @@
+{
+  "status": "confirmed",
+  "scope": "actual private daemon documented persistent idle expiry, no provider",
+  "idle_elapsed_seconds": 6.004,
+  "request_timeout_seconds": 35,
+  "next_setsockopt_errno": 22,
+  "daemon_still_responsive": true,
+  "production_timeout_or_retry_changed": false
+}

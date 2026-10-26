@@ -1,0 +1,171 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 32,
+  "passed_items": 32,
+  "checklist": [
+    {
+      "area": "src/acp.rs — protocol, authority and lifecycle",
+      "result": "PASS — static source",
+      "evidence": "Reviewed the full file and base-relative changes. Configure replies are explicitly dispatched before readiness; original form/permission responders and typed wire IDs are retained. Tool notifications, forms and permissions use the separate 4-KiB opaque-ID bound. Admission, delivery uncertainty and cleanup remain distinct."
+    },
+    {
+      "area": "src/acp/settings.rs — capability-backed configuration",
+      "result": "PASS — static source",
+      "evidence": "Lines 1–666 validate closed bounded requests, resolve exact advertised IDs, serialize startup setters, confirm config-option values, reject conflicting aliases and detect later displacement. Legacy mode null acknowledgements do not relax config-option confirmation."
+    },
+    {
+      "area": "src/acp_profiles.rs — shell-free executable resolution",
+      "result": "PASS — static source",
+      "evidence": "The full implementation bounds profiles and argv, merges explicit settings with validated defaults, resolves absolute or daemon-PATH executables without a shell, preserves symlink invocation paths and exposes only safe catalog fields."
+    },
+    {
+      "area": "src/cli.rs — human and explicit-controller launch",
+      "result": "PASS — static source",
+      "evidence": "AcpStart constructs explicit profile/settings requests. The default human path calls tui::start; only an explicitly supplied controller selects JSON-returning launch. Existing raw open/inspect/attach routes remain separate."
+    },
+    {
+      "area": "src/client.rs — connection lifetime classification",
+      "result": "PASS — static source",
+      "evidence": "The full file distinguishes daemon rejection from transport/framing failure. Liveness checks and shutdown handles feed native fencing; owning Connection destruction shuts down the socket even when cloned handles remain."
+    },
+    {
+      "area": "src/daemon.rs — launch and consumer routing",
+      "result": "PASS — static source",
+      "evidence": "Reviewed the full file and patch. acp-profiles and profile/settings acp-open fields have explicit dispatch. Raw command/profile exclusivity, project-name ambiguity, safe metadata projection, runtime daemon identity and authority-admitted ACP action routing are preserved."
+    },
+    {
+      "area": "src/lib.rs — module integration",
+      "result": "PASS — static source",
+      "evidence": "The profile helper is registered as a private module and used by the existing daemon/configuration paths; no redundant public compatibility layer is introduced."
+    },
+    {
+      "area": "src/projects.rs — configuration-only persistence",
+      "result": "PASS — static source",
+      "evidence": "The full file retains a configuration-only disk schema. Optional acp_profiles is validated on load and mutation; failed validation or persistence rolls back configuration without persisting runtime agents or sessions."
+    },
+    {
+      "area": "src/tui.rs — attachment supervision and input routing",
+      "result": "PASS — static source",
+      "evidence": "Reviewed full source and the recovery/event-loop diff. Recovery validates daemon and exact ACP tuple, permits only initial null-to-established session advancement, reconnects without ensure_daemon, discards queued recovery input and reconciles geometry before readiness. Acknowledged launch identity is captured before fallible observation and salvaged during joined teardown."
+    },
+    {
+      "area": "src/tui/agent.rs — truthful configuration and captured actions",
+      "result": "PASS — static source",
+      "evidence": "The full file binds drafts and actions to exact target/control/generation, discards stale bindings and preserves original interaction/revision identities. Requested and reported settings are displayed separately, with explicit unreported values and no inferred permission guarantee."
+    },
+    {
+      "area": "src/tui/control.rs — original worker and both-socket fences",
+      "result": "PASS — static source",
+      "evidence": "The full file and patch were reviewed. Worker dispatch checks stop, pause heartbeat, authority socket and observation socket; compound claims recheck after observation. Launch has an explicit reply consumer. Recovery disables automatic acquisition; stop shuts down and joins before retaining successful launch identity only."
+    },
+    {
+      "area": "src/tui/launch.rs — deliberate native profile launch",
+      "result": "PASS — static source",
+      "evidence": "The full dialog implementation selects a real project/profile, submits through NativeControl, retains structured option defaults and explains inherited-setting/option-merge semantics. Unavailable profiles are rejected and launch does not invent a second controller."
+    },
+    {
+      "area": "src/tui/view.rs — native surface and picker integration",
+      "result": "PASS — static source",
+      "evidence": "Full rendering/geometry context and the picker-hint changes were reviewed. ACP launch is advertised without replacing terminal/stock-OMP actions or introducing a raw-input fallback for ACP."
+    },
+    {
+      "area": "tests/acp.rs — registrations and shared protocol harness",
+      "result": "PASS — test-source review",
+      "evidence": "The full file registers the new profile/OMP modules and an explicitly ignored live OMP gate. Shared helpers retain exact authority and work identities; bounded reaping does not substitute fixture fallback for successful cleanup evidence."
+    },
+    {
+      "area": "tests/acp/native.rs — controlling-PTY harness",
+      "result": "PASS — test-source review",
+      "evidence": "The full harness and changes include canonical projection synchronization, termios observation, native work/input tests and owned drainer joins. New recovery/live modules are explicitly registered."
+    },
+    {
+      "area": "tests/acp/native/acceptance.rs — native/API interaction contracts",
+      "result": "PASS — test-source review",
+      "evidence": "Full source covers deterministic same-instance questions and permissions, ownership transitions, stale-input non-replay and correction/cancellation. Interaction navigation waits for canonical projected sequence rather than assuming title arrival is sufficient."
+    },
+    {
+      "area": "tests/acp/native/daily_use.rs — launch and surviving attachment cases",
+      "result": "PASS — test-source review",
+      "evidence": "Full source covers native profile/settings launch, observation and authority disconnection, paused clients, surviving work, ended/replaced targets and stale claims through a transparent relay. These are inspected assertions, not executed results."
+    },
+    {
+      "area": "tests/acp/native/omp_live.rs — genuine OMP acceptance driver",
+      "result": "PASS — test-source review only",
+      "evidence": "Full source contains an opt-in same-agent scenario with a native genuine question, exact API deny/allow choices, causal filesystem assertions, original tuple/PID/work checks, budget-evidence checks and cleanup. Its ignored registration is not treated as a successful live run."
+    },
+    {
+      "area": "tests/acp/omp.rs — OMP-shaped protocol regressions",
+      "result": "PASS — test-source review",
+      "evidence": "Full source covers acknowledged settings, exact option aliases, optional questions, permission withdrawal and later configuration displacement. It labels the deterministic fixture as protocol evidence rather than genuine installed-provider acceptance."
+    },
+    {
+      "area": "tests/acp/profiles.rs — CLI and profile contracts",
+      "result": "PASS — test-source review",
+      "evidence": "Full source exercises explicit-controller CLI launch, override precedence, project-name resolution, safe metadata, unavailable/conflicting profile rejection, invalid-patch rollback and absolute/PATH symlink invocation identity."
+    },
+    {
+      "area": "tests/fixtures/acp_peer.rs — deterministic peer fidelity",
+      "result": "PASS — test-source review",
+      "evidence": "Full peer implementation and patch were reviewed. Advertised setters validate exact session/option values, OMP-shaped callbacks preserve wire IDs, long opaque IDs cross notification/form/permission paths, and fallback cleanup is separately identified."
+    },
+    {
+      "area": "tests/pty_control/native.rs — physical routes, consent and geometry",
+      "result": "PASS — test-source review",
+      "evidence": "Full source preserves key/repeat/prefix/paste/mouse fences, conditional keep/consent ordering and historical unknown-settlement blockers. New cases inspect suppressed resize notification and registration-time recovery resize without treating structural changes as application input."
+    },
+    {
+      "area": "tests/acp/native/recovery_edges.rs — recovery race coverage",
+      "result": "PASS — test-source review",
+      "evidence": "Full source contains message-phase fault cases for paused compound claims, acknowledged launch loss, initial session establishment, recovery-time stale shortcuts and deliberate keyboard/mouse target selection."
+    },
+    {
+      "area": "tests/shell_races.rs — stock-shell regression preservation",
+      "result": "PASS — test-source review",
+      "evidence": "Full source retains explicit fixture acquisition and queued-wake/typeahead/ancestry assertions. The patch waits for complete queued output rather than file creation, without weakening the expected effect."
+    },
+    {
+      "area": "README.md — user-facing contracts",
+      "result": "PASS — static documentation",
+      "evidence": "Reviewed launch, defaults, exact advertised IDs, permission-policy uncertainty, original-attachment authority, recovery, geometry, no replay/relaunch and existing native limitations against the implementation. Historical evidence links were not followed."
+    },
+    {
+      "area": "CHANGELOG.md — change and limitation descriptions",
+      "result": "PASS — static documentation",
+      "evidence": "Reviewed the frozen file and E06 additions. The changes describe profile launch, configuration, opaque identities, cancellation, recovery and cleanup while keeping genuine provider acceptance distinct from deterministic peers and preserving historical limitations."
+    },
+    {
+      "area": "CONVENTIONS.md — repository invariants",
+      "result": "PASS — static contract review",
+      "evidence": "Read in full. Reviewed changes retain memory-only runtime state, configuration-only persistence, stable identities, explicit errors, stock Zsh/OMP distinction and observable-behavior/cleanup test intent; no new remote protocol or generic plugin infrastructure was introduced."
+    },
+    {
+      "area": "Cargo.toml — dependency and target scope",
+      "result": "PASS — static manifest review",
+      "evidence": "Read in full and compared with the base. The pinned ACP schema, existing terminal libraries and fixture target remain unchanged by E06; no new dependency or executable installation mechanism was added."
+    },
+    {
+      "area": "Cargo.lock — dependency stability",
+      "result": "PASS — static lockfile review",
+      "evidence": "Read the complete frozen lockfile and checked the base-relative dependency diff, which contains no E06 lockfile changes. This is not a dependency security scan or compilation result."
+    },
+    {
+      "area": "specs/epics/e06-acp-daily-use/PLAN.md — settled contract",
+      "result": "PASS — scoped requirements review",
+      "evidence": "Read only lines 1–45. Compared the implementation with explicit launch/settings, actual-OMP acceptance boundaries, exact surviving attachment recovery, no replay/reacquisition/resurrection and preserved ownership/native limitations. Later execution amendments were not read."
+    },
+    {
+      "area": "specs/product/SCOPE_LATEST.yaml — E06 scope boundary",
+      "result": "PASS — static requirements review",
+      "evidence": "Read in full and compared the scope change. Review stayed within the three E06 stories; E05 custom integration, crash restoration, automatic relaunch and native buffer-fence repair were not reopened or treated as implemented."
+    },
+    {
+      "area": "specs/security/epics/e06/THREAT_MODEL.md — security boundaries",
+      "result": "PASS — static threat review",
+      "evidence": "Read in full. Traced shell-free launch, exact capability/session/callback identities, truthful settings, both native connection lifetimes, pause fencing, retained unknown cleanup and live-budget/privacy boundaries. No supported patch-introduced security defect was identified."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the independent static source/security review: all 32 frozen files were covered, and no evidence-backed patch-introduced Must-fix or Should-fix defect was found. Score is 100 × 32/32. This is not live/runtime E06 acceptance, a repair of historical native application-settlement limitations, or authorization to reset caps, merge or publish.",
+  "limits": "Read-only static review against base 2195b05adf23ae26a80065ecdd6d9196e2915998, using full-file source review, delegated read-only source slices and parent reconciliation of the actual base-relative diff. No edits, builds, tests, lint, formatters, providers, auth/config/daemon operations, source execution or commits were performed. No prior review/audit/repair/runtime reports, saved handoffs, execution logs or retired private fixtures were consulted. Actual installed OMP implementation/source-pin correspondence was not independently established: safe discovery exposed a binary, not readable implementation source. Synthetic peers, source-shaped fixtures, the ignored live test, documentation assertions and parent verification are not runtime proof. Genuine installed OMP same-instance questions and exact allow/deny effects, external live-launcher budget enforcement, built CLI/native operation, disconnect/pause behavior and owned cleanup remain separately exercised runtime gates for the parent. Manifest hashes were not independently recomputed."
+}

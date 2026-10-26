@@ -1,0 +1,33 @@
+{
+  "scope": "e04-acp-plan-static",
+  "verdict": "PASS-static-only",
+  "strict_new_yaml_documents": 10,
+  "historical_state_execution_yaml_parsed_preserving_existing_keys": 2,
+  "strict_story_frontmatters": 4,
+  "stories": 4,
+  "numbered_sections_per_story": 20,
+  "tasks": 22,
+  "task_step_command_matches": 22,
+  "unique_shell_syntax_checked_commands": 11,
+  "scenario_ids": 23,
+  "task_coverage_matches_story_and_test_plan": true,
+  "all_new_story_tasks_failing": true,
+  "e03s08_failing_preserved": true,
+  "e03_review_round_and_cap": [
+    5,
+    5
+  ],
+  "new_e04_plan_review_round_and_cap": [
+    1,
+    5
+  ],
+  "installed_consistency_check": {
+    "critical": 0,
+    "high": 0,
+    "med": 0
+  },
+  "checker_limit": "Installed script selects its own package root and numeric task IDs in extract-story-verify; direct capsule parsing/step-command matching/shell syntax checks above supplement it. No runtime command was executed.",
+  "runtime_implementation": "not-started",
+  "live_model_checks": 0,
+  "independent_Plan_review": "pending"
+}

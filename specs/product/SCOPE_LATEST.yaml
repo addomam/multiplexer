@@ -1,81 +1,19 @@
-core_value: Safely share one live native agent between human interaction and local automation.
-summary: >-
-  Extend the existing native terminal environment so humans and external
-  orchestrators can exchange exclusive interaction control without replacing the
-  native agent experience, cancelling work on takeover or answering stale requests.
-  The first delivered workflow includes real structured questions and permission
-  decisions on the same live agent seen by native clients.
-
-  Retain the shipped terminal and independent capability-explorer baseline below.
-  This initiative adds ownership, visible handoff and externally requested
-  reacquisition; orchestration decisions remain outside amux.
-delivered_baseline:
-  - {story: e01s01, requirement: Host Zsh, daemon PTYs, screen and scrollback, resize, detach and cleanup}
-  - {story: e01s02, requirement: Confirmed prompt execution, partial-input protection, exported context capture and child launch}
-  - {story: e01s03, requirement: Projects, tree reparenting, saved configuration, recipes, ordered hooks and cached Git metadata}
-  - {story: e01s04, requirement: OMP manual/action discovery, independent lifecycle dimensions, precise settled waits}
-  - {story: e01s05, requirement: Single-terminal TUI, hierarchical fuzzy picker, prefix and literal prefix, shared CLI API}
-  - {story: e01s06, requirement: Vertical slice, stress validation, meaningful tests, usage and supported-version evidence}
-  - {story: e02s01, requirement: Independent terminal endpoint detection with bounded parsing and safe state restoration}
-  - {story: e02s02, requirement: Polished capability matrix, cycling visual demonstrations and reproducible screenshots}
-  - {story: e02s03, requirement: Graphics lifecycles and interactive input and integration inspection}
-  - {story: e02s04, requirement: Headless JSON regression, visual verification export and independent amux compatibility testing}
+initiative: e06-acp-daily-use
+status: implementation-verified-release-authorized
+core_value: Use supported ACP agents conveniently and safely as daily amux sessions.
+user_decision: Park e05; make OMP ACP work and implement compatibility, launch UX and reattachment hardening.
+parked: {epic: e05, evidence: ../verifications/e05-parking.json, implementation_started: false}
 in_scope:
-  - {story: e03s01, requirement: Exclusive ordinary PTY acquisition and cooperative handoff shared by native clients and raw API callers}
-  - {story: e03s02, requirement: Explicit non-cancelling force, cancellation without requester ownership, and one-shot claim recovery}
-  - {story: e03s03, requirement: Native lock indicators, deliberate takeover controls, request-level progress and multiple-attachment interaction}
-  - {story: e03s04, requirement: Externally requested inactivity/background reacquisition, visible keep-control countdown and immediate hand-back}
-  - {story: e03s05, requirement: One managed local Codex instance with ordinary native interaction, structured observation and prompt submission}
-  - {story: e03s06, requirement: Genuine structured question answers and permission allow/deny with exact live request identity}
-  - {story: e03s07, requirement: Explicit exact-turn cancellation and truthful degraded/exit behavior without accidental process stop}
-  - {story: e03s08, requirement: Complete-broker native/API handoff, authoritative interaction presentation and final real-runtime acceptance}
-out_of_scope:
-  - Tiling and nonlocal clients (deferred presentation)
-  - ACP, A2A, MCP-UI, A2UI (deferred protocols)
-  - Crash recovery, process restoration and exact interpreter cloning (explicitly excluded)
-  - Autonomous scheduling, retries, answer selection, acceptance and reacquisition policy (external orchestrator responsibility)
-  - Worktree provisioning in this workflow (deferred; an existing workspace is sufficient)
-  - Additional harness providers and generic plugin infrastructure (deferred; complete one supported local target first)
-  - Remote backends, containers and relay services (excluded from the local workflow)
-  - Upstream harness forks or replacement native UIs (excluded to preserve the ordinary native experience)
-  - Ergonomic lock/wait CLI porcelain and exact flag design (deferred; raw API access is sufficient)
+  - {story: e06s01, requirement: Actual OMP ACP same-instance genuine questions and exact permission allow/deny, ownership, honest settings and bounded cleanup}
+  - {story: e06s02, requirement: Native picker and CLI profile launch without manual JSON or raw adapter argv; explicit requested and reported model/mode/effort settings}
+  - {story: e06s03, requirement: Reconnect and reattach to surviving work after detach/disconnect/sleep with fresh native provenance and no duplicate agent or replay}
+out_of_scope: [new-protocol, generic-plugin-infrastructure, automatic-agent-relaunch, crash-restoration, remote-protocol, task-or-reacquisition-policy, native-buffer-fence-repair, global-daemon-config-auth-changes]
 constraints:
-  - Rust core; stock Zsh and existing OMP behavior remain unchanged.
-  - Preserve Linux/macOS support boundaries; report platform results actually exercised.
-  - No screen scraping, simulated answer keystrokes, shadow agent or hidden bootstrap model turn.
-  - Runtime ownership and interaction state remain memory-only.
-  - Stable target identities, explicit unknown outcomes and no implicit action replay.
-  - Keep PTY processing and explicit overrides independent of slow observers.
-  - No automatic takeover deadline or amux-initiated relock/retry.
-  - Further native-buffer investigation is deferred to final complete-broker validation if unresolved; safe-handoff guarantees are not waived.
-success_criteria:
-  - Humans and automation operate the same live native agent, including real questions and explicit permission allow/deny.
-  - Only the current owner can interact; stale authority and stale agent/request identity fail without reaching the target.
-  - Cooperative handoff safely drains prior forwarded interactions and reserves control until requester acceptance.
-  - Force preserves the running turn and discloses unresolved effects; pending cancellation grants the requester nothing.
-  - Locked native views explain control ownership, allow deliberate takeover, and show actual blockers after three seconds.
-  - Inactivity/background reacquisition occurs only under an external request; human keep preserves control without automatic retry.
-  - Timeout, socket loss and attachment changes expose inspectable state rather than hidden cancellation or fabricated success.
-  - All 32 interaction acceptance scenarios pass under the complete broker before first feature acceptance, with actual native UI and real harness evidence.
-baseline_success_criteria:
-  - All ten user vertical-slice steps exercised through the local API and native terminal.
-  - Busy and partial-input execution rejected without altering foreground input.
-  - Descendant foreground processes terminated on explicit close and shutdown.
-  - Noisy terminals and slow subscribers cannot block PTY consumption.
-  - Limitations and unverified platforms explicitly reported.
-  - All fourteen terminal-showcase completion criteria exercised with objective and visual evidence distinguished.
-prior_art:
-  - '[OK] alacritty_terminal 0.26.0: complete Rust emulator; Term::new, resize, grid, mode and vte Processor'
-  - '[OK] portable-pty 0.9.0: native PTY ownership, process spawn, reader/writer, resize'
-  - '[OK] crossterm: native terminal events, raw mode, mouse and bracketed paste'
-  - '[OK] serde_json, anyhow, clap, uuid, libc: bounded local protocol and Unix lifecycle'
-  - 'OMP 18.8.7: verified installed help and tagged ExtensionAPI, native Bun extension import, explicit -e loading'
-  - 'Zsh 5.9: documented add-zsh-hook, add-zle-hook-widget, zle -F descriptor callbacks'
-references:
-  - ../planning-context.yaml
-  - ../tech-architecture/DESIGN_PLAN_LATEST.md
-  - ../contracts/pty-control.md
-  - ../tech-architecture/pty-control-native-ux.md
-  - ../adr/0003-codex-first-agent-target.md
-  - ../verifications/agent-interaction-design-review.md
-  - ../epics/e03-agent-interaction/epic.yaml
+  - Preserve force/cancel/conditional ownership contracts and original exact protocol identities.
+  - Preserve stock Zsh/native OMP, existing ACP and all historical review caps and native-fence limitations.
+  - Runtime state remains memory-only; configuration only persists on disk.
+  - No implicit model/permission choice, premium fallback, intercepted/uncertain input replay or application acknowledgement.
+live_authorization: {harness: OMP-ACP-only, auth: existing-subscription-private-isolation, premium_or_API_key_fallback: forbidden, max_model_requests: 4, max_requested_output_tokens_each: 2000, wall_seconds: 120, hard_monetary_cap: false}
+live_budget: {actual_model_requests: 12, aggregate_cap: 12, remaining: 0, further_runs: separately-authorized-only, evidence: ../verifications/e06-omp-live-final.json}
+release_authorization: user-explicit-finish-the-release-main-push-preview-and-install-no-global-daemon-config-auth-changes
+plan: ../epics/archive/e06-acp-daily-use/PLAN.md

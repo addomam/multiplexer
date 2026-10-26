@@ -1,0 +1,44 @@
+{
+  "kind": "actual-built-human-CLI-and-controlling-PTY-outside-tests",
+  "status": "passed",
+  "provider_calls": 0,
+  "binary_sha256": "b2ce09d2f3953a7801c1574b02dd144f6b3b4beb9a62dc8c2485ba427116b595",
+  "target": {
+    "id": "acp-36f33a6b2ce2414fbb5d9e102c3c8e9a",
+    "instance_id": "instance-ef9c57cc163e496cb58385712ae29c0f",
+    "connection_generation": 1,
+    "session_id": "arithmetic-37160",
+    "kind": "acp"
+  },
+  "native_effect": 42,
+  "reattached_API_effect": 57,
+  "original_peer_pid": 37160,
+  "original_agent_retained": true,
+  "duplicate_agents": false,
+  "stale_draft_replayed": false,
+  "automatic_reacquisition": false,
+  "termios_restored": true,
+  "TUI_exits": [
+    0,
+    0
+  ],
+  "host_exits": [
+    0,
+    0
+  ],
+  "drainers_joined": true,
+  "peer_reaped": true,
+  "daemon_exit": 0,
+  "socket_absent": true,
+  "sentinel_survived": true,
+  "fallback_used": false,
+  "private_root_removed": true,
+  "source_stage": "after E06 round5 reported FAIL; one shutdown-handle allocation moved before controller creation; no new review authorized",
+  "source": "specs/verifications/e06-post-round5-source.json",
+  "actual_provider_aggregate": {
+    "spent": 8,
+    "cap": 9,
+    "remaining": 1
+  },
+  "fault_injection": "no file-descriptor exhaustion injected; ordinary actual CLI/native setup and lifetime path exercised"
+}

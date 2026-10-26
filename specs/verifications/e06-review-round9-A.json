@@ -1,0 +1,183 @@
+{
+  "verdict": "FAIL",
+  "score": 96.875,
+  "total_items": 32,
+  "passed_items": 31,
+  "checklist": [
+    {
+      "area": "src/acp.rs — admission, protocol dispatch and lifecycle",
+      "result": "PASS",
+      "evidence": "Reviewed full context and base diff. Configure responses have explicit consuming branches; ready/prompt admission waits for configuration completion. Exact session/instance/generation and typed responder identities remain checked. Peer cancellation preserves an admitted winner, full tool-call IDs have a distinct 4-KiB bound, and ownership transfer does not invoke interruption or process termination."
+    },
+    {
+      "area": "src/acp/settings.rs — advertised settings and truthful configuration",
+      "result": "PASS",
+      "evidence": "Closed bounded requests resolve against exact advertised identities. Sequential original-session setters require appropriate acknowledgments; conflicting aliases, unsupported choices and later startup displacement fail explicitly. Requested, reported, agent-default/unreported and subsequently changed states remain distinct."
+    },
+    {
+      "area": "src/acp_profiles.rs — profile resolution, privacy and symlinks",
+      "result": "PASS",
+      "evidence": "Reviewed complete implementation. Profile count/argv/defaults are bounded; executable lookup uses daemon PATH without a shell and retains the invocation pathname after metadata checks. Public catalog omits command argv and environment; structured overrides preserve exact option keys."
+    },
+    {
+      "area": "src/cli.rs — human and explicit automation launch",
+      "result": "PASS",
+      "evidence": "Reviewed full CLI context. Human start without a controller routes to tui::start; explicit-controller start retains JSON-returning automation. Structured options reject duplicate explicit identities and preserve delimiter-containing IDs. Existing raw open remains separate."
+    },
+    {
+      "area": "src/client.rs — framing and connection lifetime",
+      "result": "PASS",
+      "evidence": "Reviewed full file. Transport/framing errors remain distinguishable from definite daemon rejections. Owning connection drop shuts down retained handles; nonblocking liveness checks support fencing both native connection lifetimes. No replay mechanism was introduced."
+    },
+    {
+      "area": "src/daemon.rs — project routing and initial ownership",
+      "result": "PASS",
+      "evidence": "Reviewed full context and relevant diff. Profile launch resolves an exact project ID or an unambiguous name; raw argv keeps its explicit validation. Reserve/add-target/cooperative claim precede publication/start, and failed admission rolls back. ACP mutation dispatch uses captured Authority and serialized broker commit. Snapshots carry daemon_id and canonical configuration."
+    },
+    {
+      "area": "src/lib.rs — integration registration",
+      "result": "PASS",
+      "evidence": "Reviewed complete module registrations. The new profile module is wired into existing CLI/daemon/project code without adding an alternate protocol or E05 implementation."
+    },
+    {
+      "area": "src/projects.rs — configuration-only persistence",
+      "result": "PASS",
+      "evidence": "Reviewed full context. Optional ACP profiles reuse configuration validation and persistence rollback. Runtime agents, controllers, sessions and recovery identity are not persisted."
+    },
+    {
+      "area": "src/tui.rs — recovery supervision and event routing",
+      "result": "PASS",
+      "evidence": "Reviewed full context and native patch. Recovery uses existing sockets only, validates daemon and exact ACP continuity, disables automatic acquisition, drains setup-time input before readiness and does not repeat launch. Keyboard/mouse selection and acknowledged launch identity are retained before fallible follow-up reads. Application routes stay behind native/ACP gates; recovered geometry is reconciled before readiness."
+    },
+    {
+      "area": "src/tui/agent.rs — bound drafts and settings UX",
+      "result": "PASS",
+      "evidence": "Reviewed complete editor/rendering context. Drafts and responses bind to captured target/control/generation and are discarded on mismatch. Settings navigation consumes application gestures and distinguishes current/requested/unreported values and unknown permission policy. Bounded option clipping is explicitly marked and documented rather than misrepresented as a full catalog."
+    },
+    {
+      "area": "src/tui/control.rs — original worker, loss fences and cleanup",
+      "result": "PASS",
+      "evidence": "Reviewed full worker and UI context. Launch work is explicitly dispatched and its receipt consumed. Worker checks stop, paused heartbeat, authority socket and observation socket before queued work, and repeats checks after compound claim observation. Teardown cancels and joins before retaining only successful launch identity. Recovered idle-controller cleanup uses existing guarded close, which refuses owners/pending claims."
+    },
+    {
+      "area": "src/tui/launch.rs — exact native launch input",
+      "result": "FAIL",
+      "evidence": "Lines 179–183 silently filter control characters and truncate the submitted backing value at the byte limit. A pasted invalid 257-byte model ID can become its valid advertised 256-byte prefix and reach a genuine settings setter instead of being rejected. See E06-R9-01."
+    },
+    {
+      "area": "src/tui/view.rs — structural geometry and picker rendering",
+      "result": "PASS",
+      "evidence": "Reviewed complete renderer. Existing three-row chrome/body geometry and terminal mouse origin remain intact. ACP picker hints are integrated without adding a raw-input fallback for ACP views."
+    },
+    {
+      "area": "tests/acp.rs — shared protocol/ownership/resource coverage",
+      "result": "PASS",
+      "evidence": "Reviewed full test source and registration diff. Cases cover exact identity, first-response arbitration, ownership retention, process/endpoint uncertainty and cleanup. E06 live OMP remains explicitly ignored; test presence was not counted as execution or live acceptance."
+    },
+    {
+      "area": "tests/acp/native.rs — real native harness boundaries",
+      "result": "PASS",
+      "evidence": "Reviewed complete harness and cases. Source drives a controlling PTY, independently drains output, checks original tuple/PID/work and observes termios restoration. New modules are registered; canonical projection fencing is used before interaction navigation."
+    },
+    {
+      "area": "tests/acp/native/acceptance.rs — native/API handoff semantics",
+      "result": "PASS",
+      "evidence": "Reviewed full acceptance source. Original responders and causal permission effects are asserted across native/API handoff, force and keep/withdraw. The changed interaction helper waits for canonical projection rather than treating an incidental title as receipt."
+    },
+    {
+      "area": "tests/acp/native/daily_use.rs — launch and reconnect scenarios",
+      "result": "PASS",
+      "evidence": "Reviewed complete source. Scenarios cover native profile/default/options launch, inert settings navigation, independent loss of observation/authority, paused drafts, old claims, daemon replacement/loss and ended-target non-substitution. These are synthetic-peer test intentions, not observed runtime results."
+    },
+    {
+      "area": "tests/acp/native/omp_live.rs — genuine live acceptance design",
+      "result": "PASS",
+      "evidence": "Reviewed full opt-in driver. Source requires original installed-agent process identity, genuine question and original permission callbacks, absent/present deny/allow effects, stable tuple/work, budget evidence and cleanup before fallback. Its ignored registration and parent-supplied private guard do not establish actual live success."
+    },
+    {
+      "area": "tests/acp/omp.rs — OMP-shaped protocol regressions",
+      "result": "PASS",
+      "evidence": "Reviewed complete source. Cases exercise acknowledgment-before-ready, model-dependent choices, aliases/conflicts, null legacy mode acknowledgment, peer withdrawal, unsupported settings and original-session forms/permissions. Tests explicitly remain protocol-fixture evidence, not actual installed OMP proof."
+    },
+    {
+      "area": "tests/acp/profiles.rs — profile/CLI negative and symlink cases",
+      "result": "PASS",
+      "evidence": "Reviewed complete source. Coverage includes explicit-controller launch, inherited/overridden settings, duplicate and delimiter-containing options, unavailable/conflicting profiles, rejected configuration rollback and invocation-preserving symlink behavior. It does not cover the native editor rewrite identified in E06-R9-01."
+    },
+    {
+      "area": "tests/fixtures/acp_peer.rs — deterministic peer honesty",
+      "result": "PASS",
+      "evidence": "Reviewed full fixture and diff. Added modes retain original sessions/responders, emit long opaque tool IDs and explicit settings/cancellation responses, and record causal synthetic effects. The fixture labels itself protocol evidence rather than a real OMP/provider run."
+    },
+    {
+      "area": "tests/pty_control/native.rs — preserved native settlement and geometry",
+      "result": "PASS",
+      "evidence": "Reviewed full source. Historical unknown native settlement remains a blocker to safe transfer rather than being replaced with force-only acceptance. Added tests assert actual viewport reconciliation before Force readiness and after recovery registration; existing physical key/paste/mouse/consent cases remain present."
+    },
+    {
+      "area": "tests/acp/native/recovery_edges.rs — interleaving-specific recovery coverage",
+      "result": "PASS",
+      "evidence": "Reviewed all fault relay and assertion source. Cases target pause during claim observation, parsed/queued launch receipts, first-session establishment, repeated failed setup, idle observer retirement, registration-time controls and selected-target resize loss. Assertions preserve original work/identity without duplicate opens or automatic claims."
+    },
+    {
+      "area": "tests/shell_races.rs — stock shell race regression",
+      "result": "PASS",
+      "evidence": "Reviewed complete file and patch. Changed assertion waits for the queued builtin's actual content instead of file creation alone. Existing stock-Zsh startup, typeahead/wake and concurrent tree cases are preserved."
+    },
+    {
+      "area": "README.md — user-facing contracts and limitations",
+      "result": "PASS",
+      "evidence": "Reviewed all sections without following historical evidence links. Documentation distinguishes explicit native/automation launch, inherited settings, clipped option metadata, observer recovery, surviving work and unresolved native application settlement. Source/test support is not presented here as independently exercised live acceptance."
+    },
+    {
+      "area": "CHANGELOG.md — change claims",
+      "result": "PASS",
+      "evidence": "Reviewed complete document. E06 entries describe profile/settings/protocol/recovery changes and preserved limitations; no additional actionable documentation defect was established."
+    },
+    {
+      "area": "CONVENTIONS.md — repository constraints",
+      "result": "PASS",
+      "evidence": "Read complete conventions. Review checked memory-only runtime, configuration-only persistence, stable IDs, stock Zsh/OMP preservation, independent PTY processing and observable cleanup. No code or configuration was changed by this review."
+    },
+    {
+      "area": "Cargo.toml — dependency and fixture integration",
+      "result": "PASS",
+      "evidence": "Read complete manifest. ACP schema remains pinned to 1.12.0; concrete existing Rust dependencies and explicit fixture registration are used. No new generic plugin/remote protocol infrastructure was introduced."
+    },
+    {
+      "area": "Cargo.lock — dependency metadata",
+      "result": "PASS",
+      "evidence": "Reviewed all 2057 lines statically. No patch-specific dependency correctness defect was established. Registry artifacts/checksums were not independently fetched or vulnerability-scanned."
+    },
+    {
+      "area": "specs/epics/e06-acp-daily-use/PLAN.md:1-45 — settled contract",
+      "result": "PASS",
+      "evidence": "Read only permitted lines 1–45. Review followed the three settled outcomes and preserved force/cancel/keep/withdraw, exact identities, shell-free launch, no replay/relaunch/reacquisition and honest settings contracts. Later execution amendments were not read."
+    },
+    {
+      "area": "specs/product/SCOPE_LATEST.yaml — E06 scope",
+      "result": "PASS",
+      "evidence": "Read complete scope plus all three story requirement documents. E05 remains parked; no new planning, implementation, restoration, automatic task policy or historical-cap reset was introduced by this review."
+    },
+    {
+      "area": "specs/security/epics/e06/THREAT_MODEL.md — security boundaries",
+      "result": "PASS",
+      "evidence": "Read complete threat model and traced sensitive launch/admission/callback/recovery/cleanup consumers. No additional supported injection, capability-bypass, responder-routing or cleanup-certainty defect was established. Exact native setting input is the supported correctness exception recorded separately in E06-R9-01; no live privacy/provider execution was performed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "E06-R9-01",
+      "category": "Should-fix",
+      "priority": "P2",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui/launch.rs",
+      "line": 179,
+      "title": "Reject invalid launch edits instead of substituting a truncated ID",
+      "impact": "A native profile launch can apply a different advertised model/mode/effort identity from the invalid value supplied by the user, bypassing the intended explicit rejection before startup settings are applied.",
+      "evidence": "Event::Paste calls Dialog::append, whose lines 179–183 remove control characters and stop appending at the byte limit, then clear the error. For an advertised valid 256-byte model ID M, pasting M followed by another byte stores only M. Dialog::request submits that substituted value; tui.rs routes it through NativeControl::launch, daemon profile preparation validates the already-rewritten string, and Configuration::resolve/next dispatches the genuine setter for M. The supplied 257-byte identity would otherwise fail valid_id. PLAN lines 17–23 requires exact advertised identities and explicit unsupported-setting failure, not silent model substitution. The file is new relative to base 2195b05adf23ae26a80065ecdd6d9196e2915998, confirmed by git show reporting it absent from that base.",
+      "fix": "Validate the complete proposed edit before mutating the backing field. Reject over-budget scalar/Options JSON edits in full with a visible error rather than keeping a prefix; reject control-containing scalar setting IDs rather than rewriting them. Preserve legal JSON bytes for the existing parser. Ensure rejected input cannot silently produce a launch, and add a native dialog regression using an offered 256-byte ID and an invalid 257-byte ID sharing that prefix."
+    }
+  ],
+  "summary": "Completed read-only independent coverage of all 32 frozen files, using isolated protocol and launch source-review slices plus full native recovery review and integration/diff reconciliation. Static score is 31/32 = 96.875, but the supported P2 Should-fix in native launch identifier handling makes the verdict FAIL despite exceeding 94. No other actionable patch-introduced defect was established; source approval would still not establish actual installed OMP or runtime/live acceptance.",
+  "limits": "Static/no-execution review only. No edits, builds, tests, lint, formatting, source/shell execution, provider calls, auth/config/daemon/global operations or commits were performed; shell use was limited to permitted read-only git inspection. Prior review/audit/repair/runtime reports, handoffs, execution logs and private retired fixtures were not read, and PLAN inspection stopped at line 45. Test assertions, synthetic peers and ignored live drivers were reviewed but not exercised. Actual installed OMP same-instance interop, native/provider effects, historical unknown native settlement and runtime cleanup are not certified. Manifest hashes were not independently recomputed, so frozen-source integrity and the separately required runtime/live gates remain for the integration owner; no hash-equality or live PASS is claimed."
+}

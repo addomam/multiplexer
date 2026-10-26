@@ -1,0 +1,33 @@
+id: e06
+type: epic
+title: ACP-first daily agent workflow
+status: passing
+scope: ../../../product/SCOPE_LATEST.yaml
+plan: PLAN.md
+impact: ../../../IMPACT_LATEST.md
+threat_model: ../../../security/epics/e06/THREAT_MODEL.md
+priority: explicit-user-three-item-implementation-authorization
+integration_owner: parent
+authorization: user-do-all-three-after-parking-e05
+stories:
+  - id: e06s01
+    title: Real OMP ACP compatibility
+    bcps: 5
+    risk: P0
+    status: passing
+    spec: e06s01-story.md
+    tasks: e06s01-tasks.yaml
+  - id: e06s02
+    title: Convenient explicit ACP launch
+    bcps: 4
+    risk: P1
+    status: passing
+    spec: e06s02-story.md
+    tasks: e06s02-tasks.yaml
+  - id: e06s03
+    title: Truthful same-session reattachment
+    bcps: 5
+    risk: P0
+    status: passing
+    spec: e06s03-story.md
+    tasks: e06s03-tasks.yaml

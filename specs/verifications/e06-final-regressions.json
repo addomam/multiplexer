@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "job": "bg_299",
+  "raw_evidence": "artifact://2131",
+  "exit": 0,
+  "wall_seconds": 217.72,
+  "workspace": {
+    "passed": 426,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_package": {
+    "passed": 315,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "focused_fresh_observer": {
+    "selected": 1,
+    "passed": 1,
+    "seconds": 1.66
+  },
+  "strict_clippy": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "all_targets_check": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "workspace_build": "passed",
+  "format": "passed",
+  "node_observer_syntax": "passed",
+  "independent_actual_cursor_showcase": {
+    "selected": 1,
+    "passed": 1,
+    "seconds": 3.8
+  },
+  "final_native_unknown_settlement_guards": {
+    "selected": 2,
+    "passed": 2,
+    "seconds": [
+      1.08,
+      0.87
+    ]
+  },
+  "OMP_Bun": {
+    "job": "bg_295",
+    "passed": 8,
+    "expect_calls": 49
+  },
+  "Zsh_syntax": {
+    "job": "bg_295",
+    "status": "passed"
+  },
+  "actual_final_binary_native_CLI": "specs/verifications/e06-native-cli-smoke.json",
+  "source": "specs/verifications/e06-review-round1-source.json",
+  "earlier_failures": [
+    {
+      "job": "bg_294",
+      "raw": "artifact://2119",
+      "cause": "historical native F9 navigation ahead of canonical projection; shared render-cursor barrier"
+    },
+    {
+      "job": "bg_296",
+      "raw": "artifact://2123",
+      "cause": "positive force fixture entered before completed-paint/input-drain eligibility; truthful enabled-action affordance and wait"
+    },
+    {
+      "job": "bg_297",
+      "raw": "artifact://2125",
+      "cause": "unnecessary diagnostic-class change; preserve existing blocked classification, retain negative owner/PID/no-input proof"
+    },
+    {
+      "job": "bg_298",
+      "raw": "artifact://2127",
+      "cause": "obsolete permanent unknown-label expectation; deliberate fresh observer identity, old-owner/PID and intercepted-input proof replaces transient phase assertion"
+    }
+  ],
+  "physical_machine_suspend": "not performed; actual SIGSTOP/pause and Darwin wall-clock source exercised; no physical-suspend claim",
+  "live_provider_acceptance": "failing-separate-budget-proof",
+  "historical_review_caps": "unchanged"
+}

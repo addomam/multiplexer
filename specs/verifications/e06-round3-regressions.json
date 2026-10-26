@@ -1,0 +1,84 @@
+{
+  "status": "passed",
+  "job": "bg_308",
+  "raw": "artifact://2205",
+  "exit": 0,
+  "wall_seconds": 239.1,
+  "workspace": {
+    "passed": 433,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_package": {
+    "passed": 322,
+    "suites": 12,
+    "ignored": 9
+  },
+  "counts_overlap": true,
+  "clippy": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "check_all_targets": {
+    "workspace": "passed",
+    "default": "passed"
+  },
+  "build_workspace": "passed",
+  "fmt": "passed",
+  "node_observer_syntax": "passed",
+  "independent_cursor_showcase": {
+    "passed": 1,
+    "seconds": 3.96
+  },
+  "native_unknown_settlement_guards": {
+    "passed": 2,
+    "seconds": [
+      1.08,
+      0.97
+    ]
+  },
+  "task_selections": {
+    "e06s01": {
+      "passed": 9,
+      "live_ignored": 1,
+      "seconds": 5.48
+    },
+    "e06s02": {
+      "passed": 7,
+      "seconds": 2.3
+    },
+    "e06s03": {
+      "passed": 10,
+      "seconds": 5.06
+    },
+    "exact_native_profile": {
+      "passed": 1,
+      "seconds": 1.35
+    },
+    "exact_native_reconnect": {
+      "passed": 1,
+      "seconds": 1.91
+    },
+    "unique_nonlive": 26
+  },
+  "focused_causal_and_daily": {
+    "job": "bg_307",
+    "passed": 14,
+    "wall_seconds": 14.48,
+    "raw": "artifact://2201"
+  },
+  "unchanged_OMP_Bun_Zsh": {
+    "job": "bg_304",
+    "passed": 8,
+    "expect_calls": 49,
+    "zsh": "passed"
+  },
+  "outside_actual_human_cli_native": "specs/verifications/e06-native-cli-smoke.json",
+  "outside_driver_failure_provenance": "specs/verifications/e06-native-round3-driver-repairs.json",
+  "source": "specs/verifications/e06-review-round3-source.json",
+  "provider_calls": 0,
+  "live_acceptance": "still failing and not rerun;8 spent under cap9,1 remains",
+  "private_auth_raw_fixture": "retired with public accounting retained",
+  "physical_suspend_Linux_minimum_toolchain": "not exercised",
+  "historical_review_caps": "unchanged"
+}

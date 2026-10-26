@@ -1,0 +1,112 @@
+type: feat
+context: specs/epics/archive/e04-acp-agent-interaction/context.yaml
+story_id: e04s03
+title: Admission-fenced ownership and retained work
+spec: e04s03-story.md
+status: passing
+bcps: 8
+risk: P0
+tasks:
+- id: 1
+  description: Prove both admission/revocation orders under stalled transport and running question; preserve accepted actions
+    without later owner revalidation and permit safe ACP offer before whole-turn completion.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-01
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 2
+  description: Integrate cooperative/force/pending-cancel and private recovery with the single ownership registry; preserve
+    same process/session/RPC, reserved gap and noncancelling force.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-02
+  - SC-e04s03-P0-03
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 3
+  description: Integrate genuine original-attachment ACP focus/activity/conditional warnings, keep/withdraw and final revalidation
+    without PTY-native provenance fabrication or automatic policy.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-04
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 4
+  description: Fence all top-level raw key/paste/mouse/focus/prefix/resize routes and captured drafts against revocation/identity
+    change; no fresh control substitution or later replay.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture && cargo test --test pty_control native"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-05
+  - SC-e04s03-P1-07
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 5
+  description: Verify exact-prompt explicit interrupt, truthful stopReason/error/EOF transitions and authoritative gap/disconnect
+    resync with inert untrusted terminal rendering.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-06
+  - SC-e04s03-P1-07
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+- id: 6
+  description: Run actual two-surface handoff/conditional/stale-input runtime smoke, cleanup observations, old ownership/native
+    regression boundaries and redacted evidence.
+  verify: "cargo build --example acp_fixture && cargo test --test acp e04s03_ -- --nocapture && cargo test --test pty_control"
+  risk: P0
+  status: passing
+  scenarios:
+  - SC-e04s03-P0-02
+  - SC-e04s03-P0-03
+  - SC-e04s03-P0-04
+  - SC-e04s03-P0-05
+  completion_gate: Named intended cases plus actual smoke/evidence and no new security findings in affected paths; zero-case
+    exit is failure.
+  allure:
+    severity: critical
+    categories:
+    - ACP
+    - real-daemon
+    - Security Review
+evidence: specs/verifications/e04s03-build.md

@@ -1,0 +1,171 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 32,
+  "passed_items": 32,
+  "checklist": [
+    {
+      "area": "Frozen scope and vendor provenance",
+      "result": "PASS — static review",
+      "evidence": "Covered the manifest's 92 paths: 24 first-party code/test files, eight first-party documentation/manifest files and 60 vendor files. Used the sealed release-provenance inventory for the 57 unchanged vendor files; scrutinized vendor/crossterm/Cargo.toml, src/event/source/unix/mio.rs and src/terminal/sys/unix.rs. Independent hash recomputation was not performed."
+    },
+    {
+      "area": "Settled E06 scope",
+      "result": "PASS — static review",
+      "evidence": "Reviewed CONVENTIONS.md, PLAN.md lines 1–45, all three story requirements, SCOPE_LATEST.yaml and THREAT_MODEL.md. Implementation stays within ACP interop, explicit profile/settings launch and surviving-instance attachment recovery; E05 remains parked."
+    },
+    {
+      "area": "Cross-boundary dispatch",
+      "result": "PASS — static review",
+      "evidence": "Traced RpcKind::Configure through ACP reply dispatch and configure_next; Op::Launch through worker RPC, received, take_launched and teardown receipt retention; Work::Stop through worker termination; ConnectionError through TUI supervision; launch-dialog actions through the parent event loop."
+    },
+    {
+      "area": "Exclusive per-target ownership",
+      "result": "PASS — static review",
+      "evidence": "daemon::acp_open publishes the target and initial ownership together; acp_action authorizes the original connection and admits through the existing authority boundary before Broker::commit. Native forwarding retains the captured grant rather than substituting a newer token."
+    },
+    {
+      "area": "Force preserves admitted work",
+      "result": "PASS — static review",
+      "evidence": "Native force continues through ownership operations, not ACP interrupt or process termination. The native control UI preserves explicit confirmation and invalidates confirmation when observed ownership, settlement or retained-work facts change."
+    },
+    {
+      "area": "Cancelled pending claims",
+      "result": "PASS — static review",
+      "evidence": "Existing claim cancellation remains separate from grant acceptance and ACP work cancellation. Recovery clears local claim state and stops the old worker instead of moving pending claims or offers to the replacement attachment."
+    },
+    {
+      "area": "Keep and withdraw policy",
+      "result": "PASS — static review",
+      "evidence": "Native warning/keep handling and the conditional ownership tests preserve the human token and require external policy to make any later request. Recovery does not synthesize consent, keep, withdraw or a replacement claim."
+    },
+    {
+      "area": "Every application-input route",
+      "result": "PASS — static review",
+      "evidence": "Traced bytes, paste, repeat keys, application mouse, ACP editor requests and ownership-panel gestures through native control dispatch. ACP events are consumed without raw PTY fallback; PTY application input requires the captured grant and connected authority."
+    },
+    {
+      "area": "Draft and action identity",
+      "result": "PASS — static review",
+      "evidence": "AgentView::sync discards prompt and interaction drafts when exact target/session or authority changes. acp_action submits the editor's captured request unchanged; only explicitly unadmitted replies can restore a local draft, not transport-unknown delivery."
+    },
+    {
+      "area": "Same-agent genuine questions",
+      "result": "PASS — static review",
+      "evidence": "ACP inbound interactions retain the original wire responder, session/request scope, local interaction identity and revision. Native editing returns canonical requests to the broker rather than creating a second agent or a substitute question."
+    },
+    {
+      "area": "Exact permission allow and deny",
+      "result": "PASS — static review",
+      "evidence": "Permission parsing validates the original session and tool-call identity; selections must match an offered option. Tests in tests/acp/omp.rs and native acceptance sources assert original work/session identity and causal denied-versus-allowed effects."
+    },
+    {
+      "area": "Agent-initiated request cancellation",
+      "result": "PASS — static review",
+      "evidence": "$/cancel_request is explicitly consumed by apply and cancel_incoming. Withdrawal matches the retained wire ID and pending responder under the state lock, does not override an admitted response, and does not fabricate a human selection or prompt interrupt."
+    },
+    {
+      "area": "Advertised settings resolution",
+      "result": "PASS — static review",
+      "evidence": "settings::Configuration resolves requested model/mode/effort/options against advertised identities and categories. Unsupported, ambiguous and conflicting requests fail rather than retrying through guessed identifiers or selecting another model."
+    },
+    {
+      "area": "Acknowledgement before readiness",
+      "result": "PASS — static review",
+      "evidence": "NewSession enters configure_next; each Configure response is acknowledged before the next setting or lifecycle ready. Modern config setters require the confirming configOptions response; legacy mode permits its defined null acknowledgement."
+    },
+    {
+      "area": "Requested, reported and unreported settings",
+      "result": "PASS — static review",
+      "evidence": "Canonical descriptor/inspect projections distinguish requested values, actual reported current/offered values, agent-default state, failures and later changed settings. Native settings rendering preserves the unreported distinction rather than treating absence as confirmation."
+    },
+    {
+      "area": "Permission-policy truthfulness",
+      "result": "PASS — static review",
+      "evidence": "Native launch/settings text explicitly states that mode metadata is not a permission guarantee. No automatic permission response or policy inference was added."
+    },
+    {
+      "area": "Opaque upstream tool identities",
+      "result": "PASS — static review",
+      "evidence": "Tool notifications, tool updates, form tool scope and permission parsing use the separate valid_tool_call_id bound of 4 KiB. Local settings/session/RPC identity limits remain separate; protocol responses retain the original responder identities."
+    },
+    {
+      "area": "Lossless explicit settings edits",
+      "result": "PASS — static review",
+      "evidence": "parse_options_json rejects duplicate keys and trailing content while preserving delimiter-containing IDs and choices. CLI duplicate options are rejected; native over-budget/control-character edits are rejected in full and block submission until corrected."
+    },
+    {
+      "area": "Profile validation and persistence",
+      "result": "PASS — static review",
+      "evidence": "acp_profiles validates bounded profile IDs, safe labels, argv and closed defaults. Config validation precedes persistence and uses the existing rollback path. Only configuration is persisted; runtime ACP instances and attachment capabilities remain memory-only."
+    },
+    {
+      "area": "Shell-free invocation and symlinks",
+      "result": "PASS — static review",
+      "evidence": "Profile resolution selects an executable absolute path without shell expansion; relative PATH entries are ignored. Resolution preserves the selected symlink invocation path rather than canonicalizing away executable identity. Dedicated profile regressions cover absolute and PATH symlinks."
+    },
+    {
+      "area": "CLI and picker use original native controller",
+      "result": "PASS — static review",
+      "evidence": "Human acp start calls tui::start; NativeControl registers the attachment and submits one acp-open on its original connection. The picker uses that same worker. Explicit --controller remains the separate JSON-returning automation path."
+    },
+    {
+      "area": "Launch acknowledgement races",
+      "result": "PASS — static review",
+      "evidence": "Successful launch receipts are consumed before follow-up observation and retained during worker teardown. Resume::launched records the returned exact target; recovery_edges.rs covers follow-up observation loss and launch replies queued during either transport failure."
+    },
+    {
+      "area": "Either socket loss fences authority",
+      "result": "PASS — static review",
+      "evidence": "The UI checks observation and native authority connectivity. Worker dispatch also checks both sockets and stop state; teardown shuts down and joins the original worker before recovery creates new attachment provenance."
+    },
+    {
+      "area": "Pause and sleep fencing",
+      "result": "PASS — static review",
+      "evidence": "Wall-clock pause detection handles Darwin sleep and conservatively fences backward clock changes. Worker heartbeat checks occur before dequeuing authority and again after compound claim observation, preventing paused observations from lending stale authority."
+    },
+    {
+      "area": "Recovery input drain and no implicit acquisition",
+      "result": "PASS — static review",
+      "evidence": "Recovered controllers disable auto_acquire. Recovery discards local editor/claim/consent state, paints an observer frame, drains queued events and reconciles structural resize before accepting new interaction. Registration-time held-key regressions cover the boundary."
+    },
+    {
+      "area": "Exact surviving attachment continuity",
+      "result": "PASS — static review",
+      "evidence": "Resume::validate checks daemon ID, ACP target ID, instance ID, connection generation and established session. Only the first null-to-known session establishment is permitted; missing, ended or replaced targets cannot select a same-name substitute."
+    },
+    {
+      "area": "No relaunch, replay or daemon resurrection",
+      "result": "PASS — static review",
+      "evidence": "supervise consumes the initial launch once and recovery reconnects through Connection::connect only. It does not call ensure_daemon or spawn a replacement agent. Tests cover daemon absence/replacement and unchanged agent PID, tuple and work."
+    },
+    {
+      "area": "Input-reader readiness",
+      "result": "PASS — static review",
+      "evidence": "The changed mio backend checks level readiness before reading a potentially blocking borrowed terminal descriptor, retains readiness across parsed returns and retries interrupted polling. Native polling and RPC waits use explicit bounded waits; no new unconditional input read was found."
+    },
+    {
+      "area": "Zero-time polling and queued drain",
+      "result": "PASS — static review",
+      "evidence": "The vendor source permits an initial poll even when the timeout is zero and retains next_event across parsed returns, so unread TTY bytes and later signal tokens are not discarded. TUI recovery uses zero-time polls to fence queued input before readiness and consent."
+    },
+    {
+      "area": "Inherited descriptors and terminal restoration",
+      "result": "PASS — static review",
+      "evidence": "The changed reader does not set nonblocking flags on inherited stdin. The Unix terminal backend retains original termios, and Restore drops terminal modes/capture on exit. Source tests include blocking inherited descriptors, resize and terminal restoration assertions."
+    },
+    {
+      "area": "Cleanup, retained unknowns and privacy",
+      "result": "PASS — static review",
+      "evidence": "ACP close retains unknown work/delivery and cleanup failures rather than reporting success; existing birth-qualified owned-process cleanup remains in use. Recovered idle registrations use guarded close without releasing owners or cancelling claims. Discovery returns safe profile metadata without argv/environment; live-driver diagnostics avoid raw prompts, responses, auth and tool content."
+    },
+    {
+      "area": "Regression coverage, maintainability and preserved limitations",
+      "result": "PASS — static review",
+      "evidence": "Reviewed protocol, profile, native acceptance/daily-use/recovery, fixture, PTY and shell-race sources plus README/changelog/manifests. New helpers separate launch profiles and ACP settings while reusing existing admission/transport patterns. Historical native unknown settlement remains a blocker to safe transfer, explicitly exercised by the conditional-zero-warning regression; it was not waived or replaced with force-only acceptance."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for this independent static source/security review: 32 of 32 checklist items passed, yielding 100 points, with no supported patch-introduced Must-fix or Should-fix finding. This is not an E06 runtime, provider or release-acceptance PASS, and it does not waive historical unsafe native unknown settlement.",
+  "limits": "Read-only static review only. No edits, builds, tests, lint, formatters, source execution, providers, authentication/configuration operations, daemon operations or global operations were performed. No actual auth, retired private fixtures, earlier reviews/audits, runtime reports, handoff/state or execution logs were read; PLAN.md was restricted to lines 1–45. Vendor release identity was taken from the sealed provenance manifest, not independently re-established, and current frozen hashes were not recomputed. Test sources establish regression intent and assertions, not observed passing execution. Installed OMP same-instance compatibility, actual provider effects, timing/OS behavior and runtime cleanup were not exercised; fixture coverage, source review and live/provider approval are not equivalent. The permitted threat model explicitly retains failing live acceptance and historical native limitations; neither is converted into success by this source verdict."
+}

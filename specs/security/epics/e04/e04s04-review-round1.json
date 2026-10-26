@@ -1,0 +1,146 @@
+{
+  "coverage_summary": "Fresh read-only S04 specialist review complete for current implemented local tasks 1–3 and affected unchanged runtime. Verdict: CHANGES REQUIRED. Supported findings: security 0; operational 1 (high, confidence 9/10, must-fix). Rubric: 1 must-fix, 0 should-fix; 100*(32-1-0)/32 = 96.875. Although the numeric threshold is met, the mandatory zero-must-fix gate is not. Provisional S04-OPS-02 was withdrawn during false-positive filtering and is NOT a final finding: launcher exit alone cannot establish connection failure when a descendant may legitimately serve inherited stdio.\n\nTraced boundaries: local API/original attachment → current target-bound Authority → atomic authority-to-broker memory commit; exact instance/connection/session/generation/interaction/revision → immutable registered RPC/response → dedicated writer without late owner revalidation; conditional focus/activity/keep → original server-stamped connection; captured native drafts and typed form/permission actions → shared admission; key/repeat/paste/mouse/focus/double-prefix → consumed ACP routing, not raw terminal forwarding; adapter stdout → pre-accumulation frame/count/byte limits → ordered decoder/application consumer; stderr → capped retention with continued drain; canonical content → inert ratatui rendering; errors/environment/content → metadata/content separation; explicit close/shutdown → birth-qualified process discovery/termination → pipe-worker joins → connection retirement. The last boundary contains the surviving failure.\n\nAll 32 rubric items were considered. Items 1–18: source supports the approved local scope, same tuple/original RPCs/fresh responders, deliberate values, four offered permission dispositions and actual allow/deny effects, authority-only force, stale-control rejection, consumed physical routes, fresh reacquisition, original conditional provenance, preserved human authority, exact selected ownership, held-input witness, independent progress and recovery. Items 19–24: local tests/evidence preserve unknown/application distinctions, witnessed close-before-shutdown ordering, hostile-frame isolation, stderr drain, private metadata/errors and actual process identities. Item 25 FAILS for uncancellable inherited-pipe cleanup; current fixtures do not cover that path. Items 26–32: reviewed sentinel isolation, real controlling-PTY termios/host/drainer cleanup, outside-test proof, recorded regression/showcase evidence, unchanged native-fence/caps, concrete shared test infrastructure and honest absent live-driver status. No additional supported deduction. No actionable Fowler smell found; long cohesive E2E traces are deliberate test structure, not grounds for a gratuitous refactor.\n\nParent verification, not my execution: artifact://1399 beginning/footer and recorded evidence show selected 7/7 and final independent showcase 1/1; manifest/verification records report workspace 391 across 30 suites with 10 historical ignored, default 280 across 12 suites with 7 ignored, strict Rust gates, Bun 8/49 and Zsh syntax. These overlap and are not distinct totals. The outside-test JSON records 49/49-deny/57 on one synthetic session, termios restoration, clean worker/process/socket/root retirement and sentinel survival. Its successful covered paths do not disprove the retained-pipe failure. I ran no build, test, lint, formatter, payload, provider/auth/network/install/global/publication or other executable command and made no file changes.\n\nRead the complete brief, actual 12-line conventions, all 17 manifest-listed paths at relevant sections, threat/architecture/plan/task contracts and listed proof records. Independent SHA256 comparison was unavailable: mounted tools expose source reads/search but no checksum/execution capability. None of the 17 hashes, branch/HEAD or the no-production-change claim was independently recomputed; those remain manifest assertions. Review did not read another independent reviewer report.\n\nWhole S04/story remains FAILING independently of this local review. The root e04s04_live_adapters test is absent, not implemented and not run; source search found no matching driver or ignored case in the ACP test tree. The published local evidence explicitly says that command is not available/executed. A zero-case Cargo filter cannot establish live success. Exact approved installed closures/launchers/models/auth/private roots/prompt ceilings/enforceable spend and genuine Codex+Claude acceptance remain missing; no compatibility, whole-story acceptance, native input-cut repair or historical cap reset is claimed.",
+  "findings": [
+    {
+      "rule_id": "S04-OPS-01",
+      "title": "ACP cleanup can hang daemon shutdown on inherited pipe endpoints",
+      "summary": "Must-fix; rubric item 25; confidence 9/10. [STATIC INFERENCE, not executed] A caller-selected adapter or its tool can double-fork/setsid and orphan a process retaining adapter stdout/stderr or a stdin reader. ProcessTree only discovers current known ancestry or the original session, so that process can remain uncaptured. Explicit acp-close kills/reaps the known tree but then unconditionally joins blocking pipe workers. The two-second deadline only bounds checking known process termination, not these joins. A retained endpoint prevents EOF or write completion, so close never returns. Shutdown waits for that request connection to retire and also synchronously joins ACP cleanup, allowing one target to prevent daemon exit and socket/resource retirement. This affected unchanged-runtime defect is not introduced by the S04 test-only changes. It is an operational availability failure, not a claim that same-user tools are sandboxed.",
+      "severity": "high",
+      "confidence": "high",
+      "category": "operational/resource-lifecycle",
+      "locations": [
+        {
+          "path": "src/acp.rs",
+          "start_line": 1313,
+          "end_line": 1330,
+          "role": "Known-tree cleanup followed by unconditional pipe-worker joins"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 1461,
+          "end_line": 1509,
+          "role": "Blocking stdout/stderr reads have no cancellation wakeup"
+        },
+        {
+          "path": "src/acp.rs",
+          "start_line": 1382,
+          "end_line": 1382,
+          "role": "Blocking stdin write can likewise retain a worker"
+        },
+        {
+          "path": "src/runtime.rs",
+          "start_line": 735,
+          "end_line": 775,
+          "role": "Discovery excludes already-orphaned processes outside the original session"
+        },
+        {
+          "path": "src/daemon.rs",
+          "start_line": 458,
+          "end_line": 462,
+          "role": "Close request waits synchronously for broker cleanup"
+        },
+        {
+          "path": "src/daemon.rs",
+          "start_line": 2175,
+          "end_line": 2179,
+          "role": "Shutdown waits for request retirement and ACP cleanup"
+        },
+        {
+          "path": "tests/fixtures/acp_peer.rs",
+          "start_line": 352,
+          "end_line": 364,
+          "role": "Current descendant fixtures use null stdio and do not exercise retained endpoints"
+        }
+      ],
+      "cwe": [
+        "CWE-400",
+        "CWE-664"
+      ],
+      "evidence": [
+        {
+          "label": "Concrete source-to-sink path",
+          "explanation": "An adapter-owned daemonized descendant can retain stdout/stderr without emitting data. After its intermediary exits and it leaves the original session, neither discovery predicate includes it. The captured tree can be fully terminated while the reader remains blocked in fill_buf/read or the stderr drainer in read. There is no independent cancellation of those descriptors before joining workers.",
+          "excerpt": "for handle in threads.into_iter().flatten() {\n    workers_joined &= handle.join().is_ok();\n}"
+        },
+        {
+          "label": "Nearby bounds do not bound the joins",
+          "explanation": "The two-second deadline applies only to tree.terminated(). Condvar notification cannot wake blocking pipe I/O. The cleanup failure category is assigned only after all joins return, so this path never reaches an explicit incomplete-cleanup result.",
+          "excerpt": "while !tree.terminated() && Instant::now() < deadline {\n    thread::sleep(Duration::from_millis(5));\n}\nlet terminated = tree.terminated();\ninstance.wake.notify_all();"
+        },
+        {
+          "label": "Consumer consequence and coverage gap",
+          "explanation": "acp_action synchronously calls cleanup for close. Daemon shutdown closes sockets but then waits for the request slots to disappear; socket shutdown cannot interrupt an ACP pipe join inside that request. Direct daemon shutdown also calls Broker::shutdown and cleanup. Current S04 descendants have null stdio, so their passing cleanup assertions do not cover this failure. README's honest orphan-capture limitation does not provide an escape from the unbounded join.",
+          "excerpt": "while !connections.lock().is_empty() {\n    thread::sleep(Duration::from_millis(5));\n}\ndaemon.codex.shutdown();\ndaemon.acp.shutdown();"
+        }
+      ],
+      "anchor": "src/acp.rs:1323",
+      "remediation": "Make ACP stdio workers interruptible independently of peer EOF, for example with nonblocking readiness polling and an explicit cancellation wakeup, so explicit close can always retire and join its workers even when another process retains an endpoint. Preserve truthful incomplete process cleanup and capacity charging instead of detaching workers or fabricating descendant death. Add a real-child regression that deliberately retains a pipe endpoint outside captured ancestry/session, observes bounded close/shutdown and worker retirement, then independently reaps that fixture."
+    }
+  ],
+  "reviewed_paths": [
+    "local://e04s04-review-brief.md",
+    "CONVENTIONS.md",
+    "src/acp.rs",
+    "src/control.rs",
+    "src/daemon.rs",
+    "src/client.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs",
+    "src/runtime.rs",
+    "tests/acp.rs",
+    "tests/acp/native.rs",
+    "tests/acp/acceptance.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/fixtures/acp_peer.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-story.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+    "specs/epics/e04-acp-agent-interaction/epic.yaml",
+    "specs/epics/e04-acp-agent-interaction/context.yaml",
+    "specs/adr/0004-acp-authoritative-input.md",
+    "specs/IMPACT_LATEST.md",
+    "specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "specs/security/epics/e04/THREAT_MODEL.md",
+    "specs/verifications/AUDIT-e04s04.md",
+    "specs/verifications/NFR-e04s04.json",
+    "specs/verifications/e04s04-build.md",
+    "specs/verifications/e04s04-verify.yaml",
+    "specs/verifications/e04s04-round1-source.json",
+    "specs/verifications/e04s04-complete-native-attempt1.json",
+    "specs/verifications/e04s04-native-fence.json",
+    "specs/verifications/e04s04-worker-retirement.json",
+    "specs/bugs/BUG-e03-native-settlement.md",
+    "specs/verifications/e03-complete-broker-acceptance.json",
+    "artifact://1399",
+    "local://e04s04-live-prerequisites.md"
+  ],
+  "deferred": [
+    {
+      "reason": "Independent SHA256 comparison of all 17 frozen files and independent Git identity/diff validation were unavailable through the mounted read/search tools; no hash or Git command was executed and no independent equality claim is made.",
+      "paths": [
+        "specs/verifications/e04s04-round1-source.json"
+      ]
+    },
+    {
+      "reason": "Unapproved and unimplemented real Codex+Claude live acceptance remains required. The root exact ignored test is absent; do not run its filter or treat zero cases as success. Requires separately approved exact closures/launchers/models/auth/private roots/prompt ceilings/enforceable spend, then genuine interaction/effect/cleanup proof and the next review round for new source.",
+      "paths": [
+        "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+        "tests/acp.rs"
+      ]
+    },
+    {
+      "reason": "All executable validation was deliberately not run under the read-only assignment, including reproduction of the retained-pipe finding. Parent should add/run the focused real-child regression and then the affected ACP/PTY and full contiguous gates after any repair. Linux/MSRV/RSS/latency/CI and real-provider compatibility were not established.",
+      "paths": [
+        "src/acp.rs",
+        "src/runtime.rs",
+        "tests/acp/acceptance.rs"
+      ]
+    }
+  ]
+}

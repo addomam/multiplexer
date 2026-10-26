@@ -1,0 +1,213 @@
+{
+  "type": "architecture-review",
+  "scope": "e04-acp-architecture",
+  "round": 1,
+  "max_rounds": 5,
+  "verdict": "FAIL",
+  "source_baseline": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+  "reviewed_document_snapshots": {
+    "ADR_0004": "4FB2",
+    "context": "3F2E",
+    "impact": "4C6B",
+    "scope": "EC0C"
+  },
+  "reports": {
+    "E04ArchitectureA1": {
+      "verdict": "FAIL",
+      "score": 96.875,
+      "criteria_checked": [
+        "01 Atomic admission versus revoke — PASS: one authority-lock memory transaction orders generation check with commit; no check-then-enqueue window (ADR 0004 §Admission).",
+        "02 Admission transaction stays memory-only — PASS: no process, pipe, socket, filesystem, wait, or join under that lock.",
+        "03 Admitted work stays canonical after handoff — PASS: accepted work is not removed, rebound, or relabeled as the new owner's input.",
+        "04 Force is authority-only — PASS: force must not send session/cancel, drop SentRequest, detach, kill, or replace the session.",
+        "05 Retained SDK request futures — PASS: pinned SentRequest drop sends $/cancel_request and discards the response (jsonrpc.rs:6119-6123, Drop at 6606-6611); handoff forbids that drop.",
+        "06 detach is not transfer — PASS: detach publishes and discards the result (jsonrpc.rs:6318-6322); architecture forbids it as an ownership implementation.",
+        "07 Human takeover of a pending question — PASS: cooperative grant seals the amux cut and must not wait for the in-flight session/prompt; ACP receipts stay out of the native calls ledger that blocks offers (control.rs refresh_conditional).",
+        "08 Exact identities — PASS: target, instance, connection generation, ACP session, work, JSON-RPC request, tool call, interaction revision, owner generation, and event sequence stay distinct and are validated at admission.",
+        "09 Request-scoped forms are not guessed onto the latest prompt — PASS: pinned ElicitationRequestScope.request_id is the JSON-RPC request id, including pre-session auth (schema 1.12.0).",
+        "10 Winning response labels — PASS: first valid amux admission is stated as local policy, not an ACP first-winner protocol.",
+        "11 Losing answers stay out of history — PASS: competing and stale submissions are rejected without optimistic losing-answer history.",
+        "12 Admission, pipe write, and callback delivery are not agent application — PASS: application is confirmed, rejected, or unknown only from evidence.",
+        "13 Starting-state request-scoped forms — PASS: open reserves the target before async initialize and allows request-scoped elicitation without a hidden prompt.",
+        "14 No hidden discovery prompt — PASS: identity, capabilities, and readiness are not probed with a concealed prompt.",
+        "15 Explicit cancel uncertainty — PASS: session/cancel has no ack; confirmed only when the original prompt response supplies the stop reason.",
+        "16 Close and timeout are not confirmed cancel — PASS: socket closure and local timeout must not be labeled confirmed cancellation.",
+        "17 Permission cancel outcome — PASS at architecture level: dismiss is not deny, and exact option ids are required for user selections. The pinned Cancelled variant is a response-shape detail left to Plan, not an impossible guarantee.",
+        "18 Birth-identity cleanup — PASS: ChildGuard::terminate killpg's the original child PID after wait_for_child reaps it (acp_agent.rs:313-327, 500-530); rejecting AcpAgent is justified. No fork.",
+        "19 Owned-only cleanup races — PASS: failed startup, late publication, and concurrent close/shutdown clean only birth-qualified owned resources and preserve unrelated sentinels.",
+        "20 Privacy — PASS: prompts, answers, credentials, environment, and auth stay out of public metadata and committed evidence; forms must not collect secrets.",
+        "21 Snapshot cost — PASS: topology snapshots are content-free; transcript access is explicit and incremental; slow clients do not join PTY processing.",
+        "22 Lock order — PASS: authority then ACP state; no callback into authority while holding ACP state; component locks released before cross-component I/O or join. Compatible with the existing in-memory registry.",
+        "23 Bounded stdout frames on the selected SDK path — FAIL: see must_fix E04-ARCH-01. Public Lines/ByteStreams cannot implement the stated overflow-degrade bound.",
+        "24 Outstanding work is not evicted — PASS: retention pressure rejects new admission instead of dropping in-flight requests.",
+        "25 Legacy Codex and PTY settlement unchanged — PASS: closed Codex operations and native-input settlement are not aliased; e03s08 remains failing.",
+        "26 Stock Zsh, OMP, and terminal identity — PASS: an ACP view is not a dummy PTY; terminal screen/resize/input/execute stay PTY-only.",
+        "27 Wire v1 versus SDK 3.5.0 — PASS: SDK 3.5.0 is not protocol v3; unstable v2 stays off. Schema crate 1.12.0 matches cited schema-v1.26.0 commit e2d83349.",
+        "28 One foreground prompt — PASS: a second prompt is busy; no steer fallback, hidden queue, or retry.",
+        "29 Permission option fidelity — PASS: exact offered option ids; no synthesized allow-once; dismiss is not deny; no automatic approval.",
+        "30 URL elicitation and credential forms — PASS: URL mode is not advertised and gets Invalid params; forms do not collect credentials.",
+        "31 Delegation is not a sandbox — PASS: filesystem and terminal client capabilities are not advertised, and that absence is not a security guarantee.",
+        "32 Memory-only runtime and no plugin framework — PASS: reconnect is a new instance; no restoration, remote protocol, or generic provider abstraction."
+      ],
+      "must_fix": [
+        {
+          "id": "E04-ARCH-01",
+          "severity": "must-fix",
+          "title": "Stop claiming Lines/ByteStreams bound stdout frames",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "47, 93",
+          "also": [
+            "specs/epics/e04-acp-agent-interaction/context.yaml:50",
+            "specs/IMPACT_LATEST.md:11-20"
+          ],
+          "smell": "Leaky Abstraction",
+          "mechanism": "ADR line 47 selects public Lines/ByteStreams plus bounded owned pipes, and forbids a fork. ADR line 93 then requires bounded stdout frames whose overflow is a failed/degraded state rather than a drop followed by success. Pinned SDK 3.5.0 cannot implement that bound. ByteStreams::into_lines uses BufReader.lines() with no frame cap, so one newline-free stdout write grows without a degrade point. Lines::into_channel_transport builds Channel::duplex from mpsc::UnboundedSender/UnboundedReceiver (jsonrpc.rs:7585-7587) and transport_incoming_lines_actor unbounded_sends every parsed or malformed line (transport_actor.rs:307-334), including the raw line inside parse errors. Builder connection queues are also unbounded (jsonrpc.rs:1924-1926). A capped stream in front of Lines::new does not help: the Lines driver polls that stream and unbounded_sends with no backpressure. Owned pipe capacity is therefore drained into daemon memory before any amux overflow policy runs. Plan cannot prove the stated frame bound without abandoning public Lines, forking, or guessing a non-existent cap API, all of which this architecture forbids. This is an architectural correction, not a Plan proof item. Amux-owned transcript, stderr-copy, and pending-work caps remain Plan-proofable and do not contain SDK ingress.",
+          "correction": "Before Plan, amend ADR 0004, context.yaml, and IMPACT_LATEST.md so bounded pipes plus public Lines/ByteStreams are not the stdout-frame bound. Keep public Lines and core SDK, and do not select a fork. Either name unbounded SDK ingress as an accepted local-adapter memory limit and narrow overflow-degrade to bytes amux itself copies, or replace the transport decision with a non-Lines ConnectTo whose driver caps frame size and does not eagerly fill an unbounded queue. Do not leave Plan to discover this by a failed RSS proof."
+        }
+      ],
+      "should_fix": [],
+      "consider": [
+        {
+          "id": "E04-ARCH-C1",
+          "title": "Restate that the FIFO consumer is not the block_task waiter",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "66-70",
+          "note": "The cited ordered-application-dispatch doc says block_task on another task does not drain the application queue. If the consumer is the foreground task blocked on initialize, request-scoped forms during starting state deadlock. Restate that constraint in the ADR so Plan does not copy the SDK quickstart."
+        },
+        {
+          "id": "E04-ARCH-C2",
+          "title": "Name RequestPermissionOutcome::Cancelled in the cancel contract",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "91",
+          "note": "Pinned schema 1.12.0 says session/cancel MUST answer pending session/request_permission with Cancelled, not a selected option. Individual Responder drop sends no reply. 'Appropriately' is implementable, so this is Plan response-shape work, but naming Cancelled now prevents a false deny or a hung prompt."
+        },
+        {
+          "id": "E04-ARCH-C3",
+          "title": "Do not treat an amux transcript cap as a daemon RSS proof",
+          "file": "specs/IMPACT_LATEST.md",
+          "lines": "20-22",
+          "note": "Once ingress is honestly scoped, Plan should still require non-blocking overflow on the amux FIFO queue. A test that transcript growth stops does not prove SDK-internal queues are bounded."
+        },
+        {
+          "id": "E04-ARCH-C4",
+          "title": "Keep SDK trace logging out of evidence",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "95",
+          "note": "transport_incoming_lines_actor tracing::trace emits the full JSON line. The privacy rule already forbids prompt logging; Plan should keep that SDK target off in committed evidence."
+        }
+      ],
+      "verification_performed": [
+        "Read ADR 0004, e04 context.yaml, epic.yaml, IMPACT_LATEST.md, SCOPE_LATEST.yaml, GLOSSARY_LATEST.yaml, AUDIT-e04-architecture.md, CONVENTIONS.md, and the state/execution-status diffs.",
+        "Confirmed e03s08 remains failing and the five-round e03 review record is not reset.",
+        "Verified SDK 3.5.0 commit 305aefda exports, SentRequest drop/detach, Responder non-batch drop, Channel::duplex, builder unbounded queues, ByteStreams::into_lines, and transport_incoming_lines_actor.",
+        "Verified ChildGuard::terminate killpg-by-PID after wait_for_child reap.",
+        "Verified schema crate 1.12.0 / schema-v1.26.0 commit e2d83349 includes request-scoped elicitation and RequestPermissionOutcome::Cancelled.",
+        "Compared the proposed lock and grant cut with control.rs grant/refresh_conditional and the native-input call ledger."
+      ],
+      "limits": [
+        "Score is 100*(32-1-0)/32 = 96.875. FAIL because must-fix is nonzero; 94 alone is not sufficient.",
+        "No builds, tests, formatters, live models, adapter installs, or auth probes were run.",
+        "Numeric caps, exact request schemas, and auxiliary crate versions were treated as Plan work unless the selected mechanism makes the guarantee impossible.",
+        "Did not inspect the other reviewer's report."
+      ]
+    },
+    "E04ArchitectureB1": {
+      "verdict": "FAIL",
+      "score": 93.75,
+      "criteria_checked": [
+        "atomic admission shares the authority lock with revoke and has no check-then-enqueue interval",
+        "admission transaction excludes process, pipe, socket, filesystem I/O, waits, and joins",
+        "already-admitted work stays canonical and is not rebound or silently removed",
+        "amux acceptance, transport, protocol outcome, and agent application stay distinct",
+        "ACP receipts are not the PTY native-input settlement ledger",
+        "cooperative grant does not wait for the whole session/prompt response",
+        "force does not cancel, drop a SentRequest, detach, kill, or replace the session",
+        "ordinary pending cancellation grants nobody and retains admitted work",
+        "conditional keep/withdraw preserves human authority; reacquisition stays external",
+        "dropping a pending SentRequest is treated as protocol cancellation, not handoff",
+        "detach is not an ownership-transfer implementation",
+        "prompt futures are retained through handoff and explicit cancellation",
+        "SDK callbacks enqueue and return and do not await inbound traffic",
+        "result markers are installed before eager send where required",
+        "a pending question can be answered without prompt settlement",
+        "request-scoped elicitation binds to the exact connection and request, including initialization",
+        "session-scoped requests must match the live ACP session",
+        "updates without prompt identity are not attributed by arrival time",
+        "stable v1 allows one foreground prompt and rejects a second as busy",
+        "first valid amux admission wins; this is not claimed as an ACP first-winner protocol",
+        "losing or revoked answers are not appended as accepted conversation history",
+        "callback response delivery is not labeled as agent application",
+        "session/cancel stays unconfirmed until the original prompt outcome",
+        "socket closure and local timeout are not confirmed cancellation",
+        "pending permission responders are resolved so that prompt outcome remains reachable",
+        "SDK ChildGuard is rejected; cleanup uses birth-qualified owned identity",
+        "public metadata and evidence exclude prompts, answers, auth, and raw output",
+        "topology snapshots stay content-free and transcripts are incremental",
+        "lock order is authority then ACP state, with no reverse callback and no cross-component lock hold",
+        "stdout frames, stderr, transcript, and pending work are bounded without evicting outstanding requests",
+        "overflow fails closed with unknown outcomes rather than dropped success",
+        "legacy PTY, Codex, Zsh, OMP, and e03 failure records stay unchanged and ACP views are not dummy PTYs"
+      ],
+      "must_fix": [
+        {
+          "title": "Do not treat bounded pipes plus public Lines as a memory bound",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "47,75,93",
+          "priority": "must-fix",
+          "body": "The resource guarantee is unbounded on the selected path. Line 47 requires bounded owned streams connected through public Lines/ByteStreams and forbids a fork. Line 93 then requires bounded stdout frames with fail-closed overflow. SDK 3.5.0 does not provide that bound: ByteStreams::into_lines (jsonrpc.rs:7506-7510) uses BufReader.lines() with no frame cap, so the reader drains a small OS pipe into an unbounded line String; Lines::into_channel_transport duplexes into mpsc::UnboundedSender (jsonrpc.rs:7585-7587) and transport_incoming_lines_actor unbounded_sends every frame, including the raw malformed line (transport_actor.rs:297-320); the connection builder queues are also unbounded (jsonrpc.rs:1924-1926). Line 75 requires callbacks to enqueue and return, so an application cap cannot push back into those queues: blocking the callback deadlocks inbound dispatch or moves the growth into the unbounded channel. A real bound is still possible without a fork, but only as an amux limit inside the AsyncRead passed to ByteStreams::new, before line accumulation, that fails or stops the read without blocking an SDK callback. Exact numeric caps can stay Plan work; the decision must stop naming pipe capacity plus public Lines as the bounding mechanism."
+        }
+      ],
+      "should_fix": [
+        {
+          "title": "Admit protocol-required Cancelled permission responses on session/cancel",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "83-91",
+          "priority": "should-fix",
+          "body": "Explicit cancel confirmation can become unreachable. Line 91 correctly refuses to treat silence, socket closure, or timeout as confirmed cancellation and waits for the original prompt stop reason, but it only says to resolve pending permission channels \"appropriately.\" Lines 83 and 85 require an exact offered option ID, forbid automatic approval, and give the retained response channel to the first amux admission. Stable v1 says that sending session/cancel MUST respond to every pending session/request_permission with RequestPermissionOutcome::Cancelled; a conforming agent may wait for that response before returning the cancelled stop reason. SDK 3.5.0 ResponderDropGuard::drop sends nothing for a non-batch request, so retaining or dropping the responder does not produce Cancelled. The decision must say that authorized session/cancel itself admits those Cancelled responses on the retained responders, that they are protocol obligations rather than user-selected options or automatic allow/deny, and that they are not confirmed turn cancellation. Elicitation still must not invent a user decline."
+        }
+      ],
+      "consider": [
+        {
+          "title": "Map interaction labels onto the admission cut",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "85",
+          "body": "selected/submitted/failed/unknown are not defined against admission, transport submission, and agent application. Line 85 already says callback delivery is not agent application; Plan should bind each label to that cut so a winning local admission is not rendered as submitted or applied."
+        },
+        {
+          "title": "Release the existing snapshot lock before crossing into ACP state",
+          "file": "src/daemon.rs",
+          "lines": "244,253-268",
+          "body": "Daemon::snapshot holds state.lock() across terminal_snapshot, which takes controls.lock(). The ADR lock rule says snapshot paths release component locks before crossing. If ACP admission holds the authority lock and then publishes into daemon state, extending the current snapshot span across ACP state deadlocks. The rule is stated; Plan must apply it to this existing function, not only to new helpers."
+        },
+        {
+          "title": "Settle at Closed and tolerate late EOF completions",
+          "file": "specs/adr/0004-acp-authoritative-input.md",
+          "lines": "75-77",
+          "body": "The cited ordered-application-dispatch note says EOF synthetic error callbacks are not ordered barriers and can enqueue after the closure event. Settle outstanding work as unknown at Closed, tolerate late completions, and do not wait for every callback before accepting closure or relabel those errors as confirmed cancellation."
+        }
+      ],
+      "verification_performed": [
+        "Read ADR 0004, e04 context.yaml, e04 epic.yaml, IMPACT_LATEST.md, AUDIT-e04-architecture.md, SCOPE_LATEST.yaml, GLOSSARY_LATEST.yaml, and CONVENTIONS.md",
+        "Checked existing authority settlement, force/grant, and calls.is_empty() gates in src/control.rs",
+        "Checked daemon snapshot lock span and agent dispatch in src/daemon.rs",
+        "Checked ProcessTree::capture_owned_session and setsid spawn in src/runtime.rs and src/codex.rs",
+        "Verified SDK 3.5.0 lib.rs exports, sending-requests.md, request-cancellation.md, and ordered-application-dispatch.md",
+        "Verified ByteStreams::into_lines, Channel::duplex, builder unbounded queues, and transport_incoming_lines_actor against raw jsonrpc.rs and transport_actor.rs at tag v3.5.0",
+        "Verified ChildGuard::terminate and finish_child_exit after wait_for_child in acp_agent.rs",
+        "Verified ResponderDropGuard does not respond for non-batch drops",
+        "Verified schema constructors InitializeRequest::new, NewSessionRequest::new, PromptRequest::new, and CancelNotification::new on the schema crate 1.12.0 exported by SDK 3.5.0",
+        "Verified stable v1 prompt cancellation, permission Cancelled outcome, elicitation request scope, and authentication against current protocol docs"
+      ],
+      "limits": [
+        "No builds, tests, lints, live models, adapter installs, or auth probes were run",
+        "schema-v1.26.0 commit e2d83349 was not byte-compared with crates.io schema crate 1.12.0; constructor checks used the crate SDK 3.5.0 actually exports",
+        "The ADR ChildGuard anchor L248-L327 is offset from raw terminate at acp_agent.rs:313-327, but the post-reap kill_process_group claim is accurate and is not a finding",
+        "No Fowler smell is treated as accepted: the identity set is deliberate separation, and broker/view depth is justified",
+        "Exact caps, form-schema subset, and auxiliary crate APIs remain Plan work and were not failed merely for being unspecified"
+      ]
+    }
+  },
+  "historical_e03_review_counters": "unchanged",
+  "runtime_implementation": "not-started",
+  "new_live_model_calls": 0
+}

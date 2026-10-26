@@ -1,0 +1,105 @@
+{
+  "status": "PASS-genuine-installed-OMP-subscription-acceptance",
+  "source_review": "specs/verifications/e06-review-round11.json",
+  "authorization": "specs/verifications/e06-live-cap12-authorization.json",
+  "terminal_verdict": {
+    "command": "env AMUX_E06_OMP_LIVE_SPEC=/private/tmp/amux-e06-live-final-at61eng7/spec.json cargo test --test acp e06s01_live_omp -- --ignored --exact --nocapture",
+    "execution": "foreground-single-contiguous-run-no-retries",
+    "exit_code": 0,
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "filtered_out": 106,
+    "test_seconds": 10.06,
+    "wall_seconds": 10.38,
+    "stdout_stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s\n     Running tests/acp.rs (target/debug/deps/acp-02d20bbe086b6b59)\n\nrunning 1 test\ne06 OMP live PASS genuine_question=true native_answer=true api_handoff=true deny_effect_absent=true allow_effect_present=true original_tuple_pid_work=true implicit_cancel=false provider_budget=true owned_cleanup=true\ntest e06s01_live_omp ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 106 filtered out; finished in 10.06s\n"
+  },
+  "proof": {
+    "actual_installed_server_executable": "/opt/homebrew/bin/omp",
+    "genuine_builtin_question": true,
+    "real_native_answer_original_wire_responder": true,
+    "api_force_preserves_exact_pending_permission": true,
+    "exact_offered_reject_once_effect_absent": true,
+    "exact_offered_allow_once_expected_effect_present": true,
+    "same_original_target_session_pid_work_rpc": true,
+    "normal_end_turn": true,
+    "implicit_cancel": false,
+    "reported_model_effort_remain_exact": true,
+    "native_termios_restored_host_exited_drainer_joined": true,
+    "original_agent_process_workers_endpoints_cleanup_complete": true,
+    "daemon_exited_socket_and_owned_workspace_removed": true,
+    "unrelated_sentinel_survived": true
+  },
+  "provider_gate": {
+    "model_requests": 4,
+    "max_model_requests": 4,
+    "max_requested_output_tokens": 2000,
+    "wall_seconds": 110,
+    "model": "github-copilot/mai-code-1.1-flash",
+    "effort": "low",
+    "subscription_only": true,
+    "premium_or_api_key_fallback": false,
+    "blocked_requests": 6,
+    "requests": [
+      {
+        "model": "github-copilot/mai-code-1.1-flash",
+        "effort": "low",
+        "requested_output_tokens": 2000
+      },
+      {
+        "model": "github-copilot/mai-code-1.1-flash",
+        "effort": "low",
+        "requested_output_tokens": 2000
+      },
+      {
+        "model": "github-copilot/mai-code-1.1-flash",
+        "effort": "low",
+        "requested_output_tokens": 2000
+      },
+      {
+        "model": "github-copilot/mai-code-1.1-flash",
+        "effort": "low",
+        "requested_output_tokens": 2000
+      }
+    ],
+    "deadline_enforced": true,
+    "deadline_expired": false,
+    "metadata_requests": 0,
+    "blocked_readonly_requests": 6,
+    "blocked_categories": [
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-url",
+      "unapproved-route"
+    ]
+  },
+  "provider_accounting": {
+    "before_run": 8,
+    "this_run": 4,
+    "aggregate_actual": 12,
+    "authorized_cap": 12,
+    "remaining": 0,
+    "no_further_live_calls_authorized": true
+  },
+  "privacy_cleanup": {
+    "copied_active_subscription_credentials": 1,
+    "other_credentials_copied": 0,
+    "user_settings_copied": 0,
+    "global_subscription_credential_row_unchanged": true,
+    "global_config_or_auth_writes": false,
+    "private_auth_root_holder_check": {
+      "command": "/usr/sbin/lsof -nP +D /private/tmp/amux-e06-live-final-at61eng7",
+      "exit_code": 1,
+      "output": "none-no-holders"
+    },
+    "private_auth_root_removed": true,
+    "private_auth_raw_sessions_stderr_spec_launcher_and_gate_removed": true,
+    "secure_erasure_claimed": false,
+    "provider_guard_sha256": "1c6d48209fb0ed76e501f37ec72daffe7d35e29208b03b77d1151a5e8f63df08",
+    "prompts_replies_tokens_raw_tool_arguments_or_capabilities_saved_in_repo": false
+  },
+  "scope_limit": "Genuine OMP acceptance is complete for this exact scenario. Nonlive recovery regressions remain separately evidenced. No new Codex/Grok/Claude live run, historical-cap reset, native unknown-settlement waiver, global change or publication is implied."
+}

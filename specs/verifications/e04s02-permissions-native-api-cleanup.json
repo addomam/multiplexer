@@ -1,0 +1,8 @@
+{
+  "failure_record": "specs/verifications/e04s02-permissions-native-api.json",
+  "cause": "Probe expected wire-response outcome shape inside canonical selection. Actual permission selection is content-only {option_id}; src/acp.rs:905. Correct only the probe lookup; do not change product output.",
+  "peer_absent_after_shutdown": true,
+  "root_no_holders": true,
+  "private_root_removed": true,
+  "original_failed_proof_retained": true
+}

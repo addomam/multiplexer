@@ -1,0 +1,211 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "total_items": 40,
+  "passed_items": 40,
+  "checklist": [
+    {
+      "area": "Frozen scope and baseline",
+      "result": "PASS — static",
+      "evidence": "Reviewed the 92-path manifest against base 2195b05adf23ae26a80065ecdd6d9196e2915998: 24 first-party code/test paths, eight first-party documentation/manifest paths, and 60 vendored paths. Included new files absent from the tracked git diff; respected the PLAN.md lines 1–45 restriction."
+    },
+    {
+      "area": "E06S01 interoperability contract",
+      "result": "PASS — static",
+      "evidence": "Read e06s01-story.md and traced src/acp.rs original connection/session, form, permission, cancellation, and settings paths together with tests/acp/omp.rs and the installed-provider acceptance source. No fixture result was treated as installed OMP acceptance."
+    },
+    {
+      "area": "E06S02 explicit launch contract",
+      "result": "PASS — static",
+      "evidence": "Read e06s02-story.md; traced profile selection through src/cli.rs, src/client.rs, src/tui/launch.rs, NativeControl::launch, and daemon acp-open dispatch. Existing explicit-controller automation remains separate from interactive native launch."
+    },
+    {
+      "area": "E06S03 continuity contract",
+      "result": "PASS — static",
+      "evidence": "Read e06s03-story.md; traced Resume, supervise, attached, recovery_wait, NativeControl registration/worker teardown, and daily_use/recovery_edges test source. Recovery observes surviving targets rather than creating replacement work."
+    },
+    {
+      "area": "Cross-module dispatch completeness",
+      "result": "PASS — static",
+      "evidence": "Confirmed consumers for RpcKind::Configure, Work::Stop, Op::Launch, launch::Action::Submit, InputReadiness variants, profile requests, and configuration notifications. Producing branches have corresponding routing/handling rather than silent fallthrough."
+    },
+    {
+      "area": "Profile and request bounds",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs validates profile IDs, labels, argv, defaults, profile counts, and structured options; src/projects.rs validates configured profiles and integrates them into existing persistence. Duplicate option keys and malformed launch settings fail explicitly."
+    },
+    {
+      "area": "Shell-free launch",
+      "result": "PASS — static",
+      "evidence": "Profile preparation resolves an executable and returns argv; src/acp.rs::run invokes Command::new with separate args. Profile launch does not introduce shell parsing, eval, or implicit command substitution."
+    },
+    {
+      "area": "Executable and symlink identity",
+      "result": "PASS — static",
+      "evidence": "src/acp_profiles.rs checks executable file metadata while preserving the selected invocation path, including symlinks. Bare names resolve using daemon PATH entries rather than a new shell or a model/agent fallback."
+    },
+    {
+      "area": "Human CLI and automation distinction",
+      "result": "PASS — static",
+      "evidence": "src/cli.rs and src/client.rs preserve explicit-controller JSON automation while the human acp start path enters the real native-controller launch flow. Optional fields are normalized before daemon validation; launch settings are not silently discarded."
+    },
+    {
+      "area": "Native launch selection and edits",
+      "result": "PASS — static",
+      "evidence": "src/tui/launch.rs binds an explicit project/profile, shows availability and inheritance, preserves exact text/JSON values, and rejects oversized or invalid edits in full. Submit is consumed by the native launch route, not forwarded to a PTY."
+    },
+    {
+      "area": "Acknowledged startup settings",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs:1932–1954 and configure_next route session/new through Configuration, dispatch actual setters, process Configure acknowledgements, and withhold ready until configuration completes. Rejected settings fail instead of falling back."
+    },
+    {
+      "area": "Advertised settings and ambiguity",
+      "result": "PASS — static",
+      "evidence": "src/acp/settings.rs resolves semantic categories and explicit option IDs against advertised choices, rejects ambiguity/conflicting aliases, and rechecks settings after acknowledgements. Unsupported choices do not become invented protocol values."
+    },
+    {
+      "area": "Exact opaque protocol identifiers",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs applies the dedicated bounded tool-call ID rule to tool events, updates, elicitation scopes, and permission requests. Session/RPC/settings bounds remain distinct; permission option and responder IDs are preserved rather than shortened for display."
+    },
+    {
+      "area": "Requested versus reported settings",
+      "result": "PASS — static",
+      "evidence": "Configuration retains requested and reported state separately, validates raw configuration notifications before schema default-on-error decoding, and records failure/drift. src/tui/agent.rs displays requested, current, agent-default, and unreported states distinctly."
+    },
+    {
+      "area": "Permission-policy truthfulness",
+      "result": "PASS — static",
+      "evidence": "Native settings and launch text explicitly state that mode metadata is not a permission guarantee. Configuration acknowledgement is not used to fabricate permission grants or a reported policy."
+    },
+    {
+      "area": "Genuine form responder continuity",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs::parse_form/incoming_request and native AgentView response construction preserve original session/request scope and typed JSON-RPC responder identity. Unsupported forms and scopes receive explicit errors rather than synthetic human answers."
+    },
+    {
+      "area": "Exact permission allow and deny",
+      "result": "PASS — static",
+      "evidence": "Permission parsing retains the original tool scope and offered option IDs; selection is admitted through the existing exact target/control path. tests/acp/omp.rs, the peer fixture, and omp_live.rs source distinguish denied effect absence from allowed effect presence."
+    },
+    {
+      "area": "Agent withdrawal handling",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs:2040–2073 handles $/cancel_request only for the matching typed request ID and current pending canonical responder. The state lock orders withdrawal against admitted selection; withdrawal neither grants ownership nor implicitly interrupts the prompt."
+    },
+    {
+      "area": "Exact mutation target identity",
+      "result": "PASS — static",
+      "evidence": "ACP action preparation/commit and Resume::validate use instance, connection generation, and session identity. src/tui.rs:808–838 rejects replacement daemon/agent tuples and permits only initial session establishment to advance a previously null session."
+    },
+    {
+      "area": "Exclusive ownership admission",
+      "result": "PASS — static",
+      "evidence": "Daemon acp-action routing still uses original-controller authorization, exact prepared target, and existing authority admission before commit. Launch registration does not add a second authority or bypass ownership generation checks."
+    },
+    {
+      "area": "Force semantics",
+      "result": "PASS — static",
+      "evidence": "Native Force remains an ownership operation with a full-warning/input-drain presentation fence. The patch does not convert Force into acp-interrupt, session/cancel, agent close, or process termination; prior admitted calls remain visible."
+    },
+    {
+      "area": "Cancelled claims and admitted calls",
+      "result": "PASS — static",
+      "evidence": "Native claim/control operations continue through the existing claim state machine. Teardown clears local stale claim UI without accepting offers, replaying cancelled claims, or cancelling retained admitted work."
+    },
+    {
+      "area": "Human keep and reacquisition policy",
+      "result": "PASS — static",
+      "evidence": "NativeControl warning/keep/withdraw paths retain the existing human-control policy. NativeControl::recovered disables automatic acquisition; its guarded cleanup does not release an owner or cancel a pending claim."
+    },
+    {
+      "area": "Application-input routing gates",
+      "result": "PASS — static",
+      "evidence": "Reviewed key, repeat, prefix, paste, mouse, dialog, and ACP interaction routing in src/tui.rs and src/tui/agent.rs. ACP-local None means consumed, not permission for PTY forwarding; NativeControl input requires a current non-uncertain grant."
+    },
+    {
+      "area": "Unknown delivery retention",
+      "result": "PASS — static",
+      "evidence": "Native transport failures fence authority and do not restore uncertain actions as fresh drafts. ACP work/responder delivery and cleanup accounting remain retained; teardown salvages only parsed successful launch receipts as identity, not live grants."
+    },
+    {
+      "area": "Observation and authority disconnect fences",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs:1045–1074 checks both observation and original native-control connectivity. The worker also checks both streams before dequeuing work and rechecks after compound claim observation, covering work queued while the UI has not yet processed loss."
+    },
+    {
+      "area": "Pause and suspend fences",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs::pause_expired uses conservative wall-clock gaps, including backward changes; the NativeControl worker checks its UI heartbeat before queued dispatch. Old drafts, warnings, and queued mutations do not become fresh authority after a pause."
+    },
+    {
+      "area": "No recovery daemon resurrection",
+      "result": "PASS — static",
+      "evidence": "Recovery uses Connection::connect to the existing socket, validates daemon_id, and does not call ensure_daemon. Replacement/missing daemon and ended target states remain explicit; launch.take prevents automatic relaunch retry."
+    },
+    {
+      "area": "Fresh observer recovery provenance",
+      "result": "PASS — static",
+      "evidence": "NativeControl::register validates the daemon before creating a new attachment controller; recovered disables initial automatic acquisition. Resume retains exact surviving target identity without reusing old control/claim handles as new provenance."
+    },
+    {
+      "area": "Queued-input freshness after recovery",
+      "result": "PASS — static",
+      "evidence": "src/tui.rs:1282–1331 discards recovery input across registration, first observer paint, and bounded drains. Inconclusive readiness keeps the discard fence active; readiness is not declared until input is conclusively empty and geometry is reconciled."
+    },
+    {
+      "area": "Filtered and internal input readiness",
+      "result": "PASS — static",
+      "evidence": "vendor/crossterm/src/event/read.rs:44–86 distinguishes Empty, Pending, and Inconclusive, bounds internal-event processing, and preserves public events. Native view/consent receipts require Empty, rather than mistaking filtered cursor/device replies for exhausted input."
+    },
+    {
+      "area": "Parser fragment handling",
+      "result": "PASS — static",
+      "evidence": "The changed mio source only proves empty when parser.buffer and parser.internal_events are empty. Incomplete escape/paste sequences therefore cannot establish freshness; the normal event loop remains discard-only during recovery until a conclusive boundary."
+    },
+    {
+      "area": "Finite and zero input deadlines",
+      "result": "PASS — static",
+      "evidence": "vendor/crossterm/src/event/source/unix/mio.rs bounds readiness/read work at 32 visits, counts interrupted attempts, retains readiness, permits the initial zero-time visit, and checks deadlines before further work. PollTimeout and reader consumers were traced."
+    },
+    {
+      "area": "Resize and wakeup progress",
+      "result": "PASS — static",
+      "evidence": "The mio source processes retained signal/wakeup tokens before further TTY parsing and retains batch position across returns. Native rendering reconciles kernel geometry before consent/readiness. Source regressions cover filtered replies, lost resize notification, recovery registration resize, and sustained incomplete paste."
+    },
+    {
+      "area": "Borrowed blocking descriptor safety",
+      "result": "PASS — static",
+      "evidence": "The changed mio reader performs a zero-time level readiness check before each read, retains the FileDesc lifetime, and does not set O_NONBLOCK on borrowed stdin. Reviewed tty_fd and both libc/rustix descriptor branches for parent-shell flag preservation."
+    },
+    {
+      "area": "Owned ACP resource lifecycle",
+      "result": "PASS — static",
+      "evidence": "src/acp.rs retains owned child/process-tree identity, cancellable endpoints, bounded queues, worker joins, and unresolved cleanup accounting. New configuration and cancellation paths reuse those resources rather than introducing unowned subprocesses or blanket process-group cleanup."
+    },
+    {
+      "area": "Native resource teardown",
+      "result": "PASS — static",
+      "evidence": "NativeControl::stop sets the stop fence, shuts down the original stream, joins its worker, and discards stale local authority. Restore RAII still restores terminal state. Recovery controller cleanup is guarded and connects only to an existing socket."
+    },
+    {
+      "area": "Vendored release integration",
+      "result": "PASS — static",
+      "evidence": "Reviewed integration of all 60 vendored paths using sealed release provenance, platform/feature routing, event/filter/parser/waker consumers, output/style/cursor/terminal APIs, and examples. Scrutinized all six changed vendor files. Cargo.toml patches crossterm 0.29.0 consistently for the application and ratatui."
+    },
+    {
+      "area": "First-party regression and acceptance source",
+      "result": "PASS — static",
+      "evidence": "Reviewed all 11 frozen first-party test/fixture paths, including acp.rs, native.rs, acceptance.rs, daily_use.rs, recovery_edges.rs, omp_live.rs, omp.rs, profiles.rs, acp_peer.rs, pty_control/native.rs, and shell_races.rs. Assertions cover exact identity, effects, no replay/implicit cancellation, readiness races, and owned cleanup; none were executed."
+    },
+    {
+      "area": "Documentation, preserved limitations, and security scope",
+      "result": "PASS — static",
+      "evidence": "Reviewed README.md, CHANGELOG.md, CONVENTIONS.md, Cargo manifests/lock changes, SCOPE_LATEST.yaml, THREAT_MODEL.md, and permitted PLAN lines against source behavior. No E05 cutover, historical cap reset, native-settlement waiver, or stock Zsh/OMP replacement was introduced. No supported patch-introduced security defect was found."
+    }
+  ],
+  "findings": [],
+  "summary": "PASS for the independent E06 round-11 static source/security review: 40 of 40 checklist items passed, with no supported Must-fix or Should-fix findings. The 92-path scope was covered, including integration of the 54 manifest-declared release-identical vendor paths and scrutiny of the six changed vendor files. This is source approval only; it does not establish installed-provider acceptance or change the historical unsafe native-application-settlement limitation.",
+  "limits": "Read-only static inspection only. No builds, tests, lint, formatters, source execution, providers, auth/config operations, daemon operations, or runtime acceptance were performed. No earlier reviews, audits, runtime reports, saved handoffs/state, execution logs, real auth, or retired private fixtures were consulted. Vendored baseline identity was taken from the sealed manifest; frozen file hashes and release provenance were not independently recomputed or attested. Ignored live-test source and deterministic fixtures are not evidence of a successful installed OMP/provider run. Ownership/input correctness here is a static judgment, not a runtime proof, approval to reset caps, or waiver of existing native settlement constraints."
+}

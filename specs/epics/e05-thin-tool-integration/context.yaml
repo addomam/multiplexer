@@ -1,0 +1,27 @@
+id: e05-context
+type: planning-context
+initiative: e05-thin-tool-integration
+scope: ../../product/SCOPE_E05.yaml
+baseline: af745cdf4045af76a7a34a8bb4260e24057461ce
+branch: feat/thin-integration-api
+worktree: /Users/addomam/projects/amux-integration-api
+user_decision: language-neutral-local-API-not-TypeScript-only-SDK
+normative:
+  - ../../adr/0005-thin-tool-integration.md
+  - ../../contracts/tool-integration-v1.md
+  - ../../contracts/omp-tool-adapter.md
+  - PLAN.md
+  - ../../testing/e05-TEST_PLAN.md
+  - ../../security/epics/e05/THREAT_MODEL.md
+research: ../../verifications/e05-contract-research.json
+preservation:
+  - Existing ACP public operations and actual delivered behavior.
+  - Native PTY ownership, stock Zsh and existing observation-only OMP lifecycle extension.
+  - Historical e03 unknown native fence and all exhausted e03/e04 review caps.
+  - Original dirty multiplexer checkout remains untouched.
+authorization:
+  planning: user-approved-do-it-after-contract-and-reviewed-plan-proposal
+  implementation: parked-by-explicit-user-decision
+  new_live_provider: not-authorized
+  global_daemon_config_auth_changes: not-authorized
+  main_merge_push_release: not-authorized

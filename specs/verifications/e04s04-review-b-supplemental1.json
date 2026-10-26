@@ -1,0 +1,359 @@
+{
+  "reviewer": "B",
+  "report_type": "independent-code-review-supplemental1",
+  "scope": "e04s04-repaired-ACP-broker-reply-budget-supplemental1",
+  "authorization": {
+    "kind": "explicit-user-request",
+    "evidence": "specs/verifications/e04s04-supplemental-review-authorization.json",
+    "user_request": "Ok great. Do another review pass now that the reply-budget defect is fixed and let's see if it works.",
+    "supplemental_pass": 1,
+    "global_pass": 6,
+    "cap_reset": false,
+    "automatic_further_loop": false,
+    "historical_cycle": "exhausted 5/5 preserved; this pass does not replace or reopen that cycle"
+  },
+  "publication": "not-authorized-not-performed",
+  "story_acceptance": "not-granted-by-this-review",
+  "merge_push_release": "not-authorized-not-performed",
+  "branch": "feat/acp-agent-interaction",
+  "source_root": "/Users/addomam/projects/amux-acp-build",
+  "source_commit": "741fe4a188397223d063073ddf919c7123a1586a",
+  "source_manifest": "specs/verifications/e04s04-reply-budget-source.json",
+  "merge_base_main": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+  "changed_scope_versus_678e3a2": {
+    "files": 19,
+    "production_source": ["src/acp/grok.rs"],
+    "note": "Independently observed with git diff --stat 678e3a2...HEAD. Other changed paths are tests, fixtures, and evidence/docs. Not a second broker."
+  },
+  "blindness": "Did not read or contact current supplemental counterpart reports.",
+  "verdict": "pass",
+  "overall_correctness": "correct",
+  "score": 100,
+  "formula": "100*(32-must_fix-should_fix)/32",
+  "denominator": 32,
+  "must_fix": 0,
+  "should_fix": 0,
+  "consider": 0,
+  "numeric_gate": "pass",
+  "numeric_gate_rule": "zero must-fix and score>=94, independently",
+  "zero_must_gate_met": true,
+  "minimum_score_met": true,
+  "specialist_operational_override": "No supported operational must-fix found by this reviewer. This report cannot clear the story alone.",
+  "fowler_smells": "none. The repair is one named RESPONSE_OVERHEAD reserve and one allocation-free predicate in the existing private Grok codec. It does not add a provider trait, second responder, Middle Man, Feature Envy, Data Clump, Message Chain, or Divergent Change. Existing long admission and native-lifecycle functions remain the project's accepted causal shape under the actual 12-line conventions, not a new smell introduced here.",
+  "findings": [],
+  "must_fixes": [],
+  "should_fixes": [],
+  "consider_findings": [],
+  "security": {
+    "security_sensitive": true,
+    "supported_findings_confidence_at_least_8": [],
+    "supported_security_count": 0,
+    "operational_must_fixes": [],
+    "false_positive_rules_applied": "skill://security-review REFERENCE-false-positives.md and REFERENCE-confidence-rubric.md. Only a concrete source-to-sink exploit at confidence >= 8 would be reported. General DoS/resource pressure, theoretical races, test-only shell effects, and operator-selected absolute argv were not promoted. No such exploit was found.",
+    "cwe_trace": "The new predicate fails closed before responder publication and does not change authority, identity, force, cancellation, permission options, pipe ownership, or lock order. No new CWE-863/367, CWE-639, CWE-664, CWE-200/117, CWE-78/116, CWE-862, or CWE-833 path was found in the repair or in the traced shared boundaries."
+  },
+  "hash_verification": {
+    "matched": 22,
+    "total": 22,
+    "computed": 22,
+    "algorithm": "SHA-256",
+    "method": "shasum -a 256 of each frozen inventory path under /Users/addomam/projects/amux-acp-build, compared to specs/verifications/e04s04-reply-budget-source.json",
+    "result": "matched",
+    "git": {
+      "head": "741fe4a188397223d063073ddf919c7123a1586a",
+      "branch": "feat/acp-agent-interaction",
+      "merge_base_main": "a46eaddeb79a9a42628d9cb39cd60945ece27fbb",
+      "inventory_files_dirty": false,
+      "working_tree_fully_clean": false,
+      "observed_outside_inventory": [
+        "M specs/state.yaml",
+        "?? specs/verifications/e04s04-supplemental-review-authorization.json"
+      ],
+      "note": "Parent preflight described a clean source tree. This reviewer independently observed those two non-inventory paths dirty/untracked. All 22 inventory hashes still match HEAD. Those extra paths were not treated as production source."
+    },
+    "computed_and_matched": {
+      "src/acp.rs": "4d364a20c565154c6357b8a30e12197dde68b5e4779f66b8c3f9bab300d657c8",
+      "src/control.rs": "51ca8d47823620aec2dddbb7224eb1f25c9039ac2bfaeccba7e44131a3dd49ed",
+      "src/daemon.rs": "4613e55f70daa4277097685361c6e04081f346ab728b38429bfe5d75626d254f",
+      "src/client.rs": "f79fe28dc52e3e8452fe6445ef13895b4af76595a1d05ef359af048b9cdc6f27",
+      "src/tui.rs": "2eee12c808ab85a5c316889d5f412bc1da1c517a0e1ddadee0c4a9f643574d22",
+      "src/tui/control.rs": "13d6aff096be62f3664115eab129dc0591cdd910bab098fa77aa35ac20501bff",
+      "src/tui/agent.rs": "7632648128dfc6960c55f894009d31a8c60580a615aba1c5732c38b9c080e796",
+      "src/runtime.rs": "89f9a66729954e9e4f4308a128018abde0662a66cf9d8761360b0141dd930ba1",
+      "tests/acp.rs": "1348b6fc4406e305cea14d2aee423c16436a3f4fd5aeac8f9a1b0a945a47bd47",
+      "tests/acp/native.rs": "e3a7042f3f9b38f0c2c1265cab6e9de334195f72d3dd6b9ec5aa1551ce77eac3",
+      "tests/acp/acceptance.rs": "2d968ad37a889704ba3b7ffc6e59a969bc715ec7c41c76d702d03f8fb2aa61c5",
+      "tests/acp/native/acceptance.rs": "c745869b57a820bcc6c90b79981bc5844ea409fb8c6f917000a7e75cafdc0ffb",
+      "tests/fixtures/acp_peer.rs": "deb01ca889a3d0ba2a9cfe0f4fe0fd9da734eb32184fb15df6524d6c864ae4bb",
+      "README.md": "46ed145c2419c8017eb558cead55ec1b43959105935bec8a2bf3f2eed037b243",
+      "CHANGELOG.md": "0d6988c0f7a08fe60b38dde5e7f9b628051bb99956dbd560787383efffd64984",
+      "Cargo.toml": "be561c83d2a0f15568e860720e99e6e866d5dd2e7feea965a8fe8687c5475bb2",
+      "Cargo.lock": "e32f303bc7632e0dafd526218dbaae1eb14b55e66878e7589db8fb6fa69c8ecb",
+      "specs/bugs/BUG-e03-native-settlement.md": "7760fed1078fe739ca4a2a41f3adacbe48968931ea85ccc349aa1987000543c2",
+      "specs/bugs/BUG-e04-acp-retained-pipes.md": "29ebadc6f5892db9a70e9eaec4434282d378ca83c85ba3ba90f4fc325df218c5",
+      "src/acp/grok.rs": "92f2d855720a2fd0077544811bf24266eec696b2e83e8fb5313cfce0d6713d2a",
+      "tests/acp/native/live.rs": "245de76657a0b05b628da062102e69e6886c1ecaf2e42277367ce9e44dcf482f",
+      "tests/fixtures/acp_live_observer.mjs": "fb7dc53cf1f9d0360be353b795b7601236adc9b9456892cda427dc3dfd919ae7"
+    }
+  },
+  "reply_budget_proof": {
+    "constants": {
+      "FRAME": 1048576,
+      "LOCAL_CONTENT": 65536,
+      "RESPONSE_OVERHEAD": 4096,
+      "admission_limit": 489472,
+      "identity": "(1048576-65536-4096)/2 = 489472 exactly; 2*489472+65536+4096 = 1048576"
+    },
+    "check": "src/acp/grok.rs:37-40 requires value_bytes(params) <= 489472 before the question loop and before parse_form/responder publication.",
+    "serializer": "value_bytes and encode both use serde_json default compact serialization. value_bytes does not add a newline; encode adds one and rejects above FRAME. RequestId strings are valid_id: nonempty, <=256 bytes, no control characters. Worst escaped string id is 514 bytes including quotes.",
+    "worst_case_static": "Question text appears once in params and at most twice in the reply (answers key and annotations key). Previews and offered labels appear in params and at most once in the reply. Synthetic Other is the only selected label absent from params, 9 bytes per question. Notes content is re-encoded with the same serializer and is bounded by value_bytes(values) <= LOCAL_CONTENT. Uncovered envelope/id/map syntax for one minimal question and a max escaped id is 621 bytes; for 32 minimal questions it is 1334 bytes. Against minimum non-question wrapper slack, the tightest uncovered excess is 383 bytes, inside the 4096 reserve, leaving 3713 bytes even if notes consume the entire 65536 allowance. Escaping cancels because both sides count encoded bytes. A 600000-byte question alone exceeds 489472 and is rejected.",
+    "not_executed": "This margin was calculated from the frozen source and serde_json field order. This reviewer did not run the encoder."
+  },
+  "verification_limitations": [
+    "No build, test, lint, formatter, provider, auth, install, network, or global command was run by this reviewer.",
+    "Parent artifacts 1754 and 1760, and specs/verifications/e04s04-reply-budget-recovery.json, are attributed evidence, not re-executed proof.",
+    "artifact://1659 remains a round4 OAuth run. It is not a repaired-source rerun.",
+    "Working tree was not fully clean outside the 22-file inventory; see hash_verification.git.",
+    "NFR/verify human-readable source_commit label remains working-tree-after-2891de4. The binding inventory hashes match HEAD 741fe4a, which contains the production predicate. The label was not treated as a false acceptance claim.",
+    "Did not read current supplemental counterpart reports."
+  ],
+  "parent_evidence_attributed_not_executed": {
+    "focused": "artifact://1754, recorded exact native 1 (1.30s), Grok library 5, local S04 12; opt-in live ignored and not counted",
+    "full": "bg257/artifact://1760, recorded contiguous 210.40s PASS: workspace 401/30 suites/11 ignored; default 290/12 suites/8 ignored; counts overlap; strict workspace/default Clippy/check/build/fmt, OMP 8/49, Zsh/Node syntax, actual cursor showcase 1, final native unknown-settlement guards 2",
+    "cli": "specs/verifications/e04s04-reply-budget-recovery.json records outside-test CLI before/after and owned cleanup. Not re-executed. Not a provider run.",
+    "live": "artifact://1659 on round4 source only"
+  },
+  "required_context_read": [
+    "local://e04s04-supplemental1-review-brief.md",
+    "CONVENTIONS.md",
+    "specs/epics/e04-acp-agent-interaction/PLAN.md execution amendment",
+    "specs/epics/e04-acp-agent-interaction/e04s04-story.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+    "specs/verifications/AUDIT-e04s04.md reply-budget section",
+    "specs/verifications/e04s04-reply-budget-recovery.json",
+    "specs/verifications/e04s04-reply-budget-source.json",
+    "specs/verifications/e04s04-supplemental-review-authorization.json",
+    "specs/security/epics/e04/THREAT_MODEL.md",
+    "specs/security/epics/e04/e04s04-review-round5.json historical operational finding only",
+    "skill://security-review REFERENCE-false-positives.md and REFERENCE-confidence-rubric.md"
+  ],
+  "checklist": [
+    {
+      "id": 1,
+      "title": "Closed genuine Grok method/schema/modes; no fabricated prose/MCP questions.",
+      "result": "pass",
+      "evidence": "src/acp.rs:2012-2031 dispatches only elicitation/create, _x.ai/ask_user_question, and session/request_permission. The unmatched arm returns method_not_found. grok::form accepts only mode default or plan (src/acp/grok.rs:19-21) and projects into the existing flat form schema. No prose or MCP decoder was added. Cargo.toml pins agent-client-protocol-schema =1.12.0 with default-features=false."
+    },
+    {
+      "id": 2,
+      "title": "Exact session/tool/wire RPC identity and malformed scope rejection.",
+      "result": "pass",
+      "evidence": "toolCallId must be a nonempty control-free id of at most 256 bytes before publication (src/acp/grok.rs:22-25, src/acp.rs:2694-2696). parse_form requires exactly one of sessionId or requestId, checks the live session, and rejects a foreign or malformed request scope (src/acp.rs:2131-2164). Inbound RPC ids are validated before incoming_request (src/acp.rs:1785-1787, 2632-2638). A Grok form error returns invalid_params on the original id (src/acp.rs:2024-2031) and does not publish an interaction."
+    },
+    {
+      "id": 3,
+      "title": "Duplicate question/choice and question/option count bounds.",
+      "result": "pass",
+      "evidence": "Question count must be 1..=FIELDS/2, and FIELDS is 64, so at most 32 (src/acp/grok.rs:33-35, src/acp.rs:35). Duplicate question text and duplicate option labels are rejected (src/acp/grok.rs:64-66 and 99-102). Each question is capped at OPTIONS and the running total, including a synthesized Other, is capped at OPTIONS=256 (src/acp/grok.rs:90-91 and 120-121, src/acp.rs:36). These checks happen before parse_form publication."
+    },
+    {
+      "id": 4,
+      "title": "Nullable flags and scalar/multiselect semantics.",
+      "result": "pass",
+      "evidence": "Omitted and null multiSelect/multi_select become single choice. A present non-null non-boolean is invalid-request. Both flag names together are rejected (src/acp/grok.rs:67-77). Single choice becomes type string/oneOf; multiple choice becomes type array/items.anyOf with minItems 1 (src/acp/grok.rs:128-131). The new budget predicate does not change this branching."
+    },
+    {
+      "id": 5,
+      "title": "Original answers/previews/annotations/Other wire shape.",
+      "result": "pass",
+      "evidence": "grok::response keys answers by the original question title and always emits a JSON array of selected labels (src/acp/grok.rs:168-176). Nonempty notes become annotations.notes. A preview is copied only when exactly one option is selected and that option carried a string preview (src/acp/grok.rs:177-194). Other is added only when the request did not already offer that label (src/acp/grok.rs:116-118). Cancel remains {outcome:cancelled} (src/acp/grok.rs:147 and src/acp.rs:168-172)."
+    },
+    {
+      "id": 6,
+      "title": "Shared scalar/array Other dependent-notes validation before capture and admission.",
+      "result": "pass",
+      "evidence": "validate_form_values rejects Other, including any array element equal to Other, unless the grok_notes_key field is a nonempty string (src/acp.rs:2541-2557). Native values() calls that shared function before review/capture (src/tui/agent.rs:1648-1650 and 1668-1674). Broker admission calls it again before encode (src/acp.rs:874-877). Forms without grok_notes_key skip the predicate. The reply-budget predicate does not move or duplicate this rule."
+    },
+    {
+      "id": 7,
+      "title": "Unsupported decline retains responder and is not offered natively.",
+      "result": "pass",
+      "evidence": "Grok publication sets actions to accept/cancel only (src/acp.rs:2015-2017). Native F6 returns without sending when decline is absent (src/tui/agent.rs:1121-1124 and 1375-1380). An API decline reaches grok::response, which bails before encode (src/acp/grok.rs:148-150). That error is raised inside commit before selections are written, enqueue, selected state, or calls.insert (src/acp.rs:890-974). daemon acp_action returns the error without ending the target (src/daemon.rs:441-458). The pending responder stays pending."
+    },
+    {
+      "id": 8,
+      "title": "Concrete worst-case reply bound: escaping, repeated keys, previews, max values/count/RPC.",
+      "result": "pass",
+      "evidence": "See reply_budget_proof. The historical 600000-byte question is above the 489472 encoded-params limit, so the two 600000-byte keys cannot be published. For every request that passes the check, two encoded question keys, one copy of each request-owned preview, selected labels already present in params, a full LOCAL_CONTENT notes allowance, a 256-byte worst-escaped RPC id, null/number ids, 32 questions, and the newline fit in FRAME with at least 3713 bytes of static margin. This was not executed."
+    },
+    {
+      "id": 9,
+      "title": "Ingress budget error on original RPC before canonical/native responder publication.",
+      "result": "pass",
+      "evidence": "The predicate is inside grok::form before the schema loop (src/acp/grok.rs:37-40). incoming_request only calls parse_form after grok::form succeeds, and responders.insert for the interaction is after that success (src/acp.rs:2012-2081). Failure uses the existing invalid_params path on request.id, code -32602, and publishes no interaction (src/acp.rs:2024-2031). The native regression asserts that original id and code and an empty interactions array (tests/acp/native/acceptance.rs:656-666)."
+    },
+    {
+      "id": 10,
+      "title": "Conservative admission policy documented without changing other supported contracts.",
+      "result": "pass",
+      "evidence": "README.md:104 states the twice-metadata plus 64 KiB answer plus framing budget, the original-RPC error, and that the limit is conservative rather than a promise to accept every otherwise in-frame request. CHANGELOG.md:27 records the same no-truncation/no-replay/no-authority-substitution limit. The predicate is only on _x.ai/ask_user_question. FRAME, LOCAL_CONTENT, standard elicitation, permission outcomes, and public signatures are unchanged. Cargo.toml/Cargo.lock hashes match the frozen inventory."
+    },
+    {
+      "id": 11,
+      "title": "First-valid canonical selection, stale losers and reused IDs/writer stamps.",
+      "result": "pass",
+      "evidence": "pending_interaction still requires kind, pending state, and the responder mapping before an answer is encoded (src/acp.rs:1972-1990 and 872). Fallible validation and encode happen before enqueue, selected state, and calls.insert (src/acp.rs:890-974). A losing prepared action therefore cannot publish a second response. Responder write stamps still distinguish an unfinished write from a reused id (src/acp.rs:1984-1992 and 239-241). The new rejection never creates a selectable interaction, so it cannot become a second winner."
+    },
+    {
+      "id": 12,
+      "title": "Atomic authority/generation-to-broker ordering and no late substitution.",
+      "result": "pass",
+      "evidence": "daemon acp_action authorizes, prepares, then calls Authority::admit_acp, which holds the target lock, rechecks the live current control, and passes the captured generation into commit (src/daemon.rs:441-450, src/control.rs:1194-1208). commit rejects a changed generation and rechecks the exact target before mutation (src/acp.rs:752-762). The reply-budget failure is an inbound agent request, not an authority substitution. No late owner lookup was added."
+    },
+    {
+      "id": 13,
+      "title": "Force authority-only and accepted work retention.",
+      "result": "pass",
+      "evidence": "Force supersedes the reservation and grants control without a broker cancel or process signal (src/control.rs:530-532). admit_acp does not cancel work. The native regression asserts the subsequent answer produces no acp-interrupt work and no unexpected-cancel file (tests/acp/native/acceptance.rs:690-695). Accepted-work retention is unchanged because the new path returns before publication."
+    },
+    {
+      "id": 14,
+      "title": "Ordinary pending ownership cancellation retains calls and grants nobody.",
+      "result": "pass",
+      "evidence": "Ordinary claim handling remains in the authority state machine and is not invoked by grok::form. Force is a separate mode (src/control.rs:530-545). The production delta does not clear calls, grant a replacement owner, or emit session/cancel. No new cancellation path was added around the budget error."
+    },
+    {
+      "id": 15,
+      "title": "Conditional keep/withdraw/external reacquisition and original activity provenance.",
+      "result": "pass",
+      "evidence": "Conditional claims still require an external requester and a live original native owner (src/control.rs:538-547). Activity is recorded only when the admitting connection is the original native attachment (src/control.rs:1204-1206 and 1255-1264). Reacquisition policy is not implemented in the Grok codec. The budget repair does not borrow activity from a capability."
+    },
+    {
+      "id": 16,
+      "title": "Every native application-input/stale draft fence, no intercepted-input replay.",
+      "result": "pass",
+      "evidence": "Agent views route keys, paste, and mouse to agent.event rather than the PTY, and a None result is not a raw PTY fallback (src/tui.rs:1016-1074). authority.input drops bytes for agent targets (src/tui/control.rs:715-718). Panel capture and transport failure text state that intercepted input is not replayed (src/tui/control.rs:240-241, 466-467, and 835-836). Synchronous local rejection restores the same draft only; it does not replay (src/tui/agent.rs:1721-1734, called from src/tui.rs:1063-1065). The unrepresentable question is never offered, so there is no draft to replay."
+    },
+    {
+      "id": 17,
+      "title": "Native deliberate edit/cancel availability through validation/admission rejection paths.",
+      "result": "pass",
+      "evidence": "Other-notes and other validate_form_values failures return before capture, clear reviewed, and leave the editor editable (src/tui/agent.rs:1668-1674 and 1294-1304). F7 still calls answer(cancel) on an offered form (src/tui/agent.rs:1381-1383). The historical strand required a published interaction plus post-capture encode failure. The new predicate rejects before publication, and the native test asserts interactions is empty and Foreground: none before the next deliberate Other answer (tests/acp/native/acceptance.rs:660-678). A published question that passes the predicate cannot reach the old frame overflow, per item 8."
+    },
+    {
+      "id": 18,
+      "title": "Original prompt completion and honest delivery/application/unknown distinctions.",
+      "result": "pass",
+      "evidence": "The large fixture waits for the original-id -32602 response, writes grok-large-rejected.json, and returns bonus 0; the prompt then records effect 17+25+0 and emits end_turn (tests/fixtures/acp_peer.rs:748-766 and 860-875). The native test requires completed_turn effect 42 and stop_reason end_turn before reading that rejection (tests/acp/native/acceptance.rs:101-104 and 649-656). README still says a written answer is not agent application and interruption is confirmed only by the original prompt response. Close still marks unfinished work unknown rather than completed (src/acp.rs:383-405)."
+    },
+    {
+      "id": 19,
+      "title": "Explicit interrupt plus applicable pending/late original-RPC responses.",
+      "result": "pass",
+      "evidence": "Interrupt still requires the exact current foreground prompt, reserves session/cancel, and builds cancel frames for applicable pending interactions before commit (src/acp.rs:820-866). Grok cancel frames remain {outcome:cancelled} on the original wire id (src/acp.rs:168-172). A question rejected by the new predicate is not pending, so interrupt has nothing to answer for it. Late applicable requests still go through the cancelling branch before publication (src/acp.rs:2044-2068). The new test asserts the follow-up answer is not an interrupt."
+    },
+    {
+      "id": 20,
+      "title": "Exact offered permission allow/deny, no synthesized permission.",
+      "result": "pass",
+      "evidence": "parse_permission still requires the live session, unique offered option ids, and only allow-once, allow-always, reject-once, or reject-always (src/acp.rs:2167-2198). Permission admission checks the submitted option_id against the offered list before encoding (src/acp.rs:910-918). The Grok codec does not synthesize a permission option or map decline/F6 to deny. The production delta does not touch this path."
+    },
+    {
+      "id": 21,
+      "title": "Startup/close/shutdown races, ended authority and no resurrection.",
+      "result": "pass",
+      "evidence": "Spawn is skipped when the target is already not live, and initialize publication goes through lifetime.with_live (src/acp.rs:1372-1428). close does not reopen a non-live target except to record a later process-identity or cleanup failure (src/acp.rs:383-390). Shutdown sets stopping and ends ACP views (src/daemon.rs:494-503). acp_action rejects input after stopping (src/daemon.rs:432-435). The budget error uses error_response and does not recreate an ended target."
+    },
+    {
+      "id": 22,
+      "title": "Ingress/egress/call/retention budgets before irreversible publication.",
+      "result": "pass",
+      "evidence": "read_frame rejects growth past FRAME before extension, and the reader reserves ingress count and QUEUE_BYTES before reading (src/acp.rs:1627-1655). Interaction publication calls retain_capacity before responders.insert (src/acp.rs:2079-2081). Answer commit encodes and checks writer/RPC capacity before enqueue and calls.insert (src/acp.rs:445-456 and 930-974). The new Grok predicate is an additional pre-publication bound, not a raised frame cap. A budget failure on an inbound question returns invalid_params instead of publishing an unanswerable interaction."
+    },
+    {
+      "id": 23,
+      "title": "Lock order and no blocking I/O/spawn/join under admission locks.",
+      "result": "pass",
+      "evidence": "Admission order remains target authority lock then broker state lock (src/control.rs:1194-1208, src/acp.rs:752-762). value_bytes is a CPU counter with no allocation of a second buffer and no I/O (src/acp.rs:2587-2598). Spawn, process termination, and worker joins remain outside those locks in run/cleanup (src/acp.rs:1348-1514 and 1115-1118). The new predicate does not acquire the authority lock or spawn."
+    },
+    {
+      "id": 24,
+      "title": "Owned retained-pipe cleanup truth and joins, no capacity release on unknown.",
+      "result": "pass",
+      "evidence": "cleanup_complete requires joined workers and refuses process-identity or cleanup failure (src/acp.rs:309-313). run terminates the birth-qualified tree, reaps, joins all pipe workers, checks endpoint hangup, and only then drops descriptors and calls finish (src/acp.rs:1468-1514). Failure sets lifecycle failed and failure cleanup before finish. The reply-budget path does not drop descriptors or release a charged unknown lifetime."
+    },
+    {
+      "id": 25,
+      "title": "Birth-pinned owned process cleanup, unrelated sentinel preservation.",
+      "result": "pass",
+      "evidence": "ProcessTree::capture_owned_session requires the child to be its own session leader (src/runtime.rs:716-718). If capture fails, the pinned child is reaped and the instance closes as process-identity without publishing a birth-qualified tree (src/acp.rs:1403-1409). The native finish helper reaps peer.pid, requires cleanup_complete, shuts the daemon down, asserts the private socket is gone, and checks the unrelated sentinel before removing the private root (tests/acp/native.rs:445-468, tests/acp.rs:420-425). The new test calls that same finish helper."
+    },
+    {
+      "id": 26,
+      "title": "Canonical gap/category/metadata/content privacy and bounded caches.",
+      "result": "pass",
+      "evidence": "Metadata remains category/gap/truncation fields without transcript bodies (src/acp.rs:1195-1199). Content reads expose an explicit gap when the cursor skips evicted history (src/acp.rs:1071-1073). Native projection records broker and local gaps and drops an over-cap interaction page instead of offering controls (src/tui/agent.rs:321-327 and 472-527). inert_value strips _meta and control/bidi text (src/acp.rs:2703-2738). The observer header forbids retaining prompts, answers, credentials, or logs (tests/fixtures/acp_live_observer.mjs:1-2). The budget repair adds no tracing."
+    },
+    {
+      "id": 27,
+      "title": "Inert terminal rendering/chrome/control/bidi and PTY input isolation.",
+      "result": "pass",
+      "evidence": "inert replaces ASCII controls other than newline/tab, plus the listed bidi and isolate characters, with U+FFFD (src/acp.rs:2703-2718). Agent rendering uses that sanitized text. ACP targets do not receive native PTY paste/key forwarding (src/tui/control.rs:715-718, src/tui.rs:1016-1074). The new rejection never renders the oversized question. No shell interpolation was added; launch still uses Command::new on the operator argv (src/acp.rs:1348-1354)."
+    },
+    {
+      "id": 28,
+      "title": "Actual native/fixture regression F.I.R.S.T and original-RPC arithmetic/cleanup oracle.",
+      "result": "pass",
+      "evidence": "The new test is one isolated private host/peer/PTY case with explicit readiness, not a sleep-as-proof (tests/acp/native/acceptance.rs:643-697). It checks original id grok-large, code -32602, empty interactions, effect 42, then the same pid/owner and exact grok-other Other/notes 7 wire response with cumulative effect 52, and no interrupt. The fixture returns bonus 0 only after that exact rejection and otherwise fails the prompt (tests/fixtures/acp_peer.rs:748-766). finish() asserts host exit 0, termios, drainer join, peer reap, cleanup_complete, daemon 0, socket absence, sentinel survival, and root removal before fallback (tests/acp/native.rs:294-382 and 445-468). Parent records this case in artifact 1754; this reviewer did not execute it. The oracle is consumer-visible wire/effect/cleanup, not a source-text assertion."
+    },
+    {
+      "id": 29,
+      "title": "Consumer-visible boundary/error coverage, no incidental/default/source-text assertions.",
+      "result": "pass",
+      "evidence": "The new assertions compare JSON-RPC id/code, canonical interactions, ownership, pid, stop reason, arithmetic effects, and the exact answer object. They do not assert the predicate source text, a default field, or an incidental UI string as the proof. Existing Grok library cases remain the closed codec coverage. The new fixture error string is a peer failure if the broker does not reject, not a production contract echo."
+    },
+    {
+      "id": 30,
+      "title": "Live observer/cheap OAuth evidence honesty and tested-source attribution.",
+      "result": "pass",
+      "evidence": "e04s04-verify.yaml separate_live still binds artifact 1659 to e04s04-round4-source.json with post_repair_rerun false. e04s04-live-codex-grok.json says current native/CLI/full proof is local repair evidence, not a relabelled live rerun. The observer still forwards original bytes and refuses API-key environments (tests/fixtures/acp_live_observer.mjs:1-40). live.rs is unchanged from the frozen hash and was not counted as a repaired-source model run. This reviewer did not execute providers."
+    },
+    {
+      "id": 31,
+      "title": "Boring concrete design, allocation/copy/computation discipline, typed conventions/dependencies.",
+      "result": "pass",
+      "evidence": "The repair reuses private grok::form, the existing value_bytes counter, and the existing invalid_params response. RESPONSE_OVERHEAD is a named local constant. No new dependency, public signature, unsafe block, async retry, or second schema copy was added. CONVENTIONS.md remains the actual 12-line file; no generic line-count split was imposed. Typed RequestId and FormAnswer paths are unchanged."
+    },
+    {
+      "id": 32,
+      "title": "Docs/task/state gate provenance; historical fence/caps and no false runtime acceptance.",
+      "result": "pass",
+      "evidence": "e04s04-tasks.yaml and e04s04-story.md keep status failing. verify.yaml and NFR keep the story blocked, cap 5 exhausted, no round6, and historical native settlement unresolved. AUDIT-e04s04.md records local 1754/1760 PASS without independent clearance. BUG-e03 and BUG-e04 inventory hashes are unchanged. The human-readable source_commit label working-tree-after-2891de4 is imprecise relative to commit 741fe4a, but the 22 hash inventory matches that commit and the narrative does not claim story acceptance or a provider rerun. This review does not accept the story."
+    }
+  ],
+  "reviewed_paths": [
+    "src/acp.rs",
+    "src/control.rs",
+    "src/daemon.rs",
+    "src/client.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs",
+    "src/runtime.rs",
+    "tests/acp.rs",
+    "tests/acp/native.rs",
+    "tests/acp/acceptance.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/fixtures/acp_peer.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "specs/bugs/BUG-e03-native-settlement.md",
+    "specs/bugs/BUG-e04-acp-retained-pipes.md",
+    "src/acp/grok.rs",
+    "tests/acp/native/live.rs",
+    "tests/fixtures/acp_live_observer.mjs"
+  ],
+  "confidence": 0.86
+}

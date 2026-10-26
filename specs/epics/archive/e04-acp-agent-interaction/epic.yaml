@@ -1,0 +1,54 @@
+id: e04
+type: epic
+context: context.yaml
+title: ACP-first agent interaction
+status: done-user-accepted-local-integration
+scope: ../../../product/SCOPE_E04.yaml
+architecture: ../../../adr/0004-acp-authoritative-input.md
+impact: ../../../IMPACT_LATEST.md
+historical_native_epic: ../../e03-agent-interaction/epic.yaml
+historical_native_acceptance: failing-preserved
+priority: explicit-user-next-initiative-after-e03-publication
+phase_gates:
+  elaborate: independent-dual-review-minimum-94-each-and-user-confirmation
+  plan: separate-independent-dual-review-minimum-94-each
+  build: explicitly-user-authorized-if-two-new-independent-Plan-reviews-pass
+  live_acceptance: separately-approved-exact-harness-model-auth-and-spend
+  main_integration: separately-approved-only
+stories:
+  - id: e04s01
+    title: Shared ACP session and conversation view
+    bcps: 8
+    risk: P0
+    delta: MODIFIED
+    status: done
+    spec: e04s01-story.md
+    tasks: e04s01-tasks.yaml
+  - id: e04s02
+    title: Genuine forms and permission decisions
+    bcps: 8
+    risk: P0
+    delta: ADDED
+    status: done
+    spec: e04s02-story.md
+    tasks: e04s02-tasks.yaml
+  - id: e04s03
+    title: Admission-fenced ownership and retained work
+    bcps: 8
+    risk: P0
+    delta: MODIFIED
+    status: done
+    spec: e04s03-story.md
+    tasks: e04s03-tasks.yaml
+  - id: e04s04
+    title: Complete ACP acceptance and truthful fallback
+    bcps: 8
+    risk: P0
+    delta: MODIFIED
+    status: done
+    spec: e04s04-story.md
+    tasks: e04s04-tasks.yaml
+plan_status: passed-independent-round3-100-100
+plan: PLAN.md
+runtime_implementation: all-four-stories-runtime-verified-user-accepted-for-local-main-integration-original-independent-FAILs-and-caps-preserved
+delivery_authorization: ../../../verifications/e04-main-landing.json

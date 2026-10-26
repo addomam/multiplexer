@@ -1,0 +1,26 @@
+{
+  "job": "bg_303",
+  "raw_evidence": "artifact://2163",
+  "exit": 101,
+  "wall_seconds": 165.69,
+  "workspace": {
+    "passed": 429,
+    "suites": 30,
+    "ignored": 12
+  },
+  "default_acp": {
+    "passed": 87,
+    "failed": 1,
+    "ignored": 2
+  },
+  "failed_case": "native::daily_use::e06s02_native_profile_launch",
+  "observed": "Native UI ended the original attachment as no longer inspectable during actual native profile launch.",
+  "root_cause": "session/new can establish the first session between a valid null-session snapshot and acp-inspect; stale-target was classified as ended without validating a fresh same-instance snapshot. This is a second window of the reviewed first-session identity issue.",
+  "repair": "On a stale-target observation only, refresh the actual snapshot and run the same strict mutable Resume validation; permit only first session establishment and retain known session/daemon/instance/connection replacement failures. No mutation retry or input replay.",
+  "regression": "e06s03_first_session_established_between_snapshot_and_inspect_stays_attached: hold an actual pre-session observation response, establish original peer session, then release stale response before inspection.",
+  "current_status": "repaired-focused-verification-running",
+  "later_pipeline_steps": "not executed after default ACP failure",
+  "provider_requests": 0,
+  "production_RED_claimed": "actual integrated native launch failure only; no toggle/reproduction loop",
+  "failed_case_cleanup": "panic fixture fallback, not a claimed normal acceptance"
+}

@@ -4,7 +4,7 @@ use crate::{
     projects::{self, GitCache, Store},
     runtime::Terminal,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, bail, ensure};
 use parking_lot::{Condvar, Mutex};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, VecDeque};
@@ -48,6 +48,7 @@ struct Entry {
 struct State {
     store: Store,
     terminals: BTreeMap<String, Entry>,
+    agent_views: BTreeMap<String, Arc<Value>>,
     opening_terminals: usize,
     seq: u64,
     events: VecDeque<Value>,
@@ -64,10 +65,12 @@ struct HookJob {
     kind: &'static str,
 }
 struct Daemon {
+    daemon_id: String,
     state: Mutex<State>,
     controls: Mutex<crate::control::Registry>,
     pending_launches: Mutex<BTreeMap<String, LaunchControl>>,
     codex: crate::codex::Broker,
+    acp: crate::acp::Broker,
     changed: Condvar,
     integration: Arc<Integration>,
     git: GitCache,
@@ -251,16 +254,303 @@ impl Daemon {
         Ok(snapshot)
     }
     fn snapshot(&self) -> Result<Value> {
-        let state = self.state.lock();
-        let terminals: Vec<_> = state
-            .terminals
-            .values()
-            .map(|entry| self.terminal_snapshot(entry))
-            .collect::<Result<_>>()?;
-        Ok(
-            json!({"seq":state.seq,"detach_generation":state.detach_generation,"config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),"terminals":terminals,"diagnostics":state.diagnostics}),
-        )
+        let (mut snapshot, views) = {
+            let state = self.state.lock();
+            let terminals: Vec<_> = state
+                .terminals
+                .values()
+                .map(|entry| self.terminal_snapshot(entry))
+                .collect::<Result<_>>()?;
+            let views: Vec<_> = state.agent_views.values().cloned().collect();
+            (
+                json!({"daemon_id":self.daemon_id,"seq":state.seq,"detach_generation":state.detach_generation,
+                "config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),
+                "terminals":terminals,"diagnostics":state.diagnostics}),
+                views,
+            )
+        };
+        // No topology guard survives into an ACP projection or authority read.
+        let mut agents = Vec::with_capacity(views.len());
+        for view in views {
+            let Some(id) = view["id"].as_str() else {
+                continue;
+            };
+            let Ok(mut metadata) = self.acp.metadata(id) else {
+                continue;
+            };
+            let mut ownership = self.controls.lock().snapshot(id);
+            ownership["retained_work"] = metadata["work"].take();
+            ownership["work_as_of_seq"] = metadata["seq"].clone();
+            agents.push(json!({"id":id,"kind":"acp","name":view["name"],
+                "project_id":view["project_id"],"instance_id":view["instance_id"],
+                "connection_generation":metadata["target"]["connection_generation"],
+                "session_id":metadata["target"]["session_id"],"lifecycle":metadata["lifecycle"],
+                "configuration":metadata["configuration"].take(),
+                "ownership":ownership,"seq":metadata["seq"]}));
+        }
+        snapshot["agent_views"] = agents.into();
+        Ok(snapshot)
     }
+    fn acp_open(&self, request: &Value) -> Result<Value> {
+        validate_mutation_fields(
+            request,
+            &[
+                "version",
+                "op",
+                "persistent",
+                "project",
+                "name",
+                "cwd",
+                "controller",
+                "command",
+                "agent",
+                "settings",
+            ],
+        )?;
+        ensure!(
+            !(request.get("agent").is_some() && request.get("command").is_some()),
+            "invalid-request: agent profile and raw command are mutually exclusive"
+        );
+        let agent = request
+            .get("agent")
+            .map(|value| {
+                value
+                    .as_str()
+                    .context("invalid-request: agent profile ID must be a string")
+            })
+            .transpose()?;
+        let requested_project = request["project"]
+            .as_str()
+            .context("invalid-request: project ID required")?;
+        let (project, default_cwd, profile) = {
+            let state = self.state.lock();
+            let profile = agent
+                .map(|id| crate::acp_profiles::select(&state.store.config.acp_profiles, id))
+                .transpose()?;
+            let chosen = if let Some(project) = state.store.projects.get(requested_project) {
+                project
+            } else if profile.is_some() {
+                let mut matches = state
+                    .store
+                    .projects
+                    .values()
+                    .filter(|project| project.name == requested_project);
+                let project = matches
+                    .next()
+                    .context("project-not-found: project ID or name not found")?;
+                ensure!(
+                    matches.next().is_none(),
+                    "project-ambiguous: exact project ID required"
+                );
+                project
+            } else {
+                bail!("project-not-found: exact project ID required");
+            };
+            let project = if chosen.id == requested_project {
+                std::borrow::Cow::Borrowed(requested_project)
+            } else {
+                std::borrow::Cow::Owned(chosen.id.clone())
+            };
+            (project, chosen.context.clone(), profile)
+        };
+        let name = match request.get("name") {
+            None => "ACP agent",
+            Some(Value::String(name))
+                if !name.is_empty()
+                    && name.len() <= 128
+                    && name.chars().all(|c| {
+                        !c.is_control()
+                            && !matches!(c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+                                | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+                    }) =>
+            {
+                name
+            }
+            _ => bail!("invalid-request: ACP name must be a safe 1..128 byte label"),
+        };
+        let cwd = match request.get("cwd") {
+            None => default_cwd,
+            Some(Value::String(cwd)) => PathBuf::from(cwd),
+            _ => bail!("invalid-request: ACP cwd must be an absolute path"),
+        };
+        ensure!(
+            cwd.is_absolute(),
+            "invalid-request: ACP cwd must be absolute"
+        );
+        // Filesystem checks are outside topology, authority and broker locks.
+        let cwd = cwd
+            .canonicalize()
+            .context("invalid-request: ACP cwd is unavailable")?;
+        ensure!(cwd.is_dir(), "invalid-request: ACP cwd must be a directory");
+        let (command, settings) = if let Some(profile) = profile {
+            crate::acp_profiles::prepare(profile, request.get("settings"))?
+        } else {
+            let args = request["command"]
+                .as_array()
+                .context("invalid-request: command argv required")?;
+            ensure!(
+                !args.is_empty() && args.len() <= 128,
+                "invalid-request: command argv exceeds limit"
+            );
+            let mut bytes = 0usize;
+            let command = args
+                .iter()
+                .map(|arg| {
+                    let arg = arg
+                        .as_str()
+                        .context("invalid-request: command arguments must be strings")?;
+                    bytes += arg.len();
+                    ensure!(
+                        bytes <= 64 * 1024 && !arg.contains('\0'),
+                        "invalid-request: command argv exceeds limit"
+                    );
+                    Ok(arg.to_owned())
+                })
+                .collect::<Result<Vec<_>>>()?;
+            ensure!(
+                Path::new(&command[0]).is_absolute(),
+                "invalid-request: adapter executable must be absolute"
+            );
+            (
+                command,
+                request
+                    .get("settings")
+                    .cloned()
+                    .unwrap_or_else(|| json!({})),
+            )
+        };
+        ensure!(
+            !self.stopping.load(Ordering::Acquire),
+            "daemon-stopping: cannot open ACP view"
+        );
+        let descriptor = Arc::new(self.acp.reserve(&project, name, &cwd, command, settings)?);
+        let id = descriptor["id"]
+            .as_str()
+            .context("acp-internal: missing reserved target")?;
+        let admitted = (|| {
+            let mut state = self.state.lock();
+            ensure!(
+                !self.stopping.load(Ordering::Acquire),
+                "daemon-stopping: cannot publish ACP view"
+            );
+            let mut controls = self.controls.lock();
+            let lifetime = controls.add_acp_target(id)?;
+            let observed = controls.snapshot(id)["observed"].clone();
+            let grant = match controls.claim(&json!({
+                "version":1,"op":"ownership-claim","controller":request["controller"],
+                "target":{"kind":"acp","id":id},"observed":observed,
+                "mode":"cooperative","when":{"kind":"now"},
+            })) {
+                Ok(grant) => grant,
+                Err(error) => {
+                    controls.end_acp(id, || {})?;
+                    controls.remove_target(id);
+                    return Err(error);
+                }
+            };
+            // Publishing a reservation and its authority is one topology step.
+            state
+                .agent_views
+                .insert(id.to_owned(), Arc::clone(&descriptor));
+            Self::emit(
+                &mut state,
+                "acp-opened",
+                None,
+                json!({"target":{"kind":"acp","id":id}}),
+            );
+            Ok((lifetime, grant))
+        })();
+        let (lifetime, grant) = match admitted {
+            Ok(admitted) => admitted,
+            Err(error) => {
+                self.acp.end(id);
+                self.acp.cleanup(id);
+                if self.acp.discard_empty_ended(id) {
+                    self.flush_runtime_events();
+                }
+                return Err(error);
+            }
+        };
+        if let Err(error) = self.acp.start(id, lifetime) {
+            self.controls.lock().end_acp(id, || self.acp.end(id))?;
+            self.acp.cleanup(id);
+            if self.acp.discard_empty_ended(id) {
+                self.flush_runtime_events();
+            }
+            return Err(error);
+        }
+        self.changed.notify_all();
+        Ok(json!({"kind":"acp-opened","target":{
+            "kind":"acp","id":id,"instance_id":descriptor["instance_id"],
+            "connection_generation":descriptor["connection_generation"],"session_id":null},
+            "control":grant["control"],"generation":grant["generation"],
+            "lifecycle":"starting","seq":self.state.lock().seq}))
+    }
+
+    fn acp_action(&self, op: &str, request: &Value, connection: u64) -> Result<Value> {
+        ensure!(
+            !self.stopping.load(Ordering::Acquire),
+            "daemon-stopping: ACP input is closed"
+        );
+        ensure!(
+            request["target"]["kind"] == "acp",
+            "wrong-target-kind: ACP target required"
+        );
+        let id = request["target"]["id"]
+            .as_str()
+            .context("invalid-request: ACP target ID required")?;
+        let authority = self
+            .controls
+            .lock()
+            .authorize(id, &request["control"], connection)?;
+        let prepared = self.acp.prepare(op, request, authority.controller_id())?;
+        let result = authority.admit_acp(op == "acp-close", connection, |generation| {
+            self.acp.commit(prepared, generation)
+        })?;
+        if op == "acp-close" {
+            self.acp.cleanup(id);
+        }
+        self.flush_runtime_events();
+        Ok(result)
+    }
+
+    fn decorate_acp_work(&self, value: &mut Value) {
+        if value["target"]["kind"] == "acp"
+            && let Some(id) = value["target"]["id"].as_str()
+        {
+            if let Ok(mut metadata) = self.acp.metadata(id) {
+                value["retained_work"] = metadata["work"].take();
+                // This is a current canonical projection, not an as-of-grant fence.
+                value["work_as_of_seq"] = metadata["seq"].take();
+            } else {
+                value["retained_work_status"] = json!("unavailable");
+            }
+        }
+        if let Some(ownership) = value.get_mut("ownership") {
+            self.decorate_acp_work(ownership);
+        }
+        if value["kind"] == "controller-state" {
+            for field in ["controls", "claims"] {
+                if let Some(items) = value[field].as_array_mut() {
+                    for item in items {
+                        self.decorate_acp_work(item);
+                    }
+                }
+            }
+        }
+    }
+
+    fn begin_shutdown(&self) {
+        self.stopping.store(true, Ordering::Release);
+        let views: Vec<_> = self.state.lock().agent_views.values().cloned().collect();
+        for view in views {
+            if let Some(id) = view["id"].as_str() {
+                let _ = self.controls.lock().end_acp(id, || self.acp.end(id));
+            }
+        }
+        self.changed.notify_all();
+    }
+
     fn execute_source(
         &self,
         entry: &Entry,
@@ -942,15 +1232,54 @@ impl Daemon {
         }
     }
     fn flush_runtime_events(&self) {
-        // Never hold registry/PTY locks while taking topology/event ownership.
+        // Never hold registry/PTY/ACP locks while taking topology/event ownership.
         let mut events = self.controls.lock().take_events();
         events.extend(self.codex.take_events());
-        if events.is_empty() {
+        for (_, _, data) in &mut events {
+            self.decorate_acp_work(data);
+        }
+        let agent_events = self.acp.drain_events();
+        let mut removed = Vec::new();
+        if events.is_empty() && agent_events.is_empty() {
             return;
         }
-        let mut state = self.state.lock();
-        for (kind, terminal, data) in events {
-            Self::emit(&mut state, &kind, Some(&terminal), data);
+        {
+            let mut state = self.state.lock();
+            for (kind, terminal, mut data) in events {
+                let acp = data["ownership"]["target"]["kind"] == "acp";
+                if acp {
+                    data["target"] = data["ownership"]["target"].clone();
+                }
+                Self::emit(
+                    &mut state,
+                    &kind,
+                    if acp { None } else { Some(&terminal) },
+                    data,
+                );
+            }
+            for event in agent_events {
+                let Some(kind) = event["kind"].as_str() else {
+                    continue;
+                };
+                let Some(id) = event["id"].as_str() else {
+                    continue;
+                };
+                if kind == "acp-removed" {
+                    state.agent_views.remove(id);
+                    removed.push(id.to_owned());
+                }
+                Self::emit(
+                    &mut state,
+                    kind,
+                    None,
+                    json!({
+                        "target":{"kind":"acp","id":id},"metadata":event["data"],
+                    }),
+                );
+            }
+        }
+        for id in removed {
+            self.controls.lock().remove_target(&id);
         }
         self.changed.notify_all();
     }
@@ -961,7 +1290,36 @@ impl Daemon {
         let op = request["op"]
             .as_str()
             .context("invalid-request: op required")?;
+        if request["target"]["kind"] == "acp"
+            && !matches!(
+                op,
+                "ownership-claim"
+                    | "acp-inspect"
+                    | "acp-prompt"
+                    | "acp-authenticate"
+                    | "acp-answer"
+                    | "acp-permission"
+                    | "acp-interrupt"
+                    | "acp-close"
+            )
+        {
+            bail!("wrong-target-kind: native operation cannot address ACP");
+        }
+        if let Some(id) = request["terminal"].as_str()
+            && self.state.lock().agent_views.contains_key(id)
+        {
+            bail!("wrong-target-kind: ACP views are not terminals");
+        }
         match op {
+            "acp-profiles" => {
+                validate_mutation_fields(&request, &["version", "op", "persistent"])?;
+                let profiles = self.state.lock().store.config.acp_profiles.clone();
+                Ok(crate::acp_profiles::list(profiles))
+            }
+            "acp-open" => self.acp_open(&request),
+            "acp-inspect" => self.acp.inspect(&request),
+            "acp-prompt" | "acp-authenticate" | "acp-answer" | "acp-permission"
+            | "acp-interrupt" | "acp-close" => self.acp_action(op, &request, connection),
             "controller-create" | "ownership-claim" | "control-handle" => {
                 let mut result = {
                     let mut controls = self.controls.lock();
@@ -1024,6 +1382,7 @@ impl Daemon {
                     }
                     result
                 }?;
+                self.decorate_acp_work(&mut result);
                 self.flush_runtime_events();
                 result["seq"] = self.state.lock().seq.into();
                 if result["kind"] == "controller-state" {
@@ -1648,8 +2007,7 @@ fn serve(daemon: Arc<Daemon>, stream: UnixStream, connection: u64) -> Result<()>
         // Publish shutdown only after attempting the acknowledgement. The listener
         // can then disconnect slow clients without racing this response.
         if shutdown {
-            daemon.stopping.store(true, Ordering::Release);
-            daemon.changed.notify_all();
+            daemon.begin_shutdown();
         }
         if shutdown || !persistent {
             return written;
@@ -1686,9 +2044,11 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let (hook_jobs, hook_receiver) = std::sync::mpsc::sync_channel::<Option<HookJob>>(64);
     let daemon = Arc::new(Daemon {
+        daemon_id: Uuid::new_v4().simple().to_string(),
         state: Mutex::new(State {
             store,
             terminals: BTreeMap::new(),
+            agent_views: BTreeMap::new(),
             opening_terminals: 0,
             seq: 0,
             detach_generation: 0,
@@ -1702,6 +2062,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         controls: Mutex::new(crate::control::Registry::new()),
         pending_launches: Mutex::new(BTreeMap::new()),
         codex: crate::codex::Broker::new(runtime)?,
+        acp: crate::acp::Broker::new(),
         integration,
         git: GitCache::new(),
         stopping: AtomicBool::new(false),
@@ -1854,8 +2215,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
             }
         }
     }
-    daemon.stopping.store(true, Ordering::Release);
-    daemon.changed.notify_all();
+    daemon.begin_shutdown();
     for connection in connections.lock().values() {
         let _ = connection.shutdown(std::net::Shutdown::Both);
     }
@@ -1871,6 +2231,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         thread::sleep(Duration::from_millis(5));
     }
     daemon.codex.shutdown();
+    daemon.acp.shutdown();
     let _ = daemon.hook_jobs.send(None);
     let _ = hook_worker.join();
     drop(listener);

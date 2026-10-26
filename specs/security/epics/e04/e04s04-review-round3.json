@@ -1,0 +1,77 @@
+{
+  "coverage_summary": "Fresh blind HIGH+ security-sensitive review of implemented e04s04 local tasks1\u20133 and affected consumers; round3/max5, without resetting historical caps. total_items=32; must_fix_count=0; should_fix_count=0; consider_count=0; supported_security_must_fix_count=0; operational_availability_lifecycle_must_fix_count=0; score=100*(32-0-0)/32=100. checks_run=false. No payloads, builds, tests, linters, formatters, network/provider/auth/install calls, edits or agents were executed. The security false-positive guidance was read, but DoS/resource exhaustion, unsafe Rust boundaries, fixtures and unchanged reachable consumers were not categorically excluded.\n\nnumeric_rubric \u2014 each numbered item is individually assessed below; value=1 means no supported HIGH+ blocker in the approved local review scope, NOT independently executed acceptance:\n1 approvedlocalScope=1: inspected PLAN/story/tasks/integration contract; review and existing local implementation do not authorize live runs or publication.\n2 sameLiveTuple=1: src/acp.rs:1140-1155 compares the entire target/instance/connection/session tuple; backend and native acceptance retain exact tuple and PID across ownership changes.\n3 originalRPC=1: src/acp.rs:499-518 registers outgoing RPCs before writer visibility; response processing at1799-1951 resolves retained typed IDs, not a later owner or arrival-guessed prompt.\n4 freshReusedWireResponders=1: src/acp.rs:466-495,1975-2059 checks completed response stamps and Arc identity before releasing a responder; fresh canonical interaction IDs prevent wire-ID reuse from rebinding old answers.\n5 actualFormValues=1: src/acp.rs:2254-2523 validates restricted schemas and typed answers; fixture values affect actual arithmetic. Native trace uses deliberate7,11,5 rather than producer/default assertions.\n6 fourDispositions=1: src/acp.rs:2148-2188 retains exact offered permission IDs/kinds; tests/acp/acceptance.rs:106-268 exercises all four opaque offered options.\n7 allowEffect=1: tests/fixtures/acp_peer.rs:817-825 applies allowed arithmetic and writes tool-effect-N; acceptance checks original RPC and actual effect.\n8 denyAbsence=1: the same fixture branches omit arithmetic/file effects when permission is rejected; backend/native cases assert unchanged totals and missing denied-effect files.\n9 authorityOnlyForce=1: src/control.rs:533-535 changes authority without broker cancellation/process effects; backend/native cases retain outstanding questions, RPCs and live descendants through force.\n10 staleAPI=1: src/daemon.rs:450-460 obtains server-derived authority; src/control.rs:1194-1215 and src/acp.rs:744-770 recheck authority/generation/tuple at the same commit ordering point. Stale choices do not enter canonical work/history.\n11 physicalNoReplay=1: src/tui.rs:1025-1071 consumes active ACP events without PTY fallback, including None results; doubled prefix is explicitly guarded. Native tests cover key/repeat/paste/mouse/focus routes.\n12 freshReacquisition=1: src/tui/agent.rs:195-244 invalidates drafts on binding changes; native acceptance requires deliberate fresh acquisition/input and observes exactly three prompts, not replayed observer drafts.\n13 conditionalOriginalProvenance=1: src/control.rs:1090-1188 validates original live attachment connection, increasing view serial and target kind; borrowed control does not manufacture attachment activity/consent.\n14 humanPreserved=1: actual keep/withdraw paths retain the human generation, unanswered interaction and original work; no automatic policy rearm or acquisition was found.\n15 exactCanonicalOwnerGeneration=1: canonical Work stores server-derived controller plus captured generation; admission and response records retain original prompt/interaction/RPC identities independently of later owners.\n16 heldAdmission=1: tests/acp/acceptance.rs:270-293 observes actual canonical64KiB admission before dropping the caller socket; incomplete delivery stays accepted/not-submitted, not applied.\n17 independentProgress=1: dedicated nonblocking pipe workers do not perform I/O under authority/state locks; held-input tests concurrently perform snapshot/force and unrelated actual arithmetic42.\n18 privateRecovery=1: src/daemon.rs:468-490 decorates private controller recovery with current canonical retained work without rebinding or resubmitting it; stalled-input recovery checks original identities.\n19 closeUnknownTruth=1: src/acp.rs:375-435 closes unresolved work/interactions as unknown, preserving completed outcomes and independent late delivery evidence; close is not reported as confirmed cancellation/application.\n20 shutdownOrdering/noErrorMask=1: src/daemon.rs:493-502 ends ACP lifetimes before teardown; final shutdown includes broker joins outside locks. tests/acp/acceptance.rs:382-440 observes canonical close before shutdown and only permits confirmed post-admission reply loss, not an authority error as success.\n21 hostileIsolation=1: src/acp.rs:1597-1660 caps accumulation before deserialization and accounts for reader-owned/in-flight frames; malformed/oversized/flooded instances fail while an independent responder/session continues.\n22 stderrDrain=1: src/acp.rs:1662-1678 retains at most64KiB and continues reading/discarding overflow; independent arithmetic after stderr pressure is asserted.\n23 privacy/errors=1: public projections contain bounded disposition metadata rather than schemas/answers/transcript/stderr; provider errors become fixed categories/codes. ACP text rendering sanitizes escape/control/bidi content, and API/content inspection remains an explicit local operation.\n24 realProcessIdentity=1: src/acp.rs:1332-1401 uses direct absolute argv/cwd, setsid and owned-session capture; src/runtime.rs:589-826 validates process birth identities before signaling. Uncaptured cleanup remains uncertain; no orphan PID expansion or post-reap killpg was added.\n25 cleanup/workerJoins/retainedEndpoints/chargedUncertainty=1: src/acp.rs:1402-1418 retains all original stdio Files in one Arc before initialization publication; every started worker is joined at1474-1478; original endpoints are probed after joins and dropped before finish. Missing/error/still-held endpoints fail cleanup; cleanup_complete and reservation/pruning retain their charge. Idle stdin, early stdout failure, all-three held pipes and partial-start/error paths were inspected.\n26 sentinel/noUnrelatedImpact=1: production signals use the known tree or pinned unreaped direct-child fallback; fixture/native failure cleanup was also inspected. Acceptance observes unrelated sentinels before explicit release/fallback and does not treat escaped-retainer release as daemon cleanup success.\n27 nativeTermiosHostDrainer=1: tests/acp/native.rs:281-378 pins the controlling host through tcgetattr, checks original termios, then observes host exit and joins the nonblocking drainer. No repaired-source CLI-only smoke is misrepresented as starting a PTY/drainer.\n28 actualOutsideEvidence=1: reviewed parent records distinguish the earlier full native49/49/57 proof at1399 from final-source endpoint CLI proof at1515. The final permanent native case is recorded as passing1515. These are parent evidence, not checks or runtime observations executed by this reviewer.\n29 regressionShowcaseCounts=1: final ledger reports selected10, workspace394/30suites/10ignored, default283/12suites/7ignored, Bun8/49, native guards2 and exact showcase1; overlapping suite totals are not added. No independent execution or Linux/MSRV/RSS/latency/CI/coverage proof is claimed.\n30 historicalFenceCapsAndLiveHonesty=1: source-facing docs and current ledgers retain native unknown/application/presentation failures, exhausted historical caps, round3/5 and failing whole S04. ACP admission does not become provider application or native settlement.\n31 FIRST/types/maintainability=1: named PipeEnd, safe OwnedFd-to-File ownership and one shared cancellation owner avoid duplicated descriptors/per-endpoint ownership inference. Real-child tests use isolated private roots, explicit causal predicates, observable effects and failure-only fallback. Long Method is visible in orchestration/E2E traces, but no actionable HIGH+ Fowler-smell consequence was established.\n32 noMissingReachableImplementationOrFalseGateClaim=1 WITH EXPLICIT LOCAL BOUNDARY: the required root e04s04_live_adapters declaration is absent from the registered ACP test root/submodules. Therefore its advertised future exact filter is NOT an available fail-closed gate, and a zero-match successful Cargo exit cannot count. This is genuinely missing Task4 implementation, not merely an unrun ignored case. The implementation/evidence explicitly says driver_implemented=false, command_available_or_executed=false and whole_story=failing. The approved local tasks1\u20133 do not expose a substitute receipt/no-op/fixture acceptance path. Exact real launchers/installed closures, model/auth/private-root bindings and enforceable spend remain prerequisite information; this review cannot manufacture or authorize them. Their absence blocks full S04 acceptance, but does not establish a reachable HIGH+ security or operational defect in the implemented local scope.\n\nIndependent hash result: manifest19 entries read; independently computed/compared SHA256 hashes=0/19 because the mounted tools provide source reads/search but no hashing or command execution device. No19/19 equality, clean-tree or independent base-diff claim is made. Worktree metadata/reflog records final source6a5d9afd89b9ab0fff6bb10ae3b829f32f3aab00, consistent with the supplied manifest; that is not cryptographic working-file verification.\n\nVerdict: LOCAL_STATIC_HIGH_PLUS_REVIEW_CLEAR \u2014 zero supported security findings and zero operational must blocks survived source-to-sink/nearby-control inspection. This is not an independent runtime PASS, not a promotion of any task ledger, and not full acceptance. WHOLE_S04=FAILING; Task4 remains UNAPPROVED, UNIMPLEMENTED and UNRUN. A real fail-closed, nonzero-case driver plus separately authorized actual both-adapter evidence is still required before whole acceptance.",
+  "findings": [],
+  "reviewed_paths": [
+    "CONVENTIONS.md",
+    "src/acp.rs",
+    "src/control.rs",
+    "src/daemon.rs",
+    "src/client.rs",
+    "src/tui.rs",
+    "src/tui/control.rs",
+    "src/tui/agent.rs",
+    "src/runtime.rs",
+    "tests/acp.rs",
+    "tests/acp/native.rs",
+    "tests/acp/acceptance.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/fixtures/acp_peer.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    "specs/bugs/BUG-e04-acp-retained-pipes.md",
+    "specs/bugs/BUG-e03-native-settlement.md",
+    "specs/epics/e04-acp-agent-interaction/PLAN.md",
+    "specs/epics/e04-acp-agent-interaction/build-integration-contract.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-story.md",
+    "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+    "specs/epics/e04-acp-agent-interaction/epic.yaml",
+    "specs/epics/e04-acp-agent-interaction/context.yaml",
+    "specs/adr/0004-acp-authoritative-input.md",
+    "specs/IMPACT_LATEST.md",
+    "specs/tech-architecture/e04-TEST_PLAN_LATEST.md",
+    "specs/security/epics/e04/THREAT_MODEL.md",
+    "specs/verifications/e04s04-round3-source.json",
+    "specs/verifications/AUDIT-e04s04.md",
+    "specs/verifications/NFR-e04s04.json",
+    "specs/verifications/e04s04-verify.yaml",
+    "specs/verifications/e04s04-build.md",
+    "specs/verifications/e04s04-endpoint-truth-before-after.json",
+    "specs/verifications/e04s04-endpoint-truth-runtime.json",
+    "specs/verifications/e04s04-idle-pipe-before.json",
+    "specs/verifications/e04s04-retained-pipe-before-after.json",
+    "specs/verifications/e04s04-retained-pipe-runtime.json",
+    "specs/verifications/e04s04-complete-native-attempt1.json",
+    "specs/verifications/e04s04-native-fence.json",
+    "specs/verifications/e04s04-worker-retirement.json",
+    "specs/verifications/e04s04-live-prerequisites.json"
+  ],
+  "deferred": [
+    {
+      "reason": "Independent19-file cryptographic comparison unavailable: no mounted hashing/command-execution tool. Manifest values and final reflog were read; none of the19 working-file SHA256 values was independently computed or verified. Source inspection covers relevant sections, not an independently generated Git diff.",
+      "paths": [
+        "specs/verifications/e04s04-round3-source.json"
+      ]
+    },
+    {
+      "reason": "Whole S04/Task4 remains blocked, not cleared by local score100: required live driver is absent, concrete installed adapter/launcher/dependency-closure and model/auth/private-root/spend bindings are missing, and separate approval has not been granted. Implement the genuine fail-closed driver with real bindings before treating its exact filter as runnable acceptance; no placeholder, synthetic peer, receipt substitute or zero-case success may pass it.",
+      "paths": [
+        "tests/acp.rs",
+        "tests/acp/native.rs",
+        "specs/epics/e04-acp-agent-interaction/e04s04-tasks.yaml",
+        "specs/verifications/e04s04-live-prerequisites.json"
+      ]
+    },
+    {
+      "reason": "No independent runtime execution or cross-platform/performance proof was performed. Parent1515 regression/endpoint evidence and earlier1399 full native evidence were inspected with their distinct source/surface limitations. Native application settlement and historical acceptance/presentation failures remain unresolved.",
+      "paths": [
+        "specs/verifications/e04s04-verify.yaml",
+        "specs/verifications/e04s04-endpoint-truth-runtime.json",
+        "specs/verifications/e04s04-complete-native-attempt1.json",
+        "specs/verifications/e04s04-native-fence.json",
+        "specs/bugs/BUG-e03-native-settlement.md"
+      ]
+    }
+  ]
+}

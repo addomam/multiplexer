@@ -44,7 +44,7 @@ Independent Build/security review remains a separate gate after actual runtime p
 
 ## Accepted temporary disposition
 
-User direction: keep upstream Codex, document the correctness limitation and move on; close the issue only after future ACP integration actually supplies the required behavior. No ACP code is included now. Protocol adoption alone is not proof of a native input cut or authoritative native presentation. The failed test and all32 map remain unchanged; user acceptance is separate from runtime evidence. See `specs/security/EXCEPTIONS.md`.
+User direction: keep upstream Codex, document the correctness limitation and move on; close the issue only after future ACP integration actually supplies the required behavior. At that e03 delivery no ACP code existed. The separate e04 amux-owned ACP path now has local runtime proof, with real-adapter acceptance still gated; this is not an input cut or authoritative presentation repair for the upstream native TUI. The failed test and all32 map remain unchanged; user acceptance is separate from runtime evidence. See `specs/security/EXCEPTIONS.md` and the final integrated local revisit `specs/verifications/e04s04-native-fence.json`.
 
 ## Primary pinned source evidence
 

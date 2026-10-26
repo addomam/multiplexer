@@ -1,0 +1,8 @@
+{
+  "failure_record": "specs/verifications/e04s02-bootstrap-native.json",
+  "cause": "First-session reconciliation already selected prompt/history. The probe blindly toggled F9 into the completed form, then correctly rejected paste there. Navigate only when the rendered interaction panel is selected and wait for its removal. No product change.",
+  "peer_absent_after_shutdown": true,
+  "root_no_holders": true,
+  "private_root_removed": true,
+  "failed_record_retained": true
+}

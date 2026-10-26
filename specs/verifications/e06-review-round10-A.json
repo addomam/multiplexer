@@ -1,0 +1,203 @@
+{
+  "verdict": "FAIL",
+  "score": 94.44444444444444,
+  "total_items": 36,
+  "passed_items": 34,
+  "checklist": [
+    {
+      "area": "Frozen review scope",
+      "result": "PASS",
+      "evidence": "Reviewed the 92-path inventory in specs/verifications/e06-review-round10-source.json: 24 first-party code/test paths, 8 first-party documentation/manifest paths, and 60 vendored paths. Compared first-party changes against 2195b05adf23ae26a80065ecdd6d9196e2915998; inspected the three modified vendor files and the released files' integration. Vendor provenance is attributed to the sealed manifest, not independently re-certified."
+    },
+    {
+      "area": "Settled requirements and threat boundaries",
+      "result": "PASS",
+      "evidence": "Read CONVENTIONS.md, specs/product/SCOPE_LATEST.yaml, specs/security/epics/e06/THREAT_MODEL.md and only PLAN.md lines 1–45. The implementation preserves the ACP-first scope, explicit launch, original-agent recovery, parked E05, and the distinction between source review and actual installed-provider acceptance."
+    },
+    {
+      "area": "Same-instance ACP protocol routing",
+      "result": "PASS",
+      "evidence": "src/acp.rs routes initialize, session/new, Configure responses, session updates, forms, permissions and peer cancellation through the original Instance state and transport. The added Configure variant has a consuming response branch; requested settings do not create a replacement session."
+    },
+    {
+      "area": "Original questions, permissions and opaque tool identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs preserves typed request IDs and original session/tool scope through notification, form and permission consumers, using the separate 4-KiB tool-ID bound. tests/acp/omp.rs and tests/fixtures/acp_peer.rs exercise a long opaque tool ID, OMP-shaped form responses and permission choices without substituting another agent."
+    },
+    {
+      "area": "Peer cancellation versus admitted interaction responses",
+      "result": "PASS",
+      "evidence": "The new $/cancel_request consumer matches the exact typed request ID and only withdraws a pending, non-responding interaction. State::enqueue and finish_response retain the reserved responder and its actual write result. tests/acp/omp.rs covers withdrawal without an implicit turn interrupt."
+    },
+    {
+      "area": "Settings applied before ready and prompt admission",
+      "result": "PASS",
+      "evidence": "src/acp.rs completes Configuration::next/acknowledge processing before publishing ready. src/acp/settings.rs validates requests and records configuration failure rather than silently admitting a prompt with unsupported or unconfirmed startup settings. Settings rejection and held-bootstrap cases are represented in tests/acp/omp.rs."
+    },
+    {
+      "area": "Advertised settings IDs and supported operations",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs resolves exact model/mode/config-option identifiers, maps effort through the advertised thought_level category, and rejects unsupported or ambiguous semantic requests. Explicit option IDs remain independently addressable; no provider flags or premium fallback are invented."
+    },
+    {
+      "area": "Changing catalogs and conflicting settings",
+      "result": "PASS",
+      "evidence": "Configuration resolves successive settings against the updated catalog and verifies the final requested values. tests/acp/omp.rs includes model-dependent effort offerings, equivalent aliases and conflicting aliases, preventing an earlier catalog or a later setter from silently displacing a requested value."
+    },
+    {
+      "area": "Requested, reported, unreported and changed configuration",
+      "result": "PASS",
+      "evidence": "src/acp/settings.rs distinguishes agent-default/applied/changed/failed states and unreported values; later current-mode/config-option updates update the projection. src/tui/agent.rs renders this projection in a read-only settings panel instead of claiming an unknown setting or permission policy is effective."
+    },
+    {
+      "area": "CLI launch and closed request shape",
+      "result": "PASS",
+      "evidence": "src/cli.rs implements acp start with explicit project/profile selection, model/mode/effort, repeated options and structured options JSON. Null optional fields are omitted before daemon dispatch. src/daemon.rs rejects conflicting agent/command selection and malformed launch/settings fields."
+    },
+    {
+      "area": "Default native launch uses original attachment authority",
+      "result": "PASS",
+      "evidence": "src/cli.rs sends the default interactive launch into tui::start; src/tui/control.rs registers the native controller and dispatches acp-open on its original authority connection. The optional external --controller path is explicit and returns JSON rather than inventing a transient external owner."
+    },
+    {
+      "area": "Shell-free profiles and symlink invocation identity",
+      "result": "PASS",
+      "evidence": "src/acp_profiles.rs validates bounded argv, resolves executable availability without a shell, and preserves the selected invocation path rather than canonicalizing a symlink into a different command name. tests/acp/profiles.rs covers absolute and PATH symlink aliases and rejects missing executable/profile cases."
+    },
+    {
+      "area": "Native picker and explicit project selection",
+      "result": "PASS",
+      "evidence": "src/tui/launch.rs obtains safe profile metadata and real project IDs, keeps launch deliberate, and emits one launch request through NativeControl. src/tui.rs captures the returned target before follow-up observation; src/tui/view.rs advertises and routes the new ACP picker action without treating an ACP view as a PTY parent."
+    },
+    {
+      "area": "Lossless native settings edits",
+      "result": "PASS",
+      "evidence": "src/tui/launch.rs accepts or rejects whole edits, preserves structured option keys/values containing delimiters, and blocks submission after an over-budget edit rather than silently submitting a truncated prefix. tests/acp/native/daily_use.rs covers long/boundary IDs, rejected edits and delimiter-bearing options."
+    },
+    {
+      "area": "Exclusive ownership and authority admission",
+      "result": "PASS",
+      "evidence": "src/daemon.rs performs ACP authorization and broker preparation before Authority::admit_acp. The unchanged consuming Authority::check_locked in src/control.rs checks target lifetime, control reference, controller identity and current generation under the target lock; admit_acp commits under that same lock."
+    },
+    {
+      "area": "Force and pending-claim cancellation semantics",
+      "result": "PASS",
+      "evidence": "The ACP launch/action changes do not replace the existing target ownership protocol. src/control.rs claim dispatch compares observations before force, while native control presents explicit force confirmation and retained work. Inspected native/API regression sources continue to distinguish force, cancellation, release and explicit interruption."
+    },
+    {
+      "area": "Keep/withdraw and external reacquisition policy",
+      "result": "PASS",
+      "evidence": "src/tui/control.rs continues to route captured consent/claim operations through the existing capability API and does not add automatic conditional-policy decisions. Recovery disables first-view acquisition; retirement uses guarded controller-close rather than release, cancel, withdraw or acceptance of an old offer."
+    },
+    {
+      "area": "Captured target, generation and interaction identities",
+      "result": "PASS",
+      "evidence": "src/acp.rs PreparedAction retains the target tuple, controller, generation, call and interaction identities. Native drafts/actions in src/tui/agent.rs remain bound to their confirmed projection and grant. Recovery reconstructs the editor/control state instead of rebinding an old draft to a new grant."
+    },
+    {
+      "area": "Application input gating and revocation",
+      "result": "PASS",
+      "evidence": "src/tui.rs routes physical keys, repeat, paste, mouse and literal-prefix application input through NativeControl or the grant-bound ACP editor. src/tui/control.rs gates those paths and clears uncertain authority. tests/acp/native.rs and tests/pty_control/native.rs cover observer input rejection and stale drafts after authority changes; the separate recovery-readiness defect is recorded below."
+    },
+    {
+      "area": "Both connections and queued-worker lifetime fences",
+      "result": "PASS",
+      "evidence": "src/client.rs detects transport loss without changing shared descriptor flags. src/tui/control.rs checks observation and authority sockets plus heartbeat/stop state before dequeuing work, and rechecks the compound claim after its observation read. Its queued-launch test and tests/acp/native/recovery_edges.rs cover loss during queued launch/claim operations."
+    },
+    {
+      "area": "Exact surviving-agent recovery identity",
+      "result": "PASS",
+      "evidence": "Resume validation in src/tui.rs compares daemon ID, selected target, instance, connection generation and established session; it permits only the initial null-to-established session transition. tests/acp/native/daily_use.rs and recovery_edges.rs assert original tuple/PID/work continuity and reject ended, missing, replaced-daemon and same-name replacement targets."
+    },
+    {
+      "area": "No recovery relaunch, resurrection or mutation replay",
+      "result": "PASS",
+      "evidence": "The recovery supervisor reconnects to an existing socket without ensure_daemon. Launch receipts are captured before fallible follow-up snapshot/resize operations, and NativeControl teardown salvages identity rather than replaying acp-open. Recovery edge cases cover lost launch observations, queued operations and old claim offers not migrating to the fresh controller."
+    },
+    {
+      "area": "Queued recovery input is exhausted before readiness",
+      "result": "FAIL",
+      "evidence": "F1: src/tui.rs:1286–1298 treats event::poll(Duration::ZERO) == false as an empty-input proof. vendor/crossterm/src/event/read.rs:60–89 can return false after consuming one filtered internal terminal response while ordinary keys remain queued behind it. Repeated cursor-position replies can therefore let registration-time ownership shortcuts survive the recovery drain."
+    },
+    {
+      "area": "Vendored readiness and inherited blocking descriptors",
+      "result": "PASS",
+      "evidence": "vendor/crossterm/src/event/source/unix/mio.rs retains the event-batch index and TTY readiness across returned parser events, checks zero-time level readiness before reading a borrowed blocking fd, and does not set parent-shared O_NONBLOCK flags. Cargo.toml enables the rustix event API. The distinct public-filter false-negative is not waived and is F1."
+    },
+    {
+      "area": "Resize and consent presentation fences",
+      "result": "PASS",
+      "evidence": "src/tui.rs reconciles the actual kernel size around frame presentation and recovery before enabling input/consent. tests/pty_control/native.rs includes suppressed-SIGWINCH consent and registration-time resize cases. Selection continuity is saved before fallible keyboard/mouse-triggered resize operations."
+    },
+    {
+      "area": "Persistence and public observation separation",
+      "result": "PASS",
+      "evidence": "src/projects.rs adds optional validated profile configuration with rollback on persistence failure; SavedProject remains separate from runtime state. src/acp_profiles.rs returns safe profile metadata without argv/environment/auth. Runtime ACP instances, sessions, controls and recovery state are not added to the disk schema."
+    },
+    {
+      "area": "Retained unknown outcomes and cleanup truthfulness",
+      "result": "PASS",
+      "evidence": "src/acp.rs retains unknown work and response-write delivery evidence when a lifetime closes. cleanup_complete remains false for unresolved process-identity/cleanup failure instead of manufacturing successful cleanup. Settings failure and explicit close use the existing owned-instance lifecycle rather than bypassing it."
+    },
+    {
+      "area": "Safe quit, termios and disconnected UX",
+      "result": "PASS",
+      "evidence": "src/tui.rs keeps a Restore guard across supervision, permits safe quit while disconnected, and distinguishes disconnected/resynchronizing/ended states. vendor/crossterm/src/terminal/sys/unix.rs clones the saved rustix termios before make_raw and restores the saved mode. Native fixture sources assert actual termios restoration and host survival."
+    },
+    {
+      "area": "Live-provider privacy and bounded acceptance source",
+      "result": "PASS",
+      "evidence": "tests/acp/native/omp_live.rs validates private inputs, uses bounded request/poll deadlines, checks original agent/work/PID and genuine permission effects, and prints categorical outcomes rather than private prompts/responses. Its budget checks require recorded subscription-only model/effort/request/token/deadline limits. This is source inspection, not verification that any provider run satisfied those conditions."
+    },
+    {
+      "area": "Fixture cleanup and causal assertions",
+      "result": "PASS",
+      "evidence": "tests/acp.rs, tests/acp/native.rs and omp_live.rs retain owned cleanup/reaping assertions, PTY drainer termination, socket/root absence and unrelated sentinel survival. tests/shell_races.rs now waits for the queued command's actual file contents rather than redirection-created file existence, preserving a causal effect fence."
+    },
+    {
+      "area": "Protocol, CLI and native settings regression coverage",
+      "result": "PASS",
+      "evidence": "tests/acp/omp.rs, tests/acp/profiles.rs, tests/acp/native/daily_use.rs and tests/fixtures/acp_peer.rs cover settings acknowledgement/rejection, exact IDs, evolving catalogs, long tool IDs, cancellation, external CLI behavior, symlink invocation and native edit limits. Fixture comments explicitly distinguish protocol evidence from real OMP acceptance."
+    },
+    {
+      "area": "Recovery regression coverage at filtered-event boundaries",
+      "result": "FAIL",
+      "evidence": "tests/acp/native/recovery_edges.rs:669 onward exercises registration-time prefix/Ctrl-L keys but does not place filtered internal terminal replies ahead of them. It therefore does not cover the false empty-queue result in the vendored reader that defeats the new recovery drain. Add the mixed internal-reply/public-key case as part of F1's fix."
+    },
+    {
+      "area": "Historical unknown native settlement remains unsafe",
+      "result": "PASS",
+      "evidence": "README.md preserves the distinction between PTY delivery and application settlement, including the historical unsafe unknown native boundary. Existing ownership admission still requires the appropriate settlement proof; no change converts force-only evidence, redraw, request resolution or turn completion into a cooperative safe grant."
+    },
+    {
+      "area": "Maintainability and clean integration",
+      "result": "PASS",
+      "evidence": "src/lib.rs registers the private profile module; settings and launch parsing are separated into src/acp/settings.rs and src/tui/launch.rs while reusing the existing daemon API, NativeControl worker and projection model. Existing raw ACP operations remain implemented, not replaced by compatibility shims or placeholder paths."
+    },
+    {
+      "area": "Released vendor integration and platform/feature routing",
+      "result": "PASS",
+      "evidence": "Inspected all 60 vendored paths, including event sources/readers/filters/parsers, platform backends, wake/stream paths, terminal/cursor/style/clipboard commands, examples, README and license. The manifest identifies 57 as released-source-identical and three as locally changed. Unix default mio dispatch selects the repaired source; optional/Windows paths retain their existing routing. The inherited reader semantics causing F1 were traced rather than assumed correct."
+    },
+    {
+      "area": "Documentation and dependency provenance",
+      "result": "PASS",
+      "evidence": "Reviewed README.md, CHANGELOG.md, CONVENTIONS.md, Cargo.toml, Cargo.lock, allowed PLAN.md lines, SCOPE_LATEST.yaml and THREAT_MODEL.md. The root patch points crossterm 0.29.0 to the licensed vendor tree and Cargo.lock reflects the path package; docs describe explicit launch, honest settings and recovery limits without supplying a substitute for actual acceptance."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "category": "must-fix",
+      "priority": "P1",
+      "file": "/Users/addomam/projects/amux-integration-api/src/tui.rs",
+      "line": 1287,
+      "title": "Drain filtered terminal replies before declaring recovery ready",
+      "impact": "Queued input from a disconnected or not-yet-presented attachment can be interpreted as a deliberate ownership gesture on the fresh controller. A surviving prefix/Ctrl-L sequence emits a new cooperative claim, creating a reservation or immediately acquiring an unowned ACP target, contrary to the required no-replay/no-implicit-acquisition recovery boundary.",
+      "evidence": "The new recovery loop breaks on event::poll(Duration::ZERO) == false at src/tui.rs:1287–1288 and uses another such probe at line 1299 before eventually clearing drain_recovered_input. In vendor/crossterm/src/event/read.rs:60–89, a zero-time poll returns false after one nonmatching internal event, even when the source has further events queued. EventFilter rejects cursor-position/device replies (src/event/filter.rs:48–56); the Unix parser produces InternalEvent::CursorPosition for ESC[row;colR (src/event/sys/unix/parse.rs:241–256), and the mio Parser retains subsequent events. For example, while recovery registration is held, queue three cursor-position replies followed by the old prefix/Ctrl-L gesture: the pre-view probe, drain probe and final probe can each consume one reply and return false, leaving the ownership keys behind when readiness is enabled. Those keys then reach src/tui.rs:1451–1460, NativeControl::open/request at src/tui/control.rs:934–975, and Work::Claim, whose consuming ownership dispatch creates a real claim. This is a new dependence of recovery on an inherited reader behavior, not a request to fix an unrelated pre-existing terminal feature.",
+      "fix": "Provide a bounded drain/probe that distinguishes actual source exhaustion from encountering a filtered internal event. Continue through immediately available internal/parser events, preserve the no-parent-fd-flag-mutation property, and remain fail-closed if the drain budget is exhausted rather than reporting an empty queue. Use that result before clearing drain_recovered_input. Extend the held-registration controlling-PTY regression with cursor-position/device replies before stale ownership shortcuts; assert zero claims/reservations and unchanged owner/work, then verify a separately entered fresh gesture works."
+    }
+  ],
+  "summary": "FAIL: one supported P1 must-fix recovery-input defect. The checklist passes 34 of 36 items, so the computed score is 100 × 34 / 36 = 94.44444444444444; meeting the numeric threshold does not satisfy the zero-must-fix security gate. The remaining reviewed launch, settings, identity, ownership and cleanup paths did not yield another patch-introduced actionable defect.",
+  "limits": "Independent read-only static source/security review only. No edits, builds, tests, lint, formatters, executable/source execution, providers, auth/config/global operations or commits were performed. No prior review/audit/runtime/handoff reports, actual credentials or retired private fixtures were read; PLAN.md was limited to lines 1–45. Test descriptions above refer to inspected assertions, not exercised results. The 57 unchanged vendor files were treated according to the sealed released-source provenance and inspected for integration, not independently re-certified as a newly audited upstream release. Frozen hashes were not independently recomputed. This review does not establish runtime/provider acceptance, installed-source equivalence, or approval of fixture evidence as a substitute for genuine same-instance OMP effects. Historical unknown native application settlement remains unsafe and was neither reclassified as a new defect nor waived into acceptance."
+}
