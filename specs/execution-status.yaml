@@ -224,9 +224,11 @@ e05_task_ledgers:
 e05_parking: specs/verifications/e05-parking.json
 e06_cycle:
   phase: release
-  status: verified-user-authorized-local-commit-and-merge
-  branch: feat/acp-daily-use
-  worktree: /Users/addomam/projects/amux-integration-api
+  status: locally-landed-post-merge-smoke-passed-not-pushed
+  branch: main
+  worktree: /Users/addomam/projects/amux-acp
+  implementation_branch: feat/acp-daily-use
+  implementation_commit: f186891867faac5dde0ffd7cf5b88a622fcaa399
   baseline_job: bg_269
   baseline_evidence: specs/verifications/e06-baseline-repair.json
   original_baseline_failure: specs/verifications/e06-baseline-stall.json
@@ -250,6 +252,7 @@ e06_cycle:
   verification: specs/verifications/e06-daily-use-verify.json
   main_integration_push_release: local-commit-and-main-merge-explicitly-authorized-push-tag-release-not-authorized
   landing: specs/verifications/e06-local-landing.json
+  post_merge_smoke: {status: passed-after-documented-fixture-build, profile_native_cases: 13, stock_OMP_cases: 8, zsh_syntax: passed, provider_requests: 0, raw: "artifact://2704"}
   gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
 e06s01: passing
 e06s02: passing

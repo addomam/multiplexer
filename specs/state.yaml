@@ -1,10 +1,10 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/acp-daily-use, signing: unsigned-authorized-command-scoped-fallback, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+vcs: {kind: git, branch: main, signing: unsigned-authorized-command-scoped-fallback-after-1Password-error, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
 active_flow: release_branch
 active_epic: e06
 project_cycle:
-  current_phase: 5
-  completed_phases: [1, 2, 3, 4]
+  current_phase: 6
+  completed_phases: [1, 2, 3, 4, 5]
   mode: standard
   scope: acp-daily-use
   previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
@@ -32,7 +32,7 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: release-branch
+  next_skill: orchestrate-project
   blocked: false
   blocker: null
   reason: >-
@@ -119,7 +119,8 @@ handoff:
     User explicitly selects “Run complete acceptance, cap12”: authorize one fresh max4-request complete OMP subscription acceptance run, aggregate provider cap9→12 with8 already used. Model github-copilot/mai-code-1.1-flash/low, ≤2000 requested output tokens each,110-second guard, fresh private copied auth and ledger; no premium/API-key fallback, global changes or publication. Six nonlive gates pass; live acceptance stays failing until actual run and normal cleanup succeed.
     E06 complete genuine installed-OMP acceptance now PASS in one foreground run:1 selected/1 passed/0 ignored,10.06 seconds. Exactly4 actual MAI flash/low requests at2000 requested output tokens each; aggregate12/cap12/0. Genuine native question answer, API Force preserving the original pending permission, exact deny/allow file effects, original tuple/PID/work/RPC and normal end_turn all pass without implicit interruption. Native termios/host/drainer, original agent/workers/endpoints, daemon/socket/workspace and unrelated-sentinel cleanup pass. Separate private copied-auth/raw root has no lsof holders and is removed; global subscription credential row is unchanged. Full receipt e06-omp-live-final.json. All7 tasks/3 stories pass; E05 remains parked with historical failures/caps preserved. Retain uncommitted feature worktree; commit/merge/push/release still need separate authorization, no further live calls.
     User explicitly requests “commit and merge”: authorize committing the verified E06 feature and parked E05 planning/evidence on feat/acp-daily-use and fast-forwarding local main. Main worktree /Users/addomam/projects/amux-acp is clean at af745cdf; feature also retains the earlier2195b05 planning commit. All86 reviewed code/test/vendor/Cargo paths still match the approved source; full acceptance remains green. Attempt configured SSH signing with the actual configured author. No push, tag, release, global change or new provider run. Generic traceability matrix/scripts are absent, so quantitative gate-trace is WAIVED, not fabricated; all7 explicit task verify/evidence links are present. Keep the feature worktree until integration and actual main smoke succeed.
-  last_step_completed: e06-user-authorized-local-commit-and-merge-prepared
+    E06 implementation committed as f186891867faac5dde0ffd7cf5b88a622fcaa399 and fast-forwarded into local main, preserving earlier2195b05 and every parked E05 planning record. Configured SSH signing failed with “1Password: agent returned an error”; used existing user-authorized command-scoped unsigned fallback, actual author retained and global Git configuration unchanged. Actual main build/CLI/start-help passed. Initial main smoke omitted the documented ACP fixture example and failed12 cases; after cargo build --example acp_fixture, all13 launch/native cases pass in2.35s, all8 stock OMP tests pass and Zsh syntax passes (artifact://2704). No production/test-code change or provider request. Record landing metadata on the feature branch, fast-forward that record, then retire only the fully integrated clean feature worktree/branch without force. Main worktree /Users/addomam/projects/amux-acp is the continuing checkout. No push/tag/release/CI claim or new live authority.
+  last_step_completed: e06-local-main-code-landed-and-post-merge-native-smoke-passed
   required_reading:
     - specs/epics/e06-acp-daily-use/PLAN.md
     - specs/epics/e06-acp-daily-use/epic.yaml
@@ -852,11 +853,14 @@ e05_plan_review:
   runtime_acceptance: not-implemented
 e06_build:
   scope: acp-daily-use
-  status: verified-user-authorized-local-commit-and-merge
+  status: locally-landed-post-merge-smoke-passed-not-pushed
   authorization: user-explicit-do-all-three
   plan: specs/epics/e06-acp-daily-use/PLAN.md
-  branch: feat/acp-daily-use
-  worktree: /Users/addomam/projects/amux-integration-api
+  branch: main
+  worktree: /Users/addomam/projects/amux-acp
+  implementation_branch: feat/acp-daily-use
+  implementation_worktree: /Users/addomam/projects/amux-integration-api
+  implementation_commit: f186891867faac5dde0ffd7cf5b88a622fcaa399
   baseline_job: bg_269
   baseline_evidence: specs/verifications/e06-baseline-repair.json
   stories: [e06s01, e06s02, e06s03]
@@ -879,12 +883,13 @@ e06_build:
   verification: specs/verifications/e06-daily-use-verify.json
   main_merge_push_release: local-commit-and-main-merge-explicitly-authorized-push-tag-release-not-authorized
   landing: specs/verifications/e06-local-landing.json
+  post_merge_smoke: {status: passed-after-documented-fixture-build, profile_native_cases: 13, stock_OMP_cases: 8, zsh_syntax: passed, provider_requests: 0, raw: "artifact://2704"}
   gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
 e06_fixture_bug_cycle:
   bug: BUG-e06-native-fixture-cleanup
-  current_step: 5
-  completed_steps: [1, 2, 3, 4]
-  status: verified-on-kept-feature-branch-pending-commit
+  current_step: 6
+  completed_steps: [1, 2, 3, 4, 5]
+  status: locally-landed-verified
   baseline: {job: bg_263, status: failed-stalled-and-terminated, exit: 101, seconds: 2595.28, evidence: specs/verifications/e06-baseline-stall.json}
   forward_e06_production: cleared-by-bg_269-repaired-preflight
-  current_action: preserve-failure-repair-and-green-evidence-during-feature-integration
+  current_action: complete-preserve-failure-repair-and-green-evidence-no-new-provider-runs

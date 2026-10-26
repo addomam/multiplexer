@@ -1,14 +1,14 @@
 {
   "epic": "e06",
-  "status": "PASS-verified-on-kept-feature-branch",
+  "status": "PASS-locally-landed-main-not-pushed",
   "user_items": {
     "e05": "parked-with-all17-historical-tasks-failing-not-discarded",
     "omp_acp": "PASS-genuine-installed-server-native-question-API-handoff-exact-deny-allow-effects-same-original-agent",
     "launch": "PASS-explicit-human-CLI-native-picker-OMP-Codex-Grok-profiles-truthful-settings",
     "reattachment": "PASS-exact-live-agent-disconnect-pause-sleep-fencing-no-duplicate-replay-implicit-acquisition-or-daemon-resurrection"
   },
-  "branch": "feat/acp-daily-use",
-  "worktree": "/Users/addomam/projects/amux-integration-api",
+  "branch": "main",
+  "worktree": "/Users/addomam/projects/amux-acp",
   "task_verification": "specs/verifications/e06-task-verification.json",
   "tasks_passing": 7,
   "stories_passing": 3,
@@ -82,7 +82,7 @@
     "private_auth_raw_sessions_stderr_spec_launcher_and_gate": "removed-after-no-holder-check",
     "secure_erasure_claimed": false,
     "new_herdr_sessions_tabs_or_worktrees": "none-created-by-this-resumption",
-    "feature_worktree": "retained-unmerged-never-discarded"
+    "feature_worktree": "Fully committed and integrated; retire without force only after the metadata fast-forward."
   },
   "historical_limits": {
     "e05": "parked",
@@ -92,7 +92,7 @@
     "global_changes": "none",
     "commit_merge_push_release": "not-authorized"
   },
-  "next_action": "User may authorize commit/landing separately; implementation and all scoped acceptance gates are complete.",
+  "next_action": "Local commit/main integration is authorized and complete for implementation. Finish metadata fast-forward and safe worktree retirement; push/tag/release and further model calls remain unauthorized.",
   "stock_regressions": {
     "command": "bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
     "execution": "single-contiguous-foreground-run",
@@ -121,5 +121,9 @@
         "reason": "High-entropy heuristic matched the long hyphenated all-seven-task-gates status label, not credential material."
       }
     ]
-  }
+  },
+  "verification_branch": "feat/acp-daily-use",
+  "verification_worktree": "/Users/addomam/projects/amux-integration-api",
+  "landing": "specs/verifications/e06-local-landing.json",
+  "implementation_commit": "f186891867faac5dde0ffd7cf5b88a622fcaa399"
 }

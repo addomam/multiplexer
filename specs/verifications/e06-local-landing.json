@@ -1,5 +1,5 @@
 {
-  "status": "prepared-not-yet-committed-or-merged",
+  "status": "local-main-implementation-merged-post-merge-runtime-PASS",
   "authorization": {
     "user_request": "commit and merge",
     "local_commit_and_main_merge": true,
@@ -72,5 +72,53 @@
     "files": 273,
     "insertions": 34828,
     "deletions": 887
-  }
+  },
+  "implementation_commit": {
+    "id": "f186891867faac5dde0ffd7cf5b88a622fcaa399",
+    "subject": "feat(acp): complete verified daily agent workflows",
+    "author": "Addison Omead Amiri <gitlog@addomam.net>",
+    "signature": "N-unsigned-authorized-fallback",
+    "files": 273,
+    "insertions": 34841,
+    "deletions": 887
+  },
+  "included_prior_planning_commit": "2195b05adf23ae26a80065ecdd6d9196e2915998",
+  "main_after_implementation": "f186891867faac5dde0ffd7cf5b88a622fcaa399",
+  "first_post_merge_smoke": {
+    "status": "FAILED-prerequisite-omission-not-production-defect-proof",
+    "command": "cargo build && target/debug/amux --help && target/debug/amux acp start --help && cargo test --test acp e06s02_ -- --nocapture && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 101,
+    "build_and_both_CLI_help_commands": "PASS",
+    "profile_cases": {
+      "passed": 1,
+      "failed": 12
+    },
+    "cause": "Fresh main target lacks examples/acp_fixture; documented cargo build --example acp_fixture was omitted.",
+    "source_evidence": "tests/acp/profiles.rs:8-12; specs/verifications/e06-task-verification.json fixture_prerequisite",
+    "raw": "artifact://2702",
+    "wall_seconds": 31.43
+  },
+  "post_merge_smoke": {
+    "status": "PASS",
+    "command": "cargo build --example acp_fixture && cargo test --test acp e06s02_ -- --nocapture && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 0,
+    "profile_native_cases": 13,
+    "profile_failed": 0,
+    "profile_seconds": 2.35,
+    "stock_OMP_cases": 8,
+    "stock_OMP_failed": 0,
+    "stock_OMP_assertions": 49,
+    "zsh_syntax": "PASS",
+    "wall_seconds": 3.52,
+    "actual_provider_requests": 0,
+    "raw": "artifact://2704"
+  },
+  "final_record": "A metadata-only feature-branch commit containing this receipt is fast-forwarded after the implementation; no direct main commit or history rewrite.",
+  "worktree_cleanup_policy": {
+    "command": "git worktree remove /Users/addomam/projects/amux-integration-api && git branch -d feat/acp-daily-use",
+    "preconditions": "Run only after metadata commit is safely fast-forwarded; use no force, reset, clean or unmerged deletion.",
+    "continuing_checkout": "/Users/addomam/projects/amux-acp"
+  },
+  "push_performed": false,
+  "global_git_config_changed": false
 }
