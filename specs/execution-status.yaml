@@ -223,8 +223,8 @@ e05_task_ledgers:
   e05s04: specs/epics/e05-thin-tool-integration/e05s04-tasks.yaml
 e05_parking: specs/verifications/e05-parking.json
 e06_cycle:
-  phase: release
-  status: signed-artifact-verified-ready-for-publication
+  phase: complete
+  status: released-installed-and-verified
   branch: main
   worktree: /Users/addomam/projects/amux-acp
   implementation_branch: feat/acp-daily-use
@@ -256,7 +256,7 @@ e06_cycle:
   landing: specs/verifications/e06-local-landing.json
   post_merge_smoke: {status: passed-after-documented-fixture-build, profile_native_cases: 13, stock_OMP_cases: 8, zsh_syntax: passed, provider_requests: 0, raw: "artifact://2704"}
   gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
-  release: {version: 0.1.0, channel: macOS-arm64-preview, status: artifact-verified-ready-for-publication, evidence: specs/verifications/release-v0.1.0.json}
+  release: {version: 0.1.0, channel: macOS-arm64-preview, status: released-installed-and-verified, tag_commit: 19df8e11a3cafcc281de29b73624016c875eba8f, installed: /Users/addomam/.cargo/bin/amux, ci: not-configured, evidence: specs/verifications/release-v0.1.0.json}
 e06s01: passing
 e06s02: passing
 e06s03: passing

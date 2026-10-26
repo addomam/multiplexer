@@ -1,6 +1,7 @@
 {
   "epic": "e06",
-  "status": "PASS-locally-landed-main-not-pushed",
+  "status": "PASS-released-v0.1.0-preview-installed-and-verified",
+  "release_evidence": "specs/verifications/release-v0.1.0.json",
   "user_items": {
     "e05": "parked-with-all17-historical-tasks-failing-not-discarded",
     "omp_acp": "PASS-genuine-installed-server-native-question-API-handoff-exact-deny-allow-effects-same-original-agent",
@@ -82,7 +83,7 @@
     "private_auth_raw_sessions_stderr_spec_launcher_and_gate": "removed-after-no-holder-check",
     "secure_erasure_claimed": false,
     "new_herdr_sessions_tabs_or_worktrees": "none-created-by-this-resumption",
-    "feature_worktree": "Fully committed and integrated; retire without force only after the metadata fast-forward."
+    "feature_worktree": "Prior implementation worktree retired after full integration; release used the existing checkout with a feature branch. Package/installed private processes were normally reaped and owned release staging removed after no-holder verification."
   },
   "historical_limits": {
     "e05": "parked",
@@ -90,9 +91,9 @@
     "native_unknown_application_settlement": "not-waived",
     "new_codex_grok_claude_live_runs": "none",
     "global_changes": "none",
-    "commit_merge_push_release": "not-authorized"
+    "commit_merge_push_release": "User explicitly authorized finishing the release; signed history published through permitted PR merge, signed v0.1.0 preview published and exact downloaded binary installed. No new live/global changes authorized."
   },
-  "next_action": "Local commit/main integration is authorized and complete for implementation. Finish metadata fast-forward and safe worktree retirement; push/tag/release and further model calls remain unauthorized.",
+  "next_action": "Release complete. Use the installed preview without automatically restarting the live daemon; await the user's next concrete issue or scope. E05 stays parked and no live-model budget remains.",
   "stock_regressions": {
     "command": "bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh",
     "execution": "single-contiguous-foreground-run",

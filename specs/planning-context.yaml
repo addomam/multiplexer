@@ -1,6 +1,6 @@
 feature_name: ACP-first daily agent workflow
 initiative: e06-acp-daily-use
-status: implementation-verified-user-authorized-release-in-progress
+status: completed-released-v0.1.0-preview-and-installed-verified
 source_of_truth: specs/product/SCOPE_LATEST.yaml
 plan: specs/epics/archive/e06-acp-daily-use/PLAN.md
 parked_e05: specs/verifications/e05-parking.json
