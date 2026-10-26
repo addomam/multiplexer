@@ -1,12 +1,14 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: release/e06-v0.1.0, signing: verified-SSH-signatures-on-E06-implementation-and-landing-records, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: release_branch
-active_epic: e06
+vcs: {kind: git, branch: main, signing: verified-SSH-source-release-commits-and-tag, publish_via: protected-branch-safe-PR-merge-preserving-signed-history, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: null
+active_epic: null
 project_cycle:
   current_phase: 6
-  completed_phases: [1, 2, 3, 4, 5]
+  completed_phases: [1, 2, 3, 4, 5, 6]
   mode: standard
   scope: acp-daily-use
+  status: completed
+  release: v0.1.0
   previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
 elaborate_review:
   scope: same-instance-agent-interaction-specification
@@ -32,10 +34,10 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: release-branch
+  next_skill: orchestrate-project
   blocked: false
   blocker: null
-  reason: "User explicitly authorizes finishing the release. The v0.1.0 macOS arm64 preview is packaged/checksummed; all86 sealed reviewed code paths match,451 workspace tests and13 optimized native/profile cases pass, and the extracted binary produces same-session arithmetic42 outside the checkout with normal private peer/daemon/socket cleanup and0 provider calls. Commit signed release records, fast-forward/push main and signed tag, publish/verify assets, then install without restarting the live daemon. Global daemon/config/auth changes remain unauthorized; live budget12/cap12/0. E05 stays parked; historical caps/native unknown-settlement limits remain unchanged."
+  reason: "Release complete: v0.1.0 macOS arm64 preview is published with verified assets and a GitHub-verified SSH tag on19df8e1. The exact downloaded binary is installed at ~/.cargo/bin/amux; outside-checkout packaged and installed ACP arithmetic42, original tuple/PID and normal private cleanup pass. Owned staging has no lsof holders and is removed. Main publication uses permitted feature-branch/PR merge, not direct protected pushes. E06 all7 tasks/3 stories pass and its capsule is archived; E05 remains parked. No new live calls (12/cap12/0), live-daemon restart or global config/auth changes. CI is unconfigured, not green; coverage/traceability WAIVED and historical caps/native unknown-settlement limits remain unchanged. Await the user's next concrete issue or scope; do not reopen E05 automatically."
   historical_progress: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -121,7 +123,7 @@ handoff:
     E06 complete genuine installed-OMP acceptance now PASS in one foreground run:1 selected/1 passed/0 ignored,10.06 seconds. Exactly4 actual MAI flash/low requests at2000 requested output tokens each; aggregate12/cap12/0. Genuine native question answer, API Force preserving the original pending permission, exact deny/allow file effects, original tuple/PID/work/RPC and normal end_turn all pass without implicit interruption. Native termios/host/drainer, original agent/workers/endpoints, daemon/socket/workspace and unrelated-sentinel cleanup pass. Separate private copied-auth/raw root has no lsof holders and is removed; global subscription credential row is unchanged. Full receipt e06-omp-live-final.json. All7 tasks/3 stories pass; E05 remains parked with historical failures/caps preserved. Retain uncommitted feature worktree; commit/merge/push/release still need separate authorization, no further live calls.
     User explicitly requests “commit and merge”: authorize committing the verified E06 feature and parked E05 planning/evidence on feat/acp-daily-use and fast-forwarding local main. Main worktree /Users/addomam/projects/amux-acp is clean at af745cdf; feature also retains the earlier2195b05 planning commit. All86 reviewed code/test/vendor/Cargo paths still match the approved source; full acceptance remains green. Attempt configured SSH signing with the actual configured author. No push, tag, release, global change or new provider run. Generic traceability matrix/scripts are absent, so quantitative gate-trace is WAIVED, not fabricated; all7 explicit task verify/evidence links are present. Keep the feature worktree until integration and actual main smoke succeed.
     E06 implementation committed as f186891867faac5dde0ffd7cf5b88a622fcaa399 and fast-forwarded into local main, preserving earlier2195b05 and every parked E05 planning record. Configured SSH signing failed with “1Password: agent returned an error”; used existing user-authorized command-scoped unsigned fallback, actual author retained and global Git configuration unchanged. Actual main build/CLI/start-help passed. Initial main smoke omitted the documented ACP fixture example and failed12 cases; after cargo build --example acp_fixture, all13 launch/native cases pass in2.35s, all8 stock OMP tests pass and Zsh syntax passes (artifact://2704). No production/test-code change or provider request. Record landing metadata on the feature branch, fast-forward that record, then retire only the fully integrated clean feature worktree/branch without force. Main worktree /Users/addomam/projects/amux-acp is the continuing checkout. No push/tag/release/CI claim or new live authority.
-  last_step_completed: release-artifact-and-outside-checkout-original-session-arithmetic-verified
+  last_step_completed: v0.1.0-preview-published-installed-private-runtime-verified-and-owned-staging-removed
   required_reading:
     - specs/epics/archive/e06-acp-daily-use/PLAN.md
     - specs/epics/archive/e06-acp-daily-use/epic.yaml
@@ -856,7 +858,7 @@ e05_plan_review:
   runtime_acceptance: not-implemented
 e06_build:
   scope: acp-daily-use
-  status: signed-artifact-verified-ready-for-publication
+  status: released-installed-and-verified
   authorization: user-explicit-do-all-three
   plan: specs/epics/archive/e06-acp-daily-use/PLAN.md
   branch: main
@@ -890,7 +892,7 @@ e06_build:
   landing: specs/verifications/e06-local-landing.json
   post_merge_smoke: {status: passed-after-documented-fixture-build, profile_native_cases: 13, stock_OMP_cases: 8, zsh_syntax: passed, provider_requests: 0, raw: "artifact://2704"}
   gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
-  release: {version: 0.1.0, channel: macOS-arm64-preview, status: artifact-verified-ready-for-publication, branch: release/e06-v0.1.0, evidence: specs/verifications/release-v0.1.0.json}
+  release: {version: 0.1.0, channel: macOS-arm64-preview, status: released-installed-and-verified, tag_commit: 19df8e11a3cafcc281de29b73624016c875eba8f, tag_signature_GitHub_verified: true, url: "https://github.com/addomam/multiplexer/releases/tag/v0.1.0", installed: /Users/addomam/.cargo/bin/amux, ci_verified: false, ci: not-configured, evidence: specs/verifications/release-v0.1.0.json}
 e06_fixture_bug_cycle:
   bug: BUG-e06-native-fixture-cleanup
   current_step: 6

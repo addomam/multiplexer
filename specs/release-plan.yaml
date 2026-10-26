@@ -5,4 +5,4 @@ epics:
   - {id: e03, capsule: e03-agent-interaction, wsjf: 0.414, title: Same-instance agent interaction and exclusive PTY control}
   - {id: e04, capsule: archive/e04-acp-agent-interaction, wsjf: null, priority_source: explicit-user-next-initiative, title: ACP-first agent interaction}
   - {id: e05, capsule: e05-thin-tool-integration, wsjf: null, priority_source: explicitly-parked-by-user-until-concrete-non-ACP-consumer, status: parked, title: Language-neutral thin tool integration}
-  - {id: e06, capsule: archive/e06-acp-daily-use, wsjf: null, priority_source: explicit-user-three-item-implementation-authorization, status: completed-release-in-progress, title: ACP-first daily agent workflow}
+  - {id: e06, capsule: archive/e06-acp-daily-use, wsjf: null, priority_source: explicit-user-three-item-implementation-authorization, status: released, release: v0.1.0, title: ACP-first daily agent workflow}

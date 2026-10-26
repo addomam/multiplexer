@@ -1,5 +1,5 @@
 initiative: e06-acp-daily-use
-status: implementation-verified-release-authorized
+status: implemented-and-released-v0.1.0-preview
 core_value: Use supported ACP agents conveniently and safely as daily amux sessions.
 user_decision: Park e05; make OMP ACP work and implement compatibility, launch UX and reattachment hardening.
 parked: {epic: e05, evidence: ../verifications/e05-parking.json, implementation_started: false}
