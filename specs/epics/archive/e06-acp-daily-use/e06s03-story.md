@@ -33,7 +33,7 @@ Force/cancel/conditional semantics, exact original responders, no replay, stock 
 Delivered e04; e06 shared bootstrap/profile interfaces and feature-branch baseline before production edits.
 
 ## 9 Module purpose callers and contracts
-See PLAN.md and ../../IMPACT_LATEST.md; parent owns integration and shared registrations.
+See PLAN.md and ../../../IMPACT_LATEST.md; parent owns integration and shared registrations.
 
 ## 10 Design
 Reuse existing broker, NativeControl and original controller/agent connection; no generic provider/plugin/second authority.
@@ -48,7 +48,7 @@ Runtime memory-only; configuration on disk; public evidence metadata-only.
 Unsupported/missing/unknown fails explicitly; no model fallback, automatic task action or replay.
 
 ## 14 Security
-No new supported security findings in affected paths; apply ../../security/epics/e06/THREAT_MODEL.md.
+No new supported security findings in affected paths; apply ../../../security/epics/e06/THREAT_MODEL.md.
 
 ## 15 Resources
 Observe owned child/endpoints/workers/native host/drainer/termios/socket/root and unrelated sentinel before fallback.

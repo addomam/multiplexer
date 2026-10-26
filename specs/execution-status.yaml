@@ -224,11 +224,13 @@ e05_task_ledgers:
 e05_parking: specs/verifications/e05-parking.json
 e06_cycle:
   phase: release
-  status: locally-landed-post-merge-smoke-passed-not-pushed
+  status: signed-artifact-verified-ready-for-publication
   branch: main
   worktree: /Users/addomam/projects/amux-acp
   implementation_branch: feat/acp-daily-use
-  implementation_commit: f186891867faac5dde0ffd7cf5b88a622fcaa399
+  implementation_commit: cdc2897fc93476212f153d848383495d1499f7f1
+  signed_landing_record_commit: 83865ebc1062de87609e866ea9a49cb25cd84a85
+  historical_unsigned_commits: {implementation: f186891867faac5dde0ffd7cf5b88a622fcaa399, landing_record: 442d8a923a360c4959bcce9de0f07da31738c2fd, preserved_by: backup/e06-unsigned-442d8a9, signed_replacements_tree_identical: true}
   baseline_job: bg_269
   baseline_evidence: specs/verifications/e06-baseline-repair.json
   original_baseline_failure: specs/verifications/e06-baseline-stall.json
@@ -245,19 +247,20 @@ e06_cycle:
   task_runtime_selection: {job: bg_359, status: all-seven-task-gates-passing-with-separate-live-proof, unique_nonlive: 44, groups: [13, 13, 13], extra_unit_native: 5, separate_dependency_units: 3, live_ignored_in_default: 1, live_acceptance: passed-separate-explicit-run}
   fresh_review: {scope: e06-only, round: 11, max_rounds: 12, status: passed-source-only, scores: [100, 100, 100], findings: 0, source: specs/verifications/e06-review-round11-source.json, report: specs/verifications/e06-review-round11.json, frozen_files: 92, hashes_matched_at_verdict: 92, previous_round: specs/verifications/e06-review-round10.json}
   source_review_cap_extension_request: {from: 10, to: 12, status: explicitly-approved-by-user-Fix-and-review-cap12, scope: E06-only-source-security, historical_caps: unchanged, live_provider_budget: unchanged, prior_extension: {from: 5, to: 10, status: explicitly-approved-by-user}}
-  plan: specs/epics/e06-acp-daily-use/PLAN.md
+  plan: specs/epics/archive/e06-acp-daily-use/PLAN.md
   scope: specs/product/SCOPE_LATEST.yaml
   live_approval: completed-one-explicit-complete-run-cap12-twelve-used-zero-remaining-MAI-flash-low-2000-requested-output-tokens-each-110s-no-premium-or-API-key-fallback-no-further-live-calls
   live_cap_extension: specs/verifications/e06-live-cap12-authorization.json
   verification: specs/verifications/e06-daily-use-verify.json
-  main_integration_push_release: local-commit-and-main-merge-explicitly-authorized-push-tag-release-not-authorized
+  main_integration_push_release: explicitly-authorized-by-user-finish-the-release-no-global-daemon-config-auth-changes-or-new-live-runs
   landing: specs/verifications/e06-local-landing.json
   post_merge_smoke: {status: passed-after-documented-fixture-build, profile_native_cases: 13, stock_OMP_cases: 8, zsh_syntax: passed, provider_requests: 0, raw: "artifact://2704"}
   gate_trace: {verdict: WAIVED, rationale: no-repository-traceability-matrix-blindspot-data-or-bundled-scripts, explicit_task_verify_evidence: seven-of-seven-present}
+  release: {version: 0.1.0, channel: macOS-arm64-preview, status: artifact-verified-ready-for-publication, evidence: specs/verifications/release-v0.1.0.json}
 e06s01: passing
 e06s02: passing
 e06s03: passing
 e06_task_ledgers:
-  e06s01: specs/epics/e06-acp-daily-use/e06s01-tasks.yaml
-  e06s02: specs/epics/e06-acp-daily-use/e06s02-tasks.yaml
-  e06s03: specs/epics/e06-acp-daily-use/e06s03-tasks.yaml
+  e06s01: specs/epics/archive/e06-acp-daily-use/e06s01-tasks.yaml
+  e06s02: specs/epics/archive/e06-acp-daily-use/e06s02-tasks.yaml
+  e06s03: specs/epics/archive/e06-acp-daily-use/e06s03-tasks.yaml

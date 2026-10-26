@@ -2,10 +2,10 @@ id: e06
 type: epic
 title: ACP-first daily agent workflow
 status: passing
-scope: ../../product/SCOPE_LATEST.yaml
+scope: ../../../product/SCOPE_LATEST.yaml
 plan: PLAN.md
-impact: ../../IMPACT_LATEST.md
-threat_model: ../../security/epics/e06/THREAT_MODEL.md
+impact: ../../../IMPACT_LATEST.md
+threat_model: ../../../security/epics/e06/THREAT_MODEL.md
 priority: explicit-user-three-item-implementation-authorization
 integration_owner: parent
 authorization: user-do-all-three-after-parking-e05

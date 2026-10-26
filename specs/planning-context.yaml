@@ -1,10 +1,10 @@
 feature_name: ACP-first daily agent workflow
 initiative: e06-acp-daily-use
-status: user-authorized-implementation
+status: implementation-verified-user-authorized-release-in-progress
 source_of_truth: specs/product/SCOPE_LATEST.yaml
-plan: specs/epics/e06-acp-daily-use/PLAN.md
+plan: specs/epics/archive/e06-acp-daily-use/PLAN.md
 parked_e05: specs/verifications/e05-parking.json
 implementation: user-explicit-do-all-three
-live_approval: cheap-OMP-subscription-only-four-model-requests-2000-requested-output-tokens-each-120s-no-premium-or-API-key-fallback
-global_changes_main_push_release: not-authorized
-required_reading: [CONVENTIONS.md, specs/state.yaml, specs/execution-status.yaml, specs/epics/e06-acp-daily-use/PLAN.md, specs/epics/e06-acp-daily-use/epic.yaml, specs/security/epics/e06/THREAT_MODEL.md]
+live_approval: completed-OMP-subscription-acceptance-12-used-cap12-zero-remaining-no-new-live-runs
+global_changes_main_push_release: {main_merge_push_release: explicitly-authorized-finish-the-release, global_daemon_config_auth_changes: not-authorized}
+required_reading: [CONVENTIONS.md, specs/state.yaml, specs/execution-status.yaml, specs/epics/archive/e06-acp-daily-use/PLAN.md, specs/epics/archive/e06-acp-daily-use/epic.yaml, specs/security/epics/e06/THREAT_MODEL.md, specs/verifications/release-v0.1.0.json]

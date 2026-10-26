@@ -6,7 +6,21 @@ amux is the execution substrate, not an autonomous orchestrator. It provides ter
 
 ## Install and start
 
-Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, **OMP 18.8.7**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. amux now declares Rust **1.88** so its locked `time 0.3.47` dependency includes the RFC2822 stack-exhaustion fix. That minimum toolchain is not independently verified. Ratatui 0.30.0 still uses the existing Crossterm 0.29 backend; the independent terminal-showcase package retains its own Rust 1.86 declaration. Requires stock `/bin/zsh`. OMP is optional until launched.
+Tested with Rust/Cargo **1.95.0**, stock **Zsh 5.9**, native **OMP 18.8.7**, genuine ACP **OMP 18.12.6**, and macOS arm64. Linux has implementation paths, but attempted container validation was blocked by Docker VM filesystem I/O errors before any test ran. amux declares Rust **1.88** so its locked `time 0.3.47` dependency includes the RFC2822 stack-exhaustion fix; that minimum toolchain is not independently verified. Ratatui0.30.0 uses the existing Crossterm0.29 backend; the independent terminal-showcase package retains its own Rust1.86 declaration. Requires stock `/bin/zsh`. OMP is optional until launched.
+
+The first binary release is the [v0.1.0 macOS arm64 preview](https://github.com/addomam/multiplexer/releases/tag/v0.1.0). Other platforms and the minimum Rust toolchain are not release-validated. Download `amux-v0.1.0-aarch64-apple-darwin.tar.gz` and `SHA256SUMS` from that release, then:
+
+```sh
+shasum -a 256 -c SHA256SUMS
+tar -xzf amux-v0.1.0-aarch64-apple-darwin.tar.gz
+mkdir -p "$HOME/.cargo/bin"
+install -m 755 amux-v0.1.0-aarch64-apple-darwin/amux "$HOME/.cargo/bin/amux"
+"$HOME/.cargo/bin/amux" --version
+```
+
+Keep `~/.cargo/bin` on your `PATH`, or invoke the installed path explicitly. The archive includes the MIT license and locked-dependency notices. The executable is linker ad-hoc signed, **not Apple Developer ID signed or notarized**; macOS may require local approval. Installing the binary does **not** restart or upgrade an existing daemon; finish valuable work before deliberately restarting an older daemon.
+
+To build/install from this checkout instead:
 
 ```sh
 cargo install --path . --locked

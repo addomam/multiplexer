@@ -1,5 +1,5 @@
 initiative: e06-acp-daily-use
-status: implementation-authorized
+status: implementation-verified-release-authorized
 core_value: Use supported ACP agents conveniently and safely as daily amux sessions.
 user_decision: Park e05; make OMP ACP work and implement compatibility, launch UX and reattachment hardening.
 parked: {epic: e05, evidence: ../verifications/e05-parking.json, implementation_started: false}
@@ -7,11 +7,13 @@ in_scope:
   - {story: e06s01, requirement: Actual OMP ACP same-instance genuine questions and exact permission allow/deny, ownership, honest settings and bounded cleanup}
   - {story: e06s02, requirement: Native picker and CLI profile launch without manual JSON or raw adapter argv; explicit requested and reported model/mode/effort settings}
   - {story: e06s03, requirement: Reconnect and reattach to surviving work after detach/disconnect/sleep with fresh native provenance and no duplicate agent or replay}
-out_of_scope: [new-protocol, generic-plugin-infrastructure, automatic-agent-relaunch, crash-restoration, remote-protocol, task-or-reacquisition-policy, native-buffer-fence-repair, global-daemon-config-auth-changes, main-merge-push-release]
+out_of_scope: [new-protocol, generic-plugin-infrastructure, automatic-agent-relaunch, crash-restoration, remote-protocol, task-or-reacquisition-policy, native-buffer-fence-repair, global-daemon-config-auth-changes]
 constraints:
   - Preserve force/cancel/conditional ownership contracts and original exact protocol identities.
   - Preserve stock Zsh/native OMP, existing ACP and all historical review caps and native-fence limitations.
   - Runtime state remains memory-only; configuration only persists on disk.
   - No implicit model/permission choice, premium fallback, intercepted/uncertain input replay or application acknowledgement.
 live_authorization: {harness: OMP-ACP-only, auth: existing-subscription-private-isolation, premium_or_API_key_fallback: forbidden, max_model_requests: 4, max_requested_output_tokens_each: 2000, wall_seconds: 120, hard_monetary_cap: false}
-plan: ../epics/e06-acp-daily-use/PLAN.md
+live_budget: {actual_model_requests: 12, aggregate_cap: 12, remaining: 0, further_runs: separately-authorized-only, evidence: ../verifications/e06-omp-live-final.json}
+release_authorization: user-explicit-finish-the-release-main-push-preview-and-install-no-global-daemon-config-auth-changes
+plan: ../epics/archive/e06-acp-daily-use/PLAN.md

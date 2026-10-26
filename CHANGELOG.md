@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased — ACP daily use
+## 0.1.0 — macOS arm64 preview
+
+First tagged release: local terminal/project management and same-instance ACP conversations, including verified OMP questions and permission allow/deny, explicit installed-agent profiles and fail-closed reattachment. Linux runtime and the declared minimum Rust toolchain remain unverified. Terminal-only application settlement is still best-effort/fail-closed; this release does not resolve historical native-fence failures. E05's generic non-ACP integration remains parked. Quantitative coverage/traceability is waived, not claimed.
+
+Release checks:451 workspace Rust tests, strict workspace Clippy/check/fmt, optimized builds,13 actual optimized native/profile cases,8 OMP tests and Zsh syntax pass without provider calls. Prior explicitly authorized genuine OMP acceptance is separate; its12-request aggregate budget is exhausted. No daemon restart, global config/auth change or new live-model run is part of publication.
+
+### ACP daily use
 
 - Park E05's custom non-ACP integration API without discarding its approved planning packet or resetting historical review caps.
 - Add installed OMP/Codex/Grok launch profiles, original-attachment `acp start`, an ACP picker dialog and explicit model/mode/effort/option overrides. Resolve argv without a shell; reject unavailable adapters and unsupported or unconfirmed settings rather than silently substituting.
@@ -31,7 +37,7 @@
 - Bound ready TTY read work and honor finite/zero deadlines even when no complete event is parsed. Retain partial input/edge readiness and allow resize/wakeup/disconnection progress without changing parent-shell fd flags.
 - Verify genuine installed-OMP native question answering and same-instance API handoff/permission deny+allow effects through normal turn completion and owned cleanup. Keep the four-request cheap subscription receipt separate from deterministic peers, historical failed runs and terminal-only settlement limitations.
 
-## Unreleased — ACP conversation transport (Build)
+### ACP conversation transport
 
 - Add explicit owned ACP views, CLI open/inspect/attach and current-control, generation-bound prompt/authenticate/interrupt/close admission using pinned official ACP v1 schema types. Keep native terminal/agent routes and stock Zsh/OMP distinct.
 - Retain exact work/RPC/session identities across caller loss and authority transfer. Force never interrupts; cancelled pending claims grant nobody; accepted work is not replayed or discarded by a later owner check.
@@ -58,7 +64,7 @@
 - Reject Grok question metadata before publication when its conservatively bounded answers/annotations could exceed the existing wire-frame limit. Preserve the original RPC error and subsequent same-session native work instead of capturing an answer that cannot be represented; no truncation, replay or authority substitution.
 - Recover the exact native form/permission editor after definite asynchronous daemon non-admission, including retained-content backpressure. Preserve values and current authority for deliberate correction/cancel; strip answer text from rejection feedback and never replay, unlock a different captured call or reinterpret timeout/disconnect as rejection.
 
-## Unreleased — e03 ownership and agent interaction (Build)
+### E03 ownership and agent interaction — historical limited acceptance
 
 - Breaking API/CLI cutover: public `input` and `execute` require a current control capability; CLI callers must supply serialized `--control` JSON. Raw client requests never acquire ownership implicitly.
 - Preserve daemon rejection codes in concrete `client::DaemonError` values and the CLI JSON envelope instead of parsing diagnostic text.
@@ -84,7 +90,7 @@
 - Bind native Force confirmation to a completed, fully visible warning and drained event queue. Consume queued Enter without takeover/replay, invalidate on resize/scroll and block undrawable or clipped dialogs; keep fresh observation checks and the same live process. Use only the pinned Ratatui paragraph-measurement feature, with no terminal library version replacement.
 - Fail closed when opt-in smoke cleanup cannot refresh process ownership. Remove group-wide fallback signals, validate each descendant PID and signal direct children only while unreaped. Bound validation work, preserve cleanup errors and label stale survivor identities as tracked—not owned. Add a no-model regression and verify healthy/failure teardown with isolated local processes.
 
-## Unreleased — Execution substrate reliability
+### Execution substrate reliability
 
 - Correct DECOM-origin-relative CPR through the parsed ANSI Handler boundary; preserve native control behavior and independent expected replies.
 - Compose joined graphemes in native narrow/wide cells, including chunked UTF-8, flags/modifiers/keycaps, CJK/combining, overwrite, wrapping and variation-width replay. Final-cluster working text is limited to 4 KiB; oversized input starts a new native scalar segment without dropping text.
@@ -96,7 +102,7 @@
 - Breaking Rust-library change: `projects::run_hooks` now requires an explicit `&AtomicBool` cancellation argument. CLI/API framing remains version 1.
 - Verify 210 workspace Rust tests, the strict independent-showcase integration, 8 OMP tests, Clippy, debug/release builds, Zsh syntax and private native CLI/TUI lifecycle probes. Retain the initial queued-execution timeout observation and exact limits in `specs/verifications/substrate-reliability.md`; no independent review PASS or live-daemon upgrade is implied.
 
-## Unreleased — Terminal capability explorer
+### Terminal capability explorer
 
 - Independent `terminal-showcase` Rust workspace package; amux's default binary and implementation remain unchanged.
 - Fullscreen capability matrix with explicit protocol/visual evidence, eight cycling demonstrations, deterministic screenshot mode and bounded row-differential redraws.
@@ -105,7 +111,7 @@
 - POSIX terminal/signal RAII cleanup, resize handling, bracketed-paste-safe controls, headless JSON regressions and visual pass/fail export.
 - Ordinary-shell amux compatibility regression exposes origin-mode CPR and joined-emoji cursor mismatches without sharing the multiplexer oracle. Strict `--probe --check` preserves failures and exits nonzero.
 
-## Unreleased — Ratatui UI
+### Ratatui UI
 
 - Ratatui 0.30.0 rendering with the existing Crossterm 0.29 input/backend and Rust minimum raised to 1.86.
 - Three-row title/tab bar and top-right Switch button; native terminal fills every remaining row with no footer.
@@ -120,7 +126,7 @@
 - Existing 66 Rust tests, 8 OMP tests, Clippy, release build and Zsh syntax pass; actual Herdr selection, Unicode/colors, picker, exit/new/empty-page detach pass. Compatible with the first-pass daemon without another process-disrupting restart. See `specs/verifications/immediate-input.md`.
 - Daily-use checkpoint verifies a private locked installation outside the checkout, cold auto-start, native detach/reattach, captured context, process-preserving reparenting, busy/partial refusal, descendant cleanup, hook failure recovery and config-only restart. Retired latency workspace/checkout and empty root artifact removed with approval; committed evidence and usable build retained.
 
-## 0.1.0 — local MVP
+### Historical local MVP checkpoint — not a previous tagged release
 
 - Rust daemon-owned PTYs and alacritty_terminal emulator, one-surface detachable TUI, and `amux` CLI over a versioned local API.
 - Unsaved/saved projects, captured Zsh workspaces, independent terminal trees, asynchronous worktree-aware Git status, configurable recipes and bounded setup hooks.

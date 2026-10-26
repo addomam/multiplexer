@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "release": "v0.1.0",
+  "channel": "prerelease-macos-arm64-preview",
+  "status": "artifact-verified-ready-for-publication",
+  "authorization": {
+    "user_request": "ok sick. Let's finish the release",
+    "main_push_tag_GitHub_release_install": true,
+    "global_daemon_config_auth_changes": false,
+    "new_live_model_calls": false
+  },
+  "source": {
+    "implementation_commit": "cdc2897fc93476212f153d848383495d1499f7f1",
+    "signed_landing_record_commit": "83865ebc1062de87609e866ea9a49cb25cd84a85",
+    "signatures": "both-verified-good-SSH-signatures-gitlog@addomam.net",
+    "unsigned_history_preserved_by": "backup/e06-unsigned-442d8a9",
+    "signed_replacements_tree_identical": true,
+    "cargo_lock_sha256": "4ac542a957a5e5307cc31d370f418ab30d4a7e2e7dd6e26de55b065027128bea",
+    "release_scope": "documentation-license-archival-publication-only-no-runtime-code-change",
+    "sealed_reviewed_code_paths_matched_before_release": 86,
+    "release_bookkeeping_yaml_files_parsed": 9,
+    "passing_task_rows_confirmed": 7
+  },
+  "verification": {
+    "job": "bg_360",
+    "raw": "artifact://2733",
+    "status": "passed",
+    "wall_seconds": 189.29,
+    "workspace": {
+      "passed": 451,
+      "suites": 30,
+      "ignored": 12
+    },
+    "strict_workspace_clippy": "passed",
+    "workspace_all_targets_check": "passed",
+    "workspace_fmt": "passed",
+    "optimized_workspace_and_explicit_acp_fixture_builds": "passed",
+    "optimized_profile_native": {
+      "passed": 13,
+      "seconds": 2.12,
+      "overlaps_workspace": true
+    },
+    "stock_omp": {
+      "passed": 8,
+      "assertions": 49
+    },
+    "zsh_syntax": "passed",
+    "provider_requests": 0,
+    "command": "cargo build --example acp_fixture && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace --all-targets && cargo fmt --all -- --check && cargo build --release --workspace && cargo build --release --example acp_fixture && cargo test --release --test acp e06s02_ -- --nocapture && bun test integrations/omp && zsh -n integrations/zsh/adapter.zsh"
+  },
+  "artifact": {
+    "name": "amux-v0.1.0-aarch64-apple-darwin.tar.gz",
+    "sha256": "534b2f815b833d377d18d0b0b4c87297cfbb6e0b02d4d7290893f59cef4950f5",
+    "bytes": 2585935,
+    "binary_sha256": "2a906ac381d2508910014a9c892b2422c6eaa92f88b3d2415909a626791d1197",
+    "binary_bytes": 6323648,
+    "version_output": "amux 0.1.0",
+    "architecture": "Mach-O64-arm64",
+    "code_signature": "strict-verification-passed-linker-adhoc-not-Developer-ID-not-notarized",
+    "dynamic_libraries": [
+      "/usr/lib/libiconv.2.dylib",
+      "/usr/lib/libSystem.B.dylib"
+    ],
+    "archive_owner": "root:wheel-uid0-gid0-no-xattrs-acls-fflags",
+    "inventory": {
+      "files": 17,
+      "directories": 2
+    },
+    "source_staged_extracted_binary_hashes_identical": true,
+    "checksum_asset": "SHA256SUMS",
+    "checksum_verification": "passed"
+  },
+  "licenses": {
+    "application": "MIT-Copyright2026-Addison-Omead-Amiri",
+    "locked_normal_build_dependency_closure": 161,
+    "original_local_notices": 286,
+    "dependency_notice_bytes": 1528371,
+    "rust_standard_library_notice_bytes": 425661,
+    "rust_license_texts": 12,
+    "conservative_build_platform_entries_included_not_all_linked": true,
+    "upstream_missing_packaged_notices": [
+      {
+        "repository": "https://github.com/agentclientprotocol/agent-client-protocol",
+        "revision": "e2d83349bc9e28a4059ea3acefa1c91c966f74e2",
+        "path": "LICENSE",
+        "blob_sha": "1de02305f81f6dc087b6229a1d86a31774d2fa31",
+        "bytes": 10782
+      },
+      {
+        "repository": "https://github.com/ratatui/ratatui",
+        "revision": "0a2a7c0363a4806b0cf05c1915bf7cdd438f756c",
+        "path": "LICENSE",
+        "blob_sha": "776bf200770e7bb9b264f3cf41ad09e2a83a1509",
+        "bytes": 1132
+      }
+    ]
+  },
+  "package_smoke": {
+    "status": "passed",
+    "binary": "/private/tmp/amux-release-v0.1.0.GDqqSM/unpacked/amux-v0.1.0-aarch64-apple-darwin/amux",
+    "outside_checkout": true,
+    "private_environment": true,
+    "profile_settings": {
+      "model": "fixture/cheap",
+      "mode": "plan",
+      "effort": "low"
+    },
+    "effect": {
+      "value": 42,
+      "commands": 1,
+      "same_session": true
+    },
+    "original_tuple_and_pid": true,
+    "one_agent_view": true,
+    "work_id_observed": true,
+    "normal_acp_close_peer_gone_before_fallback": true,
+    "daemon_exit": 0,
+    "socket_removed": true,
+    "unrelated_sentinel_survived": true,
+    "provider_requests": 0,
+    "global_config_auth_daemon_changes": false,
+    "snapshot_top_level_fields": [
+      "agent_views",
+      "config",
+      "daemon_id",
+      "detach_generation",
+      "diagnostics",
+      "projects",
+      "seq",
+      "terminals"
+    ]
+  },
+  "regression_boundaries": {
+    "e06_tasks": 7,
+    "e06_stories": 3,
+    "e06_status": "passing-capsule-archived",
+    "e05_status": "parked-17-tasks-still-failing-no-implementation",
+    "source_review": {
+      "round": 11,
+      "max_rounds": 12,
+      "scores": [
+        100,
+        100,
+        100
+      ],
+      "findings": 0,
+      "evidence": "specs/verifications/e06-review-round11.json",
+      "scope": "prior-runtime-source-not-a-new-release-review"
+    },
+    "historical_caps": "unchanged",
+    "live": {
+      "actual_requests": 12,
+      "aggregate_cap": 12,
+      "remaining": 0,
+      "evidence": "specs/verifications/e06-omp-live-final.json",
+      "new_release_requests": 0
+    },
+    "native_unknown_settlement": "unresolved-fail-closed-not-complete-broker-acceptance",
+    "Linux_runtime": "unverified",
+    "declared_minimum_Rust": "1.88-unverified",
+    "actual_hardware_suspend_resume": "not-claimed",
+    "quantitative_coverage_and_generic_traceability": "WAIVED-no-repository-report-matrix-or-scripts-seven-explicit-task-links-present"
+  },
+  "publication": null,
+  "installation": null,
+  "cleanup": null,
+  "CI": "not-configured-no-green-claim",
+  "registry_publication_or_deployment": false
+}
