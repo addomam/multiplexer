@@ -6,7 +6,7 @@
     "also_preserves": "approved E07 modal/project/CLI work"
   },
   "authorization": "Explicit user: commit, merge and push; every new commit signed; re-sign unpublished old commits if needed.",
-  "status": "ready-for-signed-source-commit",
+  "status": "source-merged-and-pushed-signatures-verified",
   "baseline": "cc468a34cd7c055457ec286fc3464dc5ac2103a9",
   "unpublished_commits_before_delivery": 0,
   "published_history_rewrite": false,
@@ -52,5 +52,42 @@
     "E05": "parked",
     "historical_failures_and_caps": "retained"
   },
-  "recorded_at": "2026-10-30T16:20:54.969Z"
+  "recorded_at": "2026-10-30T16:20:54.969Z",
+  "integration": {
+    "method": "PR merge preserving SSH-signed authored commits; GitHub-signed merge",
+    "PR": 3,
+    "url": "https://github.com/addomam/multiplexer/pull/3",
+    "merged_at": "2026-10-30T16:33:28Z",
+    "source_commit": "5c51dc4ea8e13deb8643902cd5781ded9b1b64c2",
+    "archived_impact_repair": "fb1a5b124b790deb1593128b4faeac0bcf3ad80c",
+    "merge_commit": "ad5087cb67dd608eff9acc5f6cfb4dabc6b6b954",
+    "source_and_repair_local_SSH_verification": "Good git signature for gitlog@addomam.net",
+    "SSH_fingerprint": "SHA256:M+zzzSiRDN2dZqdQ+4BJS0gwNaxTNzpi5ZptTkw9a7U",
+    "GitHub_verification": {
+      "source": "valid/verified",
+      "repair": "valid/verified",
+      "merge": "valid/verified"
+    },
+    "local_checkout_fast_forwarded_to_remote_source_merge": true,
+    "direct_main_push": "blocked before execution; used release-branch PR path instead",
+    "force_push_or_public_history_rewrite": false
+  },
+  "automatic_review": {
+    "run": 41089507026,
+    "url": "https://github.com/addomam/multiplexer/actions/runs/41089507026",
+    "conclusion": "success",
+    "finding": "Archived E06 impact referenced rolling E07 content",
+    "fix": "Versioned original IMPACT-E06.md; repointed archived capsule",
+    "proof": {
+      "relative_path_resolves": true,
+      "historical_and_preserved_Git_blob": "eda5379fdea7b3aeed0ff6306bd045a415f81131"
+    },
+    "discussion": "https://github.com/addomam/multiplexer/pull/3#discussion_r4425979269",
+    "thread_resolved": true,
+    "production_edits": 0,
+    "note": "Automatic GitHub Copilot review is not a new E08 independent pair, genuine application-provider smoke, or repository Rust test/build CI."
+  },
+  "precommit_whitespace_repair": "Cached diff rejected three trailing document blank lines; removed only those blank lines before signing. No production code or historical report body changed.",
+  "receipt_publication": "This outcome record is a separately SSH-signed documentation-only follow-up; verify its signature and merge after publication without rewriting the delivered source.",
+  "completed_at": "2026-10-30T16:36:53.271Z"
 }

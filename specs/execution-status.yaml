@@ -392,8 +392,8 @@ agent_resume_investigation:
   production_tests_new_docs_globals_and_publication: untouched
   historical_review_caps_and_E05: unchanged
 e08_cycle:
-  phase: build
-  status: signed-commit-main-merge-and-push-authorized-in-progress
+  phase: source-delivered
+  status: merged-and-pushed-no-new-install-or-release
   authorization: explicit-user-implement-automatic-all-conversation-reopen-then-wait-for-fresh-user-input
   branch: feat/agent-conversation-recovery
   plan: specs/epics/e08-conversation-recovery/PLAN.md
@@ -411,7 +411,7 @@ e08_cycle:
   R5_pre_remediation_checks: {job: bg_40, raw: "artifact://3512", status: historical-pass-not-remediated-source, workspace_tests: 582, suites: 31, ignored: 12, wall_seconds: 137.51, strict_Rust: passed, quota_focused: "artifact3506 PASS2/2 plus22 recovery/29 coordinator/strict", quota_RED: "artifact3501 0/2", OMP: "8/49 PASS", Zsh_syntax: passed, frozen_source_files: 20}
   review_response: specs/verifications/e08-review-response.md
   providers: 0
-  globals_install_and_publication: signed-commit-main-merge-push-authorized-no-install-or-global-runtime-changes
+  globals_install_and_publication: signed-main-merge-and-push-complete-no-install-or-global-runtime-changes
   historical_review_caps_and_E05: unchanged
   R6_pre_remediation_checks: {job: bg_43, raw: "artifact://3584", status: historical-pass-not-corrective-source, workspace_tests: 586, suites: 31, ignored: 12, wall_seconds: 149.08, strict_Rust: passed, includes_focused: "24 recovery/31 journal-coordinator", named_protocols: "artifact3589 PASS38 ACP/9 integration/8 Codex", OMP: "8/49 PASS", Zsh_syntax: passed, source_files: 21, exact_task5_guard_exit: 0}
   R6_pre_remediation_actual_smoke: {status: historical-pass-not-corrective-source, receipts: specs/verifications/e08-recovery-r6-runtime.json, checks: 7, providers: 0}
@@ -421,4 +421,4 @@ e08_cycle:
   actual_smoke: {status: passed, receipts: specs/verifications/e08-recovery-r7-runtime.json, checks: 9, successful_build_before_smoke: "artifact://3634", providers: 0, normal_owned_cleanup: passed}
   round6_corrections: locally-verified-and-cleared-current-R7-A100-B100
 e08s01: passing
-e08_delivery: {status: signed-commit-main-merge-and-push-authorized-in-progress, evidence: specs/verifications/e08-signed-delivery.json, gate_trace: WAIVED, coverage: existing-quantitative-waiver-unchanged, CI: no-repository-test-workflow-dynamic-Copilot-only}
+e08_delivery: {status: merged-and-pushed, PR: 3, merge_commit: ad5087cb67dd608eff9acc5f6cfb4dabc6b6b954, evidence: specs/verifications/e08-signed-delivery.json, source_and_merge_signatures: verified-valid, gate_trace: WAIVED, coverage: existing-quantitative-waiver-unchanged, automatic_Copilot: success-with-documentation-finding-fixed-and-resolved, repository_build_test_CI: not-configured, new_install_or_release: false}

@@ -7,7 +7,7 @@
     "review_rounds_used": 7,
     "max_review_rounds": 10
   },
-  "status": "implemented-verified-reviewed-awaiting-delivery-authorization",
+  "status": "merged-and-pushed-no-new-install-or-release",
   "acceptance": "passing",
   "source_manifest": "specs/verifications/e08-review-r7-source.json",
   "last_local_verified_source_manifest": "specs/verifications/e08-review-r7-source.json",
@@ -198,7 +198,13 @@
   },
   "provider_requests": 0,
   "historical_caps": "unchanged; no prior PASS transferred",
-  "installation_global_changes_and_publication": "not-authorized-not-performed",
+  "installation_global_changes_and_publication": {
+    "source_commit_main_merge_push": "completed-with-verified-signatures-through-PR3",
+    "install": false,
+    "global_daemon_config_auth_changes": false,
+    "new_live_application_provider_checks": false,
+    "tag_or_release": false
+  },
   "checks": {
     "full": {
       "job": "bg_45",
@@ -555,7 +561,7 @@
     },
     "status": "all-three-findings-locally-verified-and-cleared-by-both-current-R7-reviews"
   },
-  "acceptance_scope": "Local implementation acceptance only: exact context reopening then idle. No new live-provider, genuine native Codex0.165, Linux/minimum-Rust, native application-fence, install or Git-delivery acceptance.",
+  "acceptance_scope": "Local implementation acceptance and separately authorized signed source delivery. No new live-provider, genuine native Codex0.165, Linux/minimum-Rust, native application-fence, install or version-release acceptance.",
   "final_source_certification": {
     "source_hashes_unchanged": 21,
     "reviewers_independently_matched_each": 21,
@@ -651,9 +657,13 @@
     }
   ],
   "delivery": {
-    "status": "signed-commit-main-merge-and-push-authorized-in-progress",
+    "status": "merged-and-pushed",
     "evidence": "specs/verifications/e08-signed-delivery.json",
+    "PR": 3,
+    "merge_commit": "ad5087cb67dd608eff9acc5f6cfb4dabc6b6b954",
     "source_changes_after_review": false,
+    "documentation_only_automatic_review_fix": "fb1a5b1",
+    "source_and_merge_signatures": "verified-valid",
     "installation": "not-requested-not-performed"
   }
 }

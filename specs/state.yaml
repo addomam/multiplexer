@@ -1,14 +1,14 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: feat/agent-conversation-recovery, signing: verified-SSH-source-release-commits-and-tag, publish_via: protected-branch-safe-PR-merge-preserving-signed-history, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: build_epic
+vcs: {kind: git, branch: main, signing: verified-SSH-authored-commits-and-GitHub-signed-merge, publish_via: PR-merge-preserving-signed-history, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: release_branch
 active_epic: e08
-epic_cycle: {epic: e08, story: e08s01, story_bcps: 6, current_step: 8, completed_steps: [0, 1, 2, 3, 4, 5, 6, 7], audit_result: pass, independent_review: "R7 A100/B100 PASS, zero findings, each21/21 hashes; used7/10; R1-R6 combined FAIL retained"}
+epic_cycle: {epic: e08, story: e08s01, story_bcps: 6, current_step: 8, completed_steps: [0, 1, 2, 3, 4, 5, 6, 7, 8], audit_result: pass, independent_review: "R7 A100/B100 PASS, zero findings, each21/21 hashes; used7/10; R1-R6 combined FAIL retained", delivery: merged-and-pushed}
 project_cycle:
-  current_phase: 4
-  completed_phases: [1, 2, 3]
+  current_phase: 6
+  completed_phases: [1, 2, 3, 4, 5]
   mode: standard
   scope: automatic-agent-conversation-reopening-without-work-continuation
-  status: signed-commit-main-merge-and-push-authorized-in-progress
+  status: merged-and-pushed-no-new-install-or-release
   previous_release: v0.1.0
   previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
 elaborate_review:
@@ -35,10 +35,10 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: release-branch
+  next_skill: null
   blocked: false
   blocker: null
-  reason: "User explicitly authorizes commit/main merge/push and requires every new commit signed; may re-sign unpublished old commits if needed. No unpublished commits precede delivery. Preserve published main and the verified combined approved E07/E08 tree; use signed source commit and fast-forward main, then record verified delivery. R7 A100/B100 and593 workspace cases plus guarded child/nine actual checks remain current; no source changes. Existing main GitHub GPG signature is remotely verified; local GPG keyring is locked by another process and is not changed. No install, daemon/config/auth changes, live models, tag or release."
+  reason: "Authorized source delivery complete through PR3: source5c51dc4 and documentation repairfb1a5b1 are SSH-signed/locally verified; mergead5087cb is GitHub-signed. GitHub reports all three signatures valid. Direct main push was guarded, so the protected-branch-safe PR path preserved authored signatures and published history. Automatic Copilot workflow41089507026 succeeded; its sole stale archived-impact-link finding was fixed, byte/path-verified and resolved. E08 R7 A100/B100/full593 plus guarded child/nine actual checks remain bound to unchanged production source. Signed delivery receipt follows without code changes. No install, daemon/config/auth change, new application-provider run, tag or release."
   historical_progress: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -1171,7 +1171,7 @@ agent_resume_investigation:
   production_tests_and_new_docs: unchanged
   historical_caps_and_E05_parking: unchanged
 e08_build:
-  status: signed-commit-main-merge-and-push-authorized-in-progress
+  status: merged-and-pushed-no-new-install-or-release
   authorization: explicit-user-implement-automatic-conversation-reopen-then-wait-for-user-no-auto-work
   branch: feat/agent-conversation-recovery
   plan: specs/epics/e08-conversation-recovery/PLAN.md
@@ -1195,7 +1195,7 @@ e08_build:
   evidence: specs/verifications/e08-recovery.json
   last_local_debug_binary_sha256: f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf
   provider_requests: 0
-  globals_install_and_publication: signed-commit-main-merge-push-authorized-no-install-or-global-runtime-changes
+  globals_install_and_publication: signed-main-merge-and-push-complete-no-install-or-global-runtime-changes
   historical_review_caps_and_E05_parking: unchanged
   R6_pre_remediation_checks: {job: bg_43, raw: "artifact://3584", status: historical-pass-not-corrective-source, workspace_tests: 586, suites: 31, ignored: 12, wall_seconds: 149.08, strict_Rust: passed, includes_focused: "24 recovery/31 journal-coordinator", named_protocols: "artifact3589 PASS38 ACP/9 integration/8 Codex", OMP: "8/49 PASS", Zsh_syntax: passed, exact_task5_guard_exit: 0}
   R6_pre_remediation_actual_smoke: {status: historical-pass-not-corrective-source, receipts: specs/verifications/e08-recovery-r6-runtime.json, checks: 7, providers: 0}
@@ -1208,3 +1208,5 @@ e08_build:
   delivery_authorization: {action: signed-commit-main-merge-push, source: explicit-user-request, re_sign_unpublished_if_needed: true, published_history_rewrite: unnecessary-not-planned, install_globals_live_models_tag_release: not-authorized}
   delivery_evidence: specs/verifications/e08-signed-delivery.json
   gate_trace: {verdict: WAIVED, rationale: absent-repository-scripts-and-structured-matrix-blind-spot-inputs-manual-map-current}
+  delivered_source: {PR: 3, source_commit: 5c51dc4ea8e13deb8643902cd5781ded9b1b64c2, archived_impact_repair: fb1a5b124b790deb1593128b4faeac0bcf3ad80c, merge_commit: ad5087cb67dd608eff9acc5f6cfb4dabc6b6b954, all_remote_signatures: verified-valid, published_history_rewritten: false}
+  automatic_review: {run: 41089507026, conclusion: success, sole_documentation_finding: fixed-and-resolved, new_application_provider_checks: 0, new_E08_independent_pair: false, repository_build_test_CI: not-configured}
