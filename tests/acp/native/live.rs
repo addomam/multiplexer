@@ -289,6 +289,32 @@ fn rendered(native: &mut Attachment, marker: &str, deadline: Instant) -> Check<(
         Ok(surface(native)?.contains(marker).then_some(()))
     })
 }
+fn controlled(native: &mut Attachment, deadline: Instant) -> Check<()> {
+    poll(deadline, || {
+        Ok(surface(native)?
+            .lines()
+            .any(|line| {
+                line.starts_with("ACP · ")
+                    && !line.contains("read-only")
+                    && !line.contains("starting")
+                    && !line.contains("unavailable")
+            })
+            .then_some(()))
+    })
+}
+fn rendered_details(native: &mut Attachment, marker: &str, deadline: Instant) -> Check<String> {
+    if !surface(native)?.contains("ACP settings (read-only)") {
+        send(native, b"\x1b[21~")?;
+    }
+    rendered(native, "ACP settings (read-only)", deadline)?;
+    rendered(native, marker, deadline)?;
+    let text = surface(native)?;
+    send(native, b"\x1b[21~")?;
+    poll(deadline, || {
+        Ok((!surface(native)?.contains("ACP settings (read-only)")).then_some(()))
+    })?;
+    Ok(text)
+}
 
 struct Live {
     // Retire the real attachment before the real daemon on any error path.
@@ -527,7 +553,7 @@ impl Live {
             .clone();
         self.history(deadline)?;
         let attachment = self.native.as_mut().ok_or("native-not-attached")?;
-        rendered(attachment, "Foreground: none", deadline)?;
+        rendered_details(attachment, "Foreground: none", deadline)?;
         send(attachment, format!("\x1b[200~{text}\x1b[201~").as_bytes())?;
         send(attachment, b"\r")?;
         poll(deadline, || {
@@ -653,11 +679,7 @@ impl Live {
             json!({"op":"control-handle","handle":self.agent()?.opened["control"],"method":"release"}),
         )?;
         self.native = Some(Attachment::new(&self.host, self.agent()?));
-        rendered(
-            self.native.as_mut().ok_or("native-not-attached")?,
-            "owner (input-admission)",
-            deadline,
-        )?;
+        controlled(self.native.as_mut().ok_or("native-not-attached")?, deadline)?;
         require(
             self.ownership()?["owner"]["role"] == "attachment",
             "native-not-owner",
@@ -675,7 +697,7 @@ impl Live {
         let native = self.native.as_mut().ok_or("native-not-attached")?;
         send(native, PREFIX)?;
         send(native, &[12])?;
-        rendered(native, "owner (input-admission)", deadline)?;
+        controlled(native, deadline)?;
         require(
             self.ownership()?["owner"]["role"] == "attachment",
             "native-not-owner",
@@ -709,13 +731,15 @@ impl Live {
         let wanted = wanted.and_then(|item| item["interaction_id"].as_str());
         let visible = |text: &str| {
             text.lines()
-                .find(|line| line.contains(" | revision "))
+                .find(|line| line.contains("Selected interaction:"))
                 .and_then(|line| ids.iter().find(|id| line.contains(id.as_str())))
                 .cloned()
         };
         for _ in 0..=ids.len() + 1 {
-            let current = visible(&surface(
-                self.native.as_ref().ok_or("native-not-attached")?,
+            let current = visible(&rendered_details(
+                self.native.as_mut().ok_or("native-not-attached")?,
+                "Selected interaction:",
+                deadline,
             )?);
             if current.as_deref() == wanted {
                 return Ok(());
@@ -724,12 +748,6 @@ impl Live {
                 self.native.as_mut().ok_or("native-not-attached")?,
                 b"\x1b[20~",
             )?;
-            poll(deadline, || {
-                Ok((visible(&surface(
-                    self.native.as_ref().ok_or("native-not-attached")?,
-                )?) != current)
-                    .then_some(()))
-            })?;
         }
         Err("native-interaction-not-reachable")
     }
@@ -744,7 +762,7 @@ impl Live {
         }
         let owner = self.ownership()?;
         let (values, edits) = form_values(&form)?;
-        rendered(
+        rendered_details(
             self.native.as_mut().ok_or("native-not-attached")?,
             form["interaction_id"]
                 .as_str()
@@ -760,8 +778,10 @@ impl Live {
             send(native, b"\x1b[14~")?;
             send(native, edit)?;
         }
+        rendered_details(native, "Selected interaction:", deadline)?;
+        rendered(native, "Review (F5)", deadline)?;
         send(native, ACCEPT_FORM)?;
-        rendered(native, "REVIEW: F5 accepts", deadline)?;
+        rendered(native, "Submit (F5)", deadline)?; // fresh painted, input-drained review
         require(
             self.work(&work["work_id"])?["outcome"].is_null(),
             "review-submitted-early",
@@ -799,7 +819,7 @@ impl Live {
         self.force_api()?;
         rendered(
             self.native.as_mut().ok_or("native-not-attached")?,
-            "observer (read-only)",
+            " · read-only",
             deadline,
         )?;
         let current = self.work(&work["work_id"])?;

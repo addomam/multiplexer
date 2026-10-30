@@ -1,0 +1,33 @@
+{
+  "type": "generalize-fix-sweep",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "after_review_round": 6
+  },
+  "sweeps": [
+    {
+      "defect_class": "persistent-direct-copy",
+      "grep_pattern": "copy_private_file\\(",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src/codex.rs:1-2675",
+      "match_count": 2,
+      "disposition": "Only ephemeral authentication copy remains; persistent import uses complete staged descriptor-relative no-clobber publication."
+    },
+    {
+      "defect_class": "atomic-no-clobber-publication",
+      "grep_pattern": "renameatx_np|renameat2|RENAME_EXCL|RENAME_NOREPLACE",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src/codex.rs:2500-2675",
+      "match_count": 4,
+      "disposition": "Both claimed platform code paths use exclusive atomic publication; other platforms fail closed. Linux runtime unverified."
+    },
+    {
+      "defect_class": "startup-hook-gate",
+      "grep_pattern": "startup_ready|queue_hooks\\(|ready\\.send",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+      "match_count": 8,
+      "disposition": "Reserved native-startup FIFO job waits on a private one-shot; normal/empty hook behavior and bounded queue diagnostics retained."
+    }
+  ],
+  "verification": "Focused/full and actual CLI failure/identity/effect proof; repository bundled verifier scripts unavailable, no script PASS claimed."
+}

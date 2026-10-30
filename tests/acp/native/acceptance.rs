@@ -3,7 +3,12 @@ use super::*;
 
 // F9 is read-only navigation, not a retry of an application action. Advance once
 // per observed rendered transition, bounded by the retained canonical choices.
-fn show_interaction(host: &Host, agent: &Agent, native: &mut Attachment, wanted: Option<&Value>) {
+pub(super) fn show_interaction(
+    host: &Host,
+    agent: &Agent,
+    native: &mut Attachment,
+    wanted: Option<&Value>,
+) {
     let projection = host.inspect(agent);
     native.projected(host, projection["seq"].as_u64().unwrap());
     let ids = projection["content"]["interactions"]
@@ -13,27 +18,13 @@ fn show_interaction(host: &Host, agent: &Agent, native: &mut Attachment, wanted:
         .map(|item| item["interaction_id"].as_str().unwrap().to_owned())
         .collect::<Vec<_>>();
     let wanted = wanted.map(|item| item["interaction_id"].as_str().unwrap());
-    let visible = |text: &str| {
-        text.lines()
-            .find(|line| line.contains(" | revision "))
-            .map(|line| {
-                ids.iter()
-                    .find(|id| line.contains(id.as_str()))
-                    .expect("rendered interaction belongs to this exact retained session")
-                    .clone()
-            })
-    };
     // Canonical arrival is fenced above; observe each deliberate navigation.
     for _ in 0..=ids.len() + 1 {
-        let current = visible(&native.text());
+        let current = native.selected_interaction(&ids);
         if current.as_deref() == wanted {
             return;
         }
         native.send(b"\x1b[20~");
-        host.until(
-            "F9 changes the rendered interaction/history selection",
-            || (visible(&native.text()) != current).then_some(()),
-        );
     }
     panic!(
         "requested interaction {wanted:?} not reachable:\n{}",
@@ -65,12 +56,14 @@ fn dismiss_ownership(host: &Host, agent: &Agent, native: &mut Attachment) {
 fn native_form(host: &Host, agent: &Agent, native: &mut Attachment, form: &Value, answer: &str) {
     // A fresh prompt can publish its question before the native projection
     // selects it. Observe that arrival before F9 can toggle it back to history.
-    native.wait(form["interaction_id"].as_str().unwrap());
     show_interaction(host, agent, native, Some(form));
     native.send(b"\x1b[14~"); // F4: explicitly unset before deliberate typing.
-    native.send(answer.as_bytes());
+    native.wait("UNSET (F4)");
+    native.paste(answer);
+    native.wait("local value");
+    native.ready_action("Review (F5)");
     native.send(ACCEPT_FORM);
-    native.wait("REVIEW: F5 accepts");
+    native.wait("Submit (F5)"); // fresh painted and input-drained reviewed action
     assert_eq!(
         pending(host, agent, "form")["interaction_id"],
         form["interaction_id"]
@@ -169,7 +162,6 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
             })
             .then_some(())
     });
-    native.wait(first_form["interaction_id"].as_str().unwrap());
     show_interaction(&host, &agent, &mut native, Some(&first_form));
 
     // Each conditional policy is explicitly armed by external B. Human keep is
@@ -220,7 +212,6 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
         );
         s03_same_work(&host.work(&agent, &first["work_id"]), &first_original);
         assert!(host.work(&agent, &first["work_id"])["outcome"].is_null());
-        assert!(!native.text().contains("REVIEW: F5 accepts"));
         assert!(!agent.root.join("effect.json").exists());
     }
 
@@ -402,11 +393,10 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     );
     assert!(!agent.root.join("tool-effect-2").exists());
     show_interaction(&host, &agent, &mut native, Some(&second_permission));
-    // Deliberately navigate to reject_once from either end, never accept a default.
-    native.send(b"\x1b[A\x1b[A\x1b[A\x1b[B\x1b[B");
-    native.wait("Local permission highlight");
-    native.wait("opaque-γ");
-    native.send(b"\r");
+    native.resize(80, 14);
+    // Use the actual visible reject control at the clipped-runtime geometry.
+    // Its canonical selection must remain the offered opaque reject_once ID.
+    native.click("[Reject this invocation [reject_once]]");
     completed_turn(&host, &agent, &second_original, 49, 2);
     let second_choice = selected_work(
         &host,
@@ -423,11 +413,12 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     );
     assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
     assert_eq!(host.inspect(&agent)["target"], exact);
+    native.resize(COLS, ROWS);
 
     // Separate deliberate return to the editor and its canonical idle refresh.
     // An empty Enter must not bind/replay any observer draft as a fresh prompt.
     show_interaction(&host, &agent, &mut native, None);
-    native.wait("Foreground: none");
+    native.idle();
     native.wait("Local draft 0/65536 B");
     native.send(b"\r");
     let third = native_prompt(&host, &agent, &mut native, "add 1 2");
@@ -446,7 +437,7 @@ fn e04s04_native_complete_two_surface_forms_permissions_and_running_handoffs() {
     // Reset from either end, deliberately visit another option, then allow_once.
     native.send(b"\x1b[A\x1b[A\x1b[A\x1b[B\x1b[A");
     native.wait("Local permission highlight");
-    native.wait("opaque-α");
+    native.ready_action("[Allow this invocation [allow_once]]");
     native.send(b"\r");
     completed_turn(&host, &agent, &third_original, 57, 3);
     assert!(agent.root.join("tool-effect-3").exists());
@@ -573,10 +564,9 @@ fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() 
     let original_owner = ownership(&host, &agent)["owner"].clone();
     for (index, text, total) in [(1, "add 17 25", 49), (2, "add 1 2", 32)] {
         show_interaction(&host, &agent, &mut native, None);
-        native.wait("Foreground: none"); // Observe completion in the actual input consumer.
+        native.idle(); // Observe completion in the actual input consumer through Details.
         let prompt = native_prompt(&host, &agent, &mut native, text);
         let form = pending(&host, &agent, "form");
-        native.wait(form["interaction_id"].as_str().unwrap());
         show_interaction(&host, &agent, &mut native, Some(&form));
         native.send(b"\x1b[B"); // Select Other, not the offered Zero adjustment.
         if index == 2 {
@@ -584,7 +574,7 @@ fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() 
             native.paste("x");
             native.send(b"\x7f"); // Explicitly empty notes, not merely omitted.
         }
-        native.send(ACCEPT_FORM);
+        native.ready_action("Review (F5)");
         native.send(ACCEPT_FORM);
         native.wait("Validation: Other requires answer notes");
         let retained = pending(&host, &agent, "form");
@@ -601,10 +591,12 @@ fn e04s04_native_grok_other_missing_notes_remains_correctable_and_cancellable() 
         if index == 1 {
             native.send(b"\t");
             native.paste("7");
+            native.ready_action("Review (F5)");
             native.send(ACCEPT_FORM);
-            native.wait("REVIEW: F5 accepts");
+            native.wait("Submit (F5)");
             native.send(ACCEPT_FORM);
         } else {
+            native.ready_action("[Cancel (F7)]");
             native.send(b"\x1b[18~"); // F7 explicitly cancels the retained question.
         }
         let completed = host.completed(&agent, &prompt["work_id"]);
@@ -665,16 +657,16 @@ fn e04s04_native_grok_unrepresentable_reply_is_rejected_before_offering() {
         "an unrepresentable question must never be offered for native capture"
     );
     assert_eq!(ownership(&host, &agent)["owner"], original_owner);
-    native.wait("Foreground: none");
+    native.idle();
     let fresh = native_prompt(&host, &agent, &mut native, "add 1 2");
     let form = pending(&host, &agent, "form");
-    native.wait(form["interaction_id"].as_str().unwrap());
     show_interaction(&host, &agent, &mut native, Some(&form));
     native.send(b"\x1b[B"); // Deliberately select Other on the subsequent small question.
     native.send(b"\t");
     native.paste("7");
+    native.ready_action("Review (F5)");
     native.send(ACCEPT_FORM);
-    native.wait("REVIEW: F5 accepts");
+    native.wait("Submit (F5)");
     native.send(ACCEPT_FORM);
     completed_turn(&host, &agent, &fresh, 52, 2);
     assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), pid);
@@ -711,7 +703,7 @@ fn e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_ca
     let owner = ownership(&host, &agent)["owner"].clone();
     for (index, text, total) in [(1, "add 17 25", 49), (2, "add 1 2", 32)] {
         show_interaction(&host, &agent, &mut native, None);
-        native.wait("Foreground: none");
+        native.idle();
         let prompt = native_prompt(&host, &agent, &mut native, text);
         if index == 1 {
             for reservation in 0..5 {
@@ -740,8 +732,9 @@ fn e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_ca
         native.send(b"\x1b[B"); // Other.
         native.send(b"\t");
         native.paste(&"9".repeat(40_960));
+        native.ready_action("Review (F5)");
         native.send(ACCEPT_FORM);
-        native.wait("REVIEW: F5 accepts");
+        native.wait("Submit (F5)");
         native.send(ACCEPT_FORM);
         native.wait("capacity-exceeded");
         let rejected = host.inspect(&agent);
@@ -772,10 +765,12 @@ fn e04s04_native_grok_definite_non_admission_allows_deliberate_correction_and_ca
         if index == 1 {
             native.send(b"\x1b[14~"); // Deliberately unset retained notes, not replay.
             native.paste("7");
+            native.ready_action("Review (F5)");
             native.send(ACCEPT_FORM);
-            native.wait("REVIEW: F5 accepts");
+            native.wait("Submit (F5)");
             native.send(ACCEPT_FORM);
         } else {
+            native.ready_action("[Cancel (F7)]");
             native.send(b"\x1b[18~"); // F7 deliberately cancels after definite rejection.
         }
         completed_turn(&host, &agent, &prompt, total, index);

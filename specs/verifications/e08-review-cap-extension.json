@@ -1,0 +1,18 @@
+{
+  "type": "review-cap-authorization",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01"
+  },
+  "authorization": "Explicit user: Raise the review cap to 10 and keep going.",
+  "previous_maximum": 5,
+  "new_maximum": 10,
+  "rounds_consumed_before_extension": 5,
+  "next_round": 6,
+  "resets_consumed_rounds": false,
+  "preserves_all_prior_findings": true,
+  "other_historical_caps": "unchanged",
+  "live_models_auth_globals_install_publication": "not-authorized-by-this-extension",
+  "recorded_at": "2026-10-30T02:29:09.220Z"
+}

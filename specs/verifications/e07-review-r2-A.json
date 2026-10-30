@@ -1,0 +1,16 @@
+{
+  "overall_correctness": "incorrect",
+  "explanation": "Assessed 32 requirements across all six stories: S01 native literal input, mode entry, double-press provenance, repeat/release handling, literal search and upper-key decoding; S02 conversation layout, exact interaction identity, reviewed-submit fencing, parent fence progress, covered/resize invalidation, correction focus, permission overflow and completed-question focus; S03 captured close, safe cancellation/detach, exited removal, rename identity and safe labels; S04 session kinds, placement, independent-project isolation and failed-admission rollback; S05 structured edits, local drafts, atomic persistence, exact save source and canonical-context guards; S06 contextual navigation/help, full errors, canonical attention and safety/test/convention boundaries. Final categorization is 0 must-fix, 1 should-fix and 0 consider, giving 100×(32−0−1)/32=96.875% and an individual source-review threshold PASS, although the functional defect below remains; the earlier native-selector finding is withdrawn because PLAN.md explicitly specifies exact native/ACP IDs, and the dual-reviewer AND-gate verdict remains parent-owned. Source and relevant behavioral tests were inspected without executing checks or reading another current-round review, and this assessment does not establish runtime acceptance, cleanup completion or any historical-cap reset.",
+  "confidence": 0.93,
+  "findings": [
+    {
+      "title": "Match upper mode keys against their decoded terminal events",
+      "body": "SHOULD-FIX: With `mode_key=F21` on the xterm-256color route used by the new encoder, pressing the configured key sends `ESC[20;2~`, but the vendored Unix parser (`parse_csi_special_key_code`) produces `KeyCode::F(9)` with `SHIFT`, not `KeyCode::F(21)` with no modifiers. `is_prefix` compares both fields exactly, so Menu never opens and the reserved key falls through to application input. F22–F24 have the same mismatch. Normalize the configured upper key or incoming event consistently for recognition and deliberate forwarding, and cover the real parser-to-menu path rather than only constructing synthetic F21–F24 events.",
+      "priority": 2,
+      "confidence": 0.99,
+      "file_path": "/Users/addomam/projects/amux-acp/src/tui/menu.rs",
+      "line_start": 62,
+      "line_end": 64
+    }
+  ]
+}

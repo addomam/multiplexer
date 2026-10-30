@@ -62,9 +62,9 @@ struct Instance {
     id: String,
     instance_id: String,
     project_id: String,
-    name: String,
     cwd: PathBuf,
     command: Vec<String>,
+    resume: Option<String>,
     state: Mutex<State>,
     wake: Condvar,
     worker: Mutex<Option<JoinHandle<()>>>,
@@ -189,9 +189,16 @@ impl Interaction {
 }
 
 #[derive(Clone, Copy)]
+enum SessionOpen {
+    New,
+    Load,
+    Resume,
+}
+
+#[derive(Clone, Copy)]
 enum RpcKind {
     Initialize,
-    NewSession,
+    OpenSession(SessionOpen),
     Configure,
     Authenticate,
     Prompt,
@@ -232,10 +239,14 @@ struct Work {
 }
 
 struct State {
+    name: String,
+    prompt_outcome: Option<&'static str>,
     lifecycle: &'static str,
     started: bool,
     joined: bool,
     session: Option<String>,
+    opening: SessionOpen,
+    peer_pid: Option<i32>,
     seq: u64,
     dirty: bool,
     failure: Option<&'static str>,
@@ -279,10 +290,14 @@ impl State {
 
     fn configured(configuration: settings::Configuration) -> Self {
         Self {
+            name: String::new(),
+            prompt_outcome: None,
             lifecycle: "starting",
             started: false,
             joined: false,
             session: None,
+            opening: SessionOpen::New,
+            peer_pid: None,
             seq: 0,
             dirty: true,
             failure: None,
@@ -319,6 +334,45 @@ impl State {
 
     fn live(&self) -> bool {
         !matches!(self.lifecycle, "closing" | "ended" | "failed")
+    }
+
+    /// Attention is metadata only: a submitted selection is never an unanswered
+    /// question, and a prompt response is not acknowledgement of callback effects.
+    fn attention(&self) -> Value {
+        let mut questions = 0usize;
+        let mut permissions = 0usize;
+        for interaction in &self.interactions {
+            if interaction.state == "pending"
+                && interaction.selected_work.is_none()
+                && interaction.delivery == "not-submitted"
+            {
+                if interaction.kind == "permission" {
+                    permissions += 1;
+                } else {
+                    questions += 1;
+                }
+            }
+        }
+        let state = match self.lifecycle {
+            _ if self.failure.is_some() => "failed",
+            "failed" => "failed",
+            "closing" => "closing",
+            "ended" => "finished",
+            _ if permissions > 0 => "permission-needed",
+            _ if questions > 0 => "needs-answer",
+            _ if self
+                .foreground
+                .as_ref()
+                .is_some_and(|(_, cancelling)| *cancelling) =>
+            {
+                "cancelling"
+            }
+            "auth-required" => "auth-required",
+            "starting" => "starting",
+            _ if self.foreground.is_some() => "working",
+            _ => self.prompt_outcome.unwrap_or("ready"),
+        };
+        json!({"state":state,"questions":questions,"permissions":permissions})
     }
 
     fn cleanup_complete(&self) -> bool {
@@ -560,6 +614,7 @@ impl Broker {
         cwd: &Path,
         command: Vec<String>,
         settings: Value,
+        resume: Option<String>,
     ) -> Result<Value> {
         ensure!(
             cwd.is_absolute() && !command.is_empty() && Path::new(&command[0]).is_absolute(),
@@ -571,9 +626,11 @@ impl Broker {
                 && command.iter().all(|s| !s.contains('\0')),
             "invalid-request: ACP command budget"
         );
+        ensure!(valid_id(project_id), "invalid-request: ACP project ID");
+        validate_view_name(name)?;
         ensure!(
-            valid_id(project_id) && name.len() <= 256,
-            "invalid-request: ACP descriptor budget"
+            resume.as_deref().is_none_or(valid_id),
+            "invalid-request: ACP saved session identity"
         );
         let configuration = settings::Configuration::new(settings)?;
         let mut inner = self.inner.lock();
@@ -605,14 +662,16 @@ impl Broker {
             inner.removed.push_back(id);
         }
         let id = fresh("acp");
+        let mut state = State::configured(configuration);
+        state.name = name.to_owned();
         let instance = Arc::new(Instance {
             id: id.clone(),
             instance_id: fresh("instance"),
             project_id: project_id.to_owned(),
-            name: inert(name),
             cwd: cwd.to_owned(),
             command,
-            state: Mutex::new(State::configured(configuration)),
+            resume,
+            state: Mutex::new(state),
             wake: Condvar::new(),
             worker: Mutex::new(None),
             cleanup: Mutex::new(()),
@@ -1007,6 +1066,7 @@ impl Broker {
         match &prepared.action {
             Action::Prompt(text) => {
                 state.foreground = prompt_id.map(|id| (id, false));
+                state.prompt_outcome = None;
                 state.event(
                     "user-message",
                     json!({"text":inert(text),"work_id":work_id}),
@@ -1097,6 +1157,25 @@ impl Broker {
         let instance = self.instance(id)?;
         let state = instance.state.lock();
         Ok(instance.projection(&state))
+    }
+
+    pub(crate) fn recovery(&self, id: &str) -> Result<Value> {
+        let instance = self.instance(id)?;
+        let state = instance.state.lock();
+        Ok(json!({
+            "session_id":state.session,"name":state.name,"lifecycle":state.lifecycle,
+            "peer_pid":state.peer_pid,"configuration":state.configuration.projection(),
+            "cleanup_complete":state.cleanup_complete()
+        }))
+    }
+
+    pub(crate) fn rename(&self, id: &str, name: &str) -> Result<Value> {
+        validate_view_name(name)?;
+        let instance = self.instance(id)?;
+        let mut state = instance.state.lock();
+        state.name = name.to_owned();
+        state.changed();
+        Ok(instance.descriptor(&state))
     }
 
     pub(crate) fn drain_events(&self) -> Vec<Value> {
@@ -1193,8 +1272,9 @@ impl Instance {
 
     fn descriptor(&self, state: &State) -> Value {
         json!({"id":self.id,"kind":"acp","instance_id":self.instance_id,"connection_generation":1,
-            "session_id":state.session,"project_id":self.project_id,"name":self.name,"lifecycle":state.lifecycle,"seq":state.seq,
-            "configuration":state.configuration.projection()})
+            "session_id":state.session,"project_id":self.project_id,"name":state.name,"lifecycle":state.lifecycle,"seq":state.seq,
+            "cwd":self.cwd,
+            "attention":state.attention(),"configuration":state.configuration.projection()})
     }
 
     fn projection(&self, state: &State) -> Value {
@@ -1208,7 +1288,8 @@ impl Instance {
             "state":w.state,"delivery":w.delivery,"application":"unknown","outcome":w.outcome})
             })
             .collect();
-        json!({"target":self.target(state),"lifecycle":state.lifecycle,"seq":state.seq,
+        json!({"target":self.target(state),"name":state.name,"lifecycle":state.lifecycle,"seq":state.seq,
+            "attention":state.attention(),
             "foreground":state.foreground.as_ref().map(|(id,cancelling)| json!({"prompt_id":id,"state":if *cancelling {"cancelling"} else {"active"}})),
             "work":work,"interactions":state.interactions.iter().map(Interaction::metadata).collect::<Vec<_>>(),
             "agent":state.agent,"authentication":auth_projection(state),
@@ -1216,7 +1297,7 @@ impl Instance {
             "cursor":state.seq,"gap":state.evicted_through > 0,
             "truncation":{"through":state.evicted_through,"completed_work":state.completed_evicted,"interactions":state.interactions_evicted},
             "resource":{"failure":state.failure,"stderr_truncated":state.stderr_truncated,
-                "cleanup_complete":state.cleanup_complete()}})
+                "cleanup_complete":state.cleanup_complete(),"peer_pid":state.peer_pid}})
     }
 
     fn transport_failed(&self, category: &'static str) {
@@ -1450,6 +1531,8 @@ fn run(instance: Arc<Instance>, lifetime: crate::control::AcpLifetime) {
     let publication = lifetime.with_live(|| {
         let mut state = instance.state.lock();
         ensure!(state.live(), "target-ended: ACP launch ended");
+        // Only this captured, owned child may be projected as a recovery peer.
+        state.peer_pid = Some(child.id() as i32);
         state.rpc(
             acp::ClientRequest::InitializeRequest(
                 acp::InitializeRequest::new(ProtocolVersion::V1).client_capabilities(
@@ -1819,7 +1902,9 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
                 Some("current_mode_update" | "config_option_update")
             ) {
                 ensure!(
-                    state.session.as_deref() == message["params"]["sessionId"].as_str(),
+                    state.session.as_deref().is_some_and(|session| {
+                        message["params"]["sessionId"].as_str() == Some(session)
+                    }),
                     "transport-failed: wrong update session"
                 );
                 state.configuration.update(&message["params"]["update"])?;
@@ -1918,29 +2003,68 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
                 };
                 state.auth.push((id, kind));
             }
+            let can_load = initialized.agent_capabilities.load_session;
+            let can_resume = initialized
+                .agent_capabilities
+                .session_capabilities
+                .resume
+                .is_some();
             state.agent = json!({"protocol_version":1,"text_prompt":true,"forms":true,"terminal":false,"filesystem":false,
-                "capabilities":{"load_session":initialized.agent_capabilities.load_session,
+                "capabilities":{"load_session":can_load,"resume":can_resume,
                     "prompt":{"image":initialized.agent_capabilities.prompt_capabilities.image,
                         "audio":initialized.agent_capabilities.prompt_capabilities.audio,
                         "embedded_context":initialized.agent_capabilities.prompt_capabilities.embedded_context}}});
             state.agent_content = json!({"identity":initialized.agent_info.map(|info| json!({"name":safe_label(&info.name),"version":safe_label(&info.version)})),
                 "capabilities":state.agent});
-            state.rpc(
-                acp::ClientRequest::NewSessionRequest(acp::NewSessionRequest::new(&instance.cwd)),
-                RpcKind::NewSession,
-                None,
-            )?;
+            state.opening = if instance.resume.is_none() {
+                SessionOpen::New
+            } else if can_load {
+                SessionOpen::Load
+            } else if can_resume {
+                SessionOpen::Resume
+            } else {
+                state.transport_error = Some("session-reopen-unsupported");
+                bail!("unsupported: ACP agent cannot load or resume the saved conversation");
+            };
+            open_session(instance, state)?;
             None
         }
-        (RpcKind::NewSession, Ok(value)) => {
+        (RpcKind::OpenSession(opening), Ok(value)) => {
             state.configuration.session(&value)?;
-            let session: acp::NewSessionResponse = decode(value)?;
-            let session_id = session.session_id.0.to_string();
-            ensure!(
-                valid_id(&session_id),
-                "transport-failed: invalid ACP session identity"
-            );
-            state.session = Some(session_id);
+            match opening {
+                SessionOpen::New => {
+                    let session: acp::NewSessionResponse = decode(value)?;
+                    let session_id = session.session_id.0.to_string();
+                    ensure!(
+                        valid_id(&session_id),
+                        "transport-failed: invalid ACP session identity"
+                    );
+                    state.session = Some(session_id);
+                }
+                SessionOpen::Load | SessionOpen::Resume => {
+                    ensure!(
+                        state.session == instance.resume && state.session.is_some(),
+                        "transport-failed: ACP saved session identity changed"
+                    );
+                    // These responses do not define a sessionId. Do not let an
+                    // extension field silently substitute another conversation.
+                    ensure!(
+                        value
+                            .get("sessionId")
+                            .is_none_or(|id| id.as_str() == instance.resume.as_deref()),
+                        "transport-failed: ACP reopened a different conversation"
+                    );
+                    match opening {
+                        SessionOpen::Load => {
+                            let _: acp::LoadSessionResponse = decode(value)?;
+                        }
+                        SessionOpen::Resume => {
+                            let _: acp::ResumeSessionResponse = decode(value)?;
+                        }
+                        SessionOpen::New => unreachable!(),
+                    }
+                }
+            }
             configure_next(state)?;
             None
         }
@@ -1953,22 +2077,18 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
             state.configuration.fail("setting-rejected");
             bail!("unsupported: ACP startup setting rejected");
         }
-        (RpcKind::NewSession, Err(error)) if i32::from(error.code) == -32000 => {
+        (RpcKind::OpenSession(_), Err(error)) if i32::from(error.code) == -32000 => {
             state.lifecycle = "auth-required";
             None
+        }
+        (RpcKind::OpenSession(SessionOpen::Load | SessionOpen::Resume), Err(_)) => {
+            state.transport_error = Some("session-reopen-failed");
+            bail!("unavailable: ACP saved conversation could not be reopened");
         }
         (RpcKind::Authenticate, Ok(value)) => {
             let _: acp::AuthenticateResponse = decode(value)?;
             state.lifecycle = "starting";
-            follow_up_error = state
-                .rpc(
-                    acp::ClientRequest::NewSessionRequest(acp::NewSessionRequest::new(
-                        &instance.cwd,
-                    )),
-                    RpcKind::NewSession,
-                    None,
-                )
-                .err();
+            follow_up_error = open_session(instance, state).err();
             Some(json!({"kind":"response"}))
         }
         (RpcKind::Authenticate, Err(error)) => {
@@ -1979,6 +2099,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
             let response: acp::PromptResponse = decode(value)?;
             let reason = serde_json::to_value(response.stop_reason)?;
             state.foreground = None;
+            state.prompt_outcome = Some("finished");
             state.cancel_work = None;
             state.event(
                 "completion",
@@ -1988,6 +2109,7 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
         }
         (RpcKind::Prompt, Err(error)) => {
             state.foreground = None;
+            state.prompt_outcome = Some("failed");
             state.cancel_work = None;
             let code = i32::from(error.code);
             state.event(
@@ -2013,6 +2135,36 @@ fn apply(instance: &Instance, state: &mut State, mut message: Value) -> Result<(
     state.changed();
     if let Some(error) = follow_up_error {
         return Err(error);
+    }
+    Ok(())
+}
+
+fn open_session(instance: &Instance, state: &mut State) -> Result<()> {
+    let request = match state.opening {
+        SessionOpen::New => {
+            acp::ClientRequest::NewSessionRequest(acp::NewSessionRequest::new(&instance.cwd))
+        }
+        SessionOpen::Load | SessionOpen::Resume => {
+            let session = instance
+                .resume
+                .as_deref()
+                .ok_or_else(|| anyhow::anyhow!("transport-failed: ACP saved session missing"))?;
+            match state.opening {
+                SessionOpen::Load => acp::ClientRequest::LoadSessionRequest(
+                    acp::LoadSessionRequest::new(session.to_owned(), instance.cwd.clone()),
+                ),
+                SessionOpen::Resume => acp::ClientRequest::ResumeSessionRequest(
+                    acp::ResumeSessionRequest::new(session.to_owned(), instance.cwd.clone()),
+                ),
+                SessionOpen::New => unreachable!(),
+            }
+        }
+    };
+    state.rpc(request, RpcKind::OpenSession(state.opening), None)?;
+    if !matches!(state.opening, SessionOpen::New) {
+        // session/load may replay history before its response. Establish the
+        // exact expected identity under the same lock that publishes the RPC.
+        state.session.clone_from(&instance.resume);
     }
     Ok(())
 }
@@ -2807,6 +2959,20 @@ fn fresh(prefix: &str) -> String {
     format!("{prefix}-{}", Uuid::new_v4().simple())
 }
 
+pub(crate) fn safe_view_character(c: char) -> bool {
+    !c.is_control()
+        && !matches!(c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+            | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+}
+
+pub(crate) fn validate_view_name(name: &str) -> Result<()> {
+    ensure!(
+        !name.trim().is_empty() && name.len() <= 256 && name.chars().all(safe_view_character),
+        "invalid-name: expected a safe nonempty label of at most 256 bytes"
+    );
+    Ok(())
+}
+
 // Rendering remains data even for escape/control/bidi payloads. Newline/tab are
 // intentional text layout; no terminal escape or invisible direction controls.
 fn inert(text: &str) -> String {
@@ -2903,6 +3069,7 @@ mod tests {
                 Path::new("/tmp"),
                 vec!["/bin/false".into()],
                 json!({}),
+                None,
             )
             .unwrap();
         let instance = broker.instance(descriptor["id"].as_str().unwrap()).unwrap();
@@ -2913,6 +3080,342 @@ mod tests {
             json!(instance.target(&state))
         };
         (broker, instance, target)
+    }
+
+    fn starting_broker(resume: Option<&str>, settings: Value) -> (Broker, Arc<Instance>) {
+        let broker = Broker::new();
+        let descriptor = broker
+            .reserve(
+                "project",
+                "saved conversation",
+                Path::new("/tmp"),
+                vec!["/bin/false".into()],
+                settings,
+                resume.map(str::to_owned),
+            )
+            .unwrap();
+        let instance = broker.instance(descriptor["id"].as_str().unwrap()).unwrap();
+        (broker, instance)
+    }
+
+    fn take_outgoing(state: &mut State) -> Value {
+        let frame = state.output.pop_front().expect("outgoing request");
+        state.output_count -= 1;
+        state.output_bytes -= frame.bytes.len();
+        serde_json::from_slice(&frame.bytes).unwrap()
+    }
+
+    fn initialize(instance: &Instance, capabilities: Value) -> Result<()> {
+        let mut state = instance.state.lock();
+        state.rpc(
+            acp::ClientRequest::InitializeRequest(acp::InitializeRequest::new(ProtocolVersion::V1)),
+            RpcKind::Initialize,
+            None,
+        )?;
+        let request = take_outgoing(&mut state);
+        apply(
+            instance,
+            &mut state,
+            json!({"jsonrpc":"2.0","id":request["id"],"result":{
+                "protocolVersion":1,"agentCapabilities":capabilities,
+                "authMethods":[{"id":"agent-login","name":"Explicit agent login","type":"agent"}]
+            }}),
+        )
+    }
+
+    #[test]
+    fn acp_reopening_negotiates_only_advertised_exact_session_operations() {
+        for (resume, capabilities, method, can_resume) in [
+            (
+                Some("saved-one"),
+                json!({"loadSession":true,"sessionCapabilities":{"resume":{}}}),
+                Some("session/load"),
+                true,
+            ),
+            (
+                Some("saved-two"),
+                json!({"sessionCapabilities":{"resume":{}}}),
+                Some("session/resume"),
+                true,
+            ),
+            (
+                None,
+                json!({"loadSession":true,"sessionCapabilities":{"resume":{}}}),
+                Some("session/new"),
+                true,
+            ),
+            (Some("saved-one"), json!({}), None, false),
+            (
+                Some("saved-one"),
+                json!({"sessionCapabilities":{"resume":null}}),
+                None,
+                false,
+            ),
+            (
+                Some("saved-one"),
+                json!({"sessionCapabilities":{"resume":false}}),
+                None,
+                false,
+            ),
+        ] {
+            let (broker, instance) = starting_broker(resume, json!({}));
+            assert!(broker.metadata(&instance.id).unwrap()["resource"]["peer_pid"].is_null());
+            let initialized = initialize(&instance, capabilities);
+            let metadata = broker.metadata(&instance.id).unwrap();
+            assert_eq!(metadata["agent"]["capabilities"]["resume"], can_resume);
+            let mut state = instance.state.lock();
+            if let Some(method) = method {
+                initialized.unwrap();
+                let request = take_outgoing(&mut state);
+                assert_eq!(request["method"], method);
+                assert_eq!(request["params"]["cwd"], "/tmp");
+                if let Some(session) = resume {
+                    assert_eq!(request["params"]["sessionId"], session);
+                    assert_eq!(state.session.as_deref(), Some(session));
+                } else {
+                    assert!(request["params"].get("sessionId").is_none());
+                    assert!(state.session.is_none());
+                }
+            } else {
+                assert!(
+                    initialized
+                        .unwrap_err()
+                        .to_string()
+                        .starts_with("unsupported:")
+                );
+                assert_eq!(state.transport_error, Some("session-reopen-unsupported"));
+                assert!(state.session.is_none());
+            }
+            assert!(state.output.is_empty(), "no prompt, cancel or fallback");
+            assert!(state.work.is_empty());
+            assert!(state.interactions.is_empty());
+        }
+    }
+
+    #[test]
+    fn acp_reopening_rejects_invalid_saved_id_before_reserving_a_target() {
+        let broker = Broker::new();
+        for session in ["".to_owned(), "x".repeat(257), "saved\nforeign".to_owned()] {
+            let error = broker
+                .reserve(
+                    "project",
+                    "invalid saved conversation",
+                    Path::new("/tmp"),
+                    vec!["/bin/false".into()],
+                    json!({}),
+                    Some(session),
+                )
+                .unwrap_err();
+            assert!(error.to_string().starts_with("invalid-request:"));
+        }
+        assert!(broker.inner.lock().targets.is_empty());
+    }
+
+    #[test]
+    fn acp_replay_requires_the_expected_identity_to_be_established() {
+        let (_, instance) = starting_broker(Some("saved-not-yet-opened"), json!({}));
+        let mut state = instance.state.lock();
+        for params in [
+            json!({"update":{"sessionUpdate":"current_mode_update","currentModeId":"plan"}}),
+            json!({"sessionId":"saved-not-yet-opened","update":{
+                "sessionUpdate":"agent_message_chunk",
+                "content":{"type":"text","text":"unsolicited history before open"}}}),
+        ] {
+            assert!(
+                apply(
+                    &instance,
+                    &mut state,
+                    json!({"jsonrpc":"2.0","method":"session/update","params":params}),
+                )
+                .is_err()
+            );
+        }
+        assert!(state.events.is_empty());
+        assert!(state.output.is_empty());
+        assert!(state.session.is_none());
+    }
+
+    #[test]
+    fn acp_load_history_before_response_is_display_only_and_exactly_scoped() {
+        let (broker, instance) = starting_broker(Some("saved-history"), json!({}));
+        initialize(&instance, json!({"loadSession":true})).unwrap();
+        let mut state = instance.state.lock();
+        let load = take_outgoing(&mut state);
+        for (category, text) in [
+            ("user_message_chunk", "add 17 25"),
+            ("agent_message_chunk", "Total=42; commands=1"),
+        ] {
+            apply(
+                &instance,
+                &mut state,
+                json!({"jsonrpc":"2.0","method":"session/update","params":{
+                    "sessionId":"saved-history","update":{"sessionUpdate":category,
+                        "content":{"type":"text","text":text}}}}),
+            )
+            .unwrap();
+        }
+        for update in [
+            json!({"sessionUpdate":"tool_call","toolCallId":"old-unfinished-tool",
+                "title":"Historical tool","kind":"execute","status":"pending"}),
+            json!({"sessionUpdate":"plan","entries":[{
+                "content":"Historical unfinished plan","priority":"medium","status":"pending"}]}),
+        ] {
+            apply(
+                &instance,
+                &mut state,
+                json!({"jsonrpc":"2.0","method":"session/update","params":{
+                    "sessionId":"saved-history","update":update}}),
+            )
+            .unwrap();
+        }
+        assert_eq!(state.lifecycle, "starting");
+        assert_eq!(state.events.len(), 4);
+        assert!(state.work.is_empty());
+        assert!(state.foreground.is_none());
+        assert!(state.interactions.is_empty());
+        assert!(state.output.is_empty());
+        let foreign = json!({"jsonrpc":"2.0","method":"session/update","params":{
+            "sessionId":"different-saved-history","update":{"sessionUpdate":"agent_message_chunk",
+                "content":{"type":"text","text":"must not display"}}}});
+        assert!(apply(&instance, &mut state, foreign).is_err());
+        assert_eq!(state.events.len(), 4);
+        apply(
+            &instance,
+            &mut state,
+            json!({"jsonrpc":"2.0","id":load["id"],"result":{}}),
+        )
+        .unwrap();
+        assert_eq!(state.lifecycle, "ready");
+        assert_eq!(state.session.as_deref(), Some("saved-history"));
+        assert!(state.output.is_empty());
+        drop(state);
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"ready","questions":0,"permissions":0})
+        );
+    }
+
+    #[test]
+    fn acp_reopening_authentication_retries_the_same_exact_intent_only_after_admission() {
+        for (capabilities, method) in [
+            (json!({"loadSession":true}), "session/load"),
+            (
+                json!({"sessionCapabilities":{"resume":{}}}),
+                "session/resume",
+            ),
+        ] {
+            let (broker, instance) = starting_broker(Some("saved-auth"), json!({}));
+            initialize(&instance, capabilities).unwrap();
+            let target = {
+                let mut state = instance.state.lock();
+                let open = take_outgoing(&mut state);
+                assert_eq!(open["method"], method);
+                apply(
+                    &instance,
+                    &mut state,
+                    json!({"jsonrpc":"2.0","id":open["id"],"error":{
+                        "code":-32000,"message":"explicit authentication required"}}),
+                )
+                .unwrap();
+                assert_eq!(state.lifecycle, "auth-required");
+                assert!(state.output.is_empty(), "no automatic authentication");
+                assert!(state.work.is_empty());
+                json!(instance.target(&state))
+            };
+            for (call, success) in [("denied-login", false), ("accepted-login", true)] {
+                let request = json!({"op":"acp-authenticate","target":target,
+                    "control":{"kind":"control","ref":"unit"},"owner_generation":7,
+                    "call_id":call,"method_id":"agent-login"});
+                let prepared = broker
+                    .prepare("acp-authenticate", &request, "explicit-owner")
+                    .unwrap();
+                broker.commit(prepared, 7).unwrap();
+                let mut state = instance.state.lock();
+                let authentication = take_outgoing(&mut state);
+                assert_eq!(authentication["method"], "authenticate");
+                let response = if success {
+                    json!({"jsonrpc":"2.0","id":authentication["id"],"result":{}})
+                } else {
+                    json!({"jsonrpc":"2.0","id":authentication["id"],"error":{
+                        "code":-32000,"message":"login denied"}})
+                };
+                apply(&instance, &mut state, response).unwrap();
+                assert_eq!(state.session.as_deref(), Some("saved-auth"));
+                if success {
+                    let retried = take_outgoing(&mut state);
+                    assert_eq!(retried["method"], method);
+                    assert_eq!(retried["params"]["sessionId"], "saved-auth");
+                    apply(
+                        &instance,
+                        &mut state,
+                        json!({"jsonrpc":"2.0","id":retried["id"],"result":{}}),
+                    )
+                    .unwrap();
+                    assert_eq!(state.lifecycle, "ready");
+                } else {
+                    assert_eq!(state.lifecycle, "auth-required");
+                }
+                assert!(state.output.is_empty());
+                assert!(state.foreground.is_none());
+                assert!(state.interactions.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn acp_rejected_or_substituted_saved_session_never_creates_a_replacement() {
+        for response in [
+            json!({"error":{"code":-32001,"message":"saved conversation is missing"}}),
+            json!({"result":{"sessionId":"substituted-conversation"}}),
+        ] {
+            for capabilities in [
+                json!({"loadSession":true}),
+                json!({"sessionCapabilities":{"resume":{}}}),
+            ] {
+                let (_, instance) = starting_broker(Some("missing-exact-id"), json!({}));
+                initialize(&instance, capabilities).unwrap();
+                let mut state = instance.state.lock();
+                let open = take_outgoing(&mut state);
+                let mut response = response.clone();
+                response["jsonrpc"] = json!("2.0");
+                response["id"] = open["id"].clone();
+                assert!(apply(&instance, &mut state, response).is_err());
+                assert_eq!(state.session.as_deref(), Some("missing-exact-id"));
+                assert!(state.output.is_empty());
+                assert!(state.work.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn acp_reopened_settings_remain_unready_until_the_exact_setting_acknowledgement() {
+        let (_, instance) = starting_broker(Some("saved-settings"), json!({"mode":"plan"}));
+        initialize(&instance, json!({"loadSession":true})).unwrap();
+        let mut state = instance.state.lock();
+        let load = take_outgoing(&mut state);
+        apply(
+            &instance,
+            &mut state,
+            json!({"jsonrpc":"2.0","id":load["id"],"result":{
+                "modes":{"currentModeId":"default","availableModes":[
+                    {"id":"default","name":"Default"},{"id":"plan","name":"Plan"}]}}}),
+        )
+        .unwrap();
+        assert_eq!(state.lifecycle, "starting");
+        let setting = take_outgoing(&mut state);
+        assert_eq!(setting["method"], "session/set_mode");
+        assert_eq!(setting["params"]["sessionId"], "saved-settings");
+        assert_eq!(setting["params"]["modeId"], "plan");
+        apply(
+            &instance,
+            &mut state,
+            json!({"jsonrpc":"2.0","id":setting["id"],"result":{}}),
+        )
+        .unwrap();
+        assert_eq!(state.lifecycle, "ready");
+        assert_eq!(state.configuration.projection()["state"], "applied");
+        assert!(state.output.is_empty());
+        assert!(state.work.is_empty());
     }
 
     #[test]
@@ -2927,7 +3430,7 @@ mod tests {
             state.outstanding.insert(
                 acp::RequestId::Number(77),
                 Pending {
-                    kind: RpcKind::NewSession,
+                    kind: RpcKind::OpenSession(SessionOpen::New),
                     work_id: None,
                 },
             );
@@ -2971,10 +3474,133 @@ mod tests {
         assert_eq!(state.input_bytes, 0);
     }
 
+    #[test]
+    fn acp_replay_and_reopen_response_cannot_publish_after_lifetime_end() {
+        for history in [true, false] {
+            let (broker, instance) = starting_broker(Some("saved-fenced"), json!({}));
+            initialize(&instance, json!({"loadSession":true})).unwrap();
+            let mut registry = crate::control::Registry::new();
+            let lifetime = registry.add_acp_target(&instance.id).unwrap();
+            {
+                let mut state = instance.state.lock();
+                let load = take_outgoing(&mut state);
+                let message = if history {
+                    json!({"jsonrpc":"2.0","method":"session/update","params":{
+                        "sessionId":"saved-fenced","update":{"sessionUpdate":"agent_message_chunk",
+                            "content":{"type":"text","text":"must not publish"}}}})
+                } else {
+                    json!({"jsonrpc":"2.0","id":load["id"],"result":{}})
+                };
+                let frame = serde_json::to_vec(&message).unwrap();
+                state.input_bytes = frame.len();
+                state.input_count = 1;
+                state.input.push_back(frame);
+            }
+            let mut consumer = None;
+            lifetime.end(|| {
+                let consumer_instance = instance.clone();
+                let consumer_lifetime = lifetime.clone();
+                consumer = Some(thread::spawn(move || {
+                    consume(&consumer_instance, &consumer_lifetime);
+                }));
+                let deadline = Instant::now() + Duration::from_secs(3);
+                while !instance.state.lock().input.is_empty() {
+                    assert!(Instant::now() < deadline, "consumer did not dequeue replay");
+                    thread::yield_now();
+                }
+                instance.state.lock().close(None);
+            });
+            consumer.unwrap().join().unwrap();
+            let metadata = broker.metadata(&instance.id).unwrap();
+            assert_eq!(metadata["lifecycle"], "closing");
+            assert_eq!(metadata["target"]["session_id"], "saved-fenced");
+            let state = instance.state.lock();
+            assert!(state.events.is_empty());
+            assert!(state.output.is_empty());
+            assert!(state.work.is_empty());
+            assert_eq!(state.input_count, 0);
+            assert_eq!(state.input_bytes, 0);
+        }
+    }
+
     fn prompt_request(target: &Value, call: &str) -> Value {
         json!({"op":"acp-prompt","target":target,"control":{"kind":"control","ref":"unit"},
             "owner_generation":7,"call_id":call,"text":"add 17 25"})
     }
+
+    #[test]
+    fn renamed_pending_response_keeps_identity_and_attention_tracks_obligations_not_delivery() {
+        let (broker, instance, target) = ready_broker();
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"ready","questions":0,"permissions":0})
+        );
+        let prompt = broker
+            .prepare("acp-prompt", &prompt_request(&target, "turn"), "owner")
+            .unwrap();
+        broker.commit(prompt, 7).unwrap();
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!(77), "session")).unwrap();
+        }
+        let before = broker.metadata(&instance.id).unwrap();
+        assert_eq!(
+            before["attention"],
+            json!({"state":"needs-answer","questions":1,"permissions":0})
+        );
+        let response = interaction_action(&target, &before["interactions"][0], "answer");
+        let prepared = broker.prepare("acp-answer", &response, "owner").unwrap();
+        let descriptor = broker.rename(&instance.id, "Exact same agent").unwrap();
+        assert_eq!(descriptor["name"], "Exact same agent");
+        let renamed = broker.metadata(&instance.id).unwrap();
+        assert_eq!(renamed["name"], descriptor["name"]);
+        assert_eq!(renamed["target"], target);
+        assert_eq!(renamed["work"], before["work"]);
+        assert_eq!(renamed["interactions"], before["interactions"]);
+        for unsafe_name in ["", " ", "line\nbreak", "\u{1b}[2J", "\u{202e}spoof"] {
+            assert!(broker.rename(&instance.id, unsafe_name).is_err());
+        }
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["name"],
+            "Exact same agent"
+        );
+        broker.commit(prepared, 7).unwrap();
+        let selected = broker.metadata(&instance.id).unwrap();
+        assert_eq!(
+            selected["attention"],
+            json!({"state":"working","questions":0,"permissions":0})
+        );
+        assert_eq!(selected["interactions"][0]["state"], "selected");
+        assert_eq!(selected["interactions"][0]["delivery"], "not-submitted");
+        assert_eq!(selected["interactions"][0]["application"], "unknown");
+        {
+            let mut state = instance.state.lock();
+            let original_response: Value =
+                serde_json::from_slice(&state.output.back().unwrap().bytes).unwrap();
+            assert_eq!(original_response["id"], 77);
+            assert_eq!(original_response["result"]["content"]["n"], 9);
+            apply(
+                &instance,
+                &mut state,
+                json!({"id":before["work"][0]["rpc_id"],
+                "result":{"stopReason":"end_turn"}}),
+            )
+            .unwrap();
+        }
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"]["state"],
+            "finished"
+        );
+        {
+            let mut state = instance.state.lock();
+            apply(&instance, &mut state, form_message(json!(78), "session")).unwrap();
+        }
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"needs-answer","questions":1,"permissions":0})
+        );
+    }
+
     #[test]
     fn e04s03_prepared_action_and_revocation_share_the_real_authority_ordering_point() {
         for commit_first in [false, true] {
@@ -3369,6 +3995,7 @@ mod tests {
         let resource = broker.metadata(target["id"].as_str().unwrap()).unwrap()["resource"].clone();
         assert_eq!(resource["failure"], "process-identity");
         assert_eq!(resource["cleanup_complete"], false);
+        assert!(resource["peer_pid"].is_null());
     }
 
     #[test]
@@ -3381,6 +4008,7 @@ mod tests {
             broker.metadata(id).unwrap()["resource"]["cleanup_complete"],
             false
         );
+        assert!(broker.metadata(id).unwrap()["resource"]["peer_pid"].is_null());
         // Repeated normal retirement must not evict an uncertain owned lifetime.
         for _ in 0..16 {
             let ended = broker
@@ -3390,6 +4018,7 @@ mod tests {
                     Path::new("/tmp"),
                     vec!["/bin/false".into()],
                     json!({}),
+                    None,
                 )
                 .unwrap();
             broker.end(ended["id"].as_str().unwrap());
@@ -3406,6 +4035,7 @@ mod tests {
                     Path::new("/tmp"),
                     vec!["/bin/false".into()],
                     json!({}),
+                    None,
                 )
                 .unwrap();
         }
@@ -3416,6 +4046,7 @@ mod tests {
                 Path::new("/tmp"),
                 vec!["/bin/false".into()],
                 json!({}),
+                None,
             )
             .unwrap_err();
         assert!(error.to_string().starts_with("capacity-exceeded:"));
@@ -3933,6 +4564,10 @@ mod tests {
                 });
             }
         }
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"permission-needed","questions":1,"permissions":1})
+        );
         let prompt_id = broker.metadata(&instance.id).unwrap()["foreground"]["prompt_id"].clone();
         let action = json!({"op":"acp-interrupt","target":target,"control":{"kind":"control","ref":"unit"},
             "owner_generation":7,"call_id":"cancel","prompt_id":prompt_id});
@@ -3957,6 +4592,10 @@ mod tests {
             state.output_bytes -= frame.bytes.len();
             state.output_count -= 1;
         }
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"permission-needed","questions":1,"permissions":1})
+        );
         broker
             .commit(
                 broker
@@ -3965,6 +4604,10 @@ mod tests {
                 7,
             )
             .unwrap();
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"],
+            json!({"state":"cancelling","questions":0,"permissions":0})
+        );
         let mut state = instance.state.lock();
         assert_eq!(state.output_count, EGRESS);
         assert!(state.foreground.as_ref().unwrap().1);
@@ -3995,6 +4638,11 @@ mod tests {
         );
         state.close(Some("egress-capacity"));
         assert!(state.interactions.iter().all(|i| i.state == "unknown"));
+        drop(state);
+        assert_eq!(
+            broker.metadata(&instance.id).unwrap()["attention"]["state"],
+            "failed"
+        );
     }
 
     #[test]

@@ -1,10 +1,13 @@
-feature_name: ACP-first daily agent workflow
-initiative: e06-acp-daily-use
-status: completed-released-v0.1.0-preview-and-installed-verified
-source_of_truth: specs/product/SCOPE_LATEST.yaml
-plan: specs/epics/archive/e06-acp-daily-use/PLAN.md
+feature_name: Modal daily-use UX
+initiative: e07-modal-ux
+status: verified-local-awaiting-separate-delivery-authorization
+source_of_truth: specs/product/SCOPE_E07.yaml
+plan: specs/epics/e07-modal-ux/PLAN.md
+impact: specs/IMPACT-E07.md
+implementation: user-approved-all-eight-recommendations-plus-modal-navigation
+integration_owner: parent
 parked_e05: specs/verifications/e05-parking.json
-implementation: user-explicit-do-all-three
-live_approval: completed-OMP-subscription-acceptance-12-used-cap12-zero-remaining-no-new-live-runs
-global_changes_main_push_release: {main_merge_push_release: explicitly-authorized-finish-the-release, global_daemon_config_auth_changes: not-authorized}
-required_reading: [CONVENTIONS.md, specs/state.yaml, specs/execution-status.yaml, specs/epics/archive/e06-acp-daily-use/PLAN.md, specs/epics/archive/e06-acp-daily-use/epic.yaml, specs/security/epics/e06/THREAT_MODEL.md, specs/verifications/release-v0.1.0.json]
+live_approval: none-this-initiative-historical-OMP-aggregate12-used12-remaining0
+global_changes_main_push_release: not-authorized-this-initiative
+previous_initiative: {id: e06-acp-daily-use, status: released-v0.1.0-preview-and-installed-verified, scope: specs/product/SCOPE_E06.yaml, evidence: specs/verifications/release-v0.1.0.json}
+required_reading: [CONVENTIONS.md, specs/state.yaml, specs/execution-status.yaml, specs/product/SCOPE_E07.yaml, specs/IMPACT-E07.md, specs/epics/e07-modal-ux/PLAN.md, specs/epics/e07-modal-ux/epic.yaml]

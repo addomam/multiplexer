@@ -1,0 +1,41 @@
+{
+  "type": "generalize-fix-sweep",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "review_rounds_used": 5
+  },
+  "source_manifest": "specs/verifications/e08-recovery-final-source.json",
+  "sweeps": [
+    {
+      "defect_class": "mutable-project-as-launch-identity",
+      "grep_pattern": "current == record|saved == record",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src",
+      "match_count": 0,
+      "disposition": "No full-record equality remains at startup launch admission; exhaustive same_reopen_intent retains all nonmetadata fields."
+    },
+    {
+      "defect_class": "daemon-start-hook-order",
+      "grep_pattern": "\"daemon-start\"",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+      "match_count": 2,
+      "disposition": "Both scheduling sites follow successful synchronous shell creation or deferred native/fallback availability; failure returns before scheduling."
+    },
+    {
+      "defect_class": "implicit-attach-competes-with-bootstrap",
+      "grep_pattern": "\"op\"\\s*:\\s*\"open\"",
+      "sweep_scope": "/Users/addomam/projects/amux-acp/src/tui.rs, /Users/addomam/projects/amux-acp/src/cli.rs, /Users/addomam/projects/amux-acp/src/client.rs, /Users/addomam/projects/amux-acp/src/daemon.rs",
+      "match_count": 4,
+      "disposition": "Four explicit/open-builder or initial-selection sites: only automatic initial selection waits for startup_pending; explicit CLI/Menu creation remains ordinarily quota-gated."
+    }
+  ],
+  "patched_in_pr": [
+    "src/daemon.rs",
+    "src/daemon/recovery.rs",
+    "src/tui.rs",
+    "tests/recovery.rs"
+  ],
+  "tracked_issues": [],
+  "script_gate": "Unavailable: repository has no bundled bigpowers verifier scripts; no script PASS claimed."
+}

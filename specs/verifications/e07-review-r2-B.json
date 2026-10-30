@@ -1,0 +1,277 @@
+{
+  "coverage_summary": "VERDICT: FAIL. Independent E07 round2 source review: 40 assessment items, 1 must-fix, 3 should-fix, 0 consider findings; score = 100 × (40 − 1 − 3) / 40 = 90.0. PASS requires zero must-fix and at least 94. All reported findings have source-based confidence at least 9/10. No current-round peer report was consulted.\n\nReviewed keyboard/mouse/paste intent through parent routing, rendered ACP actions, NativeControl queues, original capability/generation admission, exact ACP RPC responders, process creation/close, and configuration/path persistence. Reviewed the approved six-story scope, current audit/repair response, implementation, representative consumer regressions and cleanup assertions. Scope uses the supplied source base cc468a34cd7c055457ec286fc3464dc5ac2103a9 on feat/cli-projects-help; no independent Git command was executed.\n\n40 source assessment items (OK means no surviving source defect for that item, not runtime acceptance):\nS01: [1 OK] native Esc/j/k passthrough; [2 OK] configurable mode-key validation/default and upper-key encoding; [3 OK] legacy prefix retained; [4 OK] deliberate double-key delivery, repeat/release handling and authority gate; [5 OK] Menu navigation versus explicit search; [6 OK] literal field/search paste; [7 OK] ownership-warning precedence and no intercepted-input replay.\nS02: [8 OK] conversation-first projection and scrollable Details/History; [9 OK] typed form validation; [10 OK] local Review followed by visible/input-empty/armed Submit and bounded progress; [11 OK] covered/resize invalidation of reviewed Submit; [12 OK] completed callbacks return to prompt with canonical history; [13 OK] prompt requires original ready idle-session authority; [14 OK] ordinary same-target paste/Enter remains immediate; [15 OK] exact advertised permission IDs and original wire responders; [16 OK] bounded focus-following choices and oversized full-context route; [17 MUST] queued events can acquire replacement permission/authentication/foreground intent through an intervening repaint (SEC-01).\nS03: [18 OK] live close captures target and defaults to Keep working; [19 OK] ACP close retains original tuple/grant/generation; [20 OK] detach/force/cancel do not become implicit kill/answer/replay; [21 OK] ordinary native exit and immediate exited-record removal; [22 OK] runtime rename validates atomically and preserves process/session/RPC; [23 SHOULD] last-native removal falsely hides surviving ACP sessions (COR-04).\nS04: [24 OK] visible native/ACP and current/independent chooser; [25 OK] explicit Launch and focused basic/Advanced controls; [26 OK] independent ACP canonical directory, no inherited hooks/recipes/mkdir, failed-admission rollback; [27 OK] generated UTF-8 names reserve suffix within 128 bytes; [28 OK] exact settings and requested/reported distinction without fallback; [29 SHOULD] definite launch rejection loses the form and full corrective cause (UX-02).\nS05: [30 OK] structured project name/hooks/recipes; [31 OK] ordered local add/edit/remove drafts; [32 OK] retained invalid drafts and atomic configuration rollback; [33 OK] canonical preview and captured exact native/ACP save source; [34 OK] expected_context and source-drift rejection; [35 SHOULD] reopening a saved ACP-only project creates a shell/runs hooks instead of reusing its represented agent (COR-03).\nS06: [36 OK] contextual Tab/mouse/help/Escape routing without text shortcut theft; [37 OK] responsive action geometry and full scrollable local errors, except the separately scored launch-result loss; [38 OK] canonical attention and quiet ordinary ownership/exit presentation; [39 OK] inert metadata/rendering controls, including checking dependency zero-width/control handling before rejecting an apparent terminal-injection candidate; [40 OK] meaningful original-identity/arithmetic-effect/termios/drainer/peer/daemon/socket/root/sentinel test assertions rather than forwarding-only evidence.\n\nTesting/design assessment: the queued-F5 and correction/non-admission regressions exercise real consumer failures and original RPC effects. Replacement permission/auth/interrupt unit cases reject before repaint but do not exercise a repaint while the input queue remains nonempty. Existing launch-rejection coverage stops at local field rejection, and the reviewed project/session cases do not cover the two ACP/native integration gaps reported below. Implementation reuses existing authority/configuration mechanisms; no speculative transport rewrite or additional abstraction is requested.\n\nREAD ONLY throughout: no edits, builds, tests, lint, formatters, payload execution, provider/network calls, or process/global mutations. Parent-provided prior results were not rerun and are not represented as independently observed verification. Final workspace/OMP/Zsh results and post-fix controlling-PTY acceptance/cleanup remain parent-owned. This review consumes E07 round2 only and makes no historical/provider-cap reset or runtime-acceptance claim.",
+  "findings": [
+    {
+      "rule_id": "E07-R2-SEC-01",
+      "title": "MUST: repaint alone arms replacement permission/authentication/interrupt actions for queued input",
+      "summary": "The input-empty fence protects reviewed form Submit only. Other server mutations become armed during draw_actions whenever paint_complete is true, even if input is already queued. The parent syncs ACP before reading its next event and may repaint while input is pending because its native screen remains null on an ACP attachment. A queued Enter/F8/Ctrl-C can therefore resolve from newly generated Hits and be dispatched with a new callback, authentication method or foreground prompt identity. Concrete scenario: a permission callback arrives while an ordinary Enter is queued; the new default option is painted and armed without an Empty boundary, and that old Enter becomes acp-permission for the newly offered option. Immutable Hit provenance cannot establish that the physical event followed this presentation. Confidence 9/10; source-derived, not runtime-reproduced.",
+      "severity": "high",
+      "confidence": "high",
+      "category": "must-fix / security / stale-consent",
+      "locations": [
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/agent.rs",
+          "start_line": 800,
+          "end_line": 822,
+          "role": "Input-empty eligibility excludes all non-reviewed interaction presentations."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/agent.rs",
+          "start_line": 1738,
+          "end_line": 1747,
+          "role": "Server-action Hits require input_ready only for Review(true)."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/agent.rs",
+          "start_line": 1235,
+          "end_line": 1263,
+          "role": "Accelerators derive their intent from whichever Hits the latest repaint generated."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui.rs",
+          "start_line": 1239,
+          "end_line": 1243,
+          "role": "Null native screen allows ACP repaint before consuming pending events."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/acp.rs",
+          "start_line": 964,
+          "end_line": 991,
+          "role": "Backend correctly admits the newly selected exact option but cannot detect that its physical gesture predates presentation."
+        }
+      ],
+      "cwe": [
+        "CWE-841"
+      ],
+      "evidence": [
+        {
+          "label": "Only reviewed Submit has the new Empty boundary",
+          "explanation": "after_draw is eligible only for a reviewed selected interaction. draw_actions arms permission/authentication/interrupt without input_ready, and activate's additional input_ready test likewise applies only to Review(true).",
+          "excerpt": "armed: self.paint_complete && context_ready && (*action != Action::Review(true) || self.input_ready)"
+        },
+        {
+          "label": "Parent ordering supplies the execution path",
+          "explanation": "The parent refreshes/syncs the ACP projection before reading the next event. ACP skips native refresh_screen, leaving screen null; that condition explicitly permits drawing with pending input. A subsequent accelerator therefore passes the current-Painted comparison using replacement Hits.",
+          "excerpt": "(screen.is_null() || drain_recovered_input || queued_events >= EVENTS_BEFORE_FRAME || !event::poll(Duration::ZERO).context(\"checking queued client input\")?)"
+        },
+        {
+          "label": "Nearby controls do not restore physical intent",
+          "explanation": "Backend authority admission checks the current original capability/generation and exact target/interaction. Those checks preserve authority but cannot distinguish a newly intended choice from a queued event rebound by the frontend. Existing replacement tests reject before repaint and permit the event after paint(); the genuine queued-F5 regression covers form Submit only.",
+          "excerpt": "permission_enter_rejects_a_replacement_revision_until_its_exact_option_is_painted; interrupt_and_authentication_shortcuts_require_their_original_painted_facts"
+        }
+      ],
+      "anchor": "src/tui/agent.rs:1743",
+      "remediation": "Require successful visible presentation, conclusive input-empty readiness and an armed repaint for newly introduced/replaced permission, authentication and foreground mutation provenance. Consume old gestures locally; never defer/replay them. Preserve immediate same-target prompt paste/Enter and local Review. Add parent-ordering regressions that repaint replacement actions while input remains pending."
+    },
+    {
+      "rule_id": "E07-R2-UX-02",
+      "title": "SHOULD: definite ACP launch rejection discards the form and full correction error",
+      "summary": "A locally accepted launch removes the dialog before acp-open returns. A definite daemon rejection is reduced to its error code, with no route back to the original draft or full cause. For example, paste a 129-byte Name, which the form's 256-byte scalar limit accepts, then Launch. The daemon rejects it before reservation because launch names are capped at 128 bytes, but the form has disappeared and the retained feedback is only 'invalid-request: current facts refreshed; no input or mutation replayed'. The user cannot inspect the actual correction cause or retain their Project/Profile/Advanced draft. This concerns definite non-admission, not ambiguous transport failure. Confidence 10/10.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix / consumer-correctness / error-recovery",
+      "locations": [
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui.rs",
+          "start_line": 1734,
+          "end_line": 1740,
+          "role": "Drops launch dialog before admission outcome."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/control.rs",
+          "start_line": 598,
+          "end_line": 604,
+          "role": "Retains error code but discards daemon message/cause."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/launch.rs",
+          "start_line": 348,
+          "end_line": 369,
+          "role": "Locally accepts a 129-byte explicit Name."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+          "start_line": 454,
+          "end_line": 463,
+          "role": "Definitively rejects ACP launch names longer than 128 bytes."
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "Form destroyed before result",
+          "explanation": "Submit immediately closes the launch form. The launch path has no rejected-launch draft callback.",
+          "excerpt": "launch::Action::Submit(request) => { launch_dialog = None; authority.launch(request, &mut status); }"
+        },
+        {
+          "label": "Full cause cannot be reached through Help",
+          "explanation": "NativeControl formats only error.code. Menu Help can preserve only this already-reduced status, and the launch form's scrollable error surface no longer exists.",
+          "excerpt": "\"{}: current facts refreshed; no input or mutation replayed\", safe(&error.code, 48)"
+        },
+        {
+          "label": "Current test coverage bypasses this branch",
+          "explanation": "rejected_native_launch exercises edits rejected within the form and waits for 'Correct rejected launch input'; it does not exercise locally valid input rejected by acp-open.",
+          "excerpt": "native.text().contains(\"Correct rejected launch input\")"
+        }
+      ],
+      "anchor": "src/tui.rs:1738",
+      "remediation": "Keep the unchanged launch draft until a receipt or definitive non-admission. Restore it with the complete inert, scrollable daemon cause on definite rejection, without automatic retry. Match local explicit-name validation to the backend's 128-byte launch limit and retain existing no-replay handling for ambiguous failures."
+    },
+    {
+      "rule_id": "E07-R2-COR-03",
+      "title": "SHOULD: opening a saved ACP-only project launches a native shell instead of reusing its agent",
+      "summary": "Create an independent ACP session, save its project, then choose Menu → Projects → Open for that same still-running project. Independent ACP projects have no native terminal and main_terminal is null. project-open detects an already-open project using only native terminals, so it creates a new shell and runs configured project-open hooks. The parent then prefers that new native terminal over its ACP fallback. The original ACP survives, but ordinary project navigation unexpectedly creates work and does not reopen the represented agent, contrary to the documented reuse behavior. Confidence 10/10.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix / consumer-correctness / project-lifecycle",
+      "locations": [
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+          "start_line": 1977,
+          "end_line": 1983,
+          "role": "Already-open detection ignores agent_views."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+          "start_line": 1990,
+          "end_line": 2001,
+          "role": "False negative creates native terminal and runs hooks."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui.rs",
+          "start_line": 1660,
+          "end_line": 1680,
+          "role": "Native terminal selection precedes existing ACP fallback."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/daemon.rs",
+          "start_line": 557,
+          "end_line": 571,
+          "role": "Independent ACP project intentionally starts without a native main terminal."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/README.md",
+          "start_line": 302,
+          "end_line": 302,
+          "role": "Documents reusing an existing represented session."
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "New placement reaches the false-negative branch",
+          "explanation": "Independent ACP admission creates a project with main_terminal None. Saving preserves its identity without adding a shell. Native-only membership is therefore false when opening the live project.",
+          "excerpt": "let already = state.terminals.values().any(|entry| entry.project_id == project.id);"
+        },
+        {
+          "label": "Mutation happens before frontend fallback",
+          "explanation": "The backend creates a shell and runs hooks before returning. The parent's ACP fallback cannot prevent that mutation and loses to the newly created native terminal.",
+          "excerpt": "let terminal = self.open(&json!({\"project\":project.id}))?; self.hooks(project.hooks.clone(), project.context.clone(), std::env::vars().collect(), \"project-open\");"
+        }
+      ],
+      "anchor": "src/daemon.rs:1977",
+      "remediation": "Include represented ACP views in already-open project detection while preserving project-open serialization. Reuse the existing ACP when no native terminal represents that project. Cover independent ACP → Save → Projects/Open with unchanged original peer/tuple/PID and no additional shell or hook effect."
+    },
+    {
+      "rule_id": "E07-R2-COR-04",
+      "title": "SHOULD: removing the last native terminal hides surviving ACP sessions behind an empty-window card",
+      "summary": "With one native terminal and at least one live ACP view, let the native exit and use Menu → Close to remove its exited record. apply_window selects replacement active only from native terminals, yielding an empty ID despite surviving agent_views. Rendering and keyboard routing then classify the client as empty using only terminals: Menu shows 'No windows' instead of its nonempty ACP rows, and Enter creates another native terminal instead of opening the ACP. Remaining work survives but normal session selection becomes unavailable until another native is created or the attachment restarts. Confidence 10/10.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix / consumer-correctness / mixed-session-navigation",
+      "locations": [
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui.rs",
+          "start_line": 787,
+          "end_line": 799,
+          "role": "Replacement selection omits surviving ACP views."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/view.rs",
+          "start_line": 582,
+          "end_line": 588,
+          "role": "Empty-state decision ignores agent_views."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui/view.rs",
+          "start_line": 706,
+          "end_line": 709,
+          "role": "Empty-window card supersedes rendering nonempty ACP rows."
+        },
+        {
+          "path": "/Users/addomam/projects/amux-acp/src/tui.rs",
+          "start_line": 2225,
+          "end_line": 2236,
+          "role": "False-empty keyboard branch opens a native instead of selecting an ACP."
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "Exited-record removal preserves ACP but loses selection",
+          "explanation": "window_exited maps Close to remove immediately. The daemon removes only the native record; apply_window refreshes the snapshot and searches only terminals for a replacement ID.",
+          "excerpt": "*active = snapshot[\"terminals\"].as_array().and_then(...).map(|t| text(t, \"id\").to_owned()).unwrap_or_default();"
+        },
+        {
+          "label": "The false-empty condition controls both display and input",
+          "explanation": "tree_rows still contains ACP rows, but picker && empty renders empty_windows first. Enter's if-empty case likewise precedes ordinary row opening.",
+          "excerpt": "let empty = active.is_empty() && snapshot[\"terminals\"].as_array().is_none_or(|terminals| terminals.is_empty());"
+        }
+      ],
+      "anchor": "src/tui.rs:788",
+      "remediation": "Choose a surviving ACP view when no native replacement exists and base empty-window decisions on both session kinds. Cover last-native exited-record removal while an original ACP prompt/callback remains live; retain visible selection without another shell, authority changes or replay."
+    }
+  ],
+  "reviewed_paths": [
+    "/Users/addomam/projects/amux-acp/CONVENTIONS.md",
+    "/Users/addomam/projects/amux-acp/specs/product/SCOPE_E07.yaml",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/PLAN.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/epic.yaml",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s01-story.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s02-story.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s03-story.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s04-story.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s05-story.md",
+    "/Users/addomam/projects/amux-acp/specs/epics/e07-modal-ux/e07s06-story.md",
+    "/Users/addomam/projects/amux-acp/specs/verifications/AUDIT-e07.md",
+    "/Users/addomam/projects/amux-acp/specs/verifications/e07-review-response.md",
+    "/Users/addomam/projects/amux-acp/src/tui.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/agent.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/control.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/menu.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/project.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/launch.rs",
+    "/Users/addomam/projects/amux-acp/src/tui/view.rs",
+    "/Users/addomam/projects/amux-acp/src/acp.rs",
+    "/Users/addomam/projects/amux-acp/src/daemon.rs",
+    "/Users/addomam/projects/amux-acp/src/projects.rs",
+    "/Users/addomam/projects/amux-acp/src/control.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/profiles.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native/acceptance.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native/daily_use.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native/recovery_edges.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native/live.rs",
+    "/Users/addomam/projects/amux-acp/tests/acp/native/omp_live.rs",
+    "/Users/addomam/projects/amux-acp/README.md",
+    "/Users/addomam/projects/amux-acp/CHANGELOG.md",
+    "/Users/addomam/projects/amux-acp/Cargo.toml",
+    "/Users/addomam/projects/amux-acp/Cargo.lock",
+    "/Users/addomam/projects/amux-acp/vendor/crossterm/src/event/sys/unix/parse.rs"
+  ],
+  "deferred": [
+    {
+      "reason": "No checks were executed, as required. Final full-workspace/OMP/Zsh verification, any repairs prompted by this review, actual post-repair controlling-PTY acceptance and cleanup remain the parent's responsibility; source review alone cannot accept new safety fixes.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp/specs/verifications/AUDIT-e07.md"
+      ]
+    },
+    {
+      "reason": "Historical E03/E05/E06 settlement/release acceptance and exhausted provider exercises were not reopened. Migrated live/provider consumer files were inspected selectively for the changed UI routes, not executed or treated as new provider evidence.",
+      "paths": [
+        "/Users/addomam/projects/amux-acp/tests/acp/native/live.rs",
+        "/Users/addomam/projects/amux-acp/tests/acp/native/omp_live.rs"
+      ]
+    }
+  ]
+}

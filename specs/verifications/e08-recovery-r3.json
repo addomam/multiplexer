@@ -1,0 +1,185 @@
+{
+  "type": "epic-verification",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "review_rounds_used": 3,
+    "max_review_rounds": 5
+  },
+  "status": "independent-round3-failed-settings-boundary-corrections-required",
+  "acceptance": "failing",
+  "source_manifest": "specs/verifications/e08-review-r3-source.json",
+  "last_local_verified_source_manifest": "specs/verifications/e08-review-r3-source.json",
+  "previous_evidence": "specs/verifications/e08-recovery-r2.json",
+  "review": {
+    "rounds_used": 3,
+    "maximum_rounds": 5,
+    "R1": {
+      "A": 75,
+      "B": 81.25,
+      "gate": "FAIL"
+    },
+    "R2": {
+      "A": 84.375,
+      "B": 93.75,
+      "gate": "FAIL",
+      "A_hashes": {
+        "matched": 19,
+        "required": 19
+      },
+      "B_hashes": {
+        "matched": 0,
+        "unverified": 19,
+        "required": 19
+      },
+      "reports": [
+        "specs/verifications/e08-review-r2-A.json",
+        "specs/verifications/e08-review-r2-B.json"
+      ]
+    },
+    "R3": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "B": {
+        "score": 96.875,
+        "must_fix": 0,
+        "should_fix": 1,
+        "threshold_gate": "PASS",
+        "correctness": "incorrect",
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r3-A.json",
+        "specs/verifications/e08-review-r3-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r3-source.json"
+    },
+    "R4": "not-started"
+  },
+  "actual_smoke": {
+    "status": "passed",
+    "receipts": "specs/verifications/e08-recovery-r3-runtime.json",
+    "source_manifest": "specs/verifications/e08-review-r3-source.json",
+    "debug_binary_sha256_before_and_after": "4f1d134f7f6afa5c3ddfd1ab5676dac1df3cca9e7862659f3d9b64101391c34d",
+    "actual_checks": [
+      "two exact ACP contexts and real Menu",
+      "native OMP exact-file reopening",
+      "original persistent native OMP attachment /new and no stale-context restart"
+    ],
+    "provider_requests": 0,
+    "owned_cleanup_and_unrelated_sentinels": "passed-before-fixture-fallback"
+  },
+  "provider_requests": 0,
+  "historical_caps": "unchanged; no prior PASS transferred",
+  "installation_global_changes_and_publication": "not-authorized-not-performed",
+  "checks": {
+    "focused_round2_repairs": {
+      "job": "bg_32",
+      "raw": "artifact://3405",
+      "status": "passed",
+      "recovery_cases": 19,
+      "store_and_coordinator_units": 29,
+      "native_Codex_units": 8,
+      "native_integration": 9,
+      "OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Zsh_syntax": "passed",
+      "native_replacement_cold_restart": "passed"
+    },
+    "pre_final_startup_settlement_full": {
+      "job": "bg_33",
+      "raw": "artifact://3408",
+      "status": "historical-pass-before-final-native-shutdown-fix",
+      "workspace_passed": 578,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 143.51
+    },
+    "current_native_startup": {
+      "job": "bg_35",
+      "raw": "artifact://3413",
+      "status": "passed",
+      "owned_preparation_phases": 2,
+      "native_interaction_passed": 24,
+      "native_interaction_ignored": 1,
+      "native_Codex_units": 8,
+      "recovery_cases": 19,
+      "strict_Rust": "passed",
+      "wall_seconds": 22.75,
+      "previous_runtime_failure": "bg_34 request-drain preceded broker stop; corrected stop/join before drain"
+    },
+    "native_auth_fixture": {
+      "diagnostic": "old readiness returned on the old armed frame with the owned native process group stopped and preceding Prompt click unconsumed; temporary probe removed",
+      "repair": "mouse-only read-only paint fence, then observe unsupported method selection before leaving; keyboard focus paths unchanged; no retry/replay or production gate change",
+      "focused_auth_cases": 3,
+      "status": "passed",
+      "wall_seconds": 4.08
+    },
+    "current_full": {
+      "job": "bg_37",
+      "raw": "artifact://3429",
+      "status": "passed",
+      "workspace_passed": 579,
+      "suites": 31,
+      "ignored": 12,
+      "examples": "passed",
+      "clippy_all_targets_deny_warnings": "passed",
+      "fmt_check": "passed",
+      "build": "passed",
+      "wall_seconds": 133.18
+    },
+    "runtime_evidence_guard": {
+      "status": "passed",
+      "task": 5,
+      "ledger": "specs/epics/e08-conversation-recovery/e08s01-tasks.yaml",
+      "actual_command_executed": true,
+      "exit_code": 0
+    }
+  },
+  "preserved_repair_failures": [
+    {
+      "job": "bg_26",
+      "reason": "private diagnostic visibility; reused existing route"
+    },
+    {
+      "raw": "artifact://3396",
+      "reason": "owned fixture socket path too long; /tmp pattern and setup RAII; three failed pre-daemon roots explicitly removed"
+    },
+    {
+      "raw": "artifact://3399",
+      "reason": "new unit envelopes lacked version1"
+    },
+    {
+      "raw": "artifact://3401",
+      "reason": "incidental underlying error-type expectation removed; semantic capacity boundary retained"
+    },
+    {
+      "raw": "artifact://3403",
+      "reason": "whole-config/default-normalization assertion removed; unsaved-project consumer invariant retained"
+    },
+    {
+      "job": "bg_34",
+      "reason": "real native startup/shutdown request-drain ordering defect; corrected and both actual preparation phases pass3413"
+    },
+    {
+      "job": "bg_36",
+      "raw": "artifact://3417",
+      "reason": "native authentication mouse fixture waited for authenticate after accepting a stale armed frame; full gate stopped before strict checks",
+      "wall_seconds": 56.05
+    },
+    {
+      "reason": "first auth-readiness repair reset Tab/Enter focus through a global read-only roundtrip; two auth cases passed and Tab/Enter failed; narrowed fence to mouse-only and observed genuine unsupported selection",
+      "wall_seconds": 14.75
+    }
+  ],
+  "source_files_for_next_review": 20
+}

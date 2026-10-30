@@ -323,6 +323,33 @@ fn drawn(live: &mut Live, viewer: usize, text: &str) {
         lines.join("\n").contains(text).then_some(())
     });
 }
+fn drawn_owner(live: &mut Live, viewer: usize) {
+    let snapshot = call(&live.socket, json!({"op":"snapshot"}));
+    let terminal = snapshot["terminals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["id"] == live.terminal)
+        .unwrap();
+    let project = snapshot["projects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["id"] == terminal["project_id"])
+        .unwrap()["name"]
+        .as_str()
+        .unwrap();
+    until(
+        "native ownership and ordinary project header",
+        DAEMON,
+        || {
+            live.drain();
+            let (lines, _) = render(&live.viewers[viewer].capture.lock().raw);
+            (ownership(live)["owner"]["role"] == "attachment" && lines[0].contains(project))
+                .then_some(())
+        },
+    );
+}
 fn wait_owner(live: &mut Live, controller_id: &Value) {
     until("committed native ownership", DAEMON, || {
         live.drain();
@@ -516,7 +543,7 @@ fn ownership_and_native(live: &mut Live, matrix: &mut Matrix) {
     );
     yield_to(live, &live.control, &reservation["claim_id"]);
     wait_owner(live, &reservation["requester_id"]);
-    drawn(live, 0, "Controlled here");
+    drawn_owner(live, 0);
     let human = ownership(live);
     assert!(state(live)["pid"] == pid && live.inspect()["target"] == target);
     live.capture("safe API to native transfer with consumed opening gestures");
@@ -800,7 +827,7 @@ fn buffered_native(live: &mut Live, matrix: &mut Matrix, ended_turn: &str) {
     native(live, 0, b"\x01\x06");
     drawn(live, 0, "Force");
     native(live, 0, b"\r");
-    drawn(live, 0, "Controlled here");
+    drawn_owner(live, 0);
     let human = ownership(live);
     assert!(
         human["owner"]["role"] == "attachment" && live.inspect()["lifecycle"]["turn_id"] == turn
@@ -833,7 +860,7 @@ fn buffered_native(live: &mut Live, matrix: &mut Matrix, ended_turn: &str) {
     let started = live.root.join("slow-hook-started");
     call(
         &live.socket,
-        json!({"op":"project-new","name":"complete-slow-hook","config":{"hooks":[{"source":format!("print started > '{}'; while [[ ! -e '{}' ]]; do sleep 0.1; done; exit 7",started.display(),release.display()),"timeout_ms":30000}]}}),
+        json!({"op":"project-new","name":"complete-slow-hook","directory":live.root,"config":{"hooks":[{"source":format!("print started > '{}'; while [[ ! -e '{}' ]]; do sleep 0.1; done; exit 7",started.display(),release.display()),"timeout_ms":30000}]}}),
     );
     until("owned slow hook is actually running", DAEMON, || {
         started.exists().then_some(())

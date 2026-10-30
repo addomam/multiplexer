@@ -1,0 +1,285 @@
+{
+  "coverage_summary": "## Independent E07 assessment: FAIL\n\n32 requirements assessed: 28 static PASS, 4 FAIL; 1 must-fix, 3 should-fix, 0 consider-only findings. Score = 100 × (32 − 1 − 3) / 32 = 87.5/100. The specified gate requires zero must-fix findings and a score of at least 94; both conditions fail.\n\nThis was a read-only source assessment of all six approved story contracts, shared interfaces, affected implementation and relevant consumers/tests. PASS below means the inspected source supports that requirement, not that I exercised runtime UAT. No edits, builds, tests, lint, formatting, payload execution, network/provider calls or process/config mutations were performed. The brief's parent-observed checks were not rerun or represented as independent verification. No other E07 review report was consulted. Historical review/provider caps and acceptance limitations remain unchanged.\n\n## Requirement assessment\n\n### e07s01 — Modal navigation and native-safe entry\n1. PASS — Default F12, case-insensitive F1–F24/none validation and invalid-patch rollback are present (projects.rs:27–29, 281–294, 565–612; menu.rs:53–62).\n2. PASS — Ordinary native Esc/j/k reach the native encoder rather than becoming global letter commands (tui.rs:1483–1522, 2182–2392).\n3. PASS — Mode/prefix pass-through requires a second Press; repeat/release cannot replace the deliberate second press, and intervening navigation clears pending intent (tui.rs:1465–1519).\n4. FAIL / should-fix — Literal reserved-key delivery does not cover accepted F21–F24 (E07-COR-03).\n5. PASS — Explicit search retains literal j/k/? and bounded pasted text; navigation and search are separate states (menu.rs:17–51; tui.rs:2166–2177, 2193–2308).\n6. PASS — Navigation paste is consumed rather than interpreted as commands or forwarded to the application (tui.rs:2166–2179).\n7. PASS — Text editing remains distinct from action navigation in rename, launch, project and ACP fields (menu.rs:333–438; launch.rs:236–367; project.rs:677–832; agent.rs:913–1216).\n8. PASS — Native bytes, paste and mouse input retain the captured-grant FIFO worker and authority gate; uncertainty/backpressure do not trigger replay (control.rs:203–329, 440–503, 907–935).\n\n### e07s02 — Conversation and exact interactions\n9. PASS — ACP drafts bind the complete target tuple/control/generation and are discarded rather than rebound on authority/session changes (agent.rs:265–332, 2237–2257).\n10. FAIL / must-fix — Compatibility mutation shortcuts bypass painted-action admission and permit queued pre-review input to become Submit (E07-SEC-01).\n11. PASS — Permission actions preserve exact offered option IDs and interaction/revision; backend admission rejects unavailable options (agent.rs:2654–2675; acp.rs:969–990). This is not a certification of complete-label visibility at every possible geometry.\n12. PASS — Prompt Send requires matching original ready-session authority and no foreground prompt; bootstrap/busy input is not submitted or queued (agent.rs:1218–1280).\n13. PASS — Details has no implicit Back focus and consumes ordinary Enter, paste, authentication and interruption locally; explicit navigation/back remains available (agent.rs:879–910, 913–1095; regression at 3494–3514).\n14. PASS — Canonical completion removes the pending form focus and preserves the interaction/history rather than presenting a new default answer (agent.rs:581–615; regression at 3517–3553).\n\n### e07s03 — Close and identifiable sessions\n15. PASS — Live close captures the original native ID or complete ACP target instead of consulting a later selected row (menu.rs:175–200).\n16. PASS — Keep working is the close default; confirmation waits for the complete warning, successful draw and drained input; Escape/help/resize do not replay the action (menu.rs:198–200, 220–245, 300–345, 520–534; tui.rs:1400–1406).\n17. PASS — ACP close retains its original control/generation/call ID and dispatches unchanged; backend checks authority and exact tuple/generation instead of borrowing a newer grant (menu.rs:175–181; control.rs:533–546; daemon.rs:628–653; acp.rs:811–829).\n18. PASS — Rename validates the complete UTF-8 label before mutation and preserves the existing native/ACP identity and pending work (daemon.rs:1745–1788; acp.rs:1144–1151, 2865–2876; profiles.rs:497–537).\n19. PASS — Explicit type markers, bounded safe automatic names, suffix identifiers and leaf-preserving path clipping are present (daemon.rs:127–148; tui.rs:450–552).\n20. PASS — Exited native records use immediate removal and neutral exit presentation rather than presenting ordinary exit as ownership resynchronization failure (tui.rs:759–768, 1986–1998; control.rs:686–710, 1504–1512; view.rs:492–534).\n\n### e07s04 — Explicit creation and placement\n21. PASS — The New chooser distinguishes native/ACP and current/independent placement; launch remains explicit (menu.rs:163–174, 398–415; tui.rs:1738–1784).\n22. PASS — Independent ACP placement canonicalizes an existing cwd, creates an unsaved project without hooks/recipes, does not create a working directory and rolls back failed admission (daemon.rs:448–479, 526–620; profiles.rs:349–429).\n23. PASS — Basic/Advanced launch settings preserve exact identifiers/options, requested-versus-reported distinctions and unavailable-profile rejection without model fallback (launch.rs:143–178, 380–413; daily_use.rs:205–325).\n24. PASS — Bounded launch edits are accepted/rejected in full and rejection remains attached to the affected field; text/paste does not itself launch (launch.rs:236–367; daily_use.rs:231–268).\n\n### e07s05 — Project configuration and save\n25. PASS — Structured name, ordered hook source/timeout and recipe name/source edits stay local until the complete Apply request; add/edit/remove/cancel paths preserve unrelated draft values (project.rs:278–477; tests at 1144–1239).\n26. PASS — Backend configuration validates a candidate before replacement, detects disk conflicts and rolls back in-memory state on persistence failure; project forms retain rejected drafts (projects.rs:519–563, 565–663; project.rs:375–477).\n27. PASS — Backend save preview and save share authoritative native/ACP cwd resolution, canonical Git-root resolution and expected-context/source-drift checks before bookmark mutation (daemon.rs:319–383, 1878–1930; profiles.rs:432–494, 541–608).\n28. FAIL / should-fix — The ACP Save consumer loses the selected ACP source between preview and submission (E07-COR-02).\n\n### e07s06 — Ownership, attention and accessibility\n29. PASS — Ownership warnings/panels paint last and intercept covered application input; conditional Keep precedes ordinary routes, and force/cancel retain their separate ownership semantics (tui.rs:1320–1331, 1452–1464, 1521–1523; control.rs:1049–1310, 1315–1420, 1490–1850).\n30. FAIL / should-fix — Session-dialog errors lack a wrapping/scrollable full-text route (E07-UX-04).\n31. PASS — Attention derives from canonical unsubmitted obligations/foreground/outcome rather than transport readiness alone; ordinary owned control remains visually quiet (acp.rs:327–365; daemon.rs:308–314; agent.rs:1579–1664; control.rs:1513–1525).\n32. PASS — Inspected test consumers retain real original-RPC/effect assertions, controlled-PTY input, cleanup observations and provider opt-in boundaries (native.rs:109–255, 443–524, 615–650, 866–983; native/acceptance.rs:56–112; tests/acp.rs:25–34). No new unintended process/provider execution path was supported by this review.\n\n## Consumer and test-quality assessment\n- e07s01: native authority/key encoding coverage is useful, but the accepted upper mode-key range is not exercised end-to-end; forwarding/layout smoke remains the parent's responsibility.\n- e07s02: strong new regressions cover stale mouse revisions, exact permission IDs, Details inertness, canonical completion and painted Enter review. They do not cover the equivalent F5 shortcut; one migrated native consumer sends its two F5 activations consecutively.\n- e07s03: backend rename tests assert same PID/session/RPC and pending callback effects, not just labels. Captured close and safe-default behavior are source-supported here; I did not independently exercise the new close modal.\n- e07s04: independent placement tests assert project isolation, failed admission, no hook marker and real arithmetic effect. Migrated launch consumers check exact settings and rejected edits without substituting a different model.\n- e07s05: structured draft tests preserve hook ordering, exact recipe values and failed-Apply drafts; backend tests compare disk/runtime state after rejection. They miss the actual ACP Dialog request serialization identified below.\n- e07s06: hostile-rendering tests inspect forbidden raw terminal sequences and host title/clipboard effects; cleanup checks observe TUI exit/termios/reader, peer/daemon/socket/root and sentinel before fallback. Responsive action tests assert usable/disjoint targets rather than a single fixed row layout. Full accessibility at the requested real geometries remains parent UAT, not a source-only PASS.\n\nAll paths below were inspected in relevant E07 sections or consumer flows, not represented as a new audit of every historical ACP transport/native-fence line.",
+  "findings": [
+    {
+      "rule_id": "E07-SEC-01",
+      "title": "Must-fix: ACP compatibility shortcuts bypass painted-action admission",
+      "summary": "F5/F6/F7 and Ctrl-C take mutation paths outside AgentView::activate and its painted intent guard. With input focus, two queued F5 Press events validate and then submit unchanged form values without a fresh post-review input boundary. An incidental parent repaint between processing queued events does not establish that the second key was entered after the review appeared. F6/F7 and Ctrl-C likewise build envelopes from current interaction/foreground state rather than the previously captured painted action. Backend tuple/grant/generation checks remain correct, but they cannot establish human review of the facts used to create that new envelope. This violates the approved no-old-event/draw-bound action contract; it is not a daemon authorization bypass.",
+      "severity": "high",
+      "confidence": "high",
+      "category": "must-fix / stale-input admission / e07s02",
+      "locations": [
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 833,
+          "end_line": 839,
+          "role": "Painted-action guard bypassed by compatibility shortcuts"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 2328,
+          "end_line": 2339,
+          "role": "F5/F6/F7 call answer directly"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 2619,
+          "end_line": 2649,
+          "role": "Reviewed flag alone enables second acceptance"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 1116,
+          "end_line": 1119,
+          "role": "Ctrl-C calls interrupt directly"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 1356,
+          "end_line": 1372,
+          "role": "Shortcut interrupt uses the latest foreground identity"
+        },
+        {
+          "path": "tests/acp/native.rs",
+          "start_line": 788,
+          "end_line": 789,
+          "role": "Consumer sends consecutive F5 activations without observing reviewed state"
+        }
+      ],
+      "cwe": [
+        "CWE-841",
+        "CWE-367"
+      ],
+      "evidence": [
+        {
+          "label": "Queued compatibility presses can submit",
+          "explanation": "Interaction::event calls answer directly. The first F5 sets reviewed/review_values; the next accepts those values without checking the painted review phase or requiring queued input to drain before enabling Submit. A terminal sending two Press sequences in one burst can therefore submit before the human has seen the review.",
+          "excerpt": "KeyCode::F(5) if plain && deliberate && self.detail[\"kind\"] == \"form\" => {\n    return self.answer(\"accept\", binding, notice);\n}"
+        },
+        {
+          "label": "Nearby controls are stronger but not reused",
+          "explanation": "AgentView::activate rejects changed painted identities/actions. The Enter regression at agent.rs:3556–3576 rejects a second activation against the old pre-review paint. The shortcut does not use that path. Parent input readiness gates authority consent/close at tui.rs:1400–1406, not these ACP mutations."
+        },
+        {
+          "label": "Backend authorization cannot recover presentation provenance",
+          "explanation": "control.rs:533–546 dispatches the supplied ACP envelope unchanged. daemon.rs:641–650 and acp.rs:816–829 correctly authorize and compare the tuple/generation, but the shortcut has already populated the envelope using current local state. No server-side check proves that the corresponding review or foreground was the human's painted intent."
+        }
+      ],
+      "anchor": "src/tui/agent.rs:2328",
+      "remediation": "Route mutating compatibility accelerators through the same immutable painted-action capture and validation as their buttons. Bind the reviewed phase and exact foreground/interaction identity, and require a fresh visible/drained boundary before enabling Submit. Add behavioral regressions for two F5 Press events queued before review, shortcuts across interaction/grant replacement and Ctrl-C across foreground replacement. Preserve original authority envelopes and discard, never replay, rejected keys."
+    },
+    {
+      "rule_id": "E07-COR-02",
+      "title": "Should-fix: ACP Save drops the exact session selector after preview",
+      "summary": "Save previews the selected ACP view, but Dialog::save retains a terminal selector only for native sessions. Its eventual ACP project-save request therefore resolves the project's main native terminal or stored project context, not the ACP view that supplied the preview. When those canonical directories differ, an unchanged ACP source is incorrectly rejected as context-changed. The expected_context guard prevents silently saving a different directory, but the consumer fails the exact-target save contract.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix / consumer correctness / e07s05",
+      "locations": [
+        {
+          "path": "src/tui/project.rs",
+          "start_line": 237,
+          "end_line": 241,
+          "role": "Native-only capture discards ACP source"
+        },
+        {
+          "path": "src/tui/project.rs",
+          "start_line": 391,
+          "end_line": 396,
+          "role": "ACP submission omits terminal"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 747,
+          "end_line": 751,
+          "role": "Preview correctly addresses the exact selected source"
+        },
+        {
+          "path": "src/daemon.rs",
+          "start_line": 333,
+          "end_line": 383,
+          "role": "Exact ACP resolution differs from project-level fallback"
+        },
+        {
+          "path": "tests/acp/profiles.rs",
+          "start_line": 458,
+          "end_line": 487,
+          "role": "Backend test supplies selector manually and misses consumer bug"
+        }
+      ],
+      "cwe": [
+        "CWE-706"
+      ],
+      "evidence": [
+        {
+          "label": "Preview and save use different sources",
+          "explanation": "The parent previews terminal:source for either session kind. Dialog::save stores native.map(...), so the ACP source is not serialized into the later request.",
+          "excerpt": "terminal: native.map(|terminal| text(terminal, \"id\").to_owned()),"
+        },
+        {
+          "label": "Concrete failure scenario",
+          "explanation": "Launch ACP into the current project at directory A, then let the native main shell cd to unrelated B. Save on ACP previews A; submitting resolves B and receives context-changed despite no ACP cwd change. The native-only project-dialog fixture and backend-only ACP test do not cover this serialization path."
+        }
+      ],
+      "anchor": "src/tui/project.rs:239",
+      "remediation": "Capture the selected source ID uniformly for native and ACP and send it unchanged with project and expected_context. Add a consumer regression with ACP and main native cwd differing; assert the actual Dialog request preserves the ACP selector and saves the previewed directory without changing the peer."
+    },
+    {
+      "rule_id": "E07-COR-03",
+      "title": "Should-fix: accepted F21–F24 mode keys cannot be delivered literally",
+      "summary": "Configuration and menu parsing accept F1 through F24, and the keyboard parser produces F21–F24 events. Both reserved-key delivery routes call key_bytes, whose function-key encoder stops at F20 and returns an empty vector for F21–F24. Double-pressing configured F24 or choosing Send reserved mode key therefore leaves Menu but delivers no function key to the native application. The authority gate remains intact; this is supported-input loss.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix / native input compatibility / e07s01",
+      "locations": [
+        {
+          "path": "src/tui.rs",
+          "start_line": 301,
+          "end_line": 314,
+          "role": "Encoder lacks F21–F24"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 1495,
+          "end_line": 1502,
+          "role": "Double-mode-key delivery"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 2012,
+          "end_line": 2016,
+          "role": "Explicit Send key delivery"
+        },
+        {
+          "path": "src/tui/menu.rs",
+          "start_line": 53,
+          "end_line": 62,
+          "role": "F1–F24 selection"
+        },
+        {
+          "path": "vendor/crossterm/src/event/sys/unix/parse.rs",
+          "start_line": 447,
+          "end_line": 450,
+          "role": "Real F21–F24 event decoding"
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "Accepted key encodes to empty input",
+          "explanation": "key_bytes maps F13–F20, then returns an empty vector. Both pass-through consumers call it for any accepted mode key.",
+          "excerpt": "19 => 33,\n20 => 34,\n_ => return Vec::new(),"
+        },
+        {
+          "label": "Upper-bound coverage gap",
+          "explanation": "tui.rs:2856–2859 tests modified F12, not upper accepted values. projects.rs:1709–1737 accepts f24 and checks atomic invalid patches, but not delivery of that accepted key."
+        }
+      ],
+      "anchor": "src/tui.rs:314",
+      "remediation": "Implement literal delivery for the full approved F1–F24 range using the supported terminal keyboard protocol and existing authority gate. Add observable regressions for upper-bound keys through both delivery routes; do not silently reduce the approved range."
+    },
+    {
+      "rule_id": "E07-UX-04",
+      "title": "Should-fix: session-dialog errors have no full-text route",
+      "summary": "New/Rename/Close dialogs retain full errors but show only one clipped line, and both Help routes contain only static instructions. No wrapping/scrollable surface exposes these errors, unlike Menu help and launch/project forms. A failed New from an unavailable long cwd can hide the distinguishing path/cause; cancelling does not publish that local error into Menu status. This violates the approved full-error-accessibility contract.",
+      "severity": "low",
+      "confidence": "high",
+      "category": "should-fix / error accessibility / e07s06",
+      "locations": [
+        {
+          "path": "src/tui/menu.rs",
+          "start_line": 493,
+          "end_line": 501,
+          "role": "Error clipped to one row"
+        },
+        {
+          "path": "src/tui/menu.rs",
+          "start_line": 344,
+          "end_line": 347,
+          "role": "F1 opens static help only"
+        },
+        {
+          "path": "src/tui/menu.rs",
+          "start_line": 283,
+          "end_line": 291,
+          "role": "Help button also omits error"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 1777,
+          "end_line": 1781,
+          "role": "New failure retained only inside dialog"
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "Retained full cause is inaccessible",
+          "explanation": "Dialog::failure stores the complete String, but draw clips it to content width. Neither contextual Help route includes self.error, and the dialog has no error-scroll mechanism.",
+          "excerpt": "Paragraph::new(clip_label(&self.error, error.width))"
+        },
+        {
+          "label": "Reachable backend failure",
+          "explanation": "Native New sends backend errors into dialog.failure. daemon.rs:995–996 includes the failing directory in invalid-directory, so long paths/narrow windows hide distinguishing details. Outer Menu help cannot open while the dialog owns input."
+        }
+      ],
+      "anchor": "src/tui/menu.rs:497",
+      "remediation": "Expose the complete inert error through a wrapping scrollable local surface or append it to contextual Help while retaining the draft/modal ownership. Test semantic full-error reachability without pinning exact layout counts or wording."
+    }
+  ],
+  "reviewed_paths": [
+    "local://e07-review-brief.md",
+    "CONVENTIONS.md",
+    "specs/verifications/AUDIT-e07.md",
+    "specs/epics/e07-modal-ux/PLAN.md",
+    "specs/epics/e07-modal-ux/epic.yaml",
+    "specs/epics/e07-modal-ux/e07s01-story.md",
+    "specs/epics/e07-modal-ux/e07s02-story.md",
+    "specs/epics/e07-modal-ux/e07s03-story.md",
+    "specs/epics/e07-modal-ux/e07s04-story.md",
+    "specs/epics/e07-modal-ux/e07s05-story.md",
+    "specs/epics/e07-modal-ux/e07s06-story.md",
+    "specs/epics/e07-modal-ux/e07s01-tasks.yaml",
+    "specs/epics/e07-modal-ux/e07s02-tasks.yaml",
+    "specs/epics/e07-modal-ux/e07s03-tasks.yaml",
+    "specs/epics/e07-modal-ux/e07s04-tasks.yaml",
+    "specs/epics/e07-modal-ux/e07s05-tasks.yaml",
+    "specs/epics/e07-modal-ux/e07s06-tasks.yaml",
+    "specs/state.yaml:1-100",
+    "README.md",
+    "Cargo.toml",
+    "src/tui.rs",
+    "src/tui/menu.rs",
+    "src/tui/agent.rs",
+    "src/tui/control.rs",
+    "src/tui/view.rs",
+    "src/tui/launch.rs",
+    "src/tui/project.rs",
+    "src/daemon.rs",
+    "src/projects.rs",
+    "src/acp.rs",
+    "tests/acp.rs",
+    "tests/acp/profiles.rs",
+    "tests/acp/native.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/acp/native/daily_use.rs",
+    "tests/acp/native/recovery_edges.rs",
+    "tests/acp/native/live.rs",
+    "tests/acp/native/omp_live.rs",
+    "vendor/crossterm/src/event/sys/unix/parse.rs",
+    "/Users/addomam/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-core-0.1.0/src/text/span.rs",
+    "/Users/addomam/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-widgets-0.3.0/src/paragraph.rs"
+  ],
+  "deferred": [
+    {
+      "reason": "Actual controlling-PTY UAT, complete narrow/short geometry acceptance and final command gates belong exclusively to the parent. Parent-observed results in the brief were not rerun and are not independent runtime proof."
+    },
+    {
+      "reason": "Historical native-fence settlement, parked E05 and E06 release acceptance are outside this E07 assignment. Provider tests were inspected only as source consumers; no providers were invoked and cap12/used12/remaining0 is unchanged.",
+      "paths": [
+        "tests/acp/native/live.rs",
+        "tests/acp/native/omp_live.rs"
+      ]
+    }
+  ]
+}

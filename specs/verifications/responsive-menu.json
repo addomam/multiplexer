@@ -1,0 +1,217 @@
+{
+  "scope": "Responsive native Menu, shortcut help and project-dialog action bars",
+  "status": "verified-locally-installed-not-committed",
+  "branch": "feat/cli-projects-help",
+  "requirements": {
+    "ordinary_shortcut_legends": "removed from local and locked Menu headers and action buttons",
+    "help": "Menu ?, Ctrl+/ including legacy Crossterm Ctrl-7 and distinct enhanced Ctrl+?; Escape closes only help",
+    "legacy_CtrlQuestion": "DEL remains Backspace; no ambiguous global application shortcut",
+    "layout": "horizontal full labels, narrow vertical stacks, compact borderless actions when short",
+    "project_dialogs": "only active action slots allocated; mouse and Tab use painted rectangles",
+    "privacy_and_authority": "help below ownership warning header; no project mutation, control acquisition, application-input replay or native resize while Menu/help"
+  },
+  "verification": {
+    "initial_gate": {
+      "job": "bg_373",
+      "tests": 458,
+      "ignored": 12,
+      "status": "passed-before-Ctrl7-and-alternate-header-corrections",
+      "raw": "artifact://2893",
+      "seconds": 181.14
+    },
+    "disk_blocked_gate": {
+      "job": "bg_374",
+      "exit": 101,
+      "status": "ENOSPC while linking/copying dependency build script; no test result",
+      "seconds": 0.85
+    },
+    "intermediate_gate": {
+      "job": "bg_375",
+      "tests": 458,
+      "ignored": 12,
+      "status": "passed-before-alternate-header-correction",
+      "raw": "artifact://2907",
+      "seconds": 197.92
+    },
+    "final_gate": {
+      "job": "bg_376",
+      "status": "passed",
+      "workspace_tests": 458,
+      "suites": 30,
+      "ignored": 12,
+      "strict_clippy": true,
+      "fmt_check": true,
+      "locked_release_build": true,
+      "install": true,
+      "OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Zsh_syntax": true,
+      "seconds": 183.21,
+      "raw": "artifact://2912"
+    },
+    "disk_cleanup": {
+      "user_approved": "only target/debug/incremental,1.7GiB rebuildable cache",
+      "executed": true,
+      "other_cache_evidence_source_deletions": false,
+      "build_setting_changes": false,
+      "later_free_space": "user reports60GB; no additional disk cleanup"
+    },
+    "new_live_provider_calls": 0
+  },
+  "actual_installed_runtime": {
+    "layouts": [
+      "110x28 horizontal bordered",
+      "32x42 vertical bordered",
+      "80x6 horizontal compact",
+      "20x10 vertical compact",
+      "32x42 stacked project dialogs",
+      "32x12 compact project dialogs"
+    ],
+    "local_and_locked_headers": "both observed with no generic legend; lock state remains visible, compact badge on20-column display",
+    "help": [
+      "physical Menu ?",
+      "physical legacy1f Ctrl+/",
+      "physical CSIu63;5 enhanced Ctrl+?",
+      "PageDown",
+      "Home",
+      "End",
+      "mouse wheel up",
+      "resize/wrap to20x10",
+      "Escape preserves search prob and project draft responsive?one"
+    ],
+    "backspace": "physical7f edits search; does not open help",
+    "editor_question_mark": "literal ? retained and saved in project name responsive?one",
+    "covered_input": "physical covered click, bracketed paste containing shell effect and Ctrl-T all consumed; no file or extra session until deliberate New session click",
+    "mouse_actions": [
+      "stacked main Save project",
+      "Save dialog Save",
+      "stacked main Projects",
+      "compact project Edit",
+      "compact project Open",
+      "stacked project Edit",
+      "stacked project Return",
+      "stacked main New session"
+    ],
+    "new_session": "two independent project IDs; original native stays alive",
+    "same_original_native": {
+      "pid": 26713,
+      "arithmetic_before": 42,
+      "arithmetic_after": 57,
+      "files": "final-before/final-after read with tool; same interpreter and PID"
+    },
+    "native_geometry": "110x25 retained while menu/help resize; foreground follows on application return",
+    "full_native_canvas": {
+      "cells_compared": 2750,
+      "rows": 25,
+      "columns": 110,
+      "char_fg_bg_style_equal": true,
+      "blue_cells_preserved": 38,
+      "menu_selection_chrome_artifact_cells": 0
+    },
+    "help_below_ownership_header": "Lock and help title observed together in wide and32x42. Popup body geometry excludes the warning header and conditional-warning logic is unchanged; no new conditional-warning runtime acceptance is claimed."
+  },
+  "failures_preserved": [
+    {
+      "kind": "legacy-CtrlSlash",
+      "observed": "physical1f did not open help in initial smoke; decoder inspection reports Ctrl-7",
+      "production_defect": true,
+      "fixed": "handle Ctrl-7 plus existing explicit encodings; final physical run passed"
+    },
+    {
+      "kind": "alternate-locked-header",
+      "observed": "actual locked Menu retained old shortcut legend and separate search rendering",
+      "production_defect": true,
+      "inference": "[INFERENCE] old full-screen help title could be overpainted by the later alternate-header draw; final body-confined help observed with lock visible",
+      "fixed": "shared responsive search, compact state title, help hint, body-confined popup; final locked smoke passed"
+    },
+    {
+      "exit": 1,
+      "cause": "fixture runtime directory was not0700; rejected before startup",
+      "production_defect": false
+    },
+    {
+      "cause": "redundant os.close after normal driver close already closed slave; EBADF observed; no additional cleanup needed",
+      "production_defect": false
+    },
+    {
+      "cause": "last-page probe incorrectly expected two words to remain on one line in an18-column help body",
+      "production_defect": false
+    },
+    {
+      "original_exit": 0,
+      "cause": "original bounded900s guard expired normally before final cleanup; not credited as final live guard",
+      "production_defect": false
+    }
+  ],
+  "cleanup": {
+    "attachments": [
+      {
+        "host_exit": 0,
+        "TUI_exit": "0-asserted-by-normal-close",
+        "termios_restored_by_normal_close": true,
+        "drainer_joined": true,
+        "error": null,
+        "both_PTY_descriptors_closed": true
+      },
+      {
+        "host_exit": 0,
+        "TUI_exit": "0-asserted-by-normal-close",
+        "termios_restored_by_normal_close": true,
+        "drainer_joined": true,
+        "error": null,
+        "both_PTY_descriptors_closed": true
+      },
+      {
+        "host_exit": 0,
+        "TUI_exit": "0-asserted-by-normal-close",
+        "termios_restored": true,
+        "drainer_joined": true,
+        "error": null,
+        "both_PTY_descriptors_closed": true
+      },
+      {
+        "host_exit": 0,
+        "TUI_exit": "0-asserted-by-normal-close",
+        "termios_restored": true,
+        "drainer_joined": true,
+        "error": null,
+        "both_PTY_descriptors_closed": true
+      }
+    ],
+    "private_daemon_exits": [
+      0,
+      0
+    ],
+    "failed_startup_reaped": 1,
+    "all_native_pids_absent": [
+      95968,
+      28385,
+      26713
+    ],
+    "socket_absent": true,
+    "final_live_sentinel_survived_application_shutdown": true,
+    "sentinel_owner_reaped_exit": -15,
+    "lsof": {
+      "exit": 1,
+      "stdout_empty": true
+    },
+    "root_removed": true,
+    "fallback_process_kills": false
+  },
+  "artifact_hashes": {
+    "installed_and_release_SHA256": "a45a1f7d44605994efe82ae78e43e8506a38baf7f9470f8f2dc3d2e43681b2ab",
+    "src/tui.rs": "4a30292db5b5b19ac999c4540be00c0cf034807c64ccf809e1e3811c8d6c4c53",
+    "src/tui/view.rs": "ff555b754c2be7ed52b2f74597ceaac1050c8f573be2c7cd8632028b23bed94e",
+    "src/tui/project.rs": "9cb11c4a07718d340c3b1154c372f5fae355628e0258406b67081c3ab328ecff",
+    "src/tui/control.rs": "6622a73fce08b0fe7ad5cb442c4c7f59681f70d5dd7cb128612a6010a7a19403"
+  },
+  "limits": {
+    "global_daemon_config_auth": "untouched",
+    "daemon_protocol_storage": "no changes this patch",
+    "new_provider_acceptance": "not claimed",
+    "fresh_independent_review": "not claimed",
+    "historical_E03_fence_E05_caps_and_release": "unchanged",
+    "commit_merge_push_release": "not performed",
+    "private_control_auth_refs_and_raw_transcripts": "not persisted"
+  }
+}

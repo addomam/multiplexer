@@ -1,0 +1,28 @@
+{
+  "type": "source-manifest",
+  "context": {"project":"amux","epic":"e08","baseline_commit":"cc468a3","branch":"feat/agent-conversation-recovery","review_round":1,"max_rounds":5},
+  "root": "/Users/addomam/projects/amux-acp",
+  "historical_review_caps": "unchanged; this is only the newly authorized E08 feature review",
+  "preflight": {"job":"bg_11","raw":"artifact://3302","workspace_tests":555,"suites":31,"ignored":12,"strict_clippy_fmt_build":"passed"},
+  "sha256": {
+    "Cargo.toml":"95319b71d35c12d0d0acdb2d38c5794303963fa40c37807c0d502b98728d8f74",
+    "Cargo.lock":"25b3293c1d1de18ad328161dfddf3252d4e157895389e63d0725cb4a709e461c",
+    "CONVENTIONS.md":"bb21da16a6ce833228743c728e124145fe6211f4340ed60d7ccbc603343b874e",
+    "src/lib.rs":"cba647b543869c9a016b8773ef67296ef49efc41a9cb61672489e71fe7ce3e05",
+    "src/recovery.rs":"1d494938bf0e19aabd1a6e2a82e8b9c2c027b7dad7f1277372d2ba47e52b886b",
+    "src/runtime.rs":"a906e625494964d253a00ea43497f1e11367835294f602fa90cca6983ebeca56",
+    "src/acp.rs":"b7f603073a3a23cfa8701353d8112e3d2d1b5059a945f07a644f06283a19c628",
+    "src/codex.rs":"a3362f144d57a47fc0e12da422c3ec341f295cf7d33609925c81475d53109ed6",
+    "src/integration.rs":"ed5f3fadf82b685742442126565b4adf5282fa9116a110284aa924f44d302a77",
+    "src/daemon.rs":"65518c46a4d10a5a5596c8a98fe40eb9ab464acfa2824300b25d09df3dffde52",
+    "src/daemon/recovery.rs":"6ccff29c9fb3d9562e34da6bfc795f6e0fc785a41eea6fe622eedcd6087d018e",
+    "integrations/omp/amux.ts":"97a9bebf6b5e1659a688a52f3b3e88555990f83617066f4cbf35be96d6fef0f9",
+    "tests/recovery.rs":"8ed01b9c07e0aabdd47e35703322acf3677c4bbf189328cd3b992515dcad79fb",
+    "tests/integration.rs":"16f27f813504ae57b92b14354aed5a18adcece2d7a7763a95cb8cab4fdf55eab",
+    "tests/fixtures/acp_peer.rs":"bb3769265ddea4a722c5f070c4ed72a049f011b6df868663268b9a57d507b590",
+    "tests/acp/native.rs":"271db9907a17014c7041678391c29717d29914d84f1ca834bff0846818e218b4",
+    "tests/pty_control/native.rs":"67bc0c1d63a334ef735e5fdc42387fa0a13ce750f7ba4820709e53e16745168e",
+    "README.md":"080c2ad9eac57600ebc956d97df5c008647b697511ff9fc83acbb04e222541d7",
+    "CHANGELOG.md":"f47cb40dfd574357a772c5972a8e2947f662c3db04e3562344ea972f4ea7aa5d"
+  }
+}

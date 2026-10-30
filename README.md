@@ -38,13 +38,31 @@ amux open --source main --omp --name agent
 
 `amux attach` reattaches without restarting processes or running hooks. `amux daemon` runs in the foreground for supervision. `--socket PATH` and `AMUX_SOCKET` select a daemon; its directory must be private and owned by the current user.
 
+Every command has short and long help with argument descriptions and examples: `amux -h`, `amux projects -h`, `amux projects add -h`, and `amux acp start -h`. Help does not connect to a daemon or launch an adapter.
+
 ## Daily operation
 
 Start with `amux`; return with `amux attach`. In the picker, **Ctrl-Q** detaches only this client. Closing the client does not stop the daemon or its shells.
 
-Save useful project configuration with `amux project-save NAME`. After a daemon restart, `amux project-open NAME` starts a **new shell** at the saved project context; it does not restore old processes or interpreter state.
+Save useful project configuration with `amux projects save NAME`. After a daemon restart, `amux projects open NAME` starts a **new shell** at the saved project context; it does not restore old processes or interpreter state.
 
-**`amux shutdown` ends all managed work.** Finish valuable tasks before shutdown, reboot, or a daemon upgrade. Screen/scrollback and unsaved runtime state exist only in memory.
+**`amux shutdown` ends all managed work.** Finish valuable tasks before shutdown, reboot, or a daemon upgrade. Screen/scrollback, shell state and runtime authority exist only in memory. Supported open agent conversations retain bounded reopening metadata, not running processes or permission to continue work.
+
+### Reopen conversations after a restart
+
+On the next daemon launch, supported previously open conversations reopen automatically in their original directory/project, with their saved name and exact agent conversation identity. They **wait for your next instruction**: amux sends no continuation prompt, retries no interrupted turn/tool, answers no permission request and replays no terminal input. There is no recovery picker. New runtime/controller identities start without the old control grant.
+
+- **ACP:** named configured/builtin profiles use advertised `session/load` or `session/resume`. The resolved launch command must still match; arbitrary raw-argv launches are not recorded. Agent-reported model/mode/effort/options are retained when known. Reopening restores acknowledged choices rather than remerging profile launch defaults; defaults still apply to new conversations. History stays in the agent's own backing store.
+- **Native OMP:** the extension records the exact durable session ID/file and cwd. Reopening uses `--resume FILE`, never `--restore`. A session that was never written to disk cannot be recovered. Switching to an unsaved/unrecoverable conversation disables the old conversation's reopening intent; amux never substitutes the previous conversation.
+- **Managed native Codex:** retain the exact thread ID and its durable native rollout store. Imports publish only complete, synchronized histories without replacing existing data; failed copies remain retryable, and unsafe destination aliases are rejected before writes. A frontend replacement whose new identity is unverified blocks the old thread's reopening intent rather than substituting it. Existing native Codex version/availability restrictions still apply; ACP does not depend on that native broker.
+
+Explicit session close/normal root-agent exit forgets its reopening intent; detaching a client or stopping/crashing the daemon preserves it. If the original process is still alive, its identity is unknown, a backing conversation/profile is missing, capabilities are unsupported or the saved journal is unsafe, recovery fails visibly without killing anything, choosing “latest”, creating a replacement conversation or continuing work. Other conversations recover independently. Automatic attempts occur once per daemon start.
+
+A reopening attempt is marked durably before launch. If a second crash happens before its new process identity is safely recorded, the unknown settlement blocks another automatic launch instead of risking a duplicate agent. Conclusively failed native starts can retry on a later daemon launch; unknown cleanup stays blocked. On macOS, process exclusion uses the immutable boot-session UUID and exact native process birth identity, not wall-clock-adjustable boot time.
+
+A disposable blank startup shell does not consume a native reopening slot. Initial attachment waits for startup recovery instead of allocating another shell; Esc or Ctrl-Q quits the wait, and waiting input is discarded, never replayed. If no native terminal is restored or otherwise present, startup attempts a fresh shell within the same limit. Already published user terminals are never reused or taken away for restoration. A failed fallback is reported, and daemon-start hooks run only after a native or fallback shell is available.
+
+Project labels and context may change while recovery is in progress without cancelling later saved conversations. Each conversation still uses its exact saved cwd and launch/session identity; close, replacement and uncertain process settlement remain exclusions.
 
 To update this checkout's installed binary:
 
@@ -93,7 +111,7 @@ amux acp start grok --project "$PROJECT_ID" --mode "$ACP_MODE_ID"
 Symlinked executables retain their resolved invocation pathname, including virtual-environment and basename-selected launchers; validation follows metadata without substituting the canonical target.
 Profile `available` means an executable was found, not that authentication or a particular account/model is usable.
 
-In the window picker, **Ctrl-A** opens the ACP launch dialog. Choose project/profile, then optional name, model, mode, effort or an **Options JSON** object such as `{"option-id":"choice-id"}`. Tab/BackTab moves fields, arrows change selectors, Ctrl-U clears a text field, Enter launches once and Escape cancels. If Ctrl-A is your prefix, navigate once after opening the picker before pressing Ctrl-A; prefix twice keeps its existing literal-prefix behavior.
+Choose **Menu → New… → ACP agent**, then explicitly add the session to the current project or create an independent unsaved project. The basic form exposes Project/source, Profile and Name; **Advanced** reveals exact model, mode, effort and Options JSON. Blank names use a profile label and short unique suffix; launch names are limited to128 UTF8 bytes. Tab/BackTab and mouse move focus; arrows or j/k change selectors, but j/k/? stay literal in text fields. Enter advances a text field or activates the focused button. **Launch** submits once and retains the unchanged draft until admission; a definite rejection retains the full cause for correction and contextual Help, without retry. Escape cancels before submission; Ctrl-Q can detach while admission is pending without cancelling it. Ctrl-A remains an optional direct launch shortcut in Menu. If Ctrl-A is the prefix, navigate once before using it; prefix twice sends that literal key.
 
 Optional `acp_profiles` configuration adds or overrides named profiles:
 
@@ -112,10 +130,14 @@ Optional `acp_profiles` configuration adds or overrides named profiles:
 Profiles are credential-free argv/settings, not plugins. Explicit launch settings override profile defaults; `--option ID=VALUE` may be repeated for distinct advertised option IDs. Clearing a dialog setting returns to its selected profile default, shown as an inherited placeholder; option overrides merge with profile options, so deleting an option ID does not remove its profile default. Settings absent from both the request and the profile use agent defaults. Model/mode/effort IDs must actually be offered by that agent. amux waits for acknowledged, confirmed settings before admitting prompts; unsupported or unconfirmed requests fail rather than silently choosing another model. Inspect/snapshot `configuration` separates `requested` from actual `reported` values and marks unreported defaults or later agent-side changes. **Agent defaults are not a cheap-model or permission-policy guarantee.** Permission policy remains unreported unless the agent genuinely exposes it; a mode label alone is not proof.
 For complete option identities, use `--options-json '{"fixture,detail=level":"brief,exact=value"}'`; the JSON object preserves commas, equals signs, backslashes and whitespace within quoted IDs and choices. The `--option ID=VALUE` shorthand splits at the first `=` and is only for IDs without `=`. Distinct shorthand entries may accompany the JSON object; duplicate explicit IDs, including duplicate JSON keys, are rejected rather than silently overwritten. CLI/native Options JSON is bounded to64KiB; advertised identity/count and total-settings bounds still apply.
 Structured option selections retain exact advertised IDs even when independent options share a category; ambiguous semantic effort is rejected. Untouched native Options inherit profile JSON directly. Explicit native overrides use the same lossless JSON-object parser as the CLI; omitted IDs retain profile defaults.
-Native launch edits are accepted or rejected in full. Oversized edits and control-containing scalar text leave the backing value unchanged and mark that field rejected; Enter stays blocked until each rejected field is deliberately corrected or reset. Editing another text field does not acknowledge it. Formatted Options JSON retains legal whitespace, with inert display rather than terminal control output.
+Native launch edits are accepted or rejected in full. Oversized edits and control-containing scalar text leave the backing value unchanged and mark that field rejected; Launch stays blocked until each rejected field is deliberately corrected or reset. Editing another text field does not acknowledge it. Formatted Options JSON retains legal whitespace, with inert display rather than terminal control output.
 Legacy `session/set_mode` accepts its protocol-valid empty `null` acknowledgement. Config-option setters still require a complete, value-confirming `configOptions` response; notifications alone do not confirm the requested setting.
 
-The native settings view wraps and scrolls the same inert settings summary, so long model IDs do not hide current/requested mode or effort. Option metadata retains its explicit `[clipped]` display bound. While open, application gestures—including typing, paste, prompt submission, authentication and interruption—are discarded locally, never drafted or replayed; close the view before those actions. Navigation preserves existing prompt/interaction drafts and never requests control.
+The conversation prioritizes messages and the active question instead of protocol metadata. Genuine questions expose typed fields and separate Review/Submit actions; permissions expose the exact offered choices and require an explicit selection. Tab, mouse and contextual F1 help work across these controls. Completed questions remain available through Questions/History; their old editable defaults are not presented as the submitted answer. A completed response returns to the prompt without discarding its canonical record or original RPC identity.
+
+Keyboard accelerators use the same displayed target/grant/interaction/review phase as buttons. Reviewed Submit and new/replaced permission, authentication and interruption actions arm only after complete visible presentation, conclusive input-empty readiness and a subsequent armed repaint. Settling choices use parentheses; armed choices use brackets. Queued old gestures are discarded, never promoted into later consent. Ordinary same-target prompt typing/paste followed by Enter and the first local Review do not require an extra confirmation.
+
+**Details/F10** wraps and scrolls current/requested settings, exact target identity, canonical events, cursor/gap/resource diagnostics and full interaction context. Option metadata retains its explicit `[clipped]` display bound. While open, typing, paste, ordinary Enter, authentication and interruption stay local and are never drafted or replayed. Escape or an explicitly focused/clicked Back action returns; navigation preserves drafts and never requests control. First session establishment on the same live agent leaves read-only Details/History open; replacement identity still resets them and all authority-bound drafts. Working, needs-answer, permission-needed, finished and failed indicators come from canonical state rather than inferred screen text.
 
 For a deliberate noninteractive launch, pass an explicit `--controller "$CONTROLLER_JSON"` to `acp start`; it returns the same JSON receipt instead of attaching. No temporary external controller is invented.
 
@@ -143,7 +165,7 @@ amux acp attach "$ACP_VIEW_ID"
 
 The initial target has a null session while initialization runs. Inspect the live descriptor to obtain the exact `kind`, `id`, `instance_id`, `connection_generation` and `session_id` tuple; capture it together with current control/generation and a unique call ID for each deliberate mutation. `acp-prompt`, `acp-authenticate`, `acp-answer`, `acp-permission`, `acp-interrupt` and `acp-close` use that captured authority. Responses additionally address the exact canonical interaction ID/revision. Stale or duplicate actions are rejected, never rebound or replayed.
 
-In the ACP view, **Enter** submits a local prompt, **Alt/Shift-Enter** inserts a newline, and bracketed paste only edits the draft. **F8** explicitly selects an advertised agent-type authentication method; no automatic login, URL or credential form is opened. **Ctrl-C** requests interruption of the exact foreground prompt, not a process signal. Page keys and the mouse wheel navigate history without acquiring control. Revocation clears the old draft. Prefix opens the shared picker; prefix twice never forwards raw bytes into an ACP session.
+In the ACP view, **Enter** submits a local prompt, **Alt/Shift-Enter** inserts a newline, and bracketed paste only edits the draft. During authentication, Up/Down chooses an exact advertised `method_id [kind]`; **F8**, its focused action or its clicked button authenticates that method deliberately. The selected method remains readable on narrow windows, with full inert identity/support context in **Help/F1**; unsupported client/terminal choices send no authentication. No automatic login, URL or credential form is opened. **Ctrl-C** requests interruption of the exact foreground prompt, not a process signal. Page keys and the mouse wheel navigate history without acquiring control. Revocation clears the old draft. Prefix opens the shared picker; prefix twice never forwards raw bytes into an ACP session.
 
 Genuine ACP forms and tool permissions appear in this same conversation, including request-scoped forms during initialization/authentication. They are not inferred from terminal text. Form capability is advertised; URL elicitation, client filesystem and client terminal services are not.
 
@@ -184,33 +206,50 @@ Local deterministic-peer CLI/controlling-PTY evidence is in [transport verificat
 
 Terminal-only input remains **best-effort**: unknown native/application settlement blocks a safe grant, even after visible output or whole-turn completion. ACP does not retrofit a fence into an upstream native TUI. The thin non-ACP integration API remains deferred until solid ACP acceptance.
 
-## Picker and native interaction
+## Menu and native interaction
 
-The Ratatui interface has a **three-row title/tab bar**, a **Switch** button at the top right, and an edge-to-edge native terminal below it—no footer. Default prefix: **Ctrl-B**. Click Switch or press the prefix to replace the terminal view with a **full-screen window list**. Hierarchical rows show project, Git/agent/exit status and directory; fuzzy search covers terminal name, project, actual cwd and Git branch/commit. Select either line of a row with Enter or a mouse click to open it directly; Return or Escape restores the terminal.
+The Ratatui interface has a **three-row title/tab bar**, a **Menu** button at the top right, and an edge-to-edge native terminal below it—no footer in the application pane. **F12** enters Menu navigation; **Ctrl-B** remains the default alternate prefix. Ordinary Esc, j and k belong to the native application. F12 is not an ASCII control character, but it is an application-bindable terminal escape sequence, not a universally unused key. macOS may require Fn. Configure `mode_key` as F1–F24, case-insensitively, or `none` to use only the prefix.
 
-| Picker action | Key |
+Menu is command/navigation mode; search and form inputs are explicit literal-text modes. Hierarchical rows show native/ACP type, useful names, project, Git/attention/exit status and leaf-preserving directory paths. Search covers session name, project, actual cwd and Git branch/commit. The action bar offers **New…**, **Save project**, **Projects** and **Actions**. Native and ACP names can be changed without replacing the live process/session.
+
+Menu and saved-project action buttons sit side by side when their labels fit, stack vertically on narrow displays, and use compact rows when short. Press **?** or **F1** outside text fields for contextual, wrapping, scrollable help; **Escape** closes only help and preserves the search/draft. Arrows, j/k, PageUp/PageDown, Home/End and the mouse wheel scroll help. Menu help also retains the complete last action/error at its end. Ctrl+/ and distinct enhanced Ctrl+? remain optional aliases; legacy Backspace stays Backspace. Ownership warnings retain drawing/input priority, and covered keys, paste and clicks are consumed without replay.
+
+Returning from Menu repaints the client canvas once, including background colors. It does not clear the managed application, restart its process or resend intercepted input.
+
+| Menu action | Key |
 |---|---|
-| Select / open | Up/Down, Enter |
-| New shell from current captured context | Ctrl-N |
-| New terminal running OMP | Ctrl-O |
-| New ACP conversation | Ctrl-A |
-| Promote | Ctrl-P |
-| Reparent / demote: choose a parent row next | Ctrl-R / Ctrl-D |
-| Close running terminal / remove exited window | Ctrl-X |
-| Detach this TUI | Ctrl-Q |
-| Cancel picker | Escape |
-| Send literal prefix to the application | Prefix twice |
+| Select / open | j/k or arrows; g/G or Home/End; Enter |
+| Return to current session | i / Escape |
+| Enter literal search / leave search | / / Escape |
+| New terminal or ACP, with explicit project placement | n |
+| Save selected session's project | s |
+| Saved projects | p |
+| Session actions, including tree operations and reserved-key delivery | a |
+| Rename native/ACP session | r |
+| Confirm live close / remove exited native record | x |
+| Request or manage control / explicit force panel | c / f |
+| Detach this TUI | q / Ctrl-Q |
+| Contextual help | ? / F1 |
+| Send one literal reserved key through current control | Mode key twice / prefix twice |
 
-When a terminal exits, its view shows the actual exit code and **Close window** / **New terminal** buttons. **X** removes its exited record; **N** or **Enter** starts a new terminal from the retained captured context, leaving the old record available until closed. Removing the last window shows explicit **New terminal** and **Exit** actions: click New or use **N**, **Enter**, or **Ctrl-N** to start a shell; click either Exit button or use **Escape**, **Q**, or **Ctrl-Q** to return to your host shell. **Exit detaches the UI; the daemon keeps running.** Use `amux shutdown` to stop it. With windows present, ordinary Q remains fuzzy-search input and Ctrl-Q detaches. The list's mouse wheel moves its selection. Exit/empty-card buttons stack vertically on narrow displays.
-Native Ratatui surface/action evidence: [UI verification](specs/verifications/UI-ratatui.md), [empty-window navigation](specs/verifications/UI-empty-switcher.md).
+Legacy Ctrl-N/O/A/S/G/T/P/R/D/X commands remain optional accelerators. Reported key-repeat events do not count as a deliberate second mode-key press; legacy terminals cannot distinguish every hardware autorepeat from another Press. After other navigation the mode key simply returns to the session. No intercepted input is buffered for later replay.
+
+Closing a live native or ACP session asks for confirmation against its captured target. **Keep working** is the default; **Detach UI** leaves work running. ACP confirmation retains the original control/generation and fails rather than borrowing a later grant. Exited native records are removed without a live-process warning. `amux name ACP_VIEW_ID research` also renames the exact ACP view without changing its peer, tuple or pending work.
+
+Upper F13–F24 recognize explicit extended-protocol keys and decoded legacy Shift-F1–F12 aliases. Legacy Shift-F3 is indistinguishable from a cursor-position reply in the terminal parser: F15 requires an unambiguous extended report or a different configured mode key. Deliberate pass-through uses the managed `xterm-256color` terminfo encoding, preserving additional Control/Alt modifiers. Native input stays authority-gated through both double-key delivery and Actions.
+
+When a terminal exits, its view shows its actual exit code and **Close window** / **New terminal** buttons, not an ownership-resynchronization error. **X** removes its exited record; **N** or **Enter** starts a terminal from retained context. Removing the last native record keeps surviving ACP sessions selectable; only a genuinely empty client shows New terminal and Exit actions. Exit detaches the UI and the daemon keeps running. In Menu navigation q detaches; in search q, j and k are literal text. The list's mouse wheel moves selection, and exit/empty-card buttons use the same responsive layout.
+Surface/action evidence: [modal Menu, ACP and project verification](specs/verifications/e07-ux.json), [UI verification](specs/verifications/UI-ratatui.md), [empty-window navigation](specs/verifications/UI-empty-switcher.md), [Menu/project workflow](specs/verifications/menu-projects.json), [earlier responsive Menu and installed-client proof](specs/verifications/responsive-menu.json). E07 local verification does not imply that its build is installed or published.
 
 Mouse wheel and Shift-PageUp/PageDown scroll locally; typing returns to the live surface. Shift-drag selects text even when the foreground application requests mouse reporting; selection copies through the host terminal's OSC 52 support. Managed-application clipboard requests are not forwarded; client selection is the supported clipboard path. Focus, scrolling, selection and picker state belong to this client. Background terminals retain their last size, initially 80×24; opening a picker does not resize them. Only the visible surface follows client resize. If multiple local TUIs show the same terminal, the last attachment/resize determines its PTY geometry.
 
 Each TUI registers its attachment on the original persistent connection and reports selected-terminal and outer-focus views; focus starts unknown. An unowned, unreserved, settled target may be acquired normally.
 
+Local control is the default and needs no “Controlled here” badge or routine acquisition message. The ordinary project/session header stays visible unless a control interaction needs attention. Locked, pending/reserved, resynchronization, force-risk and conditional-handoff notices remain visible; the ownership panel still exposes detailed state.
+
 All application keys, repeats, literal prefixes, paste and application mouse input require current control. Observers keep local navigation, scrolling and selection. Rejected or intercepted input is never replayed after acquisition.
 
-**Prefix Ctrl-L** opens ownership request, owner-response and handoff progress actions. Hiding the panel preserves its claim. An incoming notice does not turn ordinary typing into consent; yield and cancellation are deliberate actions.
+**Prefix Ctrl-L** opens ownership request, owner-response and handoff progress actions. Hiding the panel preserves its claim. Yield and Release capture the original authority and exact requester, require complete presentation, an input-empty boundary and an armed repaint, and never reuse a queued gesture for a later request. **Preparing…** is not actionable; use a fresh deliberate action once armed. Release grants nobody and does not interrupt work. An incoming notice does not turn ordinary typing into consent; cancellation remains deliberate.
 
 **Prefix Ctrl-F** opens explicit force confirmation against fresh ownership facts. Force does not interrupt a turn or kill a process. Stale authority requires resynchronization, never implicit force, reconnect or replay.
 
@@ -220,12 +259,12 @@ Detaching marks the attachment departed but does not release ownership or cancel
 
 
 ```sh
-amux config '{"prefix":"ctrl-a","projects_dir":"/home/me/projects"}'
+amux config '{"mode_key":"F11","prefix":"ctrl-a","projects_dir":"/home/me/projects"}'
 amux detach       # request all currently attached TUIs to detach; processes remain running
 amux shutdown     # deliberately terminate managed processes and stop the daemon
 ```
 
-Use Ctrl-Q in the picker to detach only your current TUI. External detach is asynchronous (observed by client snapshot polling). Reattachment starts after the latest detach generation.
+Use q in Menu navigation or Ctrl-Q in amux-owned UI to detach only the current TUI. External detach is asynchronous and does not release ownership. Reattachment starts after the latest detach generation.
 
 ## Input responsiveness
 
@@ -274,20 +313,31 @@ Manual `omp` inside a managed shell loads the reporting extension. Existing `omp
 
 ## Projects, recipes and hooks
 
+Choose **Menu → New… → Terminal → New independent project**, `cd` to an existing directory, then choose **Menu → Save project**. The form previews the exact canonical cwd/repository root that will be saved. A changed context is rejected before mutation instead of silently bookmarking a different directory. Saving never creates or moves directories, restarts a session or clones interpreter state. Native and ACP creation both offer explicit current-project versus independent-project placement; independent placement does not inherit project hooks/recipes.
+
+**Menu → Projects** lists saved projects and directories. Open reuses an existing represented native session or live ACP session without rerunning project-open hooks; an ACP-only project does not gain a shell. An ACP-only project whose peer has ended can reopen with a shell. Edit provides separate name, ordered hook source/timeout and recipe name/command controls, including add/edit/remove; raw JSON is not required. Changes stay in a local draft until Apply submits a complete valid patch. Tab/BackTab, mouse, contextual help and Escape work consistently; errors preserve the draft. Forget defaults to Cancel and removes only the bookmark, never files or native/ACP work.
+
 ```sh
-amux project-save compiler
-amux project-new scratch --config '{"hooks":[{"source":"git init; printf setup-complete","timeout_ms":10000}],"recipes":{"agent":"omp","check":"cargo check"}}'
-amux project-config scratch '{"recipes":{"agent":"omp","check":"cargo check"}}'
+amux projects list
+amux projects save compiler
+amux projects add scratch --directory /path/to/existing/work --config '{"recipes":{"agent":"omp","check":"cargo check"}}'
+amux projects config scratch '{"recipes":{"agent":"omp","check":"cargo check"}}'
 amux open --project scratch --recipe check --name checks
-amux project-open scratch
+amux projects open scratch
 amux config '{"daemon_start_hooks":[{"source":"printf daemon-started","timeout_ms":1000}]}'
 ```
 
-New directories default to `<projects_dir>/<name>`; use `project-new NAME --directory PATH` to choose a location. Initial `--config` accepts hooks and recipes and is validated before project creation. Saved projects keep stable IDs. Save resolves the latest confirmed main-shell cwd/repository root before persistence; explicit re-save updates that location. Configuration patches replace the supplied hooks array or recipes map; they do not merge individual entries.
+`projects add` registers the caller's cwd, or an explicit existing `--directory PATH`; missing paths/files are rejected, never created. Initial `--config` accepts hooks and recipes. Saved projects keep stable IDs. UI Save resolves the exact selected native/ACP session; CLI Save without a terminal retains the default main-shell rule. Raw `project-save-preview` returns `{project, context}`, and `project-save` accepts `expected_context` to reject intervening context changes atomically. Explicit re-save updates that project's location/name. Configuration patches replace the supplied hooks array or recipes map rather than merging entries.
+
+`amux projects list` returns only saved project definitions; `amux snapshot` also includes unsaved runtime projects. `amux projects remove PROJECT` forgets a saved definition without deleting its directory/files, terminating native/ACP sessions, cancelling admitted work or changing its runtime identity. The retained runtime project becomes unsaved; after daemon restart its removed definition does not return. Removing an unsaved entry fails. Reusing a name can make runtime selectors ambiguous, so use exact project IDs when necessary. This differs from top-level `amux remove TERMINAL`, which removes an exited native terminal record.
+
+The former top-level project commands are replaced, without aliases: `project-save` → `projects save`, `project-new` → `projects add`, `project-open` → `projects open`, `project-config` → `projects config`. Raw `project-new` now requires an explicit existing `directory`; `project-save` accepts `terminal` to identify the actual session, and rejects a mismatched project. New session uses `open` with `new_project: true`, inheriting cwd/exports without joining the old project. New UI save/session actions require snapshot `project_save_terminal: true` and refuse an older daemon rather than silently targeting its main shell. List/remove also require the updated daemon. Installing a client does not replace a running daemon; finish its managed work before a separately approved upgrade.
 
 Hooks run as noninteractive `/bin/sh -c` workers, in a single queue: daemon-start hooks first, then project-open jobs, each hook in configuration order. Daemon hooks use daemon startup cwd; project hooks use project context. Both inherit daemon exports, not mutable interpreter internals. Default timeout is 30 seconds, configurable from 1 ms to 300 seconds. Stdout/stderr and failures are visible in snapshot diagnostics/events; a failed hook leaves a usable shell and later hooks continue. Reattachment runs neither hook category. Opening an already represented project is reattachment; close and remove its terminal records before a fresh project-open, or reopen after daemon restart. Shutdown cancels the active hook's owned process group and skips pending hooks instead of waiting for its configured timeout.
 
-Disk contains only global/project configuration and hooks under `$XDG_CONFIG_HOME/amux/config.json` (or `~/.config/amux/config.json`). No PTYs, tree, processes, screen, shell state or conversations are restored.
+During native reopening, explicit project creation/opening stays available within the normal quota. Its hook jobs wait behind the reserved daemon-start job until a native or fallback shell is available. Failed first-shell creation cancels daemon-start effects; shutdown cancels the pending startup gate and queued work.
+
+Configuration and hooks live under `$XDG_CONFIG_HOME/amux/config.json` (or `~/.config/amux/config.json`). A private, bounded `agent-sessions-<socket-identity>.json` sibling stores only reopening metadata: conversation ID/path, cwd/project/name, supported agent/profile identity, acknowledged choices and an old-process identity pin. It stores no transcript, credentials, environment, queued input or old control. The journal is locked, owner-only, bounded to512 records/4MiB and replaced atomically with file/directory sync. Separate agent-native stores may contain conversation history; managed native Codex uses the journal's `.agents` sibling. No PTYs, process tree, screen or interpreter state are restored.
 
 Configuration saves use a stable sibling lock and compare the exact configuration loaded by the daemon before replacing it. `config-busy` means another cooperating writer currently holds the lock; retry after it finishes. `config-conflict` means disk changed since this daemon loaded/saved it; the mutation is rejected rather than overwriting other projects or settings. There is no live full-config reload: finish valuable work before deliberately restarting the affected daemon to load the current file. Starting another daemon against that file also loads the current configuration, without stopping the existing daemon. File and containing directory are synced before success; a directory-sync failure after replacement reports an uncertain save and requires reload before another save. External editors that ignore the lock are not serialized.
 

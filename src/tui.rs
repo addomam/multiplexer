@@ -22,6 +22,8 @@ use std::{
 mod agent;
 mod control;
 mod launch;
+mod menu;
+mod project;
 mod view;
 use control::{Input, NativeControl};
 
@@ -218,12 +220,19 @@ fn mode(screen: &Value, name: &str) -> bool {
 
 /// Encode native input after classifying wrapper actions and ownership controls.
 fn key_bytes(key: KeyEvent, application_cursor: bool) -> Vec<u8> {
-    let modifiers = key.modifiers;
+    // xterm kf13..kf24 are Shift-F1..Shift-F12. Extended keyboard
+    // protocols can report the upper function number directly.
+    let (code, modifiers) = match key.code {
+        KeyCode::F(number @ 13..=24) => {
+            (KeyCode::F(number - 12), key.modifiers | KeyModifiers::SHIFT)
+        }
+        code => (code, key.modifiers),
+    };
     let modifier = 1
         + u8::from(modifiers.contains(KeyModifiers::SHIFT))
         + 2 * u8::from(modifiers.contains(KeyModifiers::ALT))
         + 4 * u8::from(modifiers.contains(KeyModifiers::CONTROL));
-    let sequence = match key.code {
+    let sequence = match code {
         KeyCode::Char(c) => {
             let c = if modifiers.contains(KeyModifiers::CONTROL) {
                 match c {
@@ -301,14 +310,6 @@ fn key_bytes(key: KeyEvent, application_cursor: bool) -> Vec<u8> {
                     10 => 21,
                     11 => 23,
                     12 => 24,
-                    13 => 25,
-                    14 => 26,
-                    15 => 28,
-                    16 => 29,
-                    17 => 31,
-                    18 => 32,
-                    19 => 33,
-                    20 => 34,
                     _ => return Vec::new(),
                 };
                 if modifier > 1 {
@@ -343,7 +344,10 @@ fn prefix_key(config: &str) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(character), KeyModifiers::CONTROL)
 }
 fn is_prefix(key: KeyEvent, prefix: KeyEvent) -> bool {
-    key.code == prefix.code && key.modifiers == prefix.modifiers
+    (key.code == prefix.code && key.modifiers == prefix.modifiers)
+        || matches!(prefix.code, KeyCode::F(number @ 13..=24)
+            if key.code == KeyCode::F(number - 12)
+                && key.modifiers == (prefix.modifiers | KeyModifiers::SHIFT))
 }
 
 fn fuzzy(needle: &str, haystack: &str) -> bool {
@@ -360,6 +364,13 @@ struct Row {
     id: String,
     label: String,
     depth: usize,
+}
+enum MenuAction {
+    Save,
+    Projects,
+    NewSession,
+    Actions,
+    Session(menu::SessionAction),
 }
 fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
     let terminals = snapshot["terminals"]
@@ -396,6 +407,7 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
             .unwrap_or("");
         let activity = node["integration"]["agent"]["activity"]
             .as_str()
+            .filter(|activity| *activity != "unknown")
             .unwrap_or("");
         let divergence = if git["ahead"].is_number() {
             format!(" ↑{} ↓{}", git["ahead"], git["behind"])
@@ -431,7 +443,7 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
             String::new()
         };
         let label = format!(
-            "{}  [{}]  {}{}  {}\n{}",
+            "Terminal · {}  [{}]  {}{}  {}\n{}",
             text(node, "name"),
             project_name,
             activity,
@@ -471,7 +483,7 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
             let label = format!(
                 "ACP · {} · {}\n{}",
                 text(agent, "name"),
-                text(agent, "lifecycle"),
+                agent_status(agent),
                 project
                     .map(|project| text(project, "name"))
                     .unwrap_or("project")
@@ -486,6 +498,46 @@ fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
         }
     }
     rows
+}
+
+fn agent_status(view: &Value) -> &str {
+    match view["attention"]["state"]
+        .as_str()
+        .unwrap_or_else(|| text(view, "lifecycle"))
+    {
+        "needs-answer" => "Needs your answer",
+        "permission-needed" => "Permission needed",
+        "working" => "Working",
+        "cancelling" => "Stopping turn",
+        "finished" | "ended" | "closed" => "Finished",
+        "failed" => "Failed",
+        "auth-required" => "Sign-in required",
+        "closing" => "Closing",
+        "ready" => "Ready",
+        _ => "Starting",
+    }
+}
+
+fn clip_path(path: &str, columns: u16) -> String {
+    use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+    let clean = clip_label(path, u16::MAX);
+    if clean.width() <= usize::from(columns) {
+        return clean;
+    }
+    if columns == 0 {
+        return String::new();
+    }
+    let mut width = 1;
+    let mut start = clean.len();
+    for (index, ch) in clean.char_indices().rev() {
+        let next = width + ch.width().unwrap_or(0);
+        if next > usize::from(columns) {
+            break;
+        }
+        width = next;
+        start = index;
+    }
+    format!("…{}", &clean[start..])
 }
 
 fn clip_label(label: &str, cols: u16) -> String {
@@ -670,6 +722,40 @@ fn contains_view(snapshot: &Value, id: &str) -> bool {
             .is_some_and(|terminals| terminals.iter().any(|terminal| terminal["id"] == id))
 }
 
+fn has_views(snapshot: &Value) -> bool {
+    ["terminals", "agent_views"].into_iter().any(|kind| {
+        snapshot[kind]
+            .as_array()
+            .is_some_and(|views| !views.is_empty())
+    })
+}
+
+fn preferred_view<'a>(snapshot: &'a Value, project: Option<&Value>) -> Option<&'a Value> {
+    let terminals = snapshot["terminals"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let agents = snapshot["agent_views"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let in_project = |view: &Value| project.is_none_or(|id| &view["project_id"] == id);
+    terminals
+        .iter()
+        .find(|view| in_project(view) && view["alive"] == true)
+        .or_else(|| {
+            agents.iter().find(|view| {
+                in_project(view)
+                    && matches!(
+                        view["lifecycle"].as_str(),
+                        Some("starting" | "auth-required" | "ready")
+                    )
+            })
+        })
+        .or_else(|| terminals.iter().find(|view| in_project(view)))
+        .or_else(|| agents.iter().find(|view| in_project(view)))
+}
+
 fn resize_native(socket: &Session, snapshot: &Value, id: &str, size: (u16, u16)) -> Result<()> {
     if agent_view(snapshot, id).is_none() && !id.is_empty() {
         call(
@@ -689,24 +775,16 @@ fn open_from_view(snapshot: &Value, id: &str, omp: bool) -> Value {
     }
 }
 
-fn close_agent(
-    authority: &mut NativeControl,
+fn save_project_dialog(
+    socket: &Session,
     snapshot: &Value,
-    id: &str,
-    status: &mut String,
-) -> bool {
-    let Some(view) = agent_view(snapshot, id) else {
-        return false;
-    };
-    let Some(grant) = authority.acp_grant(id) else {
-        *status = "ACP observer: obtain control before explicitly closing this instance".into();
-        return true;
-    };
-    let request = json!({"op":"acp-close","target":agent_target(view),
-        "control":grant["control"],"owner_generation":grant["owner_generation"],
-        "call_id":uuid::Uuid::new_v4().to_string()});
-    let _ = authority.acp_action(request, status);
-    true
+    source: &str,
+) -> Result<project::Dialog> {
+    let preview = call(
+        socket,
+        json!({"op":"project-save-preview","terminal":source}),
+    )?;
+    project::Dialog::save(snapshot, source, preview)
 }
 
 fn window_exited(snapshot: &Value, id: &str) -> bool {
@@ -738,14 +816,8 @@ fn apply_window(
     if opens {
         *active = text(&result, "id").to_owned();
     } else if !contains_view(snapshot, active) {
-        *active = snapshot["terminals"]
-            .as_array()
-            .and_then(|ts| {
-                ts.iter()
-                    .find(|t| t["alive"] == true)
-                    .or_else(|| ts.first())
-            })
-            .map(|t| text(t, "id").to_owned())
+        *active = preferred_view(snapshot, None)
+            .map(|view| text(view, "id").to_owned())
             .unwrap_or_default();
     }
     Resume::select(resume, snapshot, active);
@@ -930,6 +1002,61 @@ fn recovery_wait(reason: &str, retry: bool) -> Result<bool> {
     }
 }
 
+fn startup_wait(socket: &Session, snapshot: &mut Value) -> Result<bool> {
+    let mut display =
+        ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(io::stdout()))?;
+    display.clear()?;
+    let mut dirty = true;
+    let mut quiet = Instant::now();
+    let mut snapshot_at = Instant::now();
+    loop {
+        if dirty {
+            display.draw(|frame| {
+                frame.render_widget(ratatui::widgets::Clear, frame.area());
+                frame.render_widget(
+                    ratatui::widgets::Paragraph::new(
+                        "Starting · waiting for saved conversations\nInput discarded. Ctrl-Q / Esc quits safely.",
+                    )
+                    .wrap(ratatui::widgets::Wrap { trim: false }),
+                    frame.area(),
+                );
+            })?;
+            dirty = false;
+        }
+        if event::poll(Duration::from_millis(50))? {
+            match event::read()? {
+                Event::Key(key)
+                    if key.kind != KeyEventKind::Release
+                        && (key.code == KeyCode::Esc
+                            || key.code == KeyCode::Char('q')
+                                && key.modifiers.contains(KeyModifiers::CONTROL)) =>
+                {
+                    return Ok(false);
+                }
+                Event::Resize(..) => dirty = true,
+                _ => {}
+            }
+            quiet = Instant::now();
+        } else if snapshot["startup_pending"] != true
+            && quiet.elapsed() >= Duration::from_millis(250)
+        {
+            // An incomplete paste/escape sequence is still waiting input.
+            // Require conclusive emptiness, not just absence of a full event.
+            if event::input_readiness()? == event::InputReadiness::Empty {
+                display.clear()?;
+                return Ok(true);
+            }
+            quiet = Instant::now();
+        }
+        if snapshot["startup_pending"] == true
+            && snapshot_at.elapsed() >= Duration::from_millis(250)
+        {
+            *snapshot = call(socket, json!({"op":"snapshot"}))?;
+            snapshot_at = Instant::now();
+        }
+    }
+}
+
 fn attached(
     path: &Path,
     terminal: Option<String>,
@@ -944,6 +1071,14 @@ fn attached(
         if snapshot["detach_generation"].as_u64().unwrap_or(0) != original.detach_generation {
             return Ok(());
         }
+    }
+    // Initial selection is implicit, including an exact selector lookup.
+    // Bootstrap owns the first topology; do not compete for its reserved slots.
+    // Explicit launches and exact Resume validation retain their existing paths.
+    let startup_waited =
+        !recovered && launch_request.is_none() && snapshot["startup_pending"] == true;
+    if startup_waited && !startup_wait(socket, &mut snapshot)? {
+        return Ok(());
     }
     let terminal = resume
         .as_ref()
@@ -1006,6 +1141,8 @@ fn attached(
     let mut screen = Value::Null;
     let mut picker = active.is_empty();
     let mut prefix_pending = false;
+    let mut mode_pending = false;
+    let mut navigation = menu::Navigation::default();
     let mut query = String::new();
     let mut selected = 0usize;
     let mut offset = 0usize;
@@ -1015,6 +1152,9 @@ fn attached(
         String::new()
     };
     let mut launch_dialog: Option<launch::Dialog> = None;
+    let mut project_dialog: Option<project::Dialog> = None;
+    let mut menu_dialog: Option<menu::Dialog> = None;
+    let mut shortcut_help: Option<view::Help> = None;
     if let Some(request) = launch_request {
         authority.launch(request, &mut status);
     }
@@ -1027,6 +1167,7 @@ fn attached(
     let mut reported_focus = None;
     let mut snapshot_at = Instant::now();
     let mut dirty = true;
+    let mut painted_picker = picker;
     let mut viewport = ScreenViewport::default();
     let mut surface = view::NativeSurface::default();
     let mut agent = agent::AgentView::new();
@@ -1039,7 +1180,7 @@ fn attached(
     let mut urgent_frame = false;
     let mut queued_events = 0usize;
     let mut frame_at = Instant::now() - FRAME;
-    let mut drain_recovered_input = recovered;
+    let mut drain_recovered_input = recovered || startup_waited;
     let mut tick = SystemTime::now();
     let outcome = (|| -> Result<()> {
         loop {
@@ -1062,6 +1203,12 @@ fn attached(
                 agent.restore_unadmitted(action);
             });
             dirty |= authority_changed;
+            if let Some(error) = authority.take_launch_rejection()
+                && let Some(dialog) = launch_dialog.as_mut()
+            {
+                dialog.failure(error);
+                dirty = true;
+            }
             let launched = authority.take_launched();
             if let Some(opened) = launched.as_ref() {
                 let continuity = Resume::launched(&snapshot, opened)?;
@@ -1074,6 +1221,7 @@ fn attached(
                 ));
             }
             if launched.is_some() {
+                launch_dialog = None;
                 snapshot = call(socket, json!({"op":"snapshot"}))?;
                 authority.sync_agent_targets(&snapshot);
                 resume
@@ -1088,6 +1236,16 @@ fn attached(
                 dirty = true;
             }
             let is_agent = agent_view(&snapshot, &active).is_some();
+            if !is_agent
+                || picker
+                || launch_dialog.is_some()
+                || project_dialog.is_some()
+                || menu_dialog.is_some()
+                || shortcut_help.is_some()
+                || authority.panel_visible()
+            {
+                agent.invalidate_presentation();
+            }
             if is_agent && agent_id != active {
                 agent_id.clone_from(&active);
                 agent_after = 0;
@@ -1219,6 +1377,16 @@ fn attached(
                 {
                     dirty = true;
                 }
+                if is_agent
+                    && !picker
+                    && launch_dialog.is_none()
+                    && project_dialog.is_none()
+                    && menu_dialog.is_none()
+                    && shortcut_help.is_none()
+                    && !authority.panel_visible()
+                {
+                    dirty |= agent.needs_input_fence();
+                }
                 if dirty {
                     let rows = tree_rows(&snapshot, &query);
                     selected = selected.min(rows.len().saturating_sub(1));
@@ -1228,6 +1396,12 @@ fn attached(
                         &status
                     };
                     let mut painted_size = size;
+                    if painted_picker && !picker {
+                        // Dropping the styled menu overlay invalidates the
+                        // physical canvas as well as the native screen cache.
+                        // Repaint once, regardless of which input closed it.
+                        display.clear().context("clearing menu overlay")?;
+                    }
                     display
                         .draw(|frame| {
                             let area = frame.area();
@@ -1242,6 +1416,7 @@ fn attached(
                                 &rows,
                                 selected,
                                 &query,
+                                &navigation,
                                 shown_status,
                                 offset,
                                 focused,
@@ -1250,8 +1425,17 @@ fn attached(
                             if is_agent && !picker {
                                 agent.draw(frame, geometry.body);
                             }
-                            if let Some(dialog) = &launch_dialog {
+                            if let Some(dialog) = launch_dialog.as_mut() {
                                 dialog.draw(frame);
+                            }
+                            if let Some(dialog) = project_dialog.as_mut() {
+                                dialog.draw(frame);
+                            }
+                            if let Some(dialog) = menu_dialog.as_mut() {
+                                dialog.draw(frame, geometry.body);
+                            }
+                            if let Some(help) = shortcut_help.as_mut() {
+                                help.draw(frame, geometry.body);
                             }
                             authority.draw(
                                 frame,
@@ -1260,11 +1444,13 @@ fn attached(
                                 &snapshot,
                                 picker,
                                 &query,
+                                navigation.searching(),
                                 shown_status,
                                 offset,
                             );
                         })
                         .context("drawing terminal surface")?;
+                    painted_picker = picker;
                     // SIGWINCH can coalesce or be lost; the actual painted
                     // viewport is authoritative before consent becomes ready.
                     if painted_size != size {
@@ -1282,7 +1468,7 @@ fn attached(
                     if drain_recovered_input {
                         // Registration and the first projection can block.
                         // Until this observer frame is painted, queued events
-                        // are recovery input, never deliberate new authority.
+                        // are waiting input, never deliberate new authority.
                         let mut input_empty = false;
                         for _ in 0..1024 {
                             match event::input_readiness()? {
@@ -1325,8 +1511,12 @@ fn attached(
                             continue;
                         }
                         drain_recovered_input = false;
-                        status = "Reconnected · observer; request control deliberately; nothing replayed"
-                            .to_owned();
+                        status = if recovered {
+                            "Reconnected · observer; request control deliberately; nothing replayed"
+                        } else {
+                            "Ready · startup input discarded; nothing replayed"
+                        }
+                        .to_owned();
                         dirty = true;
                         urgent_frame = true;
                         continue;
@@ -1335,6 +1525,19 @@ fn attached(
                         == event::InputReadiness::Empty
                     {
                         dirty = authority.after_draw(&mut status);
+                        if let Some(dialog) = menu_dialog.as_mut() {
+                            dirty |= dialog.after_draw();
+                        }
+                        if is_agent
+                            && !picker
+                            && launch_dialog.is_none()
+                            && project_dialog.is_none()
+                            && menu_dialog.is_none()
+                            && shortcut_help.is_none()
+                            && !authority.panel_visible()
+                        {
+                            dirty |= agent.after_draw();
+                        }
                     }
                 }
                 frame_at = Instant::now();
@@ -1350,6 +1553,9 @@ fn attached(
                 continue;
             }
             let event = event::read().context("reading client input")?;
+            if matches!(event, Event::Resize(..)) {
+                agent.invalidate_presentation();
+            }
             dirty = true;
             urgent_frame = true;
             queued_events += 1;
@@ -1384,12 +1590,202 @@ fn attached(
                 authority.warning_event(&active, &event, &mut status);
             if reset_warning {
                 prefix_pending = false;
+                mode_pending = false;
                 pending_parent = None;
             }
             if consume_warning {
                 picker = active.is_empty();
                 query.clear();
                 selection = None;
+                continue;
+            }
+            let previous_prefix = prefix_pending;
+            let previous_mode = mode_pending;
+            if !matches!(&event, Event::Key(key) if key.kind == KeyEventKind::Release) {
+                prefix_pending = false;
+                mode_pending = false;
+            }
+            let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
+            let mode_key = menu::mode_key(snapshot["config"]["mode_key"].as_str().unwrap_or("F12"));
+            let dialog_open = shortcut_help.is_some()
+                || project_dialog.is_some()
+                || launch_dialog.is_some()
+                || menu_dialog.is_some();
+            if matches!(&event, Event::Key(key) if key.kind == KeyEventKind::Press
+                && key.code == KeyCode::Char('q') && key.modifiers.contains(KeyModifiers::CONTROL))
+                && (picker || dialog_open || authority.panel_visible())
+            {
+                break;
+            }
+            if !dialog_open
+                && let Event::Key(key) = &event
+                && key.kind != KeyEventKind::Release
+                && (mode_key.is_some_and(|mode| is_prefix(*key, mode))
+                    || is_prefix(*key, prefix) && (!picker || previous_prefix))
+            {
+                authority.activity(&active, &mut status);
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+                let is_mode = mode_key.is_some_and(|mode| is_prefix(*key, mode));
+                authority.dismiss_panel();
+                if picker
+                    && !active.is_empty()
+                    && ((is_mode && previous_mode) || (!is_mode && previous_prefix))
+                {
+                    picker = false;
+                    if !is_agent {
+                        authority.input(&active, Input::Bytes(key_bytes(*key, false)), &mut status);
+                    }
+                    resize_native(socket, &snapshot, &active, size)?;
+                } else if picker && is_mode && !active.is_empty() {
+                    picker = false;
+                    resize_native(socket, &snapshot, &active, size)?;
+                } else {
+                    picker = true;
+                    prefix_pending = !is_mode;
+                    mode_pending = is_mode;
+                    query.clear();
+                    selected = tree_rows(&snapshot, "")
+                        .iter()
+                        .position(|row| row.id == active)
+                        .unwrap_or(0);
+                }
+                navigation = menu::Navigation::default();
+                pending_parent = None;
+                continue;
+            }
+            if authority.panel_event(&event, &mut status) {
+                continue;
+            }
+            let mut dialog_action = None;
+            if let Some(help) = shortcut_help.as_mut() {
+                // Covered gestures remain local; closing help never replays them.
+                match &event {
+                    Event::Key(key)
+                        if key.kind != KeyEventKind::Release
+                            && key.code == KeyCode::Char('q')
+                            && key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
+                        break;
+                    }
+                    Event::Resize(cols, rows) => {
+                        size = (*cols, *rows);
+                        authority.panel_event(&event, &mut status);
+                    }
+                    Event::FocusGained => {
+                        focused = true;
+                        reported_focus = Some(true);
+                    }
+                    Event::FocusLost => {
+                        focused = false;
+                        reported_focus = Some(false);
+                    }
+                    Event::Mouse(mouse) => {
+                        if !matches!(mouse.kind, MouseEventKind::Moved) {
+                            authority.activity(&active, &mut status);
+                        }
+                        authority.suppress_mouse(mouse.kind);
+                    }
+                    Event::Paste(_)
+                    | Event::Key(KeyEvent {
+                        kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                        ..
+                    }) => authority.activity(&active, &mut status),
+                    _ => {}
+                }
+                if help.event(&event) {
+                    shortcut_help = None;
+                }
+                prefix_pending = false;
+                continue;
+            }
+            if picker
+                && launch_dialog.is_none()
+                && project_dialog.is_none()
+                && menu_dialog.is_none()
+                && matches!(&event, Event::Key(key) if view::help_key(*key, !navigation.searching()))
+            {
+                authority.activity(&active, &mut status);
+                shortcut_help = Some(view::Help::with_status(&status));
+                prefix_pending = false;
+                continue;
+            }
+            if let Some(dialog) = project_dialog.as_mut() {
+                if matches!(&event, Event::Key(key) if key.kind != KeyEventKind::Release
+                    && key.code == KeyCode::Char('q') && key.modifiers.contains(KeyModifiers::CONTROL))
+                {
+                    break;
+                }
+                match &event {
+                    Event::Resize(cols, rows) => {
+                        size = (*cols, *rows);
+                        authority.panel_event(&event, &mut status);
+                    }
+                    Event::FocusGained => {
+                        focused = true;
+                        reported_focus = Some(true);
+                    }
+                    Event::FocusLost => {
+                        focused = false;
+                        reported_focus = Some(false);
+                    }
+                    Event::Mouse(mouse) => {
+                        if !matches!(mouse.kind, MouseEventKind::Moved) {
+                            authority.activity(&active, &mut status);
+                        }
+                        authority.suppress_mouse(mouse.kind);
+                    }
+                    Event::Paste(_)
+                    | Event::Key(KeyEvent {
+                        kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                        ..
+                    }) => authority.activity(&active, &mut status),
+                    _ => {}
+                }
+                match dialog.event(&event) {
+                    project::Action::None => {}
+                    project::Action::Cancel => project_dialog = None,
+                    project::Action::Submit(request) => {
+                        let op = text(&request, "op").to_owned();
+                        match call(socket, request) {
+                            Ok(result) => {
+                                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                if op == "project-open" {
+                                    let project_id = &result["project"]["id"];
+                                    let target = preferred_view(&snapshot, Some(project_id));
+                                    if let Some(target) = target {
+                                        active = text(target, "id").to_owned();
+                                        Resume::select(resume, &snapshot, &active);
+                                        picker = false;
+                                        project_dialog = None;
+                                        screen = Value::Null;
+                                        offset = 0;
+                                        selection = None;
+                                        status.clear();
+                                        resize_native(socket, &snapshot, &active, size)?;
+                                    } else {
+                                        dialog.failure(
+                                            "Project opened but has no selectable session".into(),
+                                        );
+                                    }
+                                } else if op == "project-save" {
+                                    status = format!("Saved project {}", text(&result, "name"));
+                                    project_dialog = None;
+                                } else {
+                                    dialog.refresh(&snapshot);
+                                    status.clear();
+                                }
+                            }
+                            Err(error) => {
+                                if crate::client::is_connection_error(&error) {
+                                    return Err(error);
+                                }
+                                dialog.failure(format!("{error:#}"));
+                            }
+                        }
+                    }
+                }
                 continue;
             }
             if let Some(dialog) = launch_dialog.as_mut() {
@@ -1417,22 +1813,19 @@ fn attached(
                     launch::Action::None => {}
                     launch::Action::Cancel => launch_dialog = None,
                     launch::Action::Submit(request) => {
-                        launch_dialog = None;
                         authority.launch(request, &mut status);
+                        if authority.launching() {
+                            dialog.set_pending();
+                        } else {
+                            dialog.failure(status.clone());
+                        }
                     }
                 }
                 continue;
             }
-            if authority.launching() {
-                match event {
-                    Event::Key(key)
-                        if key.kind != KeyEventKind::Release
-                            && key.code == KeyCode::Char('q')
-                            && key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
-                        break;
-                    }
-                    Event::Resize(cols, rows) => size = (cols, rows),
+            if let Some(dialog) = menu_dialog.as_mut() {
+                match &event {
+                    Event::Resize(cols, rows) => size = (*cols, *rows),
                     Event::FocusGained => {
                         focused = true;
                         reported_focus = Some(true);
@@ -1441,22 +1834,337 @@ fn attached(
                         focused = false;
                         reported_focus = Some(false);
                     }
+                    Event::Mouse(mouse) => {
+                        if !matches!(mouse.kind, MouseEventKind::Moved) {
+                            authority.activity(&active, &mut status);
+                        }
+                        authority.suppress_mouse(mouse.kind);
+                    }
+                    Event::Paste(_)
+                    | Event::Key(KeyEvent {
+                        kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                        ..
+                    }) => authority.activity(&active, &mut status),
                     _ => {}
+                }
+                match dialog.event(&event) {
+                    menu::Action::None => {}
+                    menu::Action::Cancel => menu_dialog = None,
+                    menu::Action::Detach => break,
+                    menu::Action::Session { source, action } => {
+                        dialog_action = Some((action, source));
+                        menu_dialog = None;
+                    }
+                    menu::Action::New {
+                        source,
+                        agent: acp,
+                        independent,
+                    } => {
+                        if snapshot["project_save_terminal"].as_bool() != Some(true) {
+                            dialog.failure("This daemon cannot safely create the requested session. It must advertise project_save_terminal support. Finish its managed work before a separately authorized daemon upgrade/restart.".into());
+                        } else if !source.is_empty() && !contains_view(&snapshot, &source) {
+                            dialog.failure(
+                                "The selected source session ended; choose a current session."
+                                    .into(),
+                            );
+                        } else if acp {
+                            match call(socket, json!({"op":"acp-profiles"})).and_then(|catalog| {
+                                launch::Dialog::new(&snapshot, &source, catalog, independent)
+                            }) {
+                                Ok(next) => {
+                                    launch_dialog = Some(next);
+                                    menu_dialog = None;
+                                }
+                                Err(error) => {
+                                    if crate::client::is_connection_error(&error) {
+                                        return Err(error);
+                                    }
+                                    dialog.failure(format!("{error:#}"));
+                                }
+                            }
+                        } else {
+                            let mut request = open_from_view(&snapshot, &source, false);
+                            request["new_project"] = json!(independent);
+                            match apply_window(socket, request, &mut active, &mut snapshot, resume)
+                            {
+                                Ok(()) => {
+                                    menu_dialog = None;
+                                    picker = false;
+                                    screen = Value::Null;
+                                    offset = 0;
+                                    selection = None;
+                                    status.clear();
+                                    resize_native(socket, &snapshot, &active, size)?;
+                                }
+                                Err(error) => {
+                                    if crate::client::is_connection_error(&error) {
+                                        return Err(error);
+                                    }
+                                    dialog.failure(format!("{error:#}"));
+                                }
+                            }
+                        }
+                    }
+                    menu::Action::Submit(request) => {
+                        if request["op"] == "acp-close" {
+                            if authority.acp_action(request, &mut status).is_ok() {
+                                menu_dialog = None;
+                            } else {
+                                dialog.failure(status.clone());
+                            }
+                        } else {
+                            match apply_window(socket, request, &mut active, &mut snapshot, resume)
+                            {
+                                Ok(()) => {
+                                    menu_dialog = None;
+                                    screen = Value::Null;
+                                    offset = 0;
+                                    selection = None;
+                                    status.clear();
+                                }
+                                Err(error) => {
+                                    if crate::client::is_connection_error(&error) {
+                                        return Err(error);
+                                    }
+                                    dialog.failure(format!("{error:#}"));
+                                }
+                            }
+                        }
+                    }
+                }
+                if dialog_action.is_none() {
+                    continue;
+                }
+            }
+            if picker
+                && matches!(&event, Event::Key(key) if key.kind == KeyEventKind::Press
+                && matches!(key.code, KeyCode::Tab | KeyCode::BackTab))
+            {
+                authority.activity(&active, &mut status);
+                if let Event::Key(key) = &event {
+                    navigation.next(
+                        key.code == KeyCode::BackTab || key.modifiers.contains(KeyModifiers::SHIFT),
+                    );
                 }
                 continue;
             }
-            let previous_prefix = prefix_pending;
-            if !matches!(
-                event,
-                Event::Key(KeyEvent {
-                    kind: KeyEventKind::Release,
-                    ..
-                })
-            ) {
-                prefix_pending = false;
+            if picker
+                && matches!(&event, Event::Mouse(mouse)
+                if mouse.kind == MouseEventKind::Down(MouseButton::Left)
+                    && view::Geometry::hit(geometry.header, mouse.column, mouse.row))
+            {
+                navigation.focus = menu::Focus::Search;
+                if let Event::Mouse(mouse) = &event {
+                    authority.suppress_mouse(mouse.kind);
+                }
+                authority.activity(&active, &mut status);
+                continue;
             }
-            let prefix = prefix_key(snapshot["config"]["prefix"].as_str().unwrap_or("Ctrl-b"));
             let rows = tree_rows(&snapshot, &query);
+            let menu_action = if let Some((action, _)) = dialog_action.as_ref() {
+                Some(MenuAction::Session(*action))
+            } else if picker {
+                match &event {
+                    Event::Key(key)
+                        if key.kind == KeyEventKind::Press
+                            && key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
+                        match key.code {
+                            KeyCode::Char('s') => Some(MenuAction::Save),
+                            KeyCode::Char('g') => Some(MenuAction::Projects),
+                            KeyCode::Char('t') => Some(MenuAction::NewSession),
+                            KeyCode::Char('x') => {
+                                Some(MenuAction::Session(menu::SessionAction::Close))
+                            }
+                            _ => None,
+                        }
+                    }
+                    Event::Key(key)
+                        if key.kind == KeyEventKind::Press
+                            && key.code == KeyCode::Enter
+                            && navigation.button().is_some() =>
+                    {
+                        match navigation.button() {
+                            Some(0) => Some(MenuAction::NewSession),
+                            Some(1) => Some(MenuAction::Save),
+                            Some(2) => Some(MenuAction::Projects),
+                            _ => Some(MenuAction::Actions),
+                        }
+                    }
+                    Event::Key(key)
+                        if key.kind == KeyEventKind::Press
+                            && !navigation.searching()
+                            && !key
+                                .modifiers
+                                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+                    {
+                        match key.code {
+                            KeyCode::Char('n') => Some(MenuAction::NewSession),
+                            KeyCode::Char('s') => Some(MenuAction::Save),
+                            KeyCode::Char('p') => Some(MenuAction::Projects),
+                            KeyCode::Char('a') => Some(MenuAction::Actions),
+                            KeyCode::Char('r') => {
+                                Some(MenuAction::Session(menu::SessionAction::Rename))
+                            }
+                            KeyCode::Char('x') => {
+                                Some(MenuAction::Session(menu::SessionAction::Close))
+                            }
+                            KeyCode::Char('c') => {
+                                Some(MenuAction::Session(menu::SessionAction::Control))
+                            }
+                            KeyCode::Char('f') => {
+                                Some(MenuAction::Session(menu::SessionAction::Force))
+                            }
+                            KeyCode::Char('v') => {
+                                Some(MenuAction::Session(menu::SessionAction::SendKey))
+                            }
+                            KeyCode::Char('P') => {
+                                Some(MenuAction::Session(menu::SessionAction::Promote))
+                            }
+                            KeyCode::Char('m') => {
+                                Some(MenuAction::Session(menu::SessionAction::Reparent))
+                            }
+                            KeyCode::Char('D') => {
+                                Some(MenuAction::Session(menu::SessionAction::Demote))
+                            }
+                            _ => None,
+                        }
+                    }
+                    Event::Mouse(mouse)
+                        if mouse.kind == MouseEventKind::Down(MouseButton::Left) =>
+                    {
+                        if view::Geometry::hit(geometry.save_project, mouse.column, mouse.row) {
+                            Some(MenuAction::Save)
+                        } else if view::Geometry::hit(geometry.projects, mouse.column, mouse.row) {
+                            Some(MenuAction::Projects)
+                        } else if view::Geometry::hit(geometry.new_session, mouse.column, mouse.row)
+                        {
+                            Some(MenuAction::NewSession)
+                        } else if view::Geometry::hit(geometry.actions, mouse.column, mouse.row) {
+                            Some(MenuAction::Actions)
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            if let Some(action) = menu_action {
+                authority.activity(&active, &mut status);
+                if let Event::Mouse(mouse) = &event {
+                    authority.suppress_mouse(mouse.kind);
+                }
+                let source = dialog_action
+                    .as_ref()
+                    .map(|(_, source)| source.as_str())
+                    .or_else(|| rows.get(selected).map(|row| row.id.as_str()))
+                    .unwrap_or(&active);
+                let mut mutation = None;
+                match action {
+                    MenuAction::Save => match save_project_dialog(socket, &snapshot, source) {
+                        Ok(dialog) => project_dialog = Some(dialog),
+                        Err(error) => status = format!("{error:#}"),
+                    },
+                    MenuAction::Projects => {
+                        project_dialog = Some(project::Dialog::manage(&snapshot))
+                    }
+                    MenuAction::NewSession => {
+                        menu_dialog = Some(menu::Dialog::new(&snapshot, source))
+                    }
+                    MenuAction::Actions => {
+                        menu_dialog = Some(menu::Dialog::actions(&snapshot, source))
+                    }
+                    MenuAction::Session(action) => match action {
+                        menu::SessionAction::Rename => {
+                            match menu::Dialog::rename(&snapshot, source) {
+                                Ok(dialog) => menu_dialog = Some(dialog),
+                                Err(error) => status = format!("{error:#}"),
+                            }
+                        }
+                        menu::SessionAction::Close => {
+                            if window_exited(&snapshot, source) {
+                                mutation = Some(close_window(&snapshot, source));
+                            } else {
+                                match menu::Dialog::close(
+                                    &snapshot,
+                                    source,
+                                    authority.acp_grant(source),
+                                ) {
+                                    Ok(dialog) => menu_dialog = Some(dialog),
+                                    Err(error) => status = format!("{error:#}"),
+                                }
+                            }
+                        }
+                        menu::SessionAction::Control | menu::SessionAction::Force => {
+                            authority.open(
+                                source,
+                                matches!(action, menu::SessionAction::Force),
+                                &mut status,
+                            );
+                        }
+                        menu::SessionAction::SendKey => {
+                            if agent_view(&snapshot, source).is_some() {
+                                status =
+                                    "ACP is structured input; there is no native key to forward"
+                                        .into();
+                            } else if let Some(key) = mode_key {
+                                authority.input(
+                                    source,
+                                    Input::Bytes(key_bytes(key, false)),
+                                    &mut status,
+                                );
+                                active = source.to_owned();
+                                Resume::select(resume, &snapshot, &active);
+                                picker = false;
+                                screen = Value::Null;
+                                offset = 0;
+                                selection = None;
+                                resize_native(socket, &snapshot, &active, size)?;
+                            } else {
+                                status = "No mode key is reserved; the configured prefix remains available".into();
+                            }
+                        }
+                        menu::SessionAction::Promote => {
+                            if agent_view(&snapshot, source).is_none() {
+                                mutation = Some(json!({"op":"promote","terminal":source}));
+                            } else {
+                                status = "ACP sessions are not native terminal tree nodes".into();
+                            }
+                        }
+                        menu::SessionAction::Reparent | menu::SessionAction::Demote => {
+                            if agent_view(&snapshot, source).is_none() {
+                                pending_parent = Some((
+                                    source.to_owned(),
+                                    matches!(action, menu::SessionAction::Demote),
+                                ));
+                                navigation.focus = menu::Focus::List;
+                                status = "Select the new parent; Enter moves, Esc cancels".into();
+                            } else {
+                                status = "ACP sessions are not native terminal tree nodes".into();
+                            }
+                        }
+                    },
+                }
+                if let Some(request) = mutation {
+                    match apply_window(socket, request, &mut active, &mut snapshot, resume) {
+                        Ok(()) => {
+                            screen = Value::Null;
+                            offset = 0;
+                            selection = None;
+                            status.clear();
+                        }
+                        Err(error) => {
+                            if crate::client::is_connection_error(&error) {
+                                return Err(error);
+                            }
+                            status = format!("{error:#}");
+                        }
+                    }
+                }
+                continue;
+            }
             if picker
                 && !previous_prefix
                 && matches!(&event, Event::Key(key)
@@ -1469,7 +2177,7 @@ fn attached(
                     .map(|row| row.id.as_str())
                     .unwrap_or(&active);
                 match call(socket, json!({"op":"acp-profiles"}))
-                    .and_then(|catalog| launch::Dialog::new(&snapshot, source, catalog))
+                    .and_then(|catalog| launch::Dialog::new(&snapshot, source, catalog, false))
                 {
                     Ok(dialog) => launch_dialog = Some(dialog),
                     Err(error) => {
@@ -1493,12 +2201,7 @@ fn attached(
                 authority.open(&active, key.code == KeyCode::Char('f'), &mut status);
                 continue;
             }
-            if authority.panel_event(&event, &mut status) {
-                continue;
-            }
-            let prefix_event = matches!(&event, Event::Key(key)
-            if key.kind != KeyEventKind::Release && is_prefix(*key, prefix));
-            if is_agent && !picker && !prefix_event {
+            if is_agent && !picker {
                 match &event {
                     Event::Resize(cols, rows) => size = (*cols, *rows),
                     Event::FocusGained => {
@@ -1517,6 +2220,7 @@ fn attached(
                         authority.suppress_mouse(mouse.kind);
                         picker = true;
                         query.clear();
+                        navigation = menu::Navigation::default();
                         pending_parent = None;
                         selected = rows.iter().position(|row| row.id == active).unwrap_or(0);
                     }
@@ -1562,66 +2266,78 @@ fn attached(
                 Event::Paste(paste) => {
                     if picker {
                         authority.activity(&active, &mut status);
-                        query.push_str(&paste.replace(['\n', '\r'], " "));
-                        selected = 0;
+                        if navigation.searching() {
+                            if query.len().saturating_add(paste.len()) <= 4096 {
+                                query.push_str(&paste.replace(['\n', '\r'], " "));
+                                selected = 0;
+                            } else {
+                                status = "Search edit exceeds4096bytes; nothing pasted".into();
+                            }
+                        }
                     } else {
                         offset = 0;
                         authority.input(&active, Input::Paste(paste), &mut status);
                     }
                 }
                 Event::Key(key) if key.kind != KeyEventKind::Release => {
-                    if is_prefix(key, prefix) {
-                        if picker && previous_prefix && !active.is_empty() {
-                            picker = false;
-                            resize_native(socket, &snapshot, &active, size)?;
-                            if !is_agent {
-                                authority.input(
-                                    &active,
-                                    Input::Bytes(key_bytes(
-                                        prefix,
-                                        mode(&screen, "application_cursor"),
-                                    )),
-                                    &mut status,
-                                );
-                            }
-                        } else {
-                            authority.activity(&active, &mut status);
-                            picker = true;
-                            prefix_pending = true;
-                            query.clear();
-                            selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
-                            pending_parent = None;
-                        }
-                        continue;
-                    }
                     if picker {
                         authority.activity(&active, &mut status);
                         let chosen = rows.get(selected).map(|r| r.id.clone());
                         let control = key.modifiers.contains(KeyModifiers::CONTROL);
-                        let empty = active.is_empty()
-                            && snapshot["terminals"]
-                                .as_array()
-                                .is_none_or(|terminals| terminals.is_empty());
+                        let empty = active.is_empty() && !has_views(&snapshot);
                         let action = match key.code {
-                            KeyCode::Char('q') if control || empty => break,
+                            KeyCode::Char('q') if control || !navigation.searching() => break,
+                            KeyCode::Esc if navigation.searching() => {
+                                navigation.focus = menu::Focus::List;
+                                None
+                            }
                             KeyCode::Esc if empty => break,
                             KeyCode::Enter if empty => Some(open_window("", false)),
                             KeyCode::Esc => {
                                 picker = active.is_empty();
                                 pending_parent = None;
+                                navigation = menu::Navigation::default();
                                 None
                             }
-                            KeyCode::Up => {
+                            KeyCode::Up | KeyCode::Char('k')
+                                if !navigation.searching() || key.code == KeyCode::Up =>
+                            {
                                 selected = selected.saturating_sub(1);
+                                if !navigation.searching() {
+                                    navigation.focus = menu::Focus::List;
+                                }
                                 None
                             }
-                            KeyCode::Down => {
+                            KeyCode::Down | KeyCode::Char('j')
+                                if !navigation.searching() || key.code == KeyCode::Down =>
+                            {
                                 selected = (selected + 1).min(rows.len().saturating_sub(1));
+                                if !navigation.searching() {
+                                    navigation.focus = menu::Focus::List;
+                                }
                                 None
                             }
-                            KeyCode::Backspace => {
+                            KeyCode::Backspace if navigation.searching() => {
                                 query.pop();
                                 selected = 0;
+                                None
+                            }
+                            KeyCode::Char('/') if !navigation.searching() => {
+                                navigation.focus = menu::Focus::Search;
+                                None
+                            }
+                            KeyCode::Home | KeyCode::Char('g') if !navigation.searching() => {
+                                selected = 0;
+                                navigation.focus = menu::Focus::List;
+                                None
+                            }
+                            KeyCode::End | KeyCode::Char('G') if !navigation.searching() => {
+                                selected = rows.len().saturating_sub(1);
+                                navigation.focus = menu::Focus::List;
+                                None
+                            }
+                            KeyCode::Char('i') if !navigation.searching() && !active.is_empty() => {
+                                picker = false;
                                 None
                             }
                             KeyCode::Enter => {
@@ -1644,6 +2360,7 @@ fn attached(
                                         status.clear();
                                         offset = 0;
                                         picker = false;
+                                        navigation = menu::Navigation::default();
                                         None
                                     }
                                 } else {
@@ -1663,13 +2380,6 @@ fn attached(
                             KeyCode::Char('p') if control => chosen
                                 .filter(|id| agent_view(&snapshot, id).is_none())
                                 .map(|id| json!({"op":"promote","terminal":id})),
-                            KeyCode::Char('x') if control => chosen.and_then(|id| {
-                                if close_agent(&mut authority, &snapshot, &id, &mut status) {
-                                    None
-                                } else {
-                                    Some(close_window(&snapshot, &id))
-                                }
-                            }),
                             KeyCode::Char('r' | 'd') if control => {
                                 if let Some(id) = chosen {
                                     if agent_view(&snapshot, &id).is_some() {
@@ -1683,10 +2393,17 @@ fn attached(
                                 None
                             }
                             KeyCode::Char(c)
-                                if !control && !key.modifiers.contains(KeyModifiers::ALT) =>
+                                if navigation.searching()
+                                    && !control
+                                    && !key.modifiers.contains(KeyModifiers::ALT) =>
                             {
-                                query.push(c);
-                                selected = 0;
+                                if query.len().saturating_add(c.len_utf8()) <= 4096 {
+                                    query.push(c);
+                                    selected = 0;
+                                } else {
+                                    status = "Search edit exceeds4096bytes; character not inserted"
+                                        .into();
+                                }
                                 None
                             }
                             _ => None,
@@ -1797,6 +2514,7 @@ fn attached(
                         }
                         picker = !picker || active.is_empty();
                         query.clear();
+                        navigation = menu::Navigation::default();
                         pending_parent = None;
                         selected = rows.iter().position(|r| r.id == active).unwrap_or(0);
                         status.clear();
@@ -1804,10 +2522,7 @@ fn attached(
                             resize_native(socket, &snapshot, &active, size)?;
                         }
                     } else if picker {
-                        let empty = active.is_empty()
-                            && snapshot["terminals"]
-                                .as_array()
-                                .is_none_or(|terminals| terminals.is_empty());
+                        let empty = active.is_empty() && !has_views(&snapshot);
                         if empty && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
                             if view::Geometry::hit(geometry.close, mouse.column, mouse.row) {
                                 break;
@@ -1842,15 +2557,16 @@ fn attached(
                             selected = selected.saturating_sub(3);
                         } else if matches!(mouse.kind, MouseEventKind::ScrollDown) {
                             selected = (selected + 3).min(rows.len().saturating_sub(1));
-                        } else if view::Geometry::hit(geometry.body, mouse.column, mouse.row)
-                            && mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT
-                                < geometry.body.height / view::ROW_HEIGHT
+                        } else if view::Geometry::hit(geometry.menu_list, mouse.column, mouse.row)
+                            && mouse.row.saturating_sub(geometry.menu_list.y) / view::ROW_HEIGHT
+                                < geometry.menu_list.height / view::ROW_HEIGHT
                             && matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
                         {
-                            let start = view::list_start(selected, geometry.body.height);
+                            let start = view::list_start(selected, geometry.menu_list.height);
                             if let Some(row) = rows.get(
                                 start
-                                    + (mouse.row.saturating_sub(geometry.body.y) / view::ROW_HEIGHT)
+                                    + (mouse.row.saturating_sub(geometry.menu_list.y)
+                                        / view::ROW_HEIGHT)
                                         as usize,
                             ) {
                                 if let Some((child, demote)) = pending_parent.take() {
@@ -1876,6 +2592,7 @@ fn attached(
                                     active = row.id.clone();
                                     Resume::select(resume, &snapshot, &active);
                                     picker = false;
+                                    navigation = menu::Navigation::default();
                                     offset = 0;
                                     screen = Value::Null;
                                     selection = None;
@@ -2030,6 +2747,7 @@ mod tests {
                     &[],
                     0,
                     "",
+                    &menu::Navigation::default(),
                     "",
                     0,
                     true,
@@ -2233,6 +2951,43 @@ mod tests {
             key_bytes(KeyEvent::new(KeyCode::F(12), KeyModifiers::ALT), false),
             b"\x1b[24;3~"
         );
+        for (key, plain, modified) in [
+            (13, "\x1b[1;2P", "\x1b[1;8P"),
+            (14, "\x1b[1;2Q", "\x1b[1;8Q"),
+            (15, "\x1b[1;2R", "\x1b[1;8R"),
+            (16, "\x1b[1;2S", "\x1b[1;8S"),
+            (17, "\x1b[15;2~", "\x1b[15;8~"),
+            (18, "\x1b[17;2~", "\x1b[17;8~"),
+            (19, "\x1b[18;2~", "\x1b[18;8~"),
+            (20, "\x1b[19;2~", "\x1b[19;8~"),
+            (21, "\x1b[20;2~", "\x1b[20;8~"),
+            (22, "\x1b[21;2~", "\x1b[21;8~"),
+            (23, "\x1b[23;2~", "\x1b[23;8~"),
+            (24, "\x1b[24;2~", "\x1b[24;8~"),
+        ] {
+            let reserved = KeyEvent::new(KeyCode::F(key), KeyModifiers::NONE);
+            assert!(is_prefix(reserved, reserved));
+            assert!(is_prefix(
+                KeyEvent::new(KeyCode::F(key - 12), KeyModifiers::SHIFT),
+                reserved
+            ));
+            assert!(!is_prefix(
+                KeyEvent::new(KeyCode::F(key - 12), KeyModifiers::NONE),
+                reserved
+            ));
+            assert!(!is_prefix(
+                KeyEvent::new(KeyCode::F(key), KeyModifiers::CONTROL),
+                reserved
+            ));
+            assert_eq!(key_bytes(reserved, false), plain.as_bytes());
+            assert_eq!(
+                key_bytes(
+                    KeyEvent::new(KeyCode::F(key), KeyModifiers::CONTROL | KeyModifiers::ALT),
+                    false
+                ),
+                modified.as_bytes()
+            );
+        }
     }
     #[test]
     fn picker_preserves_hierarchy_and_matches_workspace_metadata() {

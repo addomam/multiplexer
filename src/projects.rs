@@ -24,6 +24,10 @@ fn default_terminal_limit() -> usize {
     64
 }
 
+fn default_mode_key() -> String {
+    "F12".into()
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Hook {
@@ -51,6 +55,8 @@ pub struct AcpProfile {
 pub struct Config {
     pub projects_dir: PathBuf,
     pub prefix: String,
+    #[serde(default = "default_mode_key")]
+    pub mode_key: String,
     #[serde(default = "default_terminal_limit")]
     pub terminal_limit: usize,
     #[serde(default)]
@@ -67,6 +73,7 @@ impl Default for Config {
         Self {
             projects_dir: home.join("projects"),
             prefix: "ctrl-b".into(),
+            mode_key: default_mode_key(),
             terminal_limit: default_terminal_limit(),
             daemon_start_hooks: Vec::new(),
             acp_profiles: BTreeMap::new(),
@@ -271,6 +278,21 @@ fn validate_config(config: &Config) -> Result<()> {
         letter.is_some_and(|key| key.len() == 1 && key.as_bytes()[0].is_ascii_alphabetic()),
         "prefix must be a Ctrl-letter chord (Ctrl-x, Control-x or C-x)"
     );
+    let mode_key = config.mode_key.as_str();
+    ensure!(
+        mode_key.eq_ignore_ascii_case("none")
+            || mode_key
+                .strip_prefix('f')
+                .or_else(|| mode_key.strip_prefix('F'))
+                .is_some_and(|number| {
+                    !number.starts_with('0')
+                        && number.bytes().all(|byte| byte.is_ascii_digit())
+                        && number
+                            .parse::<u8>()
+                            .is_ok_and(|key| (1..=24).contains(&key))
+                }),
+        "mode_key must be F1..F24 or none"
+    );
     validate_hooks(&config.daemon_start_hooks)?;
     crate::acp_profiles::validate_profiles(&config.acp_profiles)
 }
@@ -328,11 +350,14 @@ fn read_disk(path: &Path) -> Result<Option<(DiskConfig, Vec<u8>)>> {
 
 impl Store {
     pub fn load(path: &Path, projects_override: Option<PathBuf>) -> Result<Self> {
-        let path = configuration_path(path)?;
+        let path = configuration_path(path)
+            .with_context(|| format!("resolving project configuration {}", path.display()))?;
         let mut config = Config::default();
         let mut projects = BTreeMap::new();
         let mut expected = None;
-        if let Some((disk, bytes)) = read_disk(&path)? {
+        if let Some((disk, bytes)) = read_disk(&path)
+            .with_context(|| format!("loading project configuration {}", path.display()))?
+        {
             expected = Some(bytes);
             config = disk.config;
             for saved in disk.projects {
@@ -398,13 +423,16 @@ impl Store {
         Ok(())
     }
 
-    pub fn save(&mut self, id: &str, name: &str) -> Result<Project> {
+    pub fn save(&mut self, id: &str, name: &str, context: Option<PathBuf>) -> Result<Project> {
         let id = self.resolve(id)?;
         self.check_name(&id, name)?;
         let old = self.projects[&id].clone();
         let project = self.projects.get_mut(&id).expect("resolved project");
         project.name = name.to_owned();
         project.saved = true;
+        if let Some(context) = context {
+            project.context = context;
+        }
         let result = project.clone();
         if let Err(error) = self.persist() {
             self.projects.insert(id, old);
@@ -413,13 +441,23 @@ impl Store {
         Ok(result)
     }
 
-    /// Initial configuration is limited to hooks and recipes, validated before directory creation.
-    pub fn create(
-        &mut self,
-        name: &str,
-        directory: Option<PathBuf>,
-        patch: Value,
-    ) -> Result<Project> {
+    /// Forget only durable configuration; live terminal/ACP references keep this identity.
+    pub(crate) fn remove_saved(&mut self, selector: &str) -> Result<&Project> {
+        let id = self.resolve(selector)?;
+        ensure!(
+            self.projects[&id].saved,
+            "invalid-request: project is not saved"
+        );
+        self.projects.get_mut(&id).expect("resolved project").saved = false;
+        if let Err(error) = self.persist() {
+            self.projects.get_mut(&id).expect("retained project").saved = true;
+            return Err(error);
+        }
+        Ok(&self.projects[&id])
+    }
+
+    /// Register an existing directory; project management never creates work directories.
+    pub fn create(&mut self, name: &str, directory: PathBuf, patch: Value) -> Result<Project> {
         self.check_name("", name)?;
         ensure!(
             name.bytes()
@@ -441,14 +479,9 @@ impl Store {
                 _ => bail!("unknown or runtime-only initial project setting: {field}"),
             }
         }
-        let context = absolute(&directory.unwrap_or_else(|| self.config.projects_dir.join(name)))?;
-        match fs::metadata(&context) {
-            Ok(metadata) => ensure!(metadata.is_dir(), "project context is not a directory"),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                fs::create_dir_all(&context).context("creating project directory")?;
-            }
-            Err(error) => return Err(error).context("checking project directory"),
-        }
+        let context =
+            fs::canonicalize(&directory).context("project directory must already exist")?;
+        ensure!(context.is_dir(), "project context is not a directory");
         let project = Project {
             id: Uuid::new_v4().to_string(),
             name: name.to_owned(),
@@ -548,6 +581,12 @@ impl Store {
                         .as_str()
                         .context("prefix must be a string")?
                         .to_owned()
+                }
+                "mode_key" => {
+                    updated.mode_key = value
+                        .as_str()
+                        .context("mode_key must be a string")?
+                        .to_owned();
                 }
                 "terminal_limit" => {
                     updated.terminal_limit = serde_json::from_value(value.clone())
@@ -1277,7 +1316,7 @@ mod tests {
         let file = temp.0.join("config.json");
         let mut owner = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
         let mut stale = Store::load(&file, None).unwrap();
-        let saved = owner.create("retained", None, json!({})).unwrap();
+        let saved = owner.create("retained", temp.0.clone(), json!({})).unwrap();
         owner.configure_global(json!({"prefix":"C-a"})).unwrap();
         let original = fs::read(&file).unwrap();
         let error = stale.configure_global(json!({"prefix":"C-z"})).unwrap_err();
@@ -1317,26 +1356,102 @@ mod tests {
     }
 
     #[test]
+    fn forgetting_saved_project_retains_runtime_files_and_rejects_ambiguous_reuse() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let project = store
+            .create(
+                "retained",
+                temp.0.clone(),
+                json!({"hooks":[{"source":"printf retained","timeout_ms":500}],
+                    "recipes":{"check":"cargo check"}}),
+            )
+            .unwrap();
+        let other = store.create("other", temp.0.clone(), json!({})).unwrap();
+        store.projects.get_mut(&project.id).unwrap().main_terminal = Some("live-terminal".into());
+        fs::write(project.context.join("work"), "valuable work").unwrap();
+
+        let forgotten = store.remove_saved("retained").unwrap();
+        assert!(!forgotten.saved);
+        assert_eq!(forgotten.id, project.id);
+        assert_eq!(forgotten.main_terminal.as_deref(), Some("live-terminal"));
+        assert_eq!(forgotten.context, project.context);
+        assert_eq!(forgotten.hooks[0].source, "printf retained");
+        assert_eq!(forgotten.recipes["check"], "cargo check");
+        assert_eq!(
+            fs::read_to_string(project.context.join("work")).unwrap(),
+            "valuable work"
+        );
+        let reloaded = Store::load(&file, None).unwrap();
+        assert!(!reloaded.projects.contains_key(&project.id));
+        assert!(reloaded.projects[&other.id].saved);
+
+        let disk = fs::read(&file).unwrap();
+        assert!(store.remove_saved(&project.id).is_err());
+        assert_eq!(fs::read(&file).unwrap(), disk);
+        let replacement = store
+            .create("retained", project.context.clone(), json!({}))
+            .unwrap();
+        assert_ne!(replacement.id, project.id);
+        assert!(store.remove_saved("retained").is_err());
+        assert!(store.projects[&replacement.id].saved);
+        assert!(!store.projects[&project.id].saved);
+        assert_eq!(store.resolve(&project.id).unwrap(), project.id);
+        assert_eq!(
+            fs::read_to_string(project.context.join("work")).unwrap(),
+            "valuable work"
+        );
+    }
+
+    #[test]
+    fn stale_project_removal_preserves_saved_flag_and_newer_disk_configuration() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut owner = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let project = owner.create("retained", temp.0.clone(), json!({})).unwrap();
+        let mut stale = Store::load(&file, None).unwrap();
+        owner
+            .configure_global(json!({"terminal_limit":32}))
+            .unwrap();
+        let newer = fs::read(&file).unwrap();
+        assert!(
+            stale
+                .remove_saved(&project.id)
+                .unwrap_err()
+                .to_string()
+                .contains("config-conflict")
+        );
+        assert!(stale.projects[&project.id].saved);
+        assert_eq!(fs::read(&file).unwrap(), newer);
+        let reloaded = Store::load(&file, None).unwrap();
+        assert!(reloaded.projects[&project.id].saved);
+        assert_eq!(reloaded.config.terminal_limit, 32);
+    }
+
+    #[test]
     fn stale_project_save_does_not_replace_an_existing_configuration() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         let mut first = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
-        let retained = first.create("retained", None, json!({})).unwrap();
+        let retained = first.create("retained", temp.0.clone(), json!({})).unwrap();
         let mut second = Store::load(&file, None).unwrap();
         first
             .configure(&retained.id, json!({"recipes":{"new":"printf newer"}}))
             .unwrap();
         let original = fs::read(&file).unwrap();
         let unsaved = second.unsaved_id();
+        let previous_context = second.projects[&unsaved].context.clone();
         assert!(
             second
-                .save(&unsaved, "conflicting")
+                .save(&unsaved, "conflicting", Some(temp.0.clone()))
                 .unwrap_err()
                 .to_string()
                 .contains("config-conflict")
         );
         assert!(!second.projects[&unsaved].saved);
         assert_eq!(second.projects[&unsaved].name, "unsaved");
+        assert_eq!(second.projects[&unsaved].context, previous_context);
         assert_eq!(fs::read(&file).unwrap(), original);
         assert_eq!(
             Store::load(&file, None).unwrap().projects[&retained.id].recipes["new"],
@@ -1594,6 +1709,41 @@ mod tests {
     }
 
     #[test]
+    fn invalid_mode_key_patch_does_not_commit_other_valid_settings() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        store
+            .configure_global(json!({"mode_key":"f24","prefix":"C-a"}))
+            .unwrap();
+        let original = fs::read(&file).unwrap();
+        for invalid in [
+            json!("F0"),
+            json!("F25"),
+            json!("F01"),
+            json!(" F12"),
+            json!("F+1"),
+            json!("escape"),
+            json!(12),
+            json!(null),
+        ] {
+            assert!(
+                store
+                    .configure_global(json!({
+                        "mode_key":invalid,"prefix":"C-z","terminal_limit":1
+                    }))
+                    .is_err()
+            );
+            assert_eq!(store.config.mode_key, "f24");
+            assert_eq!(store.config.prefix, "C-a");
+            assert_eq!(store.config.terminal_limit, 64);
+            assert_eq!(fs::read(&file).unwrap(), original);
+        }
+        store.configure_global(json!({"mode_key":"NoNe"})).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.mode_key, "NoNe");
+    }
+
+    #[test]
     fn saved_identity_context_hooks_and_recipes_survive_without_runtime() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
@@ -1603,7 +1753,7 @@ mod tests {
         fs::create_dir(&context).unwrap();
         store.projects.get_mut(&id).unwrap().context = context.clone();
         store.projects.get_mut(&id).unwrap().main_terminal = Some("runtime-only".into());
-        let saved = store.save(&id, "durable").unwrap();
+        let saved = store.save(&id, "durable", None).unwrap();
         store
             .configure(
                 &id,
@@ -1625,17 +1775,34 @@ mod tests {
     }
 
     #[test]
-    fn project_creation_is_safe_and_uses_configured_directory() {
+    fn project_registration_requires_existing_directory_without_creating_paths() {
         let temp = TempDir::new();
         let base = temp.0.join("projects");
-        let mut store = Store::load(&temp.0.join("config.json"), Some(base.clone())).unwrap();
-        assert!(store.create("../escape", None, json!({})).is_err());
-        assert!(store.create("a/b", None, json!({})).is_err());
-        assert!(store.create("", None, json!({})).is_err());
-        let project = store.create("safe-project", None, json!({})).unwrap();
-        assert_eq!(project.context, base.join("safe-project"));
-        assert!(project.context.is_dir());
-        assert!(store.create("safe-project", None, json!({})).is_err());
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, Some(base.clone())).unwrap();
+        let count = store.projects.len();
+        let missing = temp.0.join("missing/nested");
+        assert!(store.create("missing", missing.clone(), json!({})).is_err());
+        fs::write(temp.0.join("file"), "valuable").unwrap();
+        assert!(
+            store
+                .create("file", temp.0.join("file"), json!({}))
+                .is_err()
+        );
+        assert_eq!(store.projects.len(), count);
+        assert!(!file.exists());
+        assert!(!missing.exists());
+        assert!(!base.exists());
+        let project = store
+            .create("safe-project", temp.0.clone(), json!({}))
+            .unwrap();
+        assert_eq!(project.context, fs::canonicalize(&temp.0).unwrap());
+        assert!(!base.exists());
+        assert!(
+            store
+                .create("safe-project", temp.0.clone(), json!({}))
+                .is_err()
+        );
         assert!(
             store
                 .configure(&project.id, json!({"context":"/tmp/changed"}))
@@ -1652,7 +1819,7 @@ mod tests {
         let created = store
             .create(
                 "ready",
-                None,
+                temp.0.clone(),
                 json!({
                     "hooks": [{"source": "printf installed > setup-marker", "timeout_ms": 500}],
                     "recipes": {"check": "cat setup-marker"}
@@ -1690,7 +1857,7 @@ mod tests {
         let file = temp.0.join("config.json");
         let base = temp.0.join("projects");
         let mut store = Store::load(&file, Some(base.clone())).unwrap();
-        store.create("existing", None, json!({})).unwrap();
+        store.create("existing", temp.0.clone(), json!({})).unwrap();
         let original = fs::read(&file).unwrap();
         let original_count = store.projects.len();
         let invalid = [
@@ -1708,7 +1875,7 @@ mod tests {
         ];
         for (index, patch) in invalid.into_iter().enumerate() {
             let name = format!("invalid-{index}");
-            assert!(store.create(&name, None, patch).is_err());
+            assert!(store.create(&name, temp.0.join(&name), patch).is_err());
             assert_eq!(store.projects.len(), original_count);
             assert!(!store.projects.values().any(|project| project.name == name));
             assert_eq!(fs::read(&file).unwrap(), original);

@@ -2,10 +2,11 @@
 use serde_json::{Value, json};
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
@@ -402,6 +403,280 @@ fn e06_update(session: &str, update: Value) -> Result<()> {
     Ok(())
 }
 
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct RecoveryMessage {
+    category: String,
+    text: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct RecoverySession {
+    session_id: String,
+    cwd: PathBuf,
+    value: i64,
+    commands: u64,
+    history: Vec<RecoveryMessage>,
+}
+
+fn recovery_path(root: &Path, session: &str) -> Result<PathBuf> {
+    let suffix = session
+        .strip_prefix("recovery-")
+        .filter(|suffix| suffix.len() == 32 && suffix.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .ok_or("unknown recovery session identity")?;
+    Ok(root
+        .join("recovery.sessions")
+        .join(format!("recovery-{suffix}.json")))
+}
+
+fn save_recovery(root: &Path, session: &RecoverySession) -> Result<()> {
+    let path = recovery_path(root, &session.session_id)?;
+    let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&temporary)?;
+    serde_json::to_writer(&mut file, session)?;
+    file.sync_all()?;
+    fs::rename(temporary, path)?;
+    fs::File::open(root.join("recovery.sessions"))?.sync_all()?;
+    Ok(())
+}
+
+fn recovery_peer(root: &Path, mode: &str) -> Result<()> {
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(root.join("recovery.sessions"))?;
+    let mut active: Option<RecoverySession> = None;
+    let (option_ids, category): (&[&str], &str) = match mode {
+        "recovery-options" => (&["thinking", "other-thinking"], "thought_level"),
+        "recovery-single-option" => (&["thinking"], "thought_level"),
+        "recovery-model-options" => (&["primary-model", "secondary-model"], "model"),
+        _ => (&[], ""),
+    };
+    let mut configuration = option_ids
+        .iter()
+        .map(|id| {
+            json!({
+                "id":id,"name":id,"type":"select","category":category,
+                "currentValue":"low","options":[
+                    {"value":"low","name":"Low"},{"value":"high","name":"High"}
+                ]
+            })
+        })
+        .collect::<Vec<_>>();
+    let load_supported = mode == "recovery" || !configuration.is_empty();
+    let mut reader = BufReader::new(std::io::stdin().lock());
+    while let Some(request) = receive(&mut reader)? {
+        let method = request["method"].as_str().unwrap_or("<response>");
+        let new_id = (method == "session/new")
+            .then(|| format!("recovery-{}", uuid::Uuid::new_v4().simple()));
+        let requested_session = request["params"]["sessionId"].as_str();
+        let mut line = serde_json::to_vec(&json!({
+            "pid":std::process::id(),"method":method,
+            "session_id":requested_session.or(new_id.as_deref()),"rpc_id":request.get("id")
+        }))?;
+        line.push(b'\n');
+        let mut log = fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .mode(0o600)
+            .open(root.join("recovery.requests.jsonl"))?;
+        log.write_all(&line)?;
+        log.sync_data()?;
+        let Some(id) = request.get("id") else {
+            // A cancel/notification is never part of conversation reopening.
+            // Recording it makes an unsolicited side effect an observable failure.
+            if method == "session/cancel" {
+                fs::write(root.join("unexpected-cancel"), b"cancel")?;
+            }
+            continue;
+        };
+        let result = match method {
+            "initialize" => {
+                let capabilities = if load_supported {
+                    json!({"loadSession":true,"sessionCapabilities":{"resume":{}}})
+                } else if mode == "recovery-resume-only" {
+                    json!({"sessionCapabilities":{"resume":{}}})
+                } else {
+                    json!({})
+                };
+                json!({"protocolVersion":1,"agentCapabilities":capabilities,"authMethods":[],
+                    "agentInfo":{"name":"synthetic-private-recovery-peer","version":"1"}})
+            }
+            "session/new" => {
+                let cwd = request["params"]["cwd"]
+                    .as_str()
+                    .map(PathBuf::from)
+                    .filter(|cwd| cwd.is_absolute())
+                    .ok_or("absolute recovery cwd required")?;
+                let session = RecoverySession {
+                    session_id: new_id.expect("new session has a unique identity"),
+                    cwd,
+                    value: 0,
+                    commands: 0,
+                    history: Vec::new(),
+                };
+                save_recovery(root, &session)?;
+                let mut result = if configuration.is_empty() {
+                    json!({"sessionId":session.session_id})
+                } else {
+                    json!({"sessionId":session.session_id,"configOptions":configuration})
+                };
+                if mode == "recovery-model-options" {
+                    result["models"] = json!({"currentModelId":"legacy-model",
+                        "availableModels":[{"modelId":"legacy-model","name":"Legacy model"}]});
+                }
+                active = Some(session);
+                result
+            }
+            "session/load" | "session/resume" => {
+                let supported = mode != "recovery-unsupported"
+                    && (method == "session/resume" || load_supported);
+                if !supported {
+                    emit(json!({"jsonrpc":"2.0","id":id,"error":{
+                        "code":-32601,"message":"Recovery capability is not advertised"}}))?;
+                    continue;
+                }
+                let gate = root.join(format!(
+                    "pause-load-{}",
+                    requested_session.unwrap_or("missing")
+                ));
+                let deadline = std::time::Instant::now() + Duration::from_secs(30);
+                while gate.exists() && std::time::Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                if gate.exists() {
+                    return Err("recovery load gate timed out".into());
+                }
+                let saved = requested_session
+                    .and_then(|session| recovery_path(root, session).ok())
+                    .and_then(|path| fs::read(path).ok())
+                    .and_then(|bytes| serde_json::from_slice::<RecoverySession>(&bytes).ok())
+                    .filter(|session| {
+                        Some(session.session_id.as_str()) == requested_session
+                            && request["params"]["cwd"].as_str() == session.cwd.to_str()
+                    });
+                let Some(session) = saved else {
+                    emit(json!({"jsonrpc":"2.0","id":id,"error":{
+                        "code":-32001,"message":"Exact saved recovery session is unavailable"}}))?;
+                    continue;
+                };
+                // Load is display-only history, deliberately emitted before
+                // the open response; resume does not replay history.
+                if method == "session/load" {
+                    for message in &session.history {
+                        stream(&session.session_id, &message.category, &message.text)?;
+                    }
+                }
+                active = Some(session);
+                let mut result = if configuration.is_empty() {
+                    json!({})
+                } else {
+                    json!({"configOptions":configuration})
+                };
+                if mode == "recovery-model-options" {
+                    result["models"] = json!({"currentModelId":"legacy-model",
+                        "availableModels":[{"modelId":"legacy-model","name":"Legacy model"}]});
+                }
+                result
+            }
+            "session/set_config_option"
+                if !configuration.is_empty()
+                    && active.as_ref().is_some_and(|session| {
+                        Some(session.session_id.as_str()) == requested_session
+                    }) =>
+            {
+                let config_id = request["params"]["configId"]
+                    .as_str()
+                    .ok_or("config ID required")?;
+                let value = request["params"]["value"]
+                    .as_str()
+                    .ok_or("choice required")?;
+                let option = configuration
+                    .iter_mut()
+                    .find(|option| option["id"] == config_id)
+                    .ok_or("unknown recovery choice")?;
+                if !option["options"]
+                    .as_array()
+                    .ok_or("choice list required")?
+                    .iter()
+                    .any(|choice| choice["value"] == value)
+                {
+                    return Err("unknown recovery choice value".into());
+                }
+                option["currentValue"] = json!(value);
+                json!({"configOptions":configuration})
+            }
+            "session/prompt"
+                if active.as_ref().is_some_and(|session| {
+                    Some(session.session_id.as_str()) == requested_session
+                }) =>
+            {
+                let session = active.as_mut().expect("exact active session checked");
+                let text = request["params"]["prompt"][0]["text"]
+                    .as_str()
+                    .ok_or("text recovery command required")?;
+                let parts: Vec<_> = text.split_whitespace().collect();
+                if parts.len() != 3 || parts[0] != "add" {
+                    return Err("expected recovery arithmetic command: add A B".into());
+                }
+                let left = parts[1].parse::<i64>()?;
+                let right = parts[2].parse::<i64>()?;
+                // These two independent choices have real, distinct arithmetic
+                // effects; load resets them so recovery must reapply both.
+                let extra: i64 = configuration
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, option)| option["currentValue"] == "high")
+                    .map(|(index, _)| (index as i64 + 1) * 100)
+                    .sum();
+                session.value = session
+                    .value
+                    .checked_add(left)
+                    .and_then(|value| value.checked_add(right))
+                    .and_then(|value| value.checked_add(extra))
+                    .ok_or("recovery arithmetic overflow")?;
+                session.commands = session
+                    .commands
+                    .checked_add(1)
+                    .ok_or("recovery command count overflow")?;
+                let output = format!("Total={}; commands={}", session.value, session.commands);
+                session.history.push(RecoveryMessage {
+                    category: "user_message_chunk".into(),
+                    text: text.to_owned(),
+                });
+                session.history.push(RecoveryMessage {
+                    category: "agent_message_chunk".into(),
+                    text: output.clone(),
+                });
+                save_recovery(root, session)?;
+                let effect = root.join(format!("recovery.effect.{}.tmp", std::process::id()));
+                fs::write(
+                    &effect,
+                    serde_json::to_vec(&json!({
+                        "session_id":session.session_id,"value":session.value,
+                        "commands":session.commands,"rpc_id":id
+                    }))?,
+                )?;
+                fs::rename(effect, root.join("effect.json"))?;
+                stream(&session.session_id, "agent_message_chunk", &output)?;
+                json!({"stopReason":"end_turn"})
+            }
+            _ => {
+                emit(json!({"jsonrpc":"2.0","id":id,"error":{
+                    "code":-32601,"message":"Unsupported recovery fixture method or session"}}))?;
+                continue;
+            }
+        };
+        emit(json!({"jsonrpc":"2.0","id":id,"result":result}))?;
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let root = PathBuf::from(
         std::env::args_os()
@@ -476,6 +751,17 @@ fn main() -> Result<()> {
         }
     });
     fs::write(root.join("peer.pid"), std::process::id().to_string())?;
+    if matches!(
+        mode.as_str(),
+        "recovery"
+            | "recovery-options"
+            | "recovery-single-option"
+            | "recovery-model-options"
+            | "recovery-resume-only"
+            | "recovery-unsupported"
+    ) {
+        return recovery_peer(&root, &mode);
+    }
     let _descendant = if matches!(
         mode.as_str(),
         "descendants" | "s04-complete" | "s04-stalled-descendants"
@@ -594,7 +880,14 @@ fn main() -> Result<()> {
                     std::io::stderr().write_all(&vec![b's'; 256 * 1024])?;
                     fs::write(root.join("stderr-drained"), b"continued")?;
                 }
-                let methods = if mode.starts_with("auth") {
+                let methods = if mode == "auth-multiple" {
+                    json!([
+                        {"id":"agent-login","name":"Agent login","type":"agent"},
+                        {"id":"agent-login-alt","name":"Alternate agent login","type":"agent"},
+                        {"id":"client-login","name":"Never a client login","type":"client"},
+                        {"id":"terminal-login","name":"Never a terminal login","type":"terminal"}
+                    ])
+                } else if mode.starts_with("auth") {
                     json!([
                         {"id":"agent-login","name":"Agent login","type":"agent"},
                         {"id":"client-login","name":"Never a client login","type":"client"},
@@ -607,7 +900,16 @@ fn main() -> Result<()> {
                     "agentInfo":{"name":"synthetic-private-agent-label","version":"1"}})
             }
             Some("authenticate") => {
-                if request["params"]["methodId"] != "agent-login" {
+                if mode == "auth-multiple" {
+                    fs::write(
+                        root.join("authenticate-request.json"),
+                        serde_json::to_vec(&request)?,
+                    )?;
+                }
+                if request["params"]["methodId"] != "agent-login"
+                    && !(mode == "auth-multiple"
+                        && request["params"]["methodId"] == "agent-login-alt")
+                {
                     return Err("non-agent auth reached peer".into());
                 }
                 fs::write(root.join("authenticate.received"), b"agent only")?;
@@ -629,6 +931,13 @@ fn main() -> Result<()> {
                     startup_bonus += form_bonus(&response, &json!(41), false)?;
                 }
                 barrier(&root, "authenticate")?;
+                if mode == "auth-multiple" {
+                    startup_bonus = if request["params"]["methodId"] == "agent-login-alt" {
+                        7
+                    } else {
+                        3
+                    };
+                }
                 authenticated = true;
                 json!({})
             }
@@ -1073,10 +1382,29 @@ fn main() -> Result<()> {
                     } else {
                         form_bonus(&response, &json!("reusable-form"), mode == "s02-rich")?
                     }
-                } else if mode == "s02-permission" {
+                } else if matches!(mode.as_str(), "s02-permission" | "e07-queued-permission") {
+                    if mode == "e07-queued-permission" {
+                        fs::write(
+                            root.join("permission-gate.received"),
+                            b"original prompt pending",
+                        )?;
+                        let deadline = Instant::now() + Duration::from_secs(30);
+                        while !root.join("permission-gate.release").exists() {
+                            if Instant::now() >= deadline {
+                                return Err("queued permission gate was not released".into());
+                            }
+                            std::thread::sleep(Duration::from_millis(2));
+                        }
+                    }
                     send_permission(json!(73), &session)?;
                     let response = receive(&mut reader)?.ok_or("permission response missing")?;
                     permitted = permission_allows(&response, &json!(73))?;
+                    if mode == "e07-queued-permission" {
+                        fs::write(
+                            root.join("permission-response.json"),
+                            serde_json::to_vec(&json!({"prompt_rpc_id":id,"response":response}))?,
+                        )?;
+                    }
                     if permitted {
                         fs::write(root.join("tool-effect"), b"authorized tool ran")?;
                     }

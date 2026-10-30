@@ -1,0 +1,56 @@
+{
+  "type": "signed-source-delivery",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "also_preserves": "approved E07 modal/project/CLI work"
+  },
+  "authorization": "Explicit user: commit, merge and push; every new commit signed; re-sign unpublished old commits if needed.",
+  "status": "ready-for-signed-source-commit",
+  "baseline": "cc468a34cd7c055457ec286fc3464dc5ac2103a9",
+  "unpublished_commits_before_delivery": 0,
+  "published_history_rewrite": false,
+  "commit_shape": "One verified combined source tree: E07 and E08 share files and the approved E07 work was still uncommitted. Both full evidence sets retained.",
+  "signing": {
+    "format": "ssh",
+    "program": "1Password op-ssh-sign",
+    "signatures_required": "every new source and delivery-record commit",
+    "verification": "local ssh-keygen plus GitHub commit verification after push"
+  },
+  "source_manifest": "specs/verifications/e08-review-r7-source.json",
+  "precommit_source_hashes_matched": 21,
+  "precommit_inventory_paths": 137,
+  "token_pattern_scan": {
+    "status": "passed",
+    "paths": 137,
+    "matches": 0,
+    "scope": "candidate text only; no auth reads; not an external secret-scanner certification"
+  },
+  "verification": {
+    "evidence": "specs/verifications/e08-recovery.json",
+    "workspace_cases": 593,
+    "guarded_child_verdicts": 1,
+    "ignored": 12,
+    "actual_runtime_checks": 9,
+    "independent_review": {
+      "A": 100,
+      "B": 100,
+      "findings": 0,
+      "hashes_each": 21
+    },
+    "current_source_unchanged": true,
+    "coverage": "existing quantitative waiver unchanged",
+    "gate_trace": "WAIVED: scripts and structured inputs absent; manual mapping current",
+    "CI": "No repository test/build workflow. GitHub API lists only dynamic Copilot review; no CI PASS claimed."
+  },
+  "boundaries": {
+    "providers": 0,
+    "install": false,
+    "global_daemon_or_config_or_auth_changes": false,
+    "tag_or_release": false,
+    "native_fence": "unknown/fail-closed",
+    "E05": "parked",
+    "historical_failures_and_caps": "retained"
+  },
+  "recorded_at": "2026-10-30T16:20:54.969Z"
+}

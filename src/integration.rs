@@ -82,6 +82,14 @@ fn valid_id(id: &str) -> Result<()> {
     );
     Ok(())
 }
+fn recovery_text(value: &Value, limit: usize) -> Option<&str> {
+    value.as_str().filter(|text| {
+        !text.trim().is_empty() && text.len() <= limit && !text.chars().any(char::is_control)
+    })
+}
+fn recovery_path(value: &Value) -> Option<&str> {
+    recovery_text(value, 4096).filter(|text| Path::new(text).is_absolute())
+}
 fn check_shell(shell: &Shell, queue: bool) -> Result<()> {
     ensure!(
         !shell.lost && shell.pid.is_some_and(alive),
@@ -289,6 +297,10 @@ impl Integration {
                     .ok_or_else(|| anyhow!("missing agent instance ID"))?
                     .to_owned();
                 ensure!(
+                    recovery_text(&event["instance_id"], 512).is_some(),
+                    "invalid agent instance ID"
+                );
+                ensure!(
                     matches!(
                         event["activity"].as_str(),
                         Some("idle" | "working" | "needs-input" | "unknown")
@@ -296,7 +308,27 @@ impl Integration {
                     "invalid agent activity"
                 );
                 let timestamp = now();
-                let root = if event["agent_kind"] == "main" {
+                let main = event["agent_kind"] == "main" && event["parent_id"].is_null();
+                let current = terminal.root.as_deref() == Some(key.as_str());
+                // Only an explicit new root may displace the selected lifetime.
+                // Late heartbeats/end/shutdown reports from its predecessor and
+                // nested agents cannot select or overwrite the current root.
+                if (current
+                    && (!main
+                        || terminal
+                            .agents
+                            .get(&key)
+                            .is_some_and(|agent| agent.value["shutdown"] == true)))
+                    || (event["agent_kind"] == "main" && !main)
+                    || (main
+                        && !current
+                        && (event["shutdown"] == true
+                            || (terminal.root.is_some()
+                                && event["lifecycle_event"] != "session_start")))
+                {
+                    return Ok(snapshot(terminal, timestamp));
+                }
+                let root = if main {
                     Some(key.as_str())
                 } else {
                     terminal.root.as_deref()
@@ -314,7 +346,7 @@ impl Integration {
                     terminal.agents.len() < 128 || terminal.agents.contains_key(&key),
                     "busy: active agent reporting limit reached"
                 );
-                if event["agent_kind"] == "main" {
+                if main {
                     terminal.root = Some(key.clone());
                 }
                 terminal.agents.insert(
@@ -331,6 +363,70 @@ impl Integration {
     }
     pub fn state(&self, id: &str) -> Value {
         self.terminals.lock().get(id).map(|t| snapshot(t, now())).unwrap_or_else(|| json!({"shell":{"ready":false,"freshness":"unknown"},"agent":{"activity":"unknown","settled":false,"reason":"integration-lost"}}))
+    }
+    /// Current-root shutdown is independent of recovery checkpoint completion.
+    pub(crate) fn root_closed(&self, id: &str, root: &str) -> bool {
+        self.terminals.lock().get(id).is_some_and(|terminal| {
+            terminal.root.as_deref() == Some(root)
+                && terminal
+                    .agents
+                    .get(root)
+                    .is_some_and(|agent| agent.value["shutdown"] == true)
+        })
+    }
+    /// Bounded current-root observation; absence is not an unrecoverable context.
+    /// The caller validates the saved header before persisting exact metadata.
+    pub fn recovery(&self, id: &str) -> Option<Value> {
+        let terminals = self.terminals.lock();
+        let terminal = terminals.get(id)?;
+        let lifetime = terminal.root.as_ref()?;
+        let agent = terminal.agents.get(lifetime)?;
+        let value = &agent.value;
+        if value["shutdown"] == true || now().saturating_sub(agent.last_seen) > AGENT_LEASE_MS {
+            return None;
+        }
+        let session = recovery_text(&value["conversation_id"], 256);
+        let file = recovery_path(&value["session_file"]);
+        let cwd = recovery_path(&value["cwd"]);
+        let pid = value["pid"]
+            .as_u64()
+            .filter(|pid| *pid > 0 && *pid <= i32::MAX as u64);
+        let reason = if value["agent_family"] != "omp" {
+            Some("unsupported-agent")
+        } else if value["session_persisted"] == false {
+            Some("session-not-persisted")
+        } else if session.is_none() {
+            Some("invalid-session-id")
+        } else if file.is_none() {
+            Some("invalid-session-file")
+        } else if cwd.is_none() {
+            Some("invalid-cwd")
+        } else if pid.is_none() {
+            Some("invalid-peer-pid")
+        } else {
+            None
+        };
+        let mut observation = json!({
+            "agent":if value["agent_family"] == "omp" {"omp"} else {"unsupported"},
+            "root_lifetime":lifetime,
+            "recoverable":reason.is_none(),
+        });
+        if let Some(reason) = reason {
+            observation["reason"] = json!(reason);
+        }
+        for (key, text) in [
+            ("session_id", session),
+            ("session_file", file),
+            ("cwd", cwd),
+        ] {
+            if let Some(text) = text {
+                observation[key] = json!(text);
+            }
+        }
+        if let Some(pid) = pid {
+            observation["peer_pid"] = json!(pid);
+        }
+        Some(observation)
     }
     pub fn capture(&self, id: &str) -> Option<Context> {
         self.terminals

@@ -1,0 +1,54 @@
+{
+  "type": "source-manifest",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "baseline_commit": "cc468a3",
+    "branch": "feat/agent-conversation-recovery",
+    "review_round": 1,
+    "max_rounds": 5
+  },
+  "root": "/Users/addomam/projects/amux-acp",
+  "historical_review_caps": "unchanged; E08 review only",
+  "preflight": {
+    "job": "bg_16",
+    "raw": "artifact://3320",
+    "workspace_tests": 555,
+    "suites": 31,
+    "ignored": 12,
+    "wall_seconds": 138.64,
+    "strict_clippy_fmt_build": "passed"
+  },
+  "stock_OMP_Zsh": {
+    "job": "bg_17",
+    "tests": 8,
+    "assertions": 49,
+    "status": "passed"
+  },
+  "binaries": {
+    "debug": "b53cd6f2bb6335ed783ca63cff6b25cf256c3e87b7de15dfcd68d5b05ea2f542",
+    "installed": "1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f",
+    "installed_unchanged": true
+  },
+  "sha256": {
+    "Cargo.toml": "95319b71d35c12d0d0acdb2d38c5794303963fa40c37807c0d502b98728d8f74",
+    "Cargo.lock": "25b3293c1d1de18ad328161dfddf3252d4e157895389e63d0725cb4a709e461c",
+    "CONVENTIONS.md": "bb21da16a6ce833228743c728e124145fe6211f4340ed60d7ccbc603343b874e",
+    "src/lib.rs": "cba647b543869c9a016b8773ef67296ef49efc41a9cb61672489e71fe7ce3e05",
+    "src/recovery.rs": "a092c8406c6f56338b32155c932b09cde3c3f89068a3e8a8d941dc05517c225f",
+    "src/runtime.rs": "a906e625494964d253a00ea43497f1e11367835294f602fa90cca6983ebeca56",
+    "src/acp.rs": "b35d2be7882d448410abbe8c52e9aad3322d9c4290ce2d2a374dfbdbc4af9c47",
+    "src/codex.rs": "a3362f144d57a47fc0e12da422c3ec341f295cf7d33609925c81475d53109ed6",
+    "src/integration.rs": "ed5f3fadf82b685742442126565b4adf5282fa9116a110284aa924f44d302a77",
+    "src/daemon.rs": "a26dfc876a99d15e58b30bd1e4f1cf77483de37c64d3b06dd8084962216f03fc",
+    "src/daemon/recovery.rs": "42da5c1a29fc4c04f403a47c5024004c14d485658e539c94a8078cb36db4a2b8",
+    "integrations/omp/amux.ts": "97a9bebf6b5e1659a688a52f3b3e88555990f83617066f4cbf35be96d6fef0f9",
+    "tests/recovery.rs": "cd15e5828030bac9c6da6a2cdc4a5819a90e5f331919ec49f6c4e8cd85bb2598",
+    "tests/integration.rs": "16f27f813504ae57b92b14354aed5a18adcece2d7a7763a95cb8cab4fdf55eab",
+    "tests/fixtures/acp_peer.rs": "bb3769265ddea4a722c5f070c4ed72a049f011b6df868663268b9a57d507b590",
+    "tests/acp/native.rs": "271db9907a17014c7041678391c29717d29914d84f1ca834bff0846818e218b4",
+    "tests/pty_control/native.rs": "67bc0c1d63a334ef735e5fdc42387fa0a13ce750f7ba4820709e53e16745168e",
+    "README.md": "e79e70971f92057235904b9d47327eb3855453283f3ccb8f7a24f21feb30bc84",
+    "CHANGELOG.md": "f47cb40dfd574357a772c5972a8e2947f662c3db04e3562344ea972f4ea7aa5d"
+  }
+}

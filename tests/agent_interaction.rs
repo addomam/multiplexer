@@ -118,6 +118,10 @@ impl Host {
         fs::write(root.join("bin/codex"), r#"#!/bin/sh
 set -eu
 if [ "${1:-}" = --version ]; then
+    if [ -f "$AMUX_CODEX_FIXTURE_ROOT/pause-native-version" ]; then
+        printf '%s\n' "$$" > "$AMUX_CODEX_FIXTURE_ROOT/native-pending.pid"
+        while [ -f "$AMUX_CODEX_FIXTURE_ROOT/pause-native-version" ]; do /bin/sleep 0.02; done
+    fi
     printf 'codex-cli 0.160.0\n'
     exit 0
 fi
@@ -125,6 +129,11 @@ printf '%s\n' "$@" >> "$AMUX_CODEX_FIXTURE_ROOT/launcher.log"
 AMUX_CODEX_FIXTURE_MODE=frontend
 if [ "${1:-}" = app-server ]; then
     AMUX_CODEX_FIXTURE_MODE=backend
+    if [ -f "$AMUX_CODEX_FIXTURE_ROOT/pause-native-backend" ]; then
+        printf '%s\n' "$$" > "$AMUX_CODEX_FIXTURE_ROOT/native-pending.pid"
+        while [ -f "$AMUX_CODEX_FIXTURE_ROOT/pause-native-backend" ]; do /bin/sleep 0.02; done
+        exit 78
+    fi
 fi
 AMUX_CODEX_FIXTURE_ENDPOINT=
 while [ "$#" -gt 0 ]; do
@@ -167,45 +176,7 @@ exec "$AMUX_CODEX_FIXTURE_BINARY" --ignored --exact protocol_fixture_backend --n
         )
         .unwrap();
         let socket = root.join("daemon.sock");
-        let log = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(root.join("daemon.log"))
-            .unwrap();
-        let daemon = Command::new(env!("CARGO_BIN_EXE_amux"))
-            .args([
-                "--socket",
-                socket.to_str().unwrap(),
-                "daemon",
-                "--projects-dir",
-                root.join("projects").to_str().unwrap(),
-            ])
-            .env_clear()
-            .env("PATH", daemon_path)
-            .env("HOME", root.join("home"))
-            .env("USER", "amux-fixture")
-            .env("SHELL", "/bin/zsh")
-            .env("TERM", "xterm-256color")
-            .env("ZDOTDIR", root.join("startup"))
-            .env("XDG_CONFIG_HOME", root.join("config"))
-            .env("XDG_RUNTIME_DIR", root.join("runtime"))
-            .env("AMUX_RUNTIME_DIR", root.join("runtime"))
-            .env("AMUX_SOCKET", &socket)
-            .env("CODEX_HOME", root.join("codex"))
-            .env("TMPDIR", root.join("tmp"))
-            .env("AMUX_CODEX_FIXTURE_GUARD", HELPER_GUARD)
-            .env("AMUX_CODEX_FIXTURE_ROOT", &root)
-            .env(
-                "AMUX_CODEX_FIXTURE_BINARY",
-                std::env::current_exe().unwrap(),
-            )
-            .current_dir(&root)
-            .process_group(0)
-            .stdin(Stdio::null())
-            .stdout(log.try_clone().unwrap())
-            .stderr(log)
-            .spawn()
-            .unwrap();
+        let daemon = Self::spawn(&root, &socket, &daemon_path);
         let host = Self {
             root,
             socket,
@@ -231,6 +202,84 @@ exec "$AMUX_CODEX_FIXTURE_BINARY" --ignored --exact protocol_fixture_backend --n
             }
         }
         host
+    }
+
+    fn spawn(root: &Path, socket: &Path, path: &str) -> Child {
+        let log = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(root.join("daemon.log"))
+            .unwrap();
+        Command::new(env!("CARGO_BIN_EXE_amux"))
+            .args([
+                "--socket",
+                socket.to_str().unwrap(),
+                "daemon",
+                "--projects-dir",
+                root.join("projects").to_str().unwrap(),
+            ])
+            .env_clear()
+            .env("PATH", path)
+            .env("HOME", root.join("home"))
+            .env("USER", "amux-fixture")
+            .env("SHELL", "/bin/zsh")
+            .env("TERM", "xterm-256color")
+            .env("ZDOTDIR", root.join("startup"))
+            .env("XDG_CONFIG_HOME", root.join("config"))
+            .env("XDG_RUNTIME_DIR", root.join("runtime"))
+            .env("AMUX_RUNTIME_DIR", root.join("runtime"))
+            .env("AMUX_SOCKET", socket)
+            .env("CODEX_HOME", root.join("codex"))
+            .env("TMPDIR", root.join("tmp"))
+            .env("AMUX_CODEX_FIXTURE_GUARD", HELPER_GUARD)
+            .env("AMUX_CODEX_FIXTURE_ROOT", root)
+            .env(
+                "AMUX_CODEX_FIXTURE_BINARY",
+                std::env::current_exe().unwrap(),
+            )
+            .current_dir(root)
+            .process_group(0)
+            .stdin(Stdio::null())
+            .stdout(log.try_clone().unwrap())
+            .stderr(log)
+            .spawn()
+            .unwrap()
+    }
+
+    fn restart(&mut self) {
+        self.call(json!({"op":"shutdown"}));
+        let deadline = Instant::now() + DEADLINE;
+        loop {
+            if let Some(status) = self.daemon.try_wait().unwrap() {
+                assert!(status.success(), "private daemon shutdown failed");
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "private daemon shutdown deadline"
+            );
+            std::thread::sleep(Duration::from_millis(15));
+        }
+        let path = format!(
+            "{}:/usr/bin:/bin:/usr/sbin:/sbin",
+            self.root.join("bin").display()
+        );
+        self.daemon = Self::spawn(&self.root, &self.socket, &path);
+        self.until("restarted private daemon", || {
+            Connection::connect(&self.socket)
+                .ok()?
+                .exchange(json!({"op":"snapshot"}))
+                .ok()
+                .filter(|reply| reply["ok"] == true)
+        });
+        for terminal in self.call(json!({"op":"snapshot"}))["terminals"]
+            .as_array()
+            .unwrap()
+        {
+            if let Some(pid) = terminal["pid"].as_i64() {
+                self.terminal_pids.borrow_mut().push(pid as i32);
+            }
+        }
     }
 
     fn until<T>(&self, label: &str, mut probe: impl FnMut() -> Option<T>) -> T {
@@ -668,9 +717,56 @@ fn first_real_turn_completion_is_recovered_when_native_root_requires_explicit_su
 
 #[test]
 fn auxiliary_title_preserves_native_turn_but_unexpected_root_invalidates_target() {
-    let host = Host::new();
+    let mut host = Host::new();
     let agent = host.open();
     host.ready(&agent);
+    let directory = host.root.join("config/amux");
+    let native_store = fs::read_dir(&directory)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.is_dir()
+                && path
+                    .extension()
+                    .is_some_and(|extension| extension == "agents")
+        })
+        .expect("private provider-native store");
+    let rollout = native_store
+        .join("sessions")
+        .join(format!("rollout-{SESSION}.jsonl"));
+    fs::write(
+        &rollout,
+        format!(
+            "{}\n",
+            json!({"type":"session_meta","payload":{"id":SESSION}})
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&rollout, fs::Permissions::from_mode(0o600)).unwrap();
+    host.call(json!({"op":"name","terminal":agent.terminal,"name":"Native recovery A"}));
+    let journal = host.until("native A has durable reopening intent", || {
+        fs::read_dir(&directory)
+            .ok()?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .find(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension == "json")
+                    && path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.starts_with("agent-sessions-"))
+            })
+    });
+    let records = || -> Value { serde_json::from_slice(&fs::read(&journal).unwrap()).unwrap() };
+    let saved = host.until("native A is eligible before replacement", || {
+        records()["records"]
+            .as_array()?
+            .iter()
+            .find(|record| record["session_id"] == SESSION && record["blocked"].is_null())
+            .cloned()
+    });
     let turn = host.start(&agent);
     let mut title = json!({
         "id":"019a0c00-0000-7000-9000-000000000001",
@@ -713,6 +809,50 @@ fn auxiliary_title_preserves_native_turn_but_unexpected_root_invalidates_target(
     let before = host.mutations();
     rejected(host.response(request));
     assert_eq!(host.mutations(), before);
+    let blocked = host.until(
+        "replacement blocks the exact saved native conversation",
+        || {
+            records()["records"]
+                .as_array()?
+                .iter()
+                .find(|record| record["id"] == saved["id"] && record["blocked"].is_string())
+                .cloned()
+        },
+    );
+    assert_eq!(
+        blocked["session_id"], SESSION,
+        "replacement B must not be guessed"
+    );
+    assert_eq!(blocked["session_file"], saved["session_file"]);
+    let launches = host.log("launcher.log");
+    let backing = fs::read(&rollout).unwrap();
+    host.restart();
+    host.until(
+        "superseded native A is refused during cold reopening",
+        || {
+            host.call(json!({"op":"snapshot"}))["diagnostics"]
+                .as_array()?
+                .iter()
+                .any(|diagnostic| {
+                    diagnostic["kind"] == "recovery" && diagnostic["target"] == saved["id"]
+                })
+                .then_some(())
+        },
+    );
+    assert_eq!(
+        host.log("launcher.log"),
+        launches,
+        "cold reopening launched the superseded native conversation"
+    );
+    assert_eq!(fs::read(&rollout).unwrap(), backing);
+    assert_eq!(
+        host.call(json!({"op":"snapshot"}))["terminals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1,
+        "cold reopening created a managed native target for the blocked context"
+    );
 }
 
 #[test]
@@ -2484,5 +2624,85 @@ fn protocol_fixture_backend() {
         Ok("backend") => run_provider(root),
         Ok("frontend") => run_native(root),
         other => panic!("invalid private fixture role: {other:?}"),
+    }
+}
+
+#[test]
+fn daemon_shutdown_joins_native_preparation_before_and_after_backend_spawn() {
+    for phase in ["version", "backend"] {
+        let mut host = Host::new();
+        let gate = host.root.join(format!("pause-native-{phase}"));
+        fs::write(&gate, b"paused").unwrap();
+        let controller = host.controller("pending native preparation");
+        let socket = host.socket.clone();
+        let cwd = host.root.join("workspace");
+        let (finished, response) = mpsc::sync_channel(1);
+        let opening = std::thread::spawn(move || {
+            let result = Connection::connect(&socket).and_then(|mut connection| {
+                connection.exchange(json!({"op":"agent-open","controller":controller,
+                    "model":MODEL,"cwd":cwd}))
+            });
+            let _ = finished.send(result);
+        });
+        let pid = host.until("owned native preparation reached its gated phase", || {
+            fs::read_to_string(host.root.join("native-pending.pid"))
+                .ok()?
+                .trim()
+                .parse::<i32>()
+                .ok()
+        });
+        assert_eq!(
+            unsafe { libc::kill(pid, 0) },
+            0,
+            "gated preparation already exited"
+        );
+        host.call(json!({"op":"shutdown"}));
+        // The listener closes authority connections before joining preparation.
+        // Keep the version probe gated until that real shutdown edge is observed.
+        let reply = response
+            .recv_timeout(DEADLINE)
+            .expect("native caller did not disconnect during shutdown");
+        assert!(
+            !reply.as_ref().is_ok_and(|reply| reply["ok"] == true),
+            "a gated native creation returned a new live target during shutdown"
+        );
+        if phase == "version" {
+            fs::remove_file(&gate).unwrap();
+        }
+        opening.join().unwrap();
+        let deadline = Instant::now() + DEADLINE;
+        loop {
+            if let Some(status) = host.daemon.try_wait().unwrap() {
+                assert!(
+                    status.success(),
+                    "native preparation made normal shutdown fail"
+                );
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "native startup ignored shutdown cancellation"
+            );
+            std::thread::sleep(Duration::from_millis(15));
+        }
+        assert_eq!(
+            unsafe { libc::kill(pid, 0) },
+            -1,
+            "owned startup process survived daemon exit"
+        );
+        assert_eq!(io::Error::last_os_error().raw_os_error(), Some(libc::ESRCH));
+        assert!(
+            fs::read_dir(&host.root)
+                .unwrap()
+                .filter_map(Result::ok)
+                .all(|entry| { !entry.file_name().to_string_lossy().starts_with("cx-") }),
+            "unpublished native preparation left its private resource root behind"
+        );
+        if phase == "backend" {
+            assert!(
+                gate.exists(),
+                "cleanup depended on unblocking the external executable"
+            );
+        }
     }
 }

@@ -1,14 +1,15 @@
 workflow_mode: solo-git
-vcs: {kind: git, branch: main, signing: verified-SSH-source-release-commits-and-tag, publish_via: protected-branch-safe-PR-merge-preserving-signed-history, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
-active_flow: null
-active_epic: null
+vcs: {kind: git, branch: feat/agent-conversation-recovery, signing: verified-SSH-source-release-commits-and-tag, publish_via: protected-branch-safe-PR-merge-preserving-signed-history, remote: origin, url: "https://github.com/addomam/multiplexer.git"}
+active_flow: build_epic
+active_epic: e08
+epic_cycle: {epic: e08, story: e08s01, story_bcps: 6, current_step: 8, completed_steps: [0, 1, 2, 3, 4, 5, 6, 7], audit_result: pass, independent_review: "R7 A100/B100 PASS, zero findings, each21/21 hashes; used7/10; R1-R6 combined FAIL retained"}
 project_cycle:
-  current_phase: 6
-  completed_phases: [1, 2, 3, 4, 5, 6]
+  current_phase: 4
+  completed_phases: [1, 2, 3]
   mode: standard
-  scope: acp-daily-use
-  status: completed
-  release: v0.1.0
+  scope: automatic-agent-conversation-reopening-without-work-continuation
+  status: signed-commit-main-merge-and-push-authorized-in-progress
+  previous_release: v0.1.0
   previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e04, scope: acp-agent-interaction, status: user-accepted-locally-landed, main_commit: af745cdf4045af76a7a34a8bb4260e24057461ce, tag_release_CI: not-requested-not-claimed, previous_cycle: {current_phase: 4, completed_phases: [2, 3], active_epic: e03, scope: same-instance-agent-interaction, acceptance: failing-user-approved-limited-delivery, previous_cycle: {current_phase: 6, completed_phases: [1, 2, 3, 4, 5], active_epic: e02}}}
 elaborate_review:
   scope: same-instance-agent-interaction-specification
@@ -34,10 +35,10 @@ plan_review:
   must_fix: 0
   evidence: specs/verifications/e03-plan-review.md
 handoff:
-  next_skill: orchestrate-project
+  next_skill: release-branch
   blocked: false
   blocker: null
-  reason: "Release complete: v0.1.0 macOS arm64 preview is published with verified assets and a GitHub-verified SSH tag on19df8e1. The exact downloaded binary is installed at ~/.cargo/bin/amux; outside-checkout packaged and installed ACP arithmetic42, original tuple/PID and normal private cleanup pass. Owned staging has no lsof holders and is removed. Main publication uses permitted feature-branch/PR merge, not direct protected pushes. E06 all7 tasks/3 stories pass and its capsule is archived; E05 remains parked. No new live calls (12/cap12/0), live-daemon restart or global config/auth changes. CI is unconfigured, not green; coverage/traceability WAIVED and historical caps/native unknown-settlement limits remain unchanged. Await the user's next concrete issue or scope; do not reopen E05 automatically."
+  reason: "User explicitly authorizes commit/main merge/push and requires every new commit signed; may re-sign unpublished old commits if needed. No unpublished commits precede delivery. Preserve published main and the verified combined approved E07/E08 tree; use signed source commit and fast-forward main, then record verified delivery. R7 A100/B100 and593 workspace cases plus guarded child/nine actual checks remain current; no source changes. Existing main GitHub GPG signature is remotely verified; local GPG keyring is locked by another process and is not changed. No install, daemon/config/auth changes, live models, tag or release."
   historical_progress: >-
     Signed e03 delivery/receipts published and verified on main a46eaddeb79a9a42628d9cb39cd60945ece27fbb.
     ACP work is /Users/addomam/projects/amux-acp-build on feat/acp-agent-interaction; original dirty checkout preserved.
@@ -123,8 +124,96 @@ handoff:
     E06 complete genuine installed-OMP acceptance now PASS in one foreground run:1 selected/1 passed/0 ignored,10.06 seconds. Exactly4 actual MAI flash/low requests at2000 requested output tokens each; aggregate12/cap12/0. Genuine native question answer, API Force preserving the original pending permission, exact deny/allow file effects, original tuple/PID/work/RPC and normal end_turn all pass without implicit interruption. Native termios/host/drainer, original agent/workers/endpoints, daemon/socket/workspace and unrelated-sentinel cleanup pass. Separate private copied-auth/raw root has no lsof holders and is removed; global subscription credential row is unchanged. Full receipt e06-omp-live-final.json. All7 tasks/3 stories pass; E05 remains parked with historical failures/caps preserved. Retain uncommitted feature worktree; commit/merge/push/release still need separate authorization, no further live calls.
     User explicitly requests “commit and merge”: authorize committing the verified E06 feature and parked E05 planning/evidence on feat/acp-daily-use and fast-forwarding local main. Main worktree /Users/addomam/projects/amux-acp is clean at af745cdf; feature also retains the earlier2195b05 planning commit. All86 reviewed code/test/vendor/Cargo paths still match the approved source; full acceptance remains green. Attempt configured SSH signing with the actual configured author. No push, tag, release, global change or new provider run. Generic traceability matrix/scripts are absent, so quantitative gate-trace is WAIVED, not fabricated; all7 explicit task verify/evidence links are present. Keep the feature worktree until integration and actual main smoke succeed.
     E06 implementation committed as f186891867faac5dde0ffd7cf5b88a622fcaa399 and fast-forwarded into local main, preserving earlier2195b05 and every parked E05 planning record. Configured SSH signing failed with “1Password: agent returned an error”; used existing user-authorized command-scoped unsigned fallback, actual author retained and global Git configuration unchanged. Actual main build/CLI/start-help passed. Initial main smoke omitted the documented ACP fixture example and failed12 cases; after cargo build --example acp_fixture, all13 launch/native cases pass in2.35s, all8 stock OMP tests pass and Zsh syntax passes (artifact://2704). No production/test-code change or provider request. Record landing metadata on the feature branch, fast-forward that record, then retire only the fully integrated clean feature worktree/branch without force. Main worktree /Users/addomam/projects/amux-acp is the continuing checkout. No push/tag/release/CI claim or new live authority.
-  last_step_completed: v0.1.0-preview-published-installed-private-runtime-verified-and-owned-staging-removed
+    E07 approved modal navigation and all eight UX improvements are locally complete: six stories/twelve tasks passed actual private real-TUI/evidence gates,511 workspace regressions and strict checks; fresh independent round4 A100/72 and B100/84 has zero findings. All31 reviewed fingerprints and installed a45a1f7d binary match;45 actual UI cases and normal owned cleanup are retained. No providers, global changes, install or publication. Phase6 awaits a separate user delivery decision; no historical acceptance/review/provider cap is reset.
+    Subsequent explicit user startup-config request completed: deleted only the identified unsupported-schema config (no saved projects/hooks/profiles); added filename context without losing root causes. New readiness regression RED3194 then GREEN3196 with all511 workspace tests/strict checks; actual private CLI failure/recovery/normal cleanup passes. No provider/auth/global-daemon/install/publication changes. E07 round4 reports and manifest remain historical, not a review of the changed follow-up source; all caps preserved.
+    User explicitly authorized local installation and daemon termination. Optimized locked cargo install bg_413 passes; installed/release binary hashes match1ad4b014 and strict codesign verification passes. Actual installed private CLI startup/error/default-modal/snapshot/shutdown and resource cleanup pass. Identified old daemon44646 gracefully stopped with shutdown0; PID/socket absent, no remaining amux daemon, no restart. No providers/auth/config/commit/publication changes. Evidence e07-local-install.json; historical source reviews/caps remain unchanged.
+    User-requested crash-resume investigation complete without implementation. Herdr0.9.5 cold restore relaunches from durable native conversation references; Codex/Grok/OMP native exact reopen and ACP v1 load/resume contracts are mapped. Installed OMP ordinary resume is observed in two distinct offline processes with one saved synthetic conversation, no prompt/automatic work, normal EOF0 and complete private cleanup; initial no-default-model startup failure is preserved. Scope narrow durable recovery metadata before Build; do not conflate OMP --restore active tool/subagent retry with context reopening or transfer old authority/RPC identities. No new live calls, globals, production changes or historical-cap resets.
+  last_step_completed: e08-local-corrections-full-and-seven-actual-runtime-proof-evidence-complete-independent-cap-exhausted
   required_reading:
+    - specs/epics/e08-conversation-recovery/PLAN.md
+    - specs/epics/e08-conversation-recovery/epic.yaml
+    - specs/epics/e08-conversation-recovery/e08s01-story.md
+    - specs/epics/e08-conversation-recovery/e08s01-tasks.yaml
+    - specs/verifications/AUDIT-e08-e08s01.md
+    - specs/verifications/e08-recovery.json
+    - specs/verifications/e08-review-r1-source.json
+    - specs/verifications/e08-review-r2-source.json
+    - specs/verifications/e08-review-r2-brief.md
+    - specs/verifications/e08-review-response.md
+    - specs/verifications/e08-review-r1-A.json
+    - specs/verifications/e08-review-r1-B.json
+    - specs/verifications/e08-review-r2-A.json
+    - specs/verifications/e08-review-r2-B.json
+    - specs/verifications/e08-recovery-r2.json
+    - specs/verifications/e08-review-r3-source.json
+    - specs/verifications/e08-review-r3-brief.md
+    - specs/verifications/e08-recovery-r3-runtime.json
+    - specs/verifications/e08-review-r3-A.json
+    - specs/verifications/e08-review-r3-B.json
+    - specs/verifications/e08-recovery-r3.json
+    - specs/verifications/e08-review-r4-source.json
+    - specs/verifications/e08-review-r4-brief.md
+    - specs/verifications/e08-recovery-r4-runtime.json
+    - specs/verifications/e08-review-r4-A.json
+    - specs/verifications/e08-review-r4-B.json
+    - specs/verifications/e08-recovery-r4.json
+    - specs/verifications/e08-review-r5-source.json
+    - specs/verifications/e08-review-r5-brief.md
+    - specs/verifications/e08-recovery-r5-runtime.json
+    - specs/verifications/e08-review-r5-a.json
+    - specs/verifications/e08-review-r5-b.json
+    - specs/verifications/e08-recovery-r5.json
+    - specs/verifications/e08-recovery-final-source.json
+    - specs/verifications/e08-recovery-final-runtime.json
+    - specs/verifications/e08-final-generalize-sweep.json
+    - specs/verifications/e08-review-cap-extension.json
+    - specs/verifications/e08-review-r6-source.json
+    - specs/verifications/e08-review-r6-brief.md
+    - specs/verifications/e08-review-r6-A.json
+    - specs/verifications/e08-review-r6-B.json
+    - specs/verifications/e08-recovery-r6.json
+    - specs/verifications/e08-recovery-r6-runtime.json
+    - specs/verifications/e08-review-r7-source.json
+    - specs/verifications/e08-review-r7-brief.md
+    - specs/verifications/e08-recovery-r7-runtime.json
+    - specs/verifications/e08-r6-generalize-sweep.json
+    - specs/verifications/e08-review-r7-A.json
+    - specs/verifications/e08-review-r7-B.json
+    - specs/security/epics/e08/THREAT_MODEL.md
+    - specs/verifications/e07-local-install.json
+    - specs/product/SCOPE_E07.yaml
+    - specs/IMPACT-E07.md
+    - specs/epics/e07-modal-ux/PLAN.md
+    - specs/epics/e07-modal-ux/epic.yaml
+    - specs/epics/e07-modal-ux/e07s01-story.md
+    - specs/epics/e07-modal-ux/e07s01-tasks.yaml
+    - specs/epics/e07-modal-ux/e07s02-story.md
+    - specs/epics/e07-modal-ux/e07s02-tasks.yaml
+    - specs/epics/e07-modal-ux/e07s03-story.md
+    - specs/epics/e07-modal-ux/e07s03-tasks.yaml
+    - specs/epics/e07-modal-ux/e07s04-story.md
+    - specs/epics/e07-modal-ux/e07s04-tasks.yaml
+    - specs/epics/e07-modal-ux/e07s05-story.md
+    - specs/epics/e07-modal-ux/e07s05-tasks.yaml
+    - specs/epics/e07-modal-ux/e07s06-story.md
+    - specs/epics/e07-modal-ux/e07s06-tasks.yaml
+    - specs/verifications/e07-ux.json
+    - specs/verifications/AUDIT-e07.md
+    - specs/verifications/e07-review-response.md
+    - specs/verifications/e07-review-r1-A.json
+    - specs/verifications/e07-review-r1-B.json
+    - specs/verifications/e07-review-r2-A.json
+    - specs/verifications/e07-review-r2-B.json
+    - specs/verifications/e07-review-r3-A.json
+    - specs/verifications/e07-review-r3-B.json
+    - specs/verifications/e07-review-r4-A.json
+    - specs/verifications/e07-review-r4-B.json
+    - specs/verifications/e07-review-r4-source.sha256
+    - specs/verifications/startup-config-path.json
+    - specs/verifications/responsive-menu.json
+    - specs/verifications/menu-projects.json
+    - specs/verifications/cli-projects-help.json
+    - specs/verifications/UI-ratatui.md
     - specs/epics/archive/e06-acp-daily-use/PLAN.md
     - specs/epics/archive/e06-acp-daily-use/epic.yaml
     - specs/epics/archive/e06-acp-daily-use/e06s01-story.md
@@ -413,6 +502,74 @@ ui_revision:
 empty_switcher_revision:
   status: passing-native-ui
   evidence: specs/verifications/UI-empty-switcher.md
+post_release_ui_fix:
+  status: verified-locally-installed-not-committed
+  branch: fix/quiet-ownership-picker-repaint
+  current_changes_branch: feat/cli-projects-help
+  quiet_default_control: passing
+  picker_background_repaint: passing
+  runtime: actual-native-and-deterministic-ACP-peer
+  evidence: specs/verifications/UI-ratatui.md
+  private_resource_cleanup: passed-normal-no-fallback
+  new_provider_requests: 0
+  historical_caps_and_published_release: unchanged
+post_release_cli_help:
+  status: verified-locally-installed-not-committed
+  branch: feat/cli-projects-help
+  preserves_uncommitted_UI_repairs: true
+  help: {paths: 38, short_and_long_calls: 76, documented_rows: 378, legacy_CLI_spellings: rejected}
+  project_children: [list, add, save, open, config, remove]
+  project_removal: saved-config-only-retains-files-runtime-identities-and-native-ACP-work
+  configuration_conflict_rollback: passing
+  runtime: actual-installed-CLI-private-native-and-deterministic-ACP
+  mechanical: {workspace_tests: 453, ignored: 12, strict_clippy_fmt_release_build: passed, stock_OMP_tests: 8, OMP_assertions: 49, stock_Zsh_syntax: passed}
+  evidence: specs/verifications/cli-projects-help.json
+  installed_SHA256: b62d74d3859af24ad8e499619b7421b801eef918b95ec8d94cc97a7a3e2f4124
+  new_API_operations: [project-list, project-remove]
+  daemon_upgrade: deliberately-not-performed-global-live-work-preserved
+  private_resource_cleanup: passed-normal-no-fallback-root-removed
+  new_provider_requests: 0
+  historical_caps_E05_and_published_release: unchanged
+post_release_menu_projects:
+  status: verified-locally-installed-not-committed
+  branch: feat/cli-projects-help
+  preserves_prior_UI_CLI_repairs: true
+  menu_new_session_cd_save_project: passing-actual-installed-UI
+  independent_project_IDs: passing
+  selected_shell_context_and_atomic_save_rollback: passing
+  no_project_directory_creation: passing
+  saved_project_open_edit_confirmed_forget: passing
+  original_native_ACP_continuity: passing-synthetic-peer-not-new-provider-proof
+  private_restart_open_and_hook: passing
+  native_blue_cells_after_Menu: 16
+  menu_background_artifact_cells: 0
+  old_daemon_save_new_session: refused-before-mutation
+  mechanical: {job: bg_372, workspace_tests: 456, ignored: 12, strict_clippy_fmt_release_build_install: passed, OMP_tests: 8, OMP_assertions: 49, Zsh_syntax: passed}
+  installed_help: {paths: 38, calls: 76, documented_rows: 378}
+  installed_SHA256: 84e49d1e3764af7a08991c4dd076ce6ccc466db6b93034908ade83f24046a179
+  evidence: specs/verifications/menu-projects.json
+  private_resource_cleanup: passed-normal-after-fixture-fences-no-fallback-root-removed
+  global_daemon_config_auth: untouched-upgrade-needs-separate-approval
+  new_live_provider_requests: 0
+  historical_caps_E05_and_published_release: unchanged
+post_release_responsive_menu:
+  status: verified-locally-installed-not-committed
+  branch: feat/cli-projects-help
+  changes: [Escape-dismissable-shortcut-help, local-and-locked-responsive-headers, responsive-menu-and-project-buttons, compact-search-label]
+  initial_gate: {job: bg_373, tests: 458, ignored: 12, result: passed-before-legacy-shortcut-correction}
+  intermediate_gate: {job: bg_375, tests: 458, status: passed-before-locked-header-correction}
+  final_gate: {job: bg_376, status: passed, tests: 458, suites: 30, ignored: 12, strict_clippy_fmt_release_install: passed, OMP_tests: 8, OMP_assertions: 49, Zsh_syntax: passed}
+  actual_runtime: {local_locked_help_resize_drafts_no_replay: passed, wide_stacked_compact_buttons: passed, physical_mouse_actions: passed, independent_new_session: passed, original_native_arithmetic: "42-to-57", full_native_cells_equal: 2750, blue_cells: 38, menu_background_artifacts: 0}
+  disk_failure: {job: bg_374, result: dependency-build-script-ENOSPC-no-test-result, approved_cleanup: target/debug/incremental-only-1.7GiB}
+  disk_policy: user-reports60GB-free-normal-builds-stop-on-new-disk-failure-no-more-cleanup
+  installed_SHA256: a45a1f7d44605994efe82ae78e43e8506a38baf7f9470f8f2dc3d2e43681b2ab
+  evidence: specs/verifications/responsive-menu.json
+  private_cleanup: four-attachments-two-daemons-native-PIDs-socket-root-normal-no-fallback
+  new_live_provider_calls: 0
+  global_daemon_config_auth: untouched
+  daemon_protocol_storage: no-changes-this-patch
+  fresh_independent_review: not-claimed
+  historical_caps_E05_and_published_release: unchanged
 input_latency_revision:
   status: passing-mechanical-and-native-runtime
   agent: amux-latency
@@ -901,3 +1058,153 @@ e06_fixture_bug_cycle:
   baseline: {job: bg_263, status: failed-stalled-and-terminated, exit: 101, seconds: 2595.28, evidence: specs/verifications/e06-baseline-stall.json}
   forward_e06_production: cleared-by-bg_269-repaired-preflight
   current_action: complete-preserve-failure-repair-and-green-evidence-no-new-provider-runs
+e07_build:
+  status: verified-and-installed-locally-six-stories-twelve-tasks-passing
+  scope: specs/product/SCOPE_E07.yaml
+  plan: specs/epics/e07-modal-ux/PLAN.md
+  impact: specs/IMPACT-E07.md
+  authorization: user-approved-eight-UX-improvements-and-modal-navigation
+  integration_owner: parent
+  baseline: {job: bg_378, status: failed-existing-native-detach-timeout-before-production-edits, raw: "artifact://2944"}
+  workers: {AcpPresentation: src/tui/agent.rs, ProjectForms: src/tui/project.rs, LaunchForm: src/tui/launch.rs, UxBackend: daemon-projects-acp-and-named-backend-tests}
+  verification:
+    status: passed-all-six-stories-and-twelve-tasks
+    native_ownership: {command: "cargo test --test pty_control", passed: 38, failed: 0, raw: "artifact://2964"}
+    previous_integrated: {command: "cargo test --test acp", passed: 89, failed: 20, ignored_live: 2, raw: "artifact://2970"}
+    routing_repair: ACP-rename-and-save-preview-predispatch-kind-guard-fixed-backend-regressions-pass
+    mechanical_gate_before_review: {job: bg_390, command: workspace-test-strict-Clippy-fmt-build-examples-OMP-Zsh, rust_passed: 475, ignored: 12, OMP_passed: 8, status: passed, raw: "artifact://3006"}
+    mechanical_gate_after_round1_repairs: {job: bg_393, rust_passed: 488, ignored: 12, Rust_suites: 30, OMP_passed: 8, strict_Clippy_fmt_build_examples_Zsh: passed, status: passed, raw: "artifact://3055"}
+    mechanical_gate_after_round2_repairs: {job: bg_396, rust_passed: 495, ignored: 12, Rust_suites: 30, OMP_passed: 8, strict_Clippy_fmt_build_examples_Zsh: passed, status: passed, raw: "artifact://3087"}
+    mechanical_gate_after_round3_repairs: {job: bg_410, rust_passed: 511, ignored: 12, Rust_suites: 30, literal_lib_passed: 172, literal_runtime_passed: 8, literal_ACP_passed: 124, OMP_passed: 8, strict_workspace_default_Clippy_fmt_build_examples_Zsh: passed, status: passed, raw: "artifact://3169"}
+    task_ledger_commands: {status: passed, tasks: 12, mechanical_receipt: shared-exact-bg410-components-no-false-six-full-runs, evidence_guards: six-distinct-exact-bun-commands-exit0, evidence: specs/verifications/e07-ux.json}
+    current_action: explicit-local-install-and-daemon-stop-complete-await-separate-commit-merge-push-tag-release-authorization
+    actual_tui: 45-observed-private-cases-including-missing-capability-native-and-ACP-New-no-RPC-real-thin-auth-context-unsupported-no-effect-original-rpc2-arithmetic49-fresh-ordinary-Release-grants-nobody-and-fresh-stock-Zsh42-final-cleanup
+    first_smoke_cleanup: normal-host0-restored-termios-drainer-joined-daemon0-owned-PIDs-gone-socket-absent-lsof1-root-removed-no-fallback-sentinel-alive
+  source_review: {scope: e07-only, maximum_rounds: 5, used_rounds: 4, status: passed-round4-dual-independent-AND, scores: [100, 100], assessments: [72, 84], must_fix: 0, should_fix: 0, consider: 0, both_complete_reports_read: true, reports: [specs/verifications/e07-review-r4-A.json, specs/verifications/e07-review-r4-B.json], previous_round3_scores: [96.67, 96.67], previous_round2_scores: [96.875, 90.0]}
+  reviewed_source_identity: {status: historical-round4-all31-matched-before-startup-config-followup-and-authorized-install, manifest: specs/verifications/e07-review-r4-source.sha256, installed_binary_unchanged: false, evidence: specs/verifications/e07-ux.json, subsequent_source_change: specs/verifications/startup-config-path.json, subsequent_installation: specs/verifications/e07-local-install.json}
+  review_repairs: {parent: older-daemon-New-guard-real-method-id-kind-context-first-session-readonly-pane-lifetime-Owner-panel-height-and-retained-text-wrap, OwnerConsent: src/tui/control.rs-captured-claim-grant-and-presentation-empty-armed-fence, NativeR3Regression: real-queued-six-Owner-and-three-actual-broker-auth-routes, previous_rounds: retained-in-e07-review-response}
+  post_round1_smoke_cleanup: {status: passed, daemon_exit: 0, UI_and_hosts: normal0-modes-restored-drainers-joined, owned_children: observed-absent, socket: absent, root_holders: none-lsof1, root: removed, unrelated_sentinel: alive-through-shutdown, fallback: false, evidence: specs/verifications/e07-ux.json}
+  final_smoke_cleanup: {status: passed, daemon_pid: 73973, daemon_exit: 0, owned_children_absent: [73977, 73979], socket: absent, root_holders: none-lsof1, root: removed, all_TUI_hosts: normal0-modes-restored-drainers-joined, sentinel_pid: 73974, sentinel_alive_observed_with_poll_through_shutdown: true, sentinel_exit_after_owned_termination: -15, fallback: false, prior_round3_owned_peer_native_absent: [40627, 51954], prior_timer_sentinel: expired-normally0-not-counted-as-live-proof, evidence: specs/verifications/e07-ux.json}
+  provider_requests: 0
+  global_daemon_config_auth: untouched-during-E07-build-subsequent-authorized-config-deletion-recorded-separately
+  historical_caps_and_published_release: unchanged
+  publication: not-authorized-this-initiative
+startup_config_path_fix:
+  status: passed-locally-bad-global-config-deleted
+  authorization: explicit-user-delete-bad-config-and-fix-logging-path
+  removed_config: /Users/addomam/.config/amux/config.json
+  cause: installed-daemon-rejects-acp_profiles-no-saved-projects-hooks-or-profiles
+  verification: {red: "artifact://3194", green: "artifact://3196", readiness_passed: 6, workspace_passed: 511, ignored: 12, strict_Clippy_fmt_build_examples: passed, actual_private_CLI_failure_recovery_cleanup: passed}
+  evidence: specs/verifications/startup-config-path.json
+  installed_binary_and_global_daemon_auth: unchanged-at-initial-repair-subsequent-authorized-install-and-daemon-stop-recorded-in-e07_local_install-auth-unchanged
+  provider_requests: 0
+  historical_review_caps: unchanged-no-new-independent-review-claimed
+  delivery: installed-via-e07_local_install-no-commit-merge-push-or-release
+e07_local_install:
+  status: installed-and-daemon-stopped
+  authorization: explicit-user-install-update-and-kill-running-daemon
+  command: cargo install --path . --locked --force --root /Users/addomam/.cargo
+  job: bg_413
+  installed_binary: /Users/addomam/.cargo/bin/amux
+  installed_and_release_SHA256: 1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f
+  verification: strict-codesign-and-actual-installed-private-CLI-help-config-path-default-F12-native-shell-snapshot-shutdown-owned-cleanup-passed
+  stopped_global_daemon: {pid: 44646, shutdown_exit: 0, PID_absent: true, socket_absent: true, remaining_daemons: 0, restarted: false}
+  evidence: specs/verifications/e07-local-install.json
+  provider_requests: 0
+  auth_and_global_amux_config_during_install: unchanged
+  historical_reviews_and_caps: unchanged-no-new-independent-review-claimed
+  publication: no-commit-merge-push-tag-or-release
+agent_resume_investigation:
+  status: investigation-complete-no-implementation
+  request: user-observed-Herdr-recovery-after-real-host-crash-and-asks-amux-to-handle-resumable-agents
+  next_skill: elaborate-spec
+  user_confirmed_behavior:
+    on_amux_relaunch: automatically-reopen-all-previously-open-supported-agent-conversations
+    matching: exact-saved-conversation-reference-and-working-directory-no-latest-guessing
+    after_loading: wait-for-fresh-user-input-so-user-can-explain-interruption-and-arrange-setup
+    recovery_picker_or_per_session_selection_required: false
+    automatic_continue_prompt_or_interruption_notification_prompt: false
+    automatic_interrupted_turn_tool_or_subagent_retry: false
+    automatic_permission_response_or_input_replay: false
+    supersedes: parent-proposal-for-Resume-selected-Resume-all-or-opt-in-automatic-reopening
+  implementation_constraint: narrow-explicit-exception-needed-to-CONVENTIONS-memory-only-runtime-and-no-restoration-before-Build
+  current_amux:
+    acp: src/acp.rs-retains-load_session-cap-and-returned-session-ID-only-in-memory-and-always-sends-session-new
+    native_OMP: integrations/omp/amux.ts-reports-conversation_id-but-not-session-file-or-confirmed-durability
+    reconnect: existing-same-daemon-live-instance-reconnect-is-not-crash-recovery
+  prior_art:
+    herdr: https://herdr.dev/docs/session-state/
+    herdr_contract: https://herdr.dev/docs/add-herdr-support/
+    herdr_version: 0.9.5-installed-metadata-and-version-pinned-source
+    herdr_mechanism: durable-agent-native-ID-or-path-and-resume-plan-plus-cwd-new-process-not-arbitrary-command-or-PTY-restoration
+    ACP_v1: https://agentclientprotocol.com/protocol/v1/session-setup
+    ACP_schema: 1.12.0-current-pin-includes-stable-ResumeSessionRequest-no-protocol-v2-migration-required
+    OMP: https://github.com/can1357/oh-my-pi/blob/v18.13.3/docs/session-operations-export-share-fork-resume.md
+  native_contracts:
+    codex: {installed_metadata_version: 0.165.0, exact_reopen: "codex resume <THREAD_UUID>"}
+    grok: {installed_metadata_version: 1.0.70, exact_reopen: "grok --no-auto-update --cwd <ABS> --resume <UUID>"}
+    omp: {installed_metadata_version: 18.13.3, exact_reopen: "omp --resume <FULL_ID_OR_ABSOLUTE_JSONL_PATH>", active_retry_separate: "--restore may retry unknown tool outcomes and revive subagents"}
+  ACP_contracts:
+    load: require-advertised-loadSession-reopen-with-history-update-replay
+    resume: require-advertised-sessionCapabilities-resume-reopen-without-history-replay
+    codex: source-confirmed-in-pinned-codex-acp2.2.2-not-a-new-live-run
+    omp: source-confirmed-in-installed-version18.13.3-not-a-new-live-ACP-run
+    grok: public-source-confirmed-not-version-matched-installed1.0.70-runtime-proof
+  offline_smoke:
+    harness: actual-installed-OMP-native-RPC-with-private-synthetic-persisted-session
+    initial_failure: clean-private-home-no-default-model-selected-exit1-no-resume-pass-claimed-root-removed
+    selection: explicit-openai-gpt4.1nano-model-metadata-and-intentionally-invalid-fixture-key-no-real-auth
+    network: sandbox-exec-deny-network-all
+    isolation: private-HOME-config-session-dir-cwd-no-extensions-skills-rules-context-tools-LSP-PTY-title-generation
+    commands: [get_state, get_messages]
+    observed_processes: [16000, 16010]
+    verified: exact-saved-ID-and-path-and-synthetic-user-record-in-both-new-processes
+    prompt_or_work_started: false
+    both_EOF_exits: 0
+    signal_fallback: false
+    private_roots: removed
+    limit: not-real-provider-turn-or-crash-during-tool-or-complete-amux-recovery-acceptance
+  proposed_boundary: automatic-reopen-of-previously-open-agent-conversations-on-relaunch-then-wait-for-user-metadata-only-exact-conversation-reference-and-durability-fresh-amux-lifetime-control-no-transcript-or-env-copy-no-prompt-tool-permission-or-input-reexecution-no-latest-fallback
+  durability_caveat: allocated-session-ID-or-file-path-does-not-guarantee-provider-backed-store-exists-yet
+  provider_requests: 0
+  global_daemon_config_auth_and_installed_binaries: untouched
+  production_tests_and_new_docs: unchanged
+  historical_caps_and_E05_parking: unchanged
+e08_build:
+  status: signed-commit-main-merge-and-push-authorized-in-progress
+  authorization: explicit-user-implement-automatic-conversation-reopen-then-wait-for-user-no-auto-work
+  branch: feat/agent-conversation-recovery
+  plan: specs/epics/e08-conversation-recovery/PLAN.md
+  integration_owner: parent
+  workers: {RecoveryStore: src/recovery.rs, AcpRecovery: src/acp.rs-and-local-peer, NativeRecovery: native-Codex-and-OMP-identity-and-backing-store}
+  baseline: {job: bg_1, status: failed-preexisting-native-handoff-offer-timeout-before-code, raw: "artifact://3266"}
+  preserved_integration_compile_failures: ACP-load-and-resume-constructors-require-owned-static-session-and-cwd-inputs-fixed-with-necessary-owned-values
+  native_baseline_fixture_repair: wait-for-actionable-Yield-repaint-not-Preparing-Yield-no-retry-or-authority-policy-change
+  R5_pre_remediation_checks: {job: bg_40, raw: "artifact://3512", status: historical-pass-not-remediated-source, workspace_tests: 582, suites: 31, ignored: 12, wall_seconds: 137.51, strict_Rust: passed, quota_focused: "artifact3506 PASS2/2 plus22 recovery/29 coordinator/strict", quota_RED: "artifact3501 0/2", OMP: "8/49 PASS", Zsh_syntax: passed}
+  task_status: all-six-passing-commands-runtime-and-dual-independent-clearance-complete
+  inflight_barrier: previous-process-pin-cannot-authorize-a-second-launch-before-new-peer-pin-is-durable-unknown-settlement-blocks
+  R5_pre_remediation_actual_smoke: {status: historical-pass-not-remediated-source, receipts: specs/verifications/e08-recovery-r5-runtime.json, checks: 5, genuine_original_shell_OMP_limit1_and_hooks: passed, binary_before_after_matched: true, providers: 0}
+  preserved_new_failure: bg_13-artifact3313-missing-session-retry-failed-until-failed-owned-peer-cleanup-was-joined-before-clearing-marker
+  independent_E08_review: {rounds_started: 7, maximum_rounds: 10, status: "R7 A100/B100 PASS with zero findings and each21/21 source hashes; all R1-R6 combined FAILs retained", other_historical_caps: unchanged}
+  review_response: specs/verifications/e08-review-response.md
+  remediation_workers: {E08CodexContextRetention: integrated-parent-corrected-and-verified, E08ProjectMutationCases: integrated-semantic-regressions-verified, shared_integration_owner: parent}
+  native_current_context: typed-inactive-block-preserves-last-trusted-reference-but-never-reopens-a-superseded-context
+  native_startup_settlement: broker-stop-and-preparation-join-before-request-drain-connect-initialize-cancel-verified-in-two-real-private-phases
+  verified_source_files: 21
+  last_local_source_manifest: specs/verifications/e08-review-r7-source.json
+  evidence: specs/verifications/e08-recovery.json
+  last_local_debug_binary_sha256: f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf
+  provider_requests: 0
+  globals_install_and_publication: signed-commit-main-merge-push-authorized-no-install-or-global-runtime-changes
+  historical_review_caps_and_E05_parking: unchanged
+  R6_pre_remediation_checks: {job: bg_43, raw: "artifact://3584", status: historical-pass-not-corrective-source, workspace_tests: 586, suites: 31, ignored: 12, wall_seconds: 149.08, strict_Rust: passed, includes_focused: "24 recovery/31 journal-coordinator", named_protocols: "artifact3589 PASS38 ACP/9 integration/8 Codex", OMP: "8/49 PASS", Zsh_syntax: passed, exact_task5_guard_exit: 0}
+  R6_pre_remediation_actual_smoke: {status: historical-pass-not-corrective-source, receipts: specs/verifications/e08-recovery-r6-runtime.json, checks: 7, providers: 0}
+  final_corrections: {mutable_project_startup_intent: locally-verified, implicit_attachment_capacity_and_input: locally-verified, failed_fallback_hook_suppression: locally-verified, workers: [E08MutableRecoveryIntent, E08StartupAttachment], integration_owner: parent}
+  remaining_blocker: null
+  review_cap_extension: {authorization: explicit-user-raise-review-cap-to10-and-keep-going, previous_maximum: 5, new_maximum: 10, rounds_already_used: 5, evidence: specs/verifications/e08-review-cap-extension.json, resets_consumed_rounds: false}
+  current_checks: {job: bg_45, raw: "artifact://3638", status: passed, workspace_tests: 593, workspace_suites: 31, extra_guarded_child_verdicts: 1, reported_passed: 594, reported_suites: 32, ignored: 12, wall_seconds: 138.03, strict_Rust: passed, focused: "artifact3634:13 parent Codex plus1 child,26 recovery/strict/actual build", protocols_stock: "artifact3640:38 ACP/9 integration/13 parent Codex plus1 child/OMP8 assertions49/Zsh", exact_task5_guard_exit: 0}
+  actual_smoke: {status: passed, receipts: specs/verifications/e08-recovery-r7-runtime.json, checks: 9, explicit_successful_build_before_smoke: "artifact://3634", new_native_import_and_dependent_project_hook_effects: passed, binary_before_after_matched: true, normal_owned_cleanup: passed, providers: 0}
+  round6_corrections: {native_import_integrity_and_aliases: verified-and-independently-cleared-R7, startup_hook_order_and_shutdown: verified-and-independently-cleared-R7, integration_owner: parent, workers: [E08AtomicNativeImport, E08StartupHookOrdering], independent_clearance: R7-dual-PASS}
+  delivery_authorization: {action: signed-commit-main-merge-push, source: explicit-user-request, re_sign_unpublished_if_needed: true, published_history_rewrite: unnecessary-not-planned, install_globals_live_models_tag_release: not-authorized}
+  delivery_evidence: specs/verifications/e08-signed-delivery.json
+  gate_trace: {verdict: WAIVED, rationale: absent-repository-scripts-and-structured-matrix-blind-spot-inputs-manual-map-current}

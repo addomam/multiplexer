@@ -1,0 +1,36 @@
+type: scope
+context: {project: amux, epic: e08, authorization: user-implement-it}
+initiative: e08-conversation-recovery
+status: implemented-verified-not-delivered
+core_value: Relaunch amux with every previously open supported saved agent conversation already reopened and waiting for fresh user input.
+authorization: explicit-user-implement-after-automatic-context-only-reopening-clarification
+in_scope:
+  - Private bounded durable references to exact agent conversations and cwd/project/name/settings; provider-native saved stores stay separate.
+  - Automatic all-conversation reopening once per daemon launch without a picker or per-session approval.
+  - Capability-gated ACP v1 session/load or session/resume for configured agent profiles, retaining intent across explicit authentication.
+  - Native OMP reported ID/file and existing managed Codex exact thread/backing-store reopening using fresh runtime authority.
+  - Explicit close/remove/native quit forgetting versus daemon teardown preservation, deterministic duplicate prevention and visible partial failures.
+  - Isolated model-free regression and actual subprocess/CLI/TUI evidence with normal owned cleanup.
+out_of_scope:
+  - PTY/process/screen/interpreter restoration or generic arbitrary command replay.
+  - Automatic continue or interruption-notification prompts, interrupted-work/tool/subagent retry, OMP --restore, permission responses or intercepted-input replay.
+  - Guessing most recent session, replacing a missing conversation with a new one or repeating a failed startup recovery loop.
+  - Inventing identities for unmanaged terminal programs by scraping screen/transcript text, or reopening parked E05's generic integration API.
+  - New live-provider runs, global daemon/config/auth changes during verification, installation, commit, merge, push, tag or release.
+constraints:
+  - Preserve all existing ownership/handoff/force/cancel/conditional-control and same-instance contracts inside each new lifetime.
+  - Reopen only when old exact process identity is definitely gone; live or unknown old peer is visible and not duplicated or killed.
+  - Keep secrets, env, transcript content, prompts, control handles and pending responders out of the recovery journal.
+  - Durable identity/path does not itself guarantee provider persistence; missing saved state fails explicitly and preserves intent.
+  - Stock Zsh/OMP and current configured profile selection remain normal; no recovery-introduced recipe/hook/work execution.
+  - Preserve prior E03 unknown-settlement limitation, E05 parking and historical source/provider caps; no prior review PASS transfers to changed source.
+prior_art:
+  - https://herdr.dev/docs/session-state/
+  - https://herdr.dev/docs/add-herdr-support/
+  - https://agentclientprotocol.com/protocol/v1/session-setup
+  - https://github.com/can1357/oh-my-pi/blob/v18.13.3/docs/session-operations-export-share-fork-resume.md
+references:
+  - ../epics/e08-conversation-recovery/PLAN.md
+  - ../epics/e08-conversation-recovery/epic.yaml
+  - ../epics/e08-conversation-recovery/e08s01-story.md
+  - ../epics/e08-conversation-recovery/e08s01-tasks.yaml

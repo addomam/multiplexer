@@ -1,0 +1,114 @@
+{
+  "type": "frozen-review-source",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "round": 7,
+    "baseline_commit": "cc468a3"
+  },
+  "status": "current-source-local-verification-and-dual-independent-review-passed",
+  "captured_at": "2026-10-30T03:22:16.026Z",
+  "sha256": {
+    "Cargo.toml": "95319b71d35c12d0d0acdb2d38c5794303963fa40c37807c0d502b98728d8f74",
+    "Cargo.lock": "25b3293c1d1de18ad328161dfddf3252d4e157895389e63d0725cb4a709e461c",
+    "CONVENTIONS.md": "bb21da16a6ce833228743c728e124145fe6211f4340ed60d7ccbc603343b874e",
+    "src/lib.rs": "cba647b543869c9a016b8773ef67296ef49efc41a9cb61672489e71fe7ce3e05",
+    "src/recovery.rs": "65a234cff472c5fd68e202120fa744eceb8e657445bc58676b50335421c125a6",
+    "src/runtime.rs": "a906e625494964d253a00ea43497f1e11367835294f602fa90cca6983ebeca56",
+    "src/acp.rs": "b35d2be7882d448410abbe8c52e9aad3322d9c4290ce2d2a374dfbdbc4af9c47",
+    "src/codex.rs": "ba829079be7f2904a2cf1a940e50f34da1d8309ed5ba275208d7114019e3d49d",
+    "src/integration.rs": "743657640a013f5a5115c9c7c66eaf5f32c9f2bdfc1c11291f31ebad02340419",
+    "src/daemon.rs": "48211b67be9fd8c4ff8f1274f20627f29eb346fa8022e7b5803a3b822a2aa1c1",
+    "src/daemon/recovery.rs": "5fb97f7c904c2f2be76e6a0f6e9738e9e5936e5b5549acab869084b6493246a5",
+    "integrations/omp/amux.ts": "4fb15958d8a0f9e767e4bbce443ab9844f043438f71bcfc9446ae1beaf20a39b",
+    "tests/recovery.rs": "eef71e29226b09d168bb12387d22d1b54370cff3e7a27003222100d19a21ab3c",
+    "tests/integration.rs": "62fe3358bb247dbcdbd0b5c1c16650dfa6cdcde147c923703e19b8eb374b1df4",
+    "tests/fixtures/acp_peer.rs": "06cd2de2e9c30aa101b7e19e7200ccf30bfa7ba42cf6264b8047fd9d07023629",
+    "tests/acp/native.rs": "48fca3d02eb4699b7b26eabf032d370ee40b4361ed9f5c55d9fe855f6b93f0e0",
+    "tests/pty_control/native.rs": "f442a70b962c77fb5cc89a37286bbe8a7d7c8ca552209aab5f3a0269054db6a0",
+    "README.md": "5816fbb6191666721f61493f64ea8f71747d9b336bd19df2e2add2b3b0bddfa4",
+    "CHANGELOG.md": "52f97f059a25d022992441b84e33e3b450134b1af12444d77227d888a1e29f38",
+    "tests/agent_interaction.rs": "b0b9cf45a2fb22c1bcea1744e692c4ccfc9f02b1a4523c33ba81623860438f7b",
+    "src/tui.rs": "6cf20733cf10f10cff39fe51c2edd0f2fcfc1eb5241d4aef35910549bfe7c6a6"
+  },
+  "debug_sha256": "f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf",
+  "installed_sha256": "1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f",
+  "independent_review": {
+    "rounds_used_before_pair": 6,
+    "current_round": 7,
+    "maximum_rounds": 10,
+    "current_pair": "E08Round7A/B-complete-dual-PASS",
+    "cap_authorization": "specs/verifications/e08-review-cap-extension.json",
+    "historical_combined_failures": "R1-R6 retained",
+    "scores": [
+      100,
+      100
+    ],
+    "must_fix": 0,
+    "should_fix": 0,
+    "hashes_matched_each": 21,
+    "full_reports_read_before_acceptance": true,
+    "reports": [
+      "specs/verifications/e08-review-r7-A.json",
+      "specs/verifications/e08-review-r7-B.json"
+    ]
+  },
+  "checks": {
+    "full": {
+      "job": "bg_45",
+      "raw": "artifact://3638",
+      "status": "passed",
+      "workspace_passed": 593,
+      "workspace_suites": 31,
+      "guarded_child_passed": 1,
+      "reported_passed": 594,
+      "reported_suites": 32,
+      "ignored": 12,
+      "derivation": "Raw3638:223 root library cases and one separate guarded single-test child verdict; aggregate includes that extra child. No inflated distinct workspace count.",
+      "wall_seconds": 138.03,
+      "examples": true,
+      "strict_clippy": true,
+      "format_check": true,
+      "build": true
+    },
+    "focused": {
+      "raw": "artifact://3634",
+      "Codex_parent_tests": 13,
+      "guarded_child_verdicts": 1,
+      "recovery": 26,
+      "strict_Rust_and_actual_CLI_build": true,
+      "wall_seconds": 20.81
+    },
+    "named_protocol_and_stock": {
+      "raw": "artifact://3640",
+      "ACP": 38,
+      "integration": 9,
+      "Codex_parent": 13,
+      "guarded_child_verdicts": 1,
+      "OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Bun_wall_ms": 246,
+      "Zsh_syntax": "passed",
+      "wall_seconds": 3.99
+    },
+    "actual": {
+      "status": "passed",
+      "receipt": "specs/verifications/e08-recovery-r7-runtime.json",
+      "checks": 9,
+      "provider_requests": 0,
+      "successful_build_before_smoke": "artifact://3634"
+    },
+    "failed_attempts": [
+      "artifact://3625 missing parent PermissionsExt; fixed without suppression",
+      "artifact://3630 copied-header read at EOF; rewind added, unchanged behavior tests pass",
+      "specs/verifications/e08-recovery-r7-stale-binary-runtime.json rejected as proof: earlier binary after gate failed before CLI build"
+    ]
+  },
+  "limits": [
+    "Native Codex fixture only; no new genuine native0.165/provider acceptance",
+    "No Linux/minimum-Rust runtime acceptance; Linux no-clobber path unexecuted",
+    "No live models/auth/global daemon/config/install/Git delivery",
+    "Historical native application fence unknown/fail-closed; E05 and other historical caps unchanged"
+  ]
+}

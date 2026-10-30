@@ -8,16 +8,24 @@ export default function amux(pi: ExtensionAPI) {
   const socket = process.env.AMUX_SOCKET;
   const terminal = process.env.AMUX_TERMINAL;
   if (!socket || !terminal) return;
-  const instance = randomUUID();
-  const agents = new Map<string, { lifecycle: Lifecycle; context: ExtensionContext }>();
+  const agents = new Map<string, { instance: string; lifecycle: Lifecycle; context: ExtensionContext }>();
   let reports: Promise<void> = Promise.resolve();
   let heartbeat: NodeJS.Timeout | undefined;
 
-  const report = (ctx: ExtensionContext, lifecycle: Lifecycle, lifecycleEvent = "heartbeat"): Promise<void> => {
+  const report = (ctx: ExtensionContext, lifecycle: Lifecycle, instance: string, lifecycleEvent = "heartbeat"): Promise<void> => {
+    // These supported observations are not exposed by every pinned readonly
+    // context type. Never force a save or read transcript entries to infer one.
+    const sessions = ctx.sessionManager as ExtensionContext["sessionManager"] & {
+      isSessionConfirmedOnDisk?: () => boolean;
+      isSessionOnDisk?: () => boolean;
+    };
+    const persisted = sessions.isSessionConfirmedOnDisk?.() ?? sessions.isSessionOnDisk?.() ?? null;
     const request = JSON.stringify({ version: 1, op: "report", terminal, event: {
       kind: "agent", instance_id: `${instance}:${ctx.agent.id}`,
       agent_id: ctx.agent.id, agent_kind: ctx.agent.kind, parent_id: ctx.agent.parentId ?? null,
-      conversation_id: ctx.sessionManager.getSessionId(), pid: process.pid,
+      agent_family: "omp", conversation_id: sessions.getSessionId(),
+      session_file: sessions.getSessionFile() ?? null, cwd: ctx.cwd,
+      session_persisted: persisted, pid: process.pid,
       lifecycle_event: lifecycleEvent,
       omp_version: "18.8.7", ...lifecycle.snapshot(),
     } }) + "\n";
@@ -39,16 +47,19 @@ export default function amux(pi: ExtensionAPI) {
   const observe = async (event: LifecycleEvent, ctx: ExtensionContext) => {
     let agent = agents.get(ctx.agent.id);
     if (!agent) {
-      agent = { lifecycle: new Lifecycle(), context: ctx };
+      // A registration is one root/agent lifetime, not one conversation. Keep
+      // its identity across session switches, but never reuse it after shutdown
+      // even if OMP reuses an agent ID in this process or the OS reuses its PID.
+      agent = { instance: randomUUID(), lifecycle: new Lifecycle(), context: ctx };
       agents.set(ctx.agent.id, agent);
     }
     agent.context = ctx;
     agent.lifecycle.apply({ ...event, hasUI: ctx.hasUI });
-    await report(ctx, agent.lifecycle, event.type);
+    const pending = report(ctx, agent.lifecycle, agent.instance, event.type);
     if (!heartbeat && !agent.lifecycle.shutdown) {
       heartbeat = setInterval(() => {
         for (const current of agents.values()) {
-          if (!current.lifecycle.shutdown) void report(current.context, current.lifecycle);
+          if (!current.lifecycle.shutdown) void report(current.context, current.lifecycle, current.instance);
         }
       }, 2_000);
       heartbeat.unref?.();
@@ -58,6 +69,7 @@ export default function amux(pi: ExtensionAPI) {
       clearInterval(heartbeat);
       heartbeat = undefined;
     }
+    await pending;
   };
   pi.on("session_start", observe);
   pi.on("session_switch", observe);

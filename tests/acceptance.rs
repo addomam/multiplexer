@@ -239,6 +239,67 @@ fn inherited_git_common_dir_does_not_corrupt_workspace_metadata() {
 }
 
 #[test]
+fn saving_selected_session_uses_its_directory_and_preserves_other_projects() {
+    let h = Harness::new();
+    let main = h.main();
+    h.ready(&main);
+    let first = h
+        .call(json!({"op":"project-save","terminal":main,"name":"original"}))
+        .unwrap();
+    let child = h.call(json!({"op":"open","source":main})).unwrap();
+    let child_id = child["id"].as_str().unwrap();
+    h.ready(child_id);
+    let directory = h.directory.join("selected-directory");
+    fs::create_dir(&directory).unwrap();
+    h.call(
+        json!({"op":"execute","terminal":child_id,"source":format!("cd '{}'",directory.display())}),
+    )
+    .unwrap();
+    h.ready(child_id);
+    let saved = h.call(json!({"op":"project-save","terminal":child_id,"project":first["id"],"name":"original"})).unwrap();
+    assert_eq!(saved["context"], directory.display().to_string());
+    assert_eq!(saved["id"], first["id"]);
+    let session = h
+        .call(json!({"op":"open","source":child_id,"new_project":true}))
+        .unwrap();
+    let session_id = session["id"].as_str().unwrap();
+    h.ready(session_id);
+    assert_ne!(session["project_id"], saved["id"]);
+    assert!(session["parent_id"].is_null());
+    let other = h
+        .call(json!({"op":"project-save","terminal":session_id,"name":"second"}))
+        .unwrap();
+    let disk = fs::read(h.directory.join("config/amux/config.json")).unwrap();
+    let wrong = h.call(
+        json!({"op":"project-save","terminal":session_id,"project":saved["id"],"name":"wrong"}),
+    );
+    assert!(wrong.is_err());
+    assert_eq!(
+        fs::read(h.directory.join("config/amux/config.json")).unwrap(),
+        disk
+    );
+    let projects = h.call(json!({"op":"project-list"})).unwrap();
+    assert!(
+        projects
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|project| project["id"] == saved["id"] && project["name"] == "original")
+    );
+    assert!(
+        projects
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|project| project["id"] == other["id"] && project["name"] == "second")
+    );
+    assert_eq!(
+        h.call(json!({"op":"state","terminal":child_id})).unwrap()["pid"],
+        child["pid"]
+    );
+}
+
+#[test]
 fn project_save_immediately_after_confirmed_cd_uses_latest_workspace_root() {
     let h = Harness::new();
     let main = h.main();
@@ -594,7 +655,7 @@ fn initial_hooks_continue_after_failure_and_concurrent_open_runs_once() {
     let h = Harness::new();
     let result = h
         .call(
-            json!({"op":"project-new","name":"hooked","config":{"hooks":[
+            json!({"op":"project-new","name":"hooked","directory":h.directory,"config":{"hooks":[
         {"source":"printf one >> hook-order; printf HOOK_OUTPUT","timeout_ms":2000},
         {"source":"printf two >> hook-order; printf HOOK_FAILURE >&2; exit 7","timeout_ms":2000},
         {"source":"printf three >> hook-order","timeout_ms":2000}
@@ -835,7 +896,7 @@ fn concurrent_terminal_admission_counts_exits_and_reuses_removed_capacity() {
             .starts_with("terminal-limit:")
     );
     assert!(
-        h.call(json!({"op":"project-new","name":"capacity-project"}))
+        h.call(json!({"op":"project-new","name":"capacity-project","directory":h.directory}))
             .unwrap_err()
             .to_string()
             .starts_with("terminal-limit:")
@@ -1040,7 +1101,7 @@ fn hook_enqueue_failures_retain_only_twenty_bounded_command_diagnostics() {
         })
         .collect();
     let opened = h
-        .call(json!({"op":"project-new","name":"queued-hooks","config":{"hooks":hooks}}))
+        .call(json!({"op":"project-new","name":"queued-hooks","directory":h.directory,"config":{"hooks":hooks}}))
         .unwrap();
     let project = opened["project"]["id"].as_str().unwrap();
     let mut terminal = opened["terminal"]["id"].as_str().unwrap().to_owned();

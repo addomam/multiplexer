@@ -309,6 +309,18 @@ impl Attachment {
             std::thread::sleep(Duration::from_millis(15));
         }
     }
+    fn project_header(&mut self, project: &str) -> bool {
+        self.drain();
+        self.lines()[0].contains(project)
+    }
+    fn wait_controlled(&mut self, h: &Host, terminal: &str) {
+        let project = project_name(h, terminal);
+        h.until("native ownership and ordinary project header", || {
+            (h.ownership(terminal)["owner"]["role"] == "attachment"
+                && self.project_header(&project))
+            .then_some(())
+        });
+    }
     fn send(&mut self, bytes: &[u8]) {
         // Writes are deliberately small and bounded, even with a nonblocking fd.
         let deadline = Instant::now() + DEADLINE;
@@ -404,7 +416,7 @@ impl Attachment {
         loop {
             let text = self.text();
             if ![
-                "WINDOWS",
+                " MENU ",
                 "Locked terminal",
                 "Control requested",
                 "Cancel takeover?",
@@ -646,6 +658,24 @@ fn configured_host() -> Host {
     h.call(json!({"op":"config","config":{"prefix":"Ctrl-a"}}));
     h
 }
+fn project_name(h: &Host, terminal: &str) -> String {
+    let snapshot = h.call(json!({"op":"snapshot"}));
+    let terminal = snapshot["terminals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["id"] == terminal)
+        .unwrap();
+    snapshot["projects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["id"] == terminal["project_id"])
+        .unwrap()["name"]
+        .as_str()
+        .unwrap()
+        .to_owned()
+}
 fn native_owner(h: &Host, terminal: &str) -> Value {
     h.until("native owner registration", || {
         let owner = h.ownership(terminal)["owner"].clone();
@@ -704,7 +734,7 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
     let terminal = recording_target(&h);
     let pid = h.state(&terminal)["pid"].clone();
     let mut owner = Attachment::new(&h, &terminal, "owner");
-    owner.wait("Controlled here");
+    owner.wait_controlled(&h, &terminal);
     let identity = native_owner(&h, &terminal);
     let owner_colors = owner.chrome_colors();
     owner.capture_native_body(&h, &terminal, "owned");
@@ -745,7 +775,7 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
     observer.capture("three-second-blockers");
     assert_owner(&h, &terminal, &identity);
     owner.action(12);
-    owner.wait("Yield");
+    owner.wait("y Yield to this request");
     owner.send(b"y");
     h.until("observer renders departure of the yielded owner", || {
         let text = observer.text();
@@ -763,7 +793,7 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
     observer.wait("Enter Force control");
     observer.capture("force-risk");
     observer.send(b"\r");
-    observer.wait("Controlled here");
+    observer.wait_controlled(&h, &terminal);
     observer.send(b"FRESH");
     wait_bytes(&h, b"y\rFRESH");
     let after = h.ownership(&terminal)["owner"].clone();
@@ -778,7 +808,7 @@ fn observer_physical_keys_repeat_literal_prefix_paste_mouse_never_replay_after_f
     let h = configured_host();
     let terminal = recording_target(&h);
     let mut owner = Attachment::new(&h, &terminal, "input-owner");
-    owner.wait("Controlled here");
+    owner.wait_controlled(&h, &terminal);
     let mut observer = Attachment::new(&h, &terminal, "input-observer");
     observer.wait("Locked");
     // Ordinary press, kitty repeat, doubled configured prefix, bracketed paste
@@ -806,7 +836,7 @@ fn observer_physical_keys_repeat_literal_prefix_paste_mouse_never_replay_after_f
     observer.action(6);
     observer.wait("Enter Force control");
     observer.send(b"\r");
-    observer.wait("Controlled here");
+    observer.wait_controlled(&h, &terminal);
     observer.send(b"\x1b[<32;13;8M\x1b[<0;13;8m");
     observer.send(b"AFTER_GRANT");
     wait_bytes(&h, b"AFTER_GRANT");
@@ -903,7 +933,7 @@ fn native_cancel_grants_nobody_and_changed_force_facts_require_new_confirmation(
     observer.action(6);
     observer.wait("Enter Force control");
     observer.send(b"\r");
-    observer.wait("Controlled here");
+    observer.wait_controlled(&h, &terminal);
     assert_ne!(
         h.ownership(&terminal)["owner"]["controller_id"],
         winner["controller_id"]
@@ -970,7 +1000,7 @@ fn e06s03_native_filtered_terminal_replies_cannot_confirm_queued_force_enter() {
     observer.action(6);
     observer.wait("Enter Force control · Esc Keep viewing");
     observer.send(b"\r"); // A separately entered, actually presented confirmation.
-    observer.wait("Controlled here");
+    observer.wait_controlled(&h, &terminal);
     assert_eq!(
         h.ownership(&terminal)["owner"]["controller_id"],
         observer_id
@@ -1460,7 +1490,7 @@ fn actual_native_idle_warning_draws_requested_duration_consumes_keep_and_never_r
     let h = configured_host();
     let terminal = recording_target(&h);
     let mut native = Attachment::new(&h, &terminal, "conditional-warning");
-    native.wait("Controlled here");
+    native.wait_controlled(&h, &terminal);
     native.send(b"\x1b[I"); // Real outer-terminal FocusGained.
     let owner = native_owner(&h, &terminal);
     let generation = h.ownership(&terminal)["observed"]["generation"].clone();
@@ -1483,7 +1513,7 @@ fn actual_native_idle_warning_draws_requested_duration_consumes_keep_and_never_r
     h.until("visible keep abort", || {
         (h.handle(&claim["claim"], "read")["phase"] == "aborted-by-owner").then_some(())
     });
-    native.wait("Controlled here");
+    native.wait_controlled(&h, &terminal);
     native.send(b"AFTER_KEEP");
     wait_bytes(&h, b"AFTER_KEEP");
     assert_owner(&h, &terminal, &owner);
@@ -1501,12 +1531,13 @@ fn competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_backgr
     // Do not wait for either grant before launching the other real attachment.
     let mut first = Attachment::new(&h, &terminal, "default-first");
     let mut second = Attachment::new(&h, &terminal, "default-second");
+    let project = project_name(&h, &terminal);
     let (owner, observer) = h.until("competing native first acquisition", || {
         let a = first.text();
         let b = second.text();
-        if a.contains("Controlled here") && b.contains("Locked") {
+        if first.project_header(&project) && b.contains("Locked") {
             Some((true, false))
-        } else if b.contains("Controlled here") && a.contains("Locked") {
+        } else if second.project_header(&project) && a.contains("Locked") {
             Some((false, true))
         } else {
             None
@@ -1537,13 +1568,13 @@ fn competing_actual_attachments_default_prefix_and_picker_do_not_steal_or_backgr
         json!({"kind":"views-backgrounded","scope":"owner"}),
     );
     owner.send(b"\x02");
-    owner.wait("WINDOWS");
+    owner.wait(" MENU ");
     owner.capture("picker-still-foreground");
     assert_eq!(condition(&h, &terminal)["eligibility"], "ineligible");
     assert_eq!(condition(&h, &terminal)["ready_for_consent"], false);
     assert_owner(&h, &terminal, &identity);
     owner.hide_panel();
-    owner.wait("Controlled here");
+    owner.wait_controlled(&h, &terminal);
     owner.send(b"\x1b[O");
     owner.wait("Background consent (owner)");
     owner.capture("owner-background-consent-no-countdown");
@@ -1612,7 +1643,7 @@ fn actual_native_warning_paste_mouse_and_local_selection_keep_the_same_authority
     let h = configured_host();
     let terminal = recording_target(&h);
     let mut native = Attachment::new(&h, &terminal, "warning-input-routes");
-    native.wait("Controlled here");
+    native.wait_controlled(&h, &terminal);
     native.send(b"\x1b[I");
     let identity = native_owner(&h, &terminal);
     let generation = h.ownership(&terminal)["observed"]["generation"].clone();
@@ -1678,7 +1709,7 @@ fn actual_native_warning_paste_mouse_and_local_selection_keep_the_same_authority
             }
             expected = bytes(&h);
         } else {
-            native.wait("Controlled here");
+            native.wait_controlled(&h, &terminal);
             assert_eq!(bytes(&h), expected, "local selection became native input");
         }
         assert_owner(&h, &terminal, &identity);
@@ -1899,7 +1930,7 @@ fn actual_native_pending_consent_ack_keeps_before_paste_without_rotating_or_repl
     let terminal = recording_target(&h);
     let gate = ConsentGate::new(&h);
     let mut native = Attachment::on_socket(&h, &terminal, "pending-consent-ack", &gate.socket);
-    native.wait("Controlled here");
+    native.wait_controlled(&h, &terminal);
     native.send(b"\x1b[I");
     let identity = native_owner(&h, &terminal);
     let generation = h.ownership(&terminal)["observed"]["generation"].clone();
@@ -1990,7 +2021,7 @@ fn actual_native_safe_offer_accepts_only_after_deliberate_yield_and_never_replay
     let terminal = h.main();
     let pid = h.state(&terminal)["pid"].clone();
     let mut owner = Attachment::new(&h, &terminal, "safe-owner");
-    owner.wait("Controlled here");
+    owner.wait_controlled(&h, &terminal);
     let identity = native_owner(&h, &terminal);
     // Open before any request exists. The same visible owner response panel
     // must follow a later reservation instead of retaining its Release action.
@@ -2027,9 +2058,10 @@ fn actual_native_safe_offer_accepts_only_after_deliberate_yield_and_never_replay
                 .then_some(())
         },
     );
+    owner.wait("y Yield to this request");
     owner.capture("owner-response-current-request");
     owner.send(b"y");
-    observer.wait("Controlled here");
+    observer.wait_controlled(&h, &terminal);
     let public = h.ownership(&terminal);
     assert_eq!(public["owner"]["controller_id"], claim["requester_id"]);
     assert!(public["reservation"].is_null());
@@ -2216,7 +2248,7 @@ fn e06s03_native_recovery_registration_resize_reconciles_surviving_geometry() {
     let terminal = recording_target(&h);
     let gate = ConsentGate::new(&h);
     let mut native = Attachment::on_socket(&h, &terminal, "recovery-resize", &gate.socket);
-    native.wait("Controlled here");
+    native.wait_controlled(&h, &terminal);
     let owner = native_owner(&h, &terminal);
     let generation = h.ownership(&terminal)["observed"]["generation"].clone();
     let pid = h.state(&terminal)["pid"].clone();

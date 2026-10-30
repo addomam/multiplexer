@@ -1,0 +1,659 @@
+{
+  "type": "epic-verification",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "review_rounds_used": 7,
+    "max_review_rounds": 10
+  },
+  "status": "implemented-verified-reviewed-awaiting-delivery-authorization",
+  "acceptance": "passing",
+  "source_manifest": "specs/verifications/e08-review-r7-source.json",
+  "last_local_verified_source_manifest": "specs/verifications/e08-review-r7-source.json",
+  "previous_evidence": "specs/verifications/e08-recovery-r5.json",
+  "review": {
+    "rounds_used": 7,
+    "maximum_rounds": 10,
+    "R1": {
+      "A": 75,
+      "B": 81.25,
+      "gate": "FAIL"
+    },
+    "R2": {
+      "A": 84.375,
+      "B": 93.75,
+      "gate": "FAIL",
+      "A_hashes": {
+        "matched": 19,
+        "required": 19
+      },
+      "B_hashes": {
+        "matched": 0,
+        "unverified": 19,
+        "required": 19
+      },
+      "reports": [
+        "specs/verifications/e08-review-r2-A.json",
+        "specs/verifications/e08-review-r2-B.json"
+      ]
+    },
+    "R3": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "B": {
+        "score": 96.875,
+        "must_fix": 0,
+        "should_fix": 1,
+        "threshold_gate": "PASS",
+        "correctness": "incorrect",
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r3-A.json",
+        "specs/verifications/e08-review-r3-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r3-source.json"
+    },
+    "R4": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "B": {
+        "score": 100,
+        "must_fix": 0,
+        "should_fix": 0,
+        "gate": "PASS",
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r4-A.json",
+        "specs/verifications/e08-review-r4-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r4-source.json"
+    },
+    "R5": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20
+      },
+      "B": {
+        "score": 93.75,
+        "must_fix": 1,
+        "should_fix": 1,
+        "hashes_matched": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r5-a.json",
+        "specs/verifications/e08-review-r5-b.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r5-source.json",
+      "cap_exhausted": true,
+      "sixth_round_or_cap_reset": "not-authorized"
+    },
+    "cap_extension": {
+      "type": "review-cap-authorization",
+      "context": {
+        "project": "amux",
+        "epic": "e08",
+        "story": "e08s01"
+      },
+      "authorization": "Explicit user: Raise the review cap to 10 and keep going.",
+      "previous_maximum": 5,
+      "new_maximum": 10,
+      "rounds_consumed_before_extension": 5,
+      "next_round": 6,
+      "resets_consumed_rounds": false,
+      "preserves_all_prior_findings": true,
+      "other_historical_caps": "unchanged",
+      "live_models_auth_globals_install_publication": "not-authorized-by-this-extension",
+      "recorded_at": "2026-10-30T02:29:09.220Z"
+    },
+    "R6": {
+      "gate": "FAIL",
+      "A": {
+        "score": 100,
+        "must_fix": 0,
+        "should_fix": 0,
+        "gate": "PASS",
+        "hashes_matched": 21,
+        "hashes_required": 21
+      },
+      "B": {
+        "score": 90.625,
+        "must_fix": 2,
+        "should_fix": 1,
+        "gate": "FAIL",
+        "hashes_matched": 21,
+        "hashes_required": 21
+      },
+      "reports": [
+        "specs/verifications/e08-review-r6-A.json",
+        "specs/verifications/e08-review-r6-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r6-source.json",
+      "used": 6,
+      "maximum": 10
+    },
+    "R7": {
+      "gate": "PASS",
+      "status": "dual-blind-complete",
+      "A": {
+        "score": 100,
+        "must_fix": 0,
+        "should_fix": 0,
+        "consider": 0,
+        "total_criteria": 32,
+        "hashes_matched": 21,
+        "hashes_required": 21
+      },
+      "B": {
+        "score": 100,
+        "must_fix": 0,
+        "should_fix": 0,
+        "consider": 0,
+        "total_criteria": 32,
+        "hashes_matched": 21,
+        "hashes_required": 21
+      },
+      "reports": [
+        "specs/verifications/e08-review-r7-A.json",
+        "specs/verifications/e08-review-r7-B.json"
+      ],
+      "all_full_reports_read_before_acceptance": true,
+      "source_manifest": "specs/verifications/e08-review-r7-source.json",
+      "used": 7,
+      "maximum": 10,
+      "previous_six_pairs_retained": true
+    }
+  },
+  "actual_smoke": {
+    "status": "passed",
+    "receipt": "specs/verifications/e08-recovery-r7-runtime.json",
+    "checks": 9,
+    "debug_sha256": "f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf",
+    "binary_before_after_matched": true,
+    "provider_requests": 0,
+    "successful_build_before_smoke": "artifact://3634"
+  },
+  "provider_requests": 0,
+  "historical_caps": "unchanged; no prior PASS transferred",
+  "installation_global_changes_and_publication": "not-authorized-not-performed",
+  "checks": {
+    "full": {
+      "job": "bg_45",
+      "raw": "artifact://3638",
+      "status": "passed",
+      "workspace_passed": 593,
+      "workspace_suites": 31,
+      "guarded_child_passed": 1,
+      "reported_passed": 594,
+      "reported_suites": 32,
+      "ignored": 12,
+      "derivation": "Raw3638:223 root library cases and one separate guarded single-test child verdict; aggregate includes that extra child. No inflated distinct workspace count.",
+      "wall_seconds": 138.03,
+      "examples": true,
+      "strict_clippy": true,
+      "format_check": true,
+      "build": true
+    },
+    "focused": {
+      "raw": "artifact://3634",
+      "Codex_parent_tests": 13,
+      "guarded_child_verdicts": 1,
+      "recovery": 26,
+      "strict_Rust_and_actual_CLI_build": true,
+      "wall_seconds": 20.81
+    },
+    "named_protocol_and_stock": {
+      "raw": "artifact://3640",
+      "ACP": 38,
+      "integration": 9,
+      "Codex_parent": 13,
+      "guarded_child_verdicts": 1,
+      "OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Bun_wall_ms": 246,
+      "Zsh_syntax": "passed",
+      "wall_seconds": 3.99
+    },
+    "actual": {
+      "status": "passed",
+      "receipt": "specs/verifications/e08-recovery-r7-runtime.json",
+      "checks": 9,
+      "provider_requests": 0,
+      "successful_build_before_smoke": "artifact://3634"
+    },
+    "failed_attempts": [
+      "artifact://3625 missing parent PermissionsExt; fixed without suppression",
+      "artifact://3630 copied-header read at EOF; rewind added, unchanged behavior tests pass",
+      "specs/verifications/e08-recovery-r7-stale-binary-runtime.json rejected as proof: earlier binary after gate failed before CLI build"
+    ],
+    "runtime_guard": {
+      "status": "passed",
+      "command": "bun -e 'const e=JSON.parse(await Bun.file(\"specs/verifications/e08-recovery.json\").text());if(e.actual_smoke?.status!==\"passed\"||e.provider_requests!==0)process.exit(1)'",
+      "exit_code": 0
+    },
+    "exact_journal_and_runtime_guard": {
+      "status": "passed",
+      "exit": 0,
+      "raw": "artifact://3672",
+      "journal_and_coordinator_cases": 31,
+      "wall_seconds": 0.684,
+      "commands": [
+        "cargo test --lib recovery::tests",
+        "bun -e 'const e=JSON.parse(await Bun.file(\"specs/verifications/e08-recovery.json\").text());if(e.actual_smoke?.status!==\"passed\"||e.provider_requests!==0)process.exit(1)'"
+      ]
+    }
+  },
+  "preserved_repair_failures": [
+    {
+      "job": "bg_26",
+      "reason": "private diagnostic visibility; reused existing route"
+    },
+    {
+      "raw": "artifact://3396",
+      "reason": "owned fixture socket path too long; /tmp pattern and setup RAII; three failed pre-daemon roots explicitly removed"
+    },
+    {
+      "raw": "artifact://3399",
+      "reason": "new unit envelopes lacked version1"
+    },
+    {
+      "raw": "artifact://3401",
+      "reason": "incidental underlying error-type expectation removed; semantic capacity boundary retained"
+    },
+    {
+      "raw": "artifact://3403",
+      "reason": "whole-config/default-normalization assertion removed; unsaved-project consumer invariant retained"
+    },
+    {
+      "job": "bg_34",
+      "reason": "real native startup/shutdown request-drain ordering defect; corrected and both actual preparation phases pass3413"
+    },
+    {
+      "job": "bg_36",
+      "raw": "artifact://3417",
+      "reason": "native authentication mouse fixture waited for authenticate after accepting a stale armed frame; full gate stopped before strict checks",
+      "wall_seconds": 56.05
+    },
+    {
+      "reason": "first auth-readiness repair reset Tab/Enter focus through a global read-only roundtrip; two auth cases passed and Tab/Enter failed; narrowed fence to mouse-only and observed genuine unsupported selection",
+      "wall_seconds": 14.75
+    },
+    {
+      "raw": "artifact://3463",
+      "reason": "Both new public settings relaunch cases fail before production fixes; retained functional RED, not ignored"
+    },
+    {
+      "kind": "throwaway-observer-harness-only",
+      "reason": "New CLI readiness expected ok envelope although retained e08_rpc already unwraps result; private fixture cleanup performed, observer corrected, product source unchanged; final4 smokes pass"
+    },
+    {
+      "raw": "artifact://3501",
+      "reason": "Both quota cases RED before bootstrap correction; final3506 GREEN2/2"
+    },
+    {
+      "raw": "artifact://3503",
+      "reason": "New test guessed native DTO cwd; incidental assertion deleted, never re-pinned; genuine native cwd proof passes"
+    },
+    {
+      "raw": "artifact://3516",
+      "kind": "new-observer-only",
+      "reason": "Observer wrongly equated independent project context with agent cwd; preserved snapshot disproved the assumption; removed without production change"
+    },
+    {
+      "raw": [
+        "artifact://3519",
+        "artifact://3525"
+      ],
+      "kind": "new-observer-only",
+      "reason": "Copied whole-project equality froze ordinary mutable unsaved-main context; retained values prove same project ID/name/exact cwd and legitimate auto refresh. Semantic identity checks retained; no production defect or source edit claimed."
+    },
+    {
+      "raw": "artifact://3557",
+      "failure": "24 recovery and6 coordinator cases passed; strict Clippy rejected test-only type-complexity and cloned-ref slice.",
+      "resolution": "Local IntentChange alias and std::slice::from_ref, no warning suppression;3559 and3569 pass."
+    },
+    {
+      "raw": "artifact://3561",
+      "failure": "New cold fixture used long macOS TMPDIR and correctly hit managed Codex socket bound before version gate.",
+      "classification": "fixture-only-no-production-defect",
+      "resolution": "Private canonical/tmp root; production restriction unchanged."
+    },
+    {
+      "raw": "artifact://3565",
+      "failure": "Exact genuine OMP conversation already visible; fixture incorrectly required literal idle in its native output.",
+      "classification": "incidental presentation gate deleted, never re-pinned",
+      "resolution": "Keep exact protocol identity, saved content/message/no-replay and normal cleanup assertions; no production change."
+    },
+    {
+      "raw": "artifact://3625",
+      "failure": "First native import integration missed parent PermissionsExt needed by existing executable resolution.",
+      "fix": "Restore existing trait import after LSP offered no import action; no suppression."
+    },
+    {
+      "raw": "artifact://3630",
+      "failure": "New pre-publication copied-header validation read the output descriptor at EOF; three parent Codex tests and guarded child failed.",
+      "fix": "Rewind completed temporary output before shared bounded identity validation; keep original behavioral assertions."
+    },
+    {
+      "runtime": "specs/verifications/e08-recovery-r7-stale-binary-runtime.json",
+      "failure": "Parallel gate failed before CLI rebuild, so nine earlier observations were on a stale binary.",
+      "classification": "not-current-source-proof; require successful explicit build before new runtime receipt"
+    }
+  ],
+  "R5_pre_remediation_actual_smoke": {
+    "status": "passed",
+    "receipts": "specs/verifications/e08-recovery-r5-runtime.json",
+    "source_manifest": "specs/verifications/e08-review-r5-source.json",
+    "debug_binary_sha256_before_and_after": "047b421bedfbc48b4e0639241f0475cc2148e4bae0a81aa895ba6e0a0d088ec7",
+    "checks": 5,
+    "provider_requests": 0,
+    "owned_cleanup_and_unrelated_sentinels": "passed-before-fixture-fallback"
+  },
+  "R5_pre_remediation_checks": {
+    "full": {
+      "job": "bg_40",
+      "raw": "artifact://3512",
+      "workspace_passed": 582,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 137.51,
+      "examples": "passed",
+      "clippy_all_targets_deny_warnings": "passed",
+      "fmt_check": "passed",
+      "build": "passed"
+    },
+    "quota_focused": {
+      "before": {
+        "raw": "artifact://3501",
+        "passed": 0,
+        "failed": 2
+      },
+      "after": {
+        "raw": "artifact://3506",
+        "passed": 2,
+        "failed": 0
+      },
+      "recovery": 22,
+      "store_coordinator": 29,
+      "strict_Rust": "passed",
+      "wall_seconds": 16.07
+    },
+    "stock": {
+      "OMP_tests": 8,
+      "assertions": 49,
+      "Zsh_syntax": "passed"
+    },
+    "runtime_evidence_guard": {
+      "task": 5,
+      "status": "passed",
+      "actual_command_executed": true,
+      "exit_code": 0
+    }
+  },
+  "final_review_remediation": {
+    "R5_A_M1": "locally-verified exhaustive identity comparison excludes only descriptive project metadata; staged metadata current; public gated startup and retirement/rollback regression",
+    "R5_B_M1": "locally-verified startup_pending producer plus initial TUI wait/input fence; two actual cold-attachment scenarios",
+    "R5_B_S1": "failed fallback never enables reserved startup-hook effects; actual later project-hook FIFO fence observes absent startup effects",
+    "independent_post_remediation_clearance": "R7 A100/B100 PASS, zero findings, each independently matched21/21; both complete reports read before acceptance",
+    "local_audit": "specs/verifications/AUDIT-e08-e08s01.md",
+    "defect_class_sweep": "specs/verifications/e08-final-generalize-sweep.json"
+  },
+  "verified_source_files": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "CONVENTIONS.md",
+    "src/lib.rs",
+    "src/recovery.rs",
+    "src/runtime.rs",
+    "src/acp.rs",
+    "src/codex.rs",
+    "src/integration.rs",
+    "src/daemon.rs",
+    "src/daemon/recovery.rs",
+    "integrations/omp/amux.ts",
+    "tests/recovery.rs",
+    "tests/integration.rs",
+    "tests/fixtures/acp_peer.rs",
+    "tests/acp/native.rs",
+    "tests/pty_control/native.rs",
+    "README.md",
+    "CHANGELOG.md",
+    "tests/agent_interaction.rs",
+    "src/tui.rs"
+  ],
+  "final_test_quality_change": {
+    "change": "Removed a redundant private staged-Candidate.project copy assertion; retained public durable metadata/history/fresh effects and all launch/retirement invariants.",
+    "scope": "cfg(test) only; no production behavior changed",
+    "verification_job": "bg_43",
+    "status": "passed-focused-full-and-seven-current-binary-actual-checks",
+    "raw": "artifact://3584"
+  },
+  "R6_pre_remediation_checks": {
+    "full": {
+      "job": "bg_43",
+      "raw": "artifact://3584",
+      "passed": 586,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 149.08,
+      "includes_focused_recovery": 24,
+      "includes_focused_journal_and_coordinator": 31,
+      "examples": true,
+      "strict_clippy": true,
+      "format_check": true,
+      "build": true
+    },
+    "focused": {
+      "raw": "artifact://3559",
+      "recovery": 24,
+      "journal_and_coordinator": 31,
+      "wall_seconds": 15.06,
+      "strict_Rust": true
+    },
+    "stock": {
+      "OMP_tests": 8,
+      "assertions": 49,
+      "Bun_wall_ms": 205,
+      "Zsh_syntax": "passed"
+    },
+    "actual": {
+      "receipt": "specs/verifications/e08-recovery-final-runtime.json",
+      "checks": 7,
+      "provider_requests": 0
+    },
+    "status": "passed",
+    "runtime_guard": {
+      "status": "passed",
+      "command": "bun -e 'const e=JSON.parse(await Bun.file(\"specs/verifications/e08-recovery.json\").text());if(e.actual_smoke?.status!==\"passed\"||e.provider_requests!==0)process.exit(1)'",
+      "exit_code": 0
+    },
+    "named_protocol_commands": {
+      "raw": "artifact://3589",
+      "ACP": 38,
+      "integration": 9,
+      "Codex": 8,
+      "wall_seconds": 3.87
+    },
+    "metadata_validation": {
+      "status": "passed",
+      "YAML_documents": 7,
+      "all_six_tasks_and_story_failing": true,
+      "review_caps": "E08 used6/max10 after explicit user cap extension; other historical caps unchanged",
+      "source_binding_matched": true,
+      "repository_required_reading_present": 307,
+      "historical_internal_references": {
+        "resolved_by": "glob internal URI handling",
+        "present": 2
+      }
+    },
+    "previous_full": {
+      "job": "bg_42",
+      "raw": "artifact://3569",
+      "passed": 586,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 134.82,
+      "status": "before-test-only-staged-copy-assertion-removal"
+    },
+    "review_authorization_validation": {
+      "status": "passed",
+      "YAML_documents": 7,
+      "rounds_used": 6,
+      "maximum_rounds": 10,
+      "prior_rounds_retained": true,
+      "other_root_sections_unchanged": 46,
+      "all_task_acceptance_still_failing": true
+    }
+  },
+  "R6_pre_remediation_actual_smoke": {
+    "status": "passed",
+    "receipt": "specs/verifications/e08-recovery-r6-runtime.json",
+    "checks": 7,
+    "debug_sha256": "0a3ba8b49849d9f20a1b298cc5abf3039f57430bbfc7eeef3eaaaac03af30062",
+    "binary_before_after_matched": true,
+    "provider_requests": 0,
+    "includes": [
+      "cold ordinary/exact-selector TUI at quotas1/2; no blank slot/input replay; safe quit/resize/termios",
+      "genuine original-shell OMP quota1 and startup hooks",
+      "actual CLI saved settings42/47/52 and342/647/952 versus new105",
+      "two exact ACP conversations and actual Menu",
+      "native exact file reopen",
+      "same persistent attachment native /new and no stale A"
+    ]
+  },
+  "round6_corrections": {
+    "native_import_owner": "E08AtomicNativeImport: src/codex.rs",
+    "hook_order_owner": "E08StartupHookOrdering: src/daemon.rs and tests/recovery.rs",
+    "integration_owner": "parent",
+    "findings": {
+      "M1": "complete durable no-clobber import publication",
+      "M2": "descriptor-relative pre-mutation destination validation",
+      "S1": "reserved startup-hook ordering gate"
+    },
+    "status": "all-three-findings-locally-verified-and-cleared-by-both-current-R7-reviews"
+  },
+  "acceptance_scope": "Local implementation acceptance only: exact context reopening then idle. No new live-provider, genuine native Codex0.165, Linux/minimum-Rust, native application-fence, install or Git-delivery acceptance.",
+  "final_source_certification": {
+    "source_hashes_unchanged": 21,
+    "reviewers_independently_matched_each": 21,
+    "debug_sha256": "f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf",
+    "installed_path": "/Users/addomam/.cargo/bin/amux",
+    "installed_sha256": "1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f",
+    "installed_unchanged": true,
+    "parent_checksum_note": "All21 source and debug hashes measured unchanged after both reports; initial aggregate command failed only for nonexistent ~/.local/bin/amux. Separate measurement at recorded ~/.cargo/bin/amux passed with unchanged1ad4b014 hash."
+  },
+  "acceptance_criteria": [
+    {
+      "id": 1,
+      "status": "passed",
+      "evidence": "Current actual ACP42/17 distinct contexts and named public recovery cases; no picker."
+    },
+    {
+      "id": 2,
+      "status": "passed",
+      "evidence": "Nine current actual receipts: no pre-input message/effect replay, fresh ownerless identities; permanent ACP choices/no-work boundaries."
+    },
+    {
+      "id": 3,
+      "status": "passed",
+      "evidence": "Current fresh arithmetic/settings42→47→52 and342→647→952, stale-target rejection."
+    },
+    {
+      "id": 4,
+      "status": "passed",
+      "evidence": "26 public recovery tests plus original persistent native /new receipt; exact close/teardown/reattachment regressions."
+    },
+    {
+      "id": 5,
+      "status": "passed",
+      "evidence": "Permanent missing/capability/partial-failure tests and actual native backend failure with no launch/new fallback and independent recovery."
+    },
+    {
+      "id": 6,
+      "status": "passed",
+      "evidence": "Current full journal/coordinator unsafe-object, writer/conflict, live/unknown-peer and uncertain-write regressions; both independent security reviews."
+    },
+    {
+      "id": 7,
+      "status": "passed",
+      "evidence": "Genuine offline native OMP exact-file/cwd/no-work receipts, native Codex complete/import/no-clobber/EFBIG retry and replacement/lifecycle cases; no genuine0.165 acceptance claim."
+    },
+    {
+      "id": 8,
+      "status": "passed",
+      "evidence": "Full593 workspace cases+1 guarded child/strict/OMP8/Zsh and nine actual current-binary checks with normal owned cleanup/provider0."
+    }
+  ],
+  "task_verification": [
+    {
+      "task": 1,
+      "status": "passed",
+      "cases": 31,
+      "raw": "artifact://3672"
+    },
+    {
+      "task": 2,
+      "status": "passed",
+      "cases": 38,
+      "raw": "artifact://3640"
+    },
+    {
+      "task": 3,
+      "status": "passed",
+      "integration": 9,
+      "parent_Codex": 13,
+      "guarded_child_verdicts": 1,
+      "raw": "artifact://3640"
+    },
+    {
+      "task": 4,
+      "status": "passed",
+      "cases": 26,
+      "raw": "artifact://3634"
+    },
+    {
+      "task": 5,
+      "status": "passed",
+      "guard_exit": 0,
+      "raw": "artifact://3672",
+      "actual_runtime": "specs/verifications/e08-recovery-r7-runtime.json",
+      "actual_checks": 9
+    },
+    {
+      "task": 6,
+      "status": "passed",
+      "raw": "artifact://3638",
+      "workspace_cases": 593,
+      "guarded_child_verdicts": 1
+    }
+  ],
+  "delivery": {
+    "status": "signed-commit-main-merge-and-push-authorized-in-progress",
+    "evidence": "specs/verifications/e08-signed-delivery.json",
+    "source_changes_after_review": false,
+    "installation": "not-requested-not-performed"
+  }
+}

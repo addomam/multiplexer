@@ -1,0 +1,197 @@
+{
+  "type": "epic-verification",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "review_rounds_used": 4,
+    "max_review_rounds": 5
+  },
+  "status": "independent-round4-failed-native-startup-capacity-correction-required",
+  "acceptance": "failing",
+  "source_manifest": "specs/verifications/e08-review-r4-source.json",
+  "last_local_verified_source_manifest": "specs/verifications/e08-review-r4-source.json",
+  "previous_evidence": "specs/verifications/e08-recovery-r3.json",
+  "review": {
+    "rounds_used": 4,
+    "maximum_rounds": 5,
+    "R1": {
+      "A": 75,
+      "B": 81.25,
+      "gate": "FAIL"
+    },
+    "R2": {
+      "A": 84.375,
+      "B": 93.75,
+      "gate": "FAIL",
+      "A_hashes": {
+        "matched": 19,
+        "required": 19
+      },
+      "B_hashes": {
+        "matched": 0,
+        "unverified": 19,
+        "required": 19
+      },
+      "reports": [
+        "specs/verifications/e08-review-r2-A.json",
+        "specs/verifications/e08-review-r2-B.json"
+      ]
+    },
+    "R3": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "B": {
+        "score": 96.875,
+        "must_fix": 0,
+        "should_fix": 1,
+        "threshold_gate": "PASS",
+        "correctness": "incorrect",
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r3-A.json",
+        "specs/verifications/e08-review-r3-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r3-source.json"
+    },
+    "R4": {
+      "gate": "FAIL",
+      "A": {
+        "score": 96.875,
+        "must_fix": 1,
+        "should_fix": 0,
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "B": {
+        "score": 100,
+        "must_fix": 0,
+        "should_fix": 0,
+        "gate": "PASS",
+        "hashes_matched": 20,
+        "hashes_required": 20
+      },
+      "reports": [
+        "specs/verifications/e08-review-r4-A.json",
+        "specs/verifications/e08-review-r4-B.json"
+      ],
+      "all_full_reports_read_before_remediation": true,
+      "source_manifest": "specs/verifications/e08-review-r4-source.json"
+    },
+    "R5": "not-started"
+  },
+  "actual_smoke": {
+    "status": "passed",
+    "receipts": "specs/verifications/e08-recovery-r4-runtime.json",
+    "source_manifest": "specs/verifications/e08-review-r4-source.json",
+    "debug_binary_sha256_before_and_after": "f92e997a87e9c96b1971de6153926fa7c4f02a29f1daf7cc878724823b3de784",
+    "checks": 4,
+    "provider_requests": 0,
+    "owned_cleanup_and_unrelated_sentinels": "passed-before-fixture-fallback"
+  },
+  "provider_requests": 0,
+  "historical_caps": "unchanged; no prior PASS transferred",
+  "installation_global_changes_and_publication": "not-authorized-not-performed",
+  "checks": {
+    "focused": {
+      "raw": "artifact://3465",
+      "status": "passed",
+      "recovery": 21,
+      "ACP": 38,
+      "store_coordinator": 29,
+      "integration": 9,
+      "Codex": 8,
+      "strict_Rust": "passed",
+      "wall_seconds": 22.68
+    },
+    "full": {
+      "job": "bg_38",
+      "raw": "artifact://3471",
+      "workspace_passed": 581,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 137.8,
+      "examples": "passed",
+      "clippy_all_targets_deny_warnings": "passed",
+      "fmt_check": "passed",
+      "build": "passed"
+    },
+    "stock": {
+      "OMP_tests": 8,
+      "assertions": 49,
+      "status": "passed",
+      "Zsh_syntax": "passed",
+      "commands": [
+        "bun test integrations/omp/lifecycle.test.ts",
+        "zsh -n integrations/zsh/adapter.zsh"
+      ]
+    },
+    "regressions": {
+      "before": {
+        "raw": "artifact://3463",
+        "passed": 0,
+        "failed": 2
+      },
+      "after": {
+        "raw": "artifact://3465",
+        "passed": 2,
+        "failed": 0
+      },
+      "settings_semantics": "saved42/47/52; mixed342/647/952; genuinely new default105; no startup work"
+    }
+  },
+  "preserved_repair_failures": [
+    {
+      "job": "bg_26",
+      "reason": "private diagnostic visibility; reused existing route"
+    },
+    {
+      "raw": "artifact://3396",
+      "reason": "owned fixture socket path too long; /tmp pattern and setup RAII; three failed pre-daemon roots explicitly removed"
+    },
+    {
+      "raw": "artifact://3399",
+      "reason": "new unit envelopes lacked version1"
+    },
+    {
+      "raw": "artifact://3401",
+      "reason": "incidental underlying error-type expectation removed; semantic capacity boundary retained"
+    },
+    {
+      "raw": "artifact://3403",
+      "reason": "whole-config/default-normalization assertion removed; unsaved-project consumer invariant retained"
+    },
+    {
+      "job": "bg_34",
+      "reason": "real native startup/shutdown request-drain ordering defect; corrected and both actual preparation phases pass3413"
+    },
+    {
+      "job": "bg_36",
+      "raw": "artifact://3417",
+      "reason": "native authentication mouse fixture waited for authenticate after accepting a stale armed frame; full gate stopped before strict checks",
+      "wall_seconds": 56.05
+    },
+    {
+      "reason": "first auth-readiness repair reset Tab/Enter focus through a global read-only roundtrip; two auth cases passed and Tab/Enter failed; narrowed fence to mouse-only and observed genuine unsupported selection",
+      "wall_seconds": 14.75
+    },
+    {
+      "raw": "artifact://3463",
+      "reason": "Both new public settings relaunch cases fail before production fixes; retained functional RED, not ignored"
+    },
+    {
+      "kind": "throwaway-observer-harness-only",
+      "reason": "New CLI readiness expected ok envelope although retained e08_rpc already unwraps result; private fixture cleanup performed, observer corrected, product source unchanged; final4 smokes pass"
+    }
+  ],
+  "source_files_for_next_review": 20
+}

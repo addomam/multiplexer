@@ -1,0 +1,45 @@
+{
+  "type": "source-manifest",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "round": 2,
+    "baseline_commit": "cc468a3"
+  },
+  "status": "frozen-for-independent-round2",
+  "captured_at": "2026-10-29T20:48:40.019Z",
+  "sha256": {
+    "Cargo.toml": "95319b71d35c12d0d0acdb2d38c5794303963fa40c37807c0d502b98728d8f74",
+    "Cargo.lock": "25b3293c1d1de18ad328161dfddf3252d4e157895389e63d0725cb4a709e461c",
+    "CONVENTIONS.md": "bb21da16a6ce833228743c728e124145fe6211f4340ed60d7ccbc603343b874e",
+    "src/lib.rs": "cba647b543869c9a016b8773ef67296ef49efc41a9cb61672489e71fe7ce3e05",
+    "src/recovery.rs": "b3cde8eb41da418813b7802834368fb9ef18e2088ff8f645c4713632c97379ab",
+    "src/runtime.rs": "a906e625494964d253a00ea43497f1e11367835294f602fa90cca6983ebeca56",
+    "src/acp.rs": "b35d2be7882d448410abbe8c52e9aad3322d9c4290ce2d2a374dfbdbc4af9c47",
+    "src/codex.rs": "4d1c32a20ea62981b1b9eb17487d232b970439f702da1f96407abb52d02ca1aa",
+    "src/integration.rs": "853e645d7bac1181342bfd3c3ef6cc3475b44f6a28defdbb1235b67ac987e150",
+    "src/daemon.rs": "170971acfcee50d481a11cb588eb72cdfbb223f66980423eb1a51565b4318e05",
+    "src/daemon/recovery.rs": "950df99a64e4d0cf7adbadf9e8d8bd2e7882c29a8641598055d605c2e879d45d",
+    "integrations/omp/amux.ts": "4fb15958d8a0f9e767e4bbce443ab9844f043438f71bcfc9446ae1beaf20a39b",
+    "tests/recovery.rs": "acc6764dc32e267d6af6790ad8de7e946beb224dc16293aaed236ae27a754ed7",
+    "tests/integration.rs": "62fe3358bb247dbcdbd0b5c1c16650dfa6cdcde147c923703e19b8eb374b1df4",
+    "tests/fixtures/acp_peer.rs": "01aaba42396695d619cd1b1de500ee6b782c27c8e7296e020491e1e77dee1634",
+    "tests/acp/native.rs": "271db9907a17014c7041678391c29717d29914d84f1ca834bff0846818e218b4",
+    "tests/pty_control/native.rs": "f442a70b962c77fb5cc89a37286bbe8a7d7c8ca552209aab5f3a0269054db6a0",
+    "README.md": "fd829c034e2e97bd2ac0837d271bcede57f06f67ce2d1fd43a14525755a5482f",
+    "CHANGELOG.md": "1cbee6eed7fc7473941023061c4ac27d4c62e3582c48aa7a7f90e522017f1226"
+  },
+  "debug_binary_sha256": "c9bce8c7c4b8be8b00c29aee9501f8bf399a2daf1ccf8de3c165989c82ba9781",
+  "installed_binary_sha256": "1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f",
+  "installed_unchanged": true,
+  "full_gate": {
+    "job": "bg_25",
+    "raw": "artifact://3374",
+    "passed": 571,
+    "suites": 31,
+    "ignored": 12,
+    "wall_seconds": 128.07
+  },
+  "previous_failed_round": "specs/verifications/e08-review-r1-source.json"
+}
