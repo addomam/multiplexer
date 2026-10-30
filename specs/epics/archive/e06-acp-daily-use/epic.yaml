@@ -4,7 +4,7 @@ title: ACP-first daily agent workflow
 status: passing
 scope: ../../../product/SCOPE_E06.yaml
 plan: PLAN.md
-impact: ../../../IMPACT_LATEST.md
+impact: ../../../IMPACT-E06.md
 threat_model: ../../../security/epics/e06/THREAT_MODEL.md
 priority: explicit-user-three-item-implementation-authorization
 integration_owner: parent
