@@ -1,0 +1,213 @@
+{
+  "scope": "CLI help and nested project management",
+  "status": "verified-locally-installed-not-committed",
+  "branch": "feat/cli-projects-help",
+  "preserved_uncommitted_ui_fixes": true,
+  "implementation": {
+    "files": [
+      "src/cli.rs",
+      "src/projects.rs",
+      "src/daemon.rs"
+    ],
+    "project_children": [
+      "list",
+      "add",
+      "save",
+      "open",
+      "config",
+      "remove"
+    ],
+    "legacy_cli_aliases": false,
+    "existing_raw_project_API_operations": "unchanged",
+    "new_API_operations": [
+      "project-list",
+      "project-remove"
+    ],
+    "removal_semantics": "forget saved configuration; retain runtime ID/name/context/hooks/recipes, files and native/ACP work; persistence failure rolls back saved flag"
+  },
+  "help": {
+    "binary": "/Users/addomam/.cargo/bin/amux",
+    "paths": [
+      "amux",
+      "amux attach",
+      "amux acp",
+      "amux acp start",
+      "amux acp profiles",
+      "amux acp open",
+      "amux acp inspect",
+      "amux acp attach",
+      "amux projects",
+      "amux projects list",
+      "amux projects add",
+      "amux projects save",
+      "amux projects open",
+      "amux projects config",
+      "amux projects remove",
+      "amux daemon",
+      "amux api",
+      "amux snapshot",
+      "amux open",
+      "amux name",
+      "amux close",
+      "amux remove",
+      "amux reparent",
+      "amux promote",
+      "amux demote",
+      "amux input",
+      "amux execute",
+      "amux screen",
+      "amux resize",
+      "amux state",
+      "amux events",
+      "amux wait",
+      "amux config",
+      "amux report",
+      "amux shutdown",
+      "amux detach",
+      "amux internal",
+      "amux internal-report"
+    ],
+    "path_count": 38,
+    "short_and_long_invocations": 76,
+    "documented_command_argument_option_rows": 378,
+    "generated_help_examples": [
+      "help",
+      "help projects add",
+      "help acp start"
+    ],
+    "legacy_commands_rejected": [
+      "project-new",
+      "project-save",
+      "project-open",
+      "project-config"
+    ],
+    "absent_socket_remained_absent": true
+  },
+  "mechanical": {
+    "full_gate": {
+      "job": "bg_367",
+      "raw": "artifact://2829",
+      "workspace_tests_passed": 453,
+      "suites": 30,
+      "ignored": 12,
+      "seconds": 172.78,
+      "strict_clippy_fmt_release_build": "passed",
+      "fixture_build": "passed",
+      "stock_OMP_tests": 8,
+      "OMP_assertions": 49,
+      "zsh_syntax": "passed"
+    },
+    "final_help_wording_gate": {
+      "job": "bg_368",
+      "CLI_tests": 3,
+      "filtered": 131,
+      "strict_clippy_fmt_release_build_install": "passed",
+      "seconds": 19.34,
+      "note": "After the full runtime gate, clarified only the existing one-level promote semantics and paste wording; final installed help traversal passes. No runtime implementation changed after the full gate."
+    },
+    "new_permanent_regressions": [
+      "projects::tests::forgetting_saved_project_retains_runtime_files_and_rejects_ambiguous_reuse",
+      "projects::tests::stale_project_removal_preserves_saved_flag_and_newer_disk_configuration"
+    ]
+  },
+  "actual_CLI": {
+    "all_six_project_children_exercised": true,
+    "list_excludes_unsaved_runtime": true,
+    "project_reopen_retains_pid_and_runs_hook_once": true,
+    "configuration_and_save_persist": true,
+    "stale_removal_rejected_without_disk_change": true,
+    "failed_removal_emits_no_success_event": true,
+    "unsaved_and_missing_removal_rejected": true,
+    "removed_definition_absent_after_private_restart": true,
+    "removed_id_open_rejected_after_restart": true,
+    "unremoved_saved_id_survives_restart": true,
+    "saved_project_open_after_restart_uses_new_shell_pid": 90459,
+    "native_continuity": {
+      "pid": 85707,
+      "same_control_and_owner": true,
+      "shell_variable_effects": [
+        42,
+        57
+      ]
+    },
+    "ACP_continuity": {
+      "pid": 89942,
+      "target": {
+        "kind": "acp",
+        "id": "acp-c6e0fb84a2cf425eb226617517cadc60",
+        "instance_id": "instance-7d883af1367e40d994b37206b7c43e68",
+        "connection_generation": 1,
+        "session_id": "arithmetic-89942"
+      },
+      "same_control_and_original_RPC_completions": true,
+      "independent_effects": [
+        42,
+        57
+      ],
+      "command_count": 2
+    },
+    "directories_files_hooks_recipes_retained": true,
+    "installed_list_add_remove_preserve_live_shell_pid": 92412
+  },
+  "fixture_failures_preserved": [
+    {
+      "kind": "shared-socket-directory",
+      "observed": "already-running: daemon runtime is locked",
+      "correction": "Use a distinct private socket parent directory, not only a second filename/environment runtime path",
+      "production_change": false
+    },
+    {
+      "kind": "invalid-throwaway-peer-command",
+      "peer_pid": 85738,
+      "submitted": "add 15",
+      "required": "add A B",
+      "observed_lifecycle": "failed",
+      "claim": "fixture input error, not a production defect or passing same-instance run"
+    }
+  ],
+  "cleanup": {
+    "three_successful_private_daemons_exit": [
+      0,
+      0,
+      0
+    ],
+    "initial_failed_start_reaped_exit": 1,
+    "sockets_absent": true,
+    "owned_native_and_peer_pids_absent": [
+      85707,
+      85691,
+      88484,
+      85738,
+      89942,
+      92412,
+      90459,
+      90447
+    ],
+    "unrelated_sentinel_survived_then_owner_reaped": true,
+    "lsof_exit": 1,
+    "lsof_stdout_empty": true,
+    "temporary_root_removed": true
+  },
+  "artifact_hashes": {
+    "target/release/amux": "b62d74d3859af24ad8e499619b7421b801eef918b95ec8d94cc97a7a3e2f4124",
+    "/Users/addomam/.cargo/bin/amux": "b62d74d3859af24ad8e499619b7421b801eef918b95ec8d94cc97a7a3e2f4124",
+    "src/cli.rs": "635587d1018056a22f7ffe56789a99ba5ce746ae6b39fa710847d7197d3d45e3",
+    "src/projects.rs": "f250cf41a3792158a16b4ed68e2ff4434ffb948b8e75d728afd310a87af56cd3",
+    "src/daemon.rs": "b489465f2b718dad75bc49da92dc8977968d65730514125e93898859a1482c24"
+  },
+  "limits": {
+    "global_live_daemon_touched": false,
+    "global_config_or_auth_changed": false,
+    "new_provider_requests": 0,
+    "historical_provider_budget": {
+      "used": 12,
+      "cap": 12,
+      "remaining": 0
+    },
+    "historical_reviews_and_E05_parking": "unchanged",
+    "new_independent_review_PASS": false,
+    "new_commit_merge_push_tag_release": false,
+    "published_v0_1_0_assets": "unchanged",
+    "new_list_remove_need_updated_daemon": "Existing global daemon left running; explicit safe upgrade remains the user's decision"
+  }
+}

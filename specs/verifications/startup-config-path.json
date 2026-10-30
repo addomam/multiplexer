@@ -1,0 +1,78 @@
+{
+  "status": "passed-locally",
+  "request": "Delete the bad startup config and include its path in invalid-config errors.",
+  "worktree": "/Users/addomam/projects/amux-acp",
+  "branch": "feat/cli-projects-help",
+  "diagnosis": {
+    "config_path": "/Users/addomam/.config/amux/config.json",
+    "actual_daemon_log": "/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-501/daemon.log",
+    "observed_cause": "Installed daemon rejects unknown field `acp_profiles` at line 8 column 18; the original error omitted the configuration filename.",
+    "saved_projects": 0,
+    "startup_hooks": 0,
+    "acp_profiles": 0,
+    "removal": "Exact user-authorized file deleted; absence observed after private smoke. No backup or other global mutation."
+  },
+  "implementation": {
+    "source": "src/projects.rs: Store::load",
+    "behavior": "Lazy anyhow context identifies the requested path on path-resolution failure and resolved path on file-read, JSON/schema and disk-validation failure. Underlying causes remain intact in the existing complete-chain stderr/daemon log/autostart diagnostic. No fallback or schema weakening.",
+    "regression": "tests/readiness.rs: failed_real_autostart_reports_invalid_configuration_and_removes_socket",
+    "cases": ["malformed JSON", "unknown config field", "invalid terminal limit"],
+    "assertions": ["nonzero startup", "exact config path and original cause in frontend diagnostic", "exact config path and original cause in daemon.log", "failed startup socket absent"],
+    "defect_class_sweep": {
+      "scope": ["src/projects.rs:200-400", "src/daemon.rs:2280-2296"],
+      "pattern": "read_disk\\(|configuration_path\\(|Store::load\\(",
+      "match_count": 4,
+      "result": "Daemon startup calls Store::load; its file parsing and disk validation share the wrapped read_disk boundary. Main already prints the full anyhow chain. No second logging convention or API change."
+    },
+    "changelog": "CHANGELOG.md: Unreleased"
+  },
+  "verification": {
+    "red": {
+      "command": "cargo test --test readiness failed_real_autostart_reports_invalid_configuration_and_removes_socket",
+      "exit_code": 101,
+      "result": "Missing-path assertion failed on the original production code; original parse cause and daemon.log path were present, but config.json path was absent.",
+      "raw": "artifact://3194"
+    },
+    "green": {
+      "command": "cargo fmt --all && cargo test --test readiness && cargo build --examples && cargo test --workspace && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check && cargo build",
+      "exit_code": 0,
+      "readiness_passed": 6,
+      "workspace_passed": 511,
+      "workspace_suites": 30,
+      "ignored": 12,
+      "strict_clippy_format_build_examples": "passed",
+      "raw": "artifact://3196"
+    },
+    "real_cli_smoke": {
+      "binary": "target/debug/amux",
+      "isolation": "Private HOME, XDG_CONFIG_HOME, runtime/socket, ZDOTDIR and working directory; no profiles or live providers.",
+      "invalid_config": {
+        "exit_code": 1,
+        "exact_path": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-cfg-yhqn_uri/config/amux/config.json",
+        "daemon_message_prefix": "amux: loading project configuration",
+        "cause": "invalid project configuration: unknown field `unknown_setting`",
+        "exact_path_and_cause_in_frontend_and_daemon_log": true,
+        "socket_removed": true
+      },
+      "harness_correction": "First recovery assertion forgot the existing RPC result envelope. Corrected the throwaway verifier only; not a production defect. First daemon exited 0, original shell absence observed, root removed. Repeated only the recovery/cleanup step.",
+      "missing_config_recovery": {
+        "native_shell_count": 1,
+        "native_shell_alive_at_start": true,
+        "explicit_private_shutdown_exit_code": 0,
+        "owned_child_pids_observed_absent": [36753, 36757, 36759, 36764],
+        "socket_removed": true,
+        "unrelated_sentinel_survived_shutdown": true,
+        "owned_sentinel_terminated_and_reaped": true,
+        "both_private_roots_removed": true
+      }
+    }
+  },
+  "delivery": {
+    "installed_binary_replaced": false,
+    "global_daemon_restarted": false,
+    "global_auth_changed": false,
+    "provider_requests": 0,
+    "commit_merge_push_release": "not performed",
+    "prior_e07_review": "Historical round-4 reports/31-file manifest retained unchanged. This follow-up changes source after that freeze; no new independent review or current manifest match is claimed, and no historical cap is reset."
+  }
+}

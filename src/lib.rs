@@ -7,5 +7,6 @@ mod control;
 pub mod daemon;
 pub mod integration;
 pub mod projects;
+mod recovery;
 pub mod runtime;
 pub mod tui;

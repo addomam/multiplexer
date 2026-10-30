@@ -82,7 +82,7 @@ fn eventually(mut condition: impl FnMut() -> bool) {
     }
 }
 fn agent(instance: &str, kind: &str, activity: &str, settled: bool) -> Value {
-    json!({"kind":"agent","instance_id":instance,"agent_kind":kind,"agent_id":instance,"activity":activity,"pid":std::process::id(),"conversation_id":"session-one","generation":1,"completed_generation":if settled {Some(1)} else {None},"retrying":false,"settled":settled})
+    json!({"kind":"agent","instance_id":instance,"agent_kind":kind,"agent_id":instance,"activity":activity,"pid":std::process::id(),"conversation_id":"session-one","lifecycle_event":"session_start","generation":1,"completed_generation":if settled {Some(1)} else {None},"retrying":false,"settled":settled})
 }
 
 #[test]
@@ -182,6 +182,256 @@ fn nested_agents_never_overwrite_root_activity_and_shutdown_is_not_settled() {
         fixture.integration.state("terminal")["agent"]["settled"],
         false
     );
+}
+
+#[test]
+fn recovery_distinguishes_unrecoverable_root_from_no_root_observation() {
+    let fixture = Fixture::new();
+    assert_eq!(fixture.integration.recovery("terminal"), None);
+    let mut root = agent("root", "main", "idle", true);
+    root["agent_family"] = json!("omp");
+    root["session_file"] = json!("/private/sessions/session-one.jsonl");
+    root["cwd"] = json!("/private/project");
+    root["session_persisted"] = json!(false);
+    fixture
+        .integration
+        .report("terminal", root.clone())
+        .unwrap();
+    let metadata = json!({"agent":"omp","root_lifetime":"root","session_id":"session-one",
+        "session_file":"/private/sessions/session-one.jsonl","cwd":"/private/project",
+        "peer_pid":std::process::id(),"recoverable":false,"reason":"session-not-persisted"});
+    assert_eq!(
+        fixture.integration.recovery("terminal"),
+        Some(metadata.clone())
+    );
+
+    root["session_persisted"] = json!(true);
+    fixture
+        .integration
+        .report("terminal", root.clone())
+        .unwrap();
+    let mut expected = metadata;
+    expected["recoverable"] = json!(true);
+    expected.as_object_mut().unwrap().remove("reason");
+    assert_eq!(
+        fixture.integration.recovery("terminal"),
+        Some(expected.clone())
+    );
+
+    let mut child = root.clone();
+    child["instance_id"] = json!("child");
+    child["agent_kind"] = json!("sub");
+    child["conversation_id"] = json!("child-conversation");
+    child["session_file"] = json!("/private/sessions/child.jsonl");
+    fixture.integration.report("terminal", child).unwrap();
+    assert_eq!(
+        fixture.integration.recovery("terminal"),
+        Some(expected.clone())
+    );
+    for (field, value, reason) in [
+        ("session_file", Value::Null, "invalid-session-file"),
+        (
+            "session_file",
+            json!("/private/bad\u{0}path"),
+            "invalid-session-file",
+        ),
+        (
+            "session_file",
+            json!(format!("/{}", "x".repeat(4096))),
+            "invalid-session-file",
+        ),
+        ("cwd", json!("relative/project"), "invalid-cwd"),
+        ("cwd", json!("/private/bad\npath"), "invalid-cwd"),
+        ("pid", json!(0), "invalid-peer-pid"),
+        ("pid", json!(u64::MAX), "invalid-peer-pid"),
+        ("agent_family", json!("unmanaged"), "unsupported-agent"),
+        (
+            "agent_family",
+            json!("private-family".repeat(256)),
+            "unsupported-agent",
+        ),
+        ("conversation_id", json!(""), "invalid-session-id"),
+        (
+            "conversation_id",
+            json!("x".repeat(257)),
+            "invalid-session-id",
+        ),
+        (
+            "conversation_id",
+            json!("unsafe\nsession"),
+            "invalid-session-id",
+        ),
+    ] {
+        let mut invalid = root.clone();
+        invalid[field] = value;
+        invalid["content"] = json!("private transcript");
+        invalid["env"] = json!({"TOKEN":"private credential"});
+        fixture.integration.report("terminal", invalid).unwrap();
+        let observed = fixture.integration.recovery("terminal").unwrap();
+        assert_eq!(observed["root_lifetime"], "root", "{field}");
+        assert_eq!(observed["recoverable"], false, "{field}");
+        assert_eq!(observed["reason"], reason, "{field}");
+        assert_eq!(observed.get("content"), None);
+        assert_eq!(observed.get("env"), None);
+        if matches!(field, "session_file" | "cwd" | "pid" | "conversation_id") {
+            let projected = match field {
+                "pid" => "peer_pid",
+                "conversation_id" => "session_id",
+                _ => field,
+            };
+            assert_eq!(observed.get(projected), None, "{field}");
+        }
+        if field == "agent_family" {
+            assert_eq!(observed["agent"], "unsupported");
+        }
+    }
+
+    // Older supported contexts expose the exact file but no persistence signal.
+    // The parent still validates the actual native file/header before journaling.
+    root["session_persisted"] = Value::Null;
+    fixture
+        .integration
+        .report("terminal", root.clone())
+        .unwrap();
+    assert_eq!(fixture.integration.recovery("terminal"), Some(expected));
+    root["shutdown"] = json!(true);
+    fixture.integration.report("terminal", root).unwrap();
+    assert_eq!(fixture.integration.recovery("terminal"), None);
+}
+
+#[test]
+fn root_session_switches_expose_unsaved_context_instead_of_previous_saved_context() {
+    let fixture = Fixture::new();
+    let mut root = agent("root", "main", "idle", true);
+    root["agent_family"] = json!("omp");
+    root["session_file"] = json!("/private/sessions/session-one.jsonl");
+    root["cwd"] = json!("/private/project");
+    root["session_persisted"] = json!(true);
+    root["lifecycle_event"] = json!("session_start");
+    fixture
+        .integration
+        .report("terminal", root.clone())
+        .unwrap();
+    let saved = fixture.integration.recovery("terminal").unwrap();
+    assert_eq!(saved["recoverable"], true);
+    assert_eq!(saved["session_id"], "session-one");
+
+    root["conversation_id"] = json!("session-two");
+    root["session_file"] = Value::Null;
+    root["session_persisted"] = json!(false);
+    root["lifecycle_event"] = json!("session_switch");
+    fixture
+        .integration
+        .report("terminal", root.clone())
+        .unwrap();
+    let unsaved = fixture.integration.recovery("terminal").unwrap();
+    assert_eq!(unsaved["root_lifetime"], saved["root_lifetime"]);
+    assert_eq!(unsaved["session_id"], "session-two");
+    assert_eq!(unsaved["recoverable"], false);
+    assert_eq!(unsaved["reason"], "session-not-persisted");
+    assert_eq!(unsaved.get("session_file"), None);
+
+    root["session_file"] = json!("/private/sessions/session-two.jsonl");
+    root["session_persisted"] = json!(true);
+    root["lifecycle_event"] = json!("heartbeat");
+    fixture.integration.report("terminal", root).unwrap();
+    let durable = fixture.integration.recovery("terminal").unwrap();
+    assert_eq!(durable["root_lifetime"], saved["root_lifetime"]);
+    assert_eq!(durable["session_id"], "session-two");
+    assert_eq!(
+        durable["session_file"],
+        "/private/sessions/session-two.jsonl"
+    );
+    assert_eq!(durable["recoverable"], true);
+}
+
+#[test]
+fn unsupported_replacement_root_does_not_mask_the_superseded_conversation() {
+    let fixture = Fixture::new();
+    let mut saved = agent("saved-root", "main", "idle", true);
+    saved["agent_family"] = json!("omp");
+    saved["session_file"] = json!("/private/sessions/session-one.jsonl");
+    saved["cwd"] = json!("/private/project");
+    fixture.integration.report("terminal", saved).unwrap();
+    assert_eq!(
+        fixture.integration.recovery("terminal").unwrap()["recoverable"],
+        true
+    );
+
+    let mut replacement = agent("unsupported-root", "main", "working", false);
+    replacement["agent_family"] = json!("unsupported-native-family");
+    replacement
+        .as_object_mut()
+        .unwrap()
+        .remove("conversation_id");
+    fixture.integration.report("terminal", replacement).unwrap();
+    assert_eq!(
+        fixture.integration.recovery("terminal"),
+        Some(json!({
+            "agent":"unsupported","root_lifetime":"unsupported-root",
+            "recoverable":false,"reason":"unsupported-agent","peer_pid":std::process::id()
+        }))
+    );
+}
+
+#[test]
+fn replacement_root_with_reused_pid_has_new_lifetime_and_ignores_displaced_reports() {
+    let fixture = Fixture::new();
+    let mut old = agent("process-one:main", "main", "idle", true);
+    old["agent_family"] = json!("omp");
+    old["session_file"] = json!("/private/sessions/session-one.jsonl");
+    old["cwd"] = json!("/private/project");
+    old["lifecycle_event"] = json!("session_start");
+    fixture.integration.report("terminal", old.clone()).unwrap();
+    let original = fixture.integration.recovery("terminal").unwrap();
+
+    let mut new = old.clone();
+    new["instance_id"] = json!("process-two:main");
+    new["conversation_id"] = json!("session-two");
+    new["session_file"] = json!("/private/sessions/session-two.jsonl");
+    fixture.integration.report("terminal", new.clone()).unwrap();
+    let replaced = fixture.integration.recovery("terminal").unwrap();
+    assert_eq!(replaced["peer_pid"], original["peer_pid"]);
+    assert_ne!(replaced["root_lifetime"], original["root_lifetime"]);
+    assert_eq!(replaced["root_lifetime"], "process-two:main");
+    assert_eq!(replaced["session_id"], "session-two");
+
+    for event in ["heartbeat", "agent_end", "session_shutdown"] {
+        old["lifecycle_event"] = json!(event);
+        old["shutdown"] = json!(event == "session_shutdown");
+        fixture.integration.report("terminal", old.clone()).unwrap();
+        assert_eq!(
+            fixture.integration.recovery("terminal"),
+            Some(replaced.clone())
+        );
+    }
+    let mut nested = old;
+    nested["instance_id"] = json!("nested:main");
+    nested["parent_id"] = json!("process-two:main");
+    nested["shutdown"] = json!(false);
+    nested["lifecycle_event"] = json!("session_start");
+    fixture.integration.report("terminal", nested).unwrap();
+    assert_eq!(
+        fixture.integration.recovery("terminal"),
+        Some(replaced.clone())
+    );
+    let mut nested_same_id = new.clone();
+    nested_same_id["parent_id"] = json!("another-root");
+    nested_same_id["conversation_id"] = json!("nested-session");
+    fixture
+        .integration
+        .report("terminal", nested_same_id)
+        .unwrap();
+    assert_eq!(fixture.integration.recovery("terminal"), Some(replaced));
+
+    new["shutdown"] = json!(true);
+    new["lifecycle_event"] = json!("session_shutdown");
+    fixture.integration.report("terminal", new.clone()).unwrap();
+    assert_eq!(fixture.integration.recovery("terminal"), None);
+    new["shutdown"] = json!(false);
+    new["lifecycle_event"] = json!("heartbeat");
+    fixture.integration.report("terminal", new).unwrap();
+    assert_eq!(fixture.integration.recovery("terminal"), None);
 }
 #[test]
 fn agent_lifetimes_are_bounded_without_losing_root_or_active_children() {

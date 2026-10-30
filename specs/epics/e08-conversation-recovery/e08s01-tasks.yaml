@@ -1,0 +1,56 @@
+type: task-ledger
+context: {project: amux, epic: e08, story: e08s01, plan: PLAN.md}
+story_id: e08s01
+title: Durable exact-session recovery on relaunch
+status: passing
+bcps: 6
+evidence: specs/verifications/e08-recovery.json
+tasks:
+  - id: 1
+    description: Implement private atomic bounded recovery metadata and exact process pins
+    verify: "cargo test --lib recovery::tests"
+    risk: P0
+    security: high
+    security_acceptance: no new supported journal-path ownership concurrency or identity findings
+    status: passing
+    allure: {severity: critical, categories: [Recovery, Security Review]}
+  - id: 2
+    description: Implement capability-gated ACP load/resume preserving identity and idle behavior
+    verify: "cargo test --lib acp::tests"
+    risk: P0
+    security: high
+    security_acceptance: no new supported stale-target responder authentication or authority findings
+    status: passing
+    allure: {severity: critical, categories: [ACP, Recovery]}
+  - id: 3
+    description: Implement native root conversation metadata and durable provider-backed reopening
+    verify: "cargo test --test integration && cargo test --lib codex::tests"
+    risk: P0
+    security: high
+    security_acceptance: no auth or environment in journal and no root replacement by nested stale reports
+    status: passing
+    allure: {severity: critical, categories: [Native, Recovery]}
+  - id: 4
+    description: Integrate all-session automatic reopening and no-work lifecycle/error behavior
+    verify: "cargo test --test recovery"
+    risk: P0
+    security: high
+    security_acceptance: no fresh-work replay duplicate-live-peer launch or stale authority reuse
+    status: passing
+    allure: {severity: critical, categories: [Recovery, Runtime]}
+  - id: 5
+    description: Prove actual isolated installed-harness or deterministic CLI/TUI relaunch and owned cleanup
+    verify: "bun -e 'const e=JSON.parse(await Bun.file(\"specs/verifications/e08-recovery.json\").text());if(e.actual_smoke?.status!==\"passed\"||e.provider_requests!==0)process.exit(1)'"
+    risk: P0
+    security: high
+    security_acceptance: complete normal private cleanup and no live provider global auth or daemon changes
+    status: passing
+    allure: {severity: critical, categories: [Recovery, Runtime]}
+  - id: 6
+    description: Pass all existing regression boundaries and strict compilation/lint/format checks
+    verify: "cargo build --examples && cargo test --workspace && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check && cargo build"
+    risk: P0
+    security: high
+    security_acceptance: no new supported security findings and no suppressed or re-pinned behavior failures
+    status: passing
+    allure: {severity: critical, categories: [Regression, Security Review]}

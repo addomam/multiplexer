@@ -1,0 +1,272 @@
+{
+  "scope": "Native Menu and existing-directory project bookmarks",
+  "status": "verified-locally-installed-not-committed",
+  "branch": "feat/cli-projects-help",
+  "requirements": {
+    "visible_Switch_renamed_Menu": true,
+    "mouse_and_keyboard_New_session_Save_project_Projects": true,
+    "new_sessions_have_independent_unsaved_project_IDs": true,
+    "selected_terminal_confirmed_cwd_or_Git_workspace_root": true,
+    "CLI_add_defaults_to_caller_existing_cwd": true,
+    "raw_project_new_requires_existing_directory": true,
+    "no_project_directory_mkdir": true,
+    "save_name_context_flag_rollback_together": true,
+    "saved_project_open_edit_forget_in_UI": true,
+    "forget_confirms_files_and_native_ACP_work_retained": true,
+    "no_menu_or_dialog_input_replay": true,
+    "prior_uncommitted_UI_CLI_repairs_preserved": true
+  },
+  "verification": {
+    "initial_gate": {
+      "job": "bg_369",
+      "result": "failed",
+      "raw": "artifact://2845",
+      "cause": "New test compared /var temporary-directory alias with canonical /private path; corrected expected identity, not production behavior"
+    },
+    "first_integrated_gate": {
+      "job": "bg_370",
+      "result": "passed",
+      "tests": 456,
+      "suites": 30,
+      "ignored": 12,
+      "raw": "artifact://2852",
+      "seconds": 169.89
+    },
+    "final_gate": {
+      "job": "bg_372",
+      "result": "passed",
+      "tests": 456,
+      "suites": 30,
+      "ignored": 12,
+      "strict_clippy_fmt_release_build_install": "passed",
+      "stock_OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Zsh_syntax": "passed",
+      "raw": "artifact://2867",
+      "seconds": 175.52
+    },
+    "final_gate_change": "After the first integrated gate, the sole source change avoided cloning an unused project catalog when initializing Save. Full final gates and the installed-client workflow were rerun.",
+    "installed_help": {
+      "paths": 38,
+      "short_and_long_calls": 76,
+      "documented_rows": 378,
+      "absent_socket_unchanged": true
+    },
+    "backend_regressions": [
+      "project_registration_requires_existing_directory_without_creating_paths",
+      "stale_project_save_does_not_replace_an_existing_configuration",
+      "saving_selected_session_uses_its_directory_and_preserves_other_projects"
+    ],
+    "native_editor_regressions": [
+      "rejected_name_paste_cannot_silently_submit_an_old_or_truncated_identity",
+      "forgetting_requires_confirmation_and_cancel_does_not_retain_the_remove_action"
+    ]
+  },
+  "actual_runtime": {
+    "first_native_workflow": {
+      "new_session_cd_mouse_save": true,
+      "project_name": "alpha-ui",
+      "project_ID": "21064f60-b63f-4d7f-b505-76c1ae842ac6",
+      "native_pid": 12253,
+      "same_shell_arithmetic": [
+        42,
+        57
+      ],
+      "mouse_edit_name_hooks_recipes": true,
+      "open_reuses_live_shell_without_running_new_hook": true,
+      "keyboard_second_session_cd_save_keeps_first_project": true,
+      "second_native_pid": 12844,
+      "local_variables_not_cloned": true
+    },
+    "forget": {
+      "cancel_and_confirm_exercised": true,
+      "only_beta_saved_definition_removed": true,
+      "native_pid_retained": 12844,
+      "native_effects": [
+        42,
+        57
+      ],
+      "ACP_target": {
+        "id": "acp-c144da9bec5d434388eca236f598f215",
+        "instance_id": "instance-b4a7b825b3ec46edb7aed9ad2138ae73",
+        "connection_generation": 1,
+        "session_id": "arithmetic-13473",
+        "kind": "acp"
+      },
+      "ACP_independent_effects": [
+        42,
+        57
+      ],
+      "ACP_commands": 2,
+      "original_two_RPCs_completed": true,
+      "context_files_hooks_recipes_and_runtime_ID_retained": true,
+      "source_note": "The sole later source change removed an unused dialog catalog clone; backend and routing unchanged. Final installed native workflow also re-exercised."
+    },
+    "configuration_error_and_resize": {
+      "invalid_JSON_draft_retained_without_store_change": true,
+      "actual_editor_size": [
+        72,
+        18
+      ],
+      "native_geometry_deferred_while_menu_open": true,
+      "native_geometry_after_return": [
+        72,
+        15
+      ],
+      "restored_native_geometry": [
+        110,
+        25
+      ]
+    },
+    "directory_safety": {
+      "CLI_default_context": "caller cwd",
+      "missing_path_and_file_rejected_before_socket_connection": true,
+      "raw_missing_directory_rejected": true,
+      "configured_projects_folder_remained_empty": true
+    },
+    "older_daemon": {
+      "native_pid": 18112,
+      "save_and_new_session_refused_before_mutation": true,
+      "native_project_and_process_unchanged": true,
+      "metadata_only_profile_catalog_seen_during_cleanup_oracle_failure": true,
+      "no_adapter_or_provider_started": true
+    },
+    "final_installed_restart": {
+      "old_saved_project_ID": "21064f60-b63f-4d7f-b505-76c1ae842ac6",
+      "new_native_pid": 38163,
+      "not_old_pid": true,
+      "removed_beta_absent": true,
+      "ACP_views_not_restored": true,
+      "interpreter_variable_not_restored": true,
+      "configured_open_hook_executed": true,
+      "mouse_new_session_cd_and_Tab_save": true,
+      "new_project_ID": "1bc1a0ed-6505-437b-ac6c-40a80ec0b67d",
+      "forgotten_native_pid_still_running_before_explicit_shutdown": 38422,
+      "Tab_cancel_and_confirm_forget": true,
+      "original_alpha_shell_reopened_not_restarted": true,
+      "same_original_shell_effects": [
+        42,
+        57
+      ],
+      "hook_mtime_unchanged_on_reattach": true,
+      "native_backgrounds_before": {
+        "default": 2734,
+        "2472c8": 16
+      },
+      "native_backgrounds_after": {
+        "default": 2734,
+        "2472c8": 16
+      },
+      "selected_or_chrome_menu_background_cells_in_application": 0
+    }
+  },
+  "fixture_failures_preserved": [
+    {
+      "kind": "arithmetic-effect-observer-schema",
+      "observed": "Observer looked for total/count instead of fixture value/commands; original prompt completed with42 once",
+      "correction": "Read existing effect and original completed work; no prompt replay"
+    },
+    {
+      "kind": "partially-painted-row-locator",
+      "observed": "Header was visible before beta row bytes arrived; StopIteration before clicking",
+      "correction": "Wait for the actual row; no mutation replay"
+    },
+    {
+      "kind": "color-disabled-private-TUI-fixture",
+      "observed": "Original environment had NO_COLOR=1 and both captured native canvases contained only default backgrounds; no colored repaint PASS is claimed for that stage",
+      "correction": "Final installed-client fixture removes NO_COLOR, sets COLORTERM=truecolor, and independently observes16 blue cells before and after Menu"
+    },
+    {
+      "kind": "cleanup-prefix-from-already-open-Ctrl-A-menu",
+      "observed": "Legacy driver close chord opened the metadata-only ACP launcher; no TUI exit observed",
+      "correction": "Escape launcher and Menu to the application first, then use the normal detach chord",
+      "adapter_or_provider_started": false
+    },
+    {
+      "kind": "adjacent-Escape-encoding",
+      "observed": "Two concatenated escapes cancelled the launcher but remained in Menu",
+      "correction": "Send a separately fenced Escape, observe actual Menu closure, then normal detach"
+    }
+  ],
+  "cleanup": {
+    "TUI_and_host_receipts": [
+      {
+        "host_exit": 0,
+        "TUI_exit": "0",
+        "termios_restored": true,
+        "drainer_joined": true,
+        "slave_closed": true
+      },
+      {
+        "host_exit": 0,
+        "TUI_exit": "0",
+        "termios_restored": true,
+        "drainer_joined": true,
+        "slave_closed": true
+      },
+      {
+        "host_exit": 0,
+        "TUI_exit": "0",
+        "termios_restored": true,
+        "drainer_joined": true,
+        "slave_closed": true
+      }
+    ],
+    "successful_private_daemon_exits": [
+      0,
+      0,
+      0
+    ],
+    "all_native_and_peer_pids_absent": [
+      12844,
+      11663,
+      18090,
+      12253,
+      13473,
+      18112,
+      38422,
+      38150,
+      38163
+    ],
+    "owned_nonblocking_drainers_joined": true,
+    "termios_and_owned_PTY_descriptors_restored_closed": true,
+    "sockets_absent": true,
+    "unrelated_sentinel_survived_all_application_cleanup_then_owner_reaped": true,
+    "fallback_process_kills": false,
+    "lsof_exit": 1,
+    "lsof_stdout_empty": true,
+    "temporary_root_removed": true
+  },
+  "artifact_hashes": {
+    "target/release/amux": "84e49d1e3764af7a08991c4dd076ce6ccc466db6b93034908ade83f24046a179",
+    "/Users/addomam/.cargo/bin/amux": "84e49d1e3764af7a08991c4dd076ce6ccc466db6b93034908ade83f24046a179",
+    "src/cli.rs": "4695dd3ed9191b1e02005d07c4e0ee1f799cc995d84238737b18f53a55ba2870",
+    "src/projects.rs": "796c635740a1acd4f1453690ed60f734373233e2893032858be1b8619e61718e",
+    "src/daemon.rs": "5a5b5de93e3010a2c7260149f7b627e8e8234ae35072dc3dc51a82625f303b52",
+    "src/tui.rs": "0f5374f8a8e9154c54b057296b0966293e4c5312268251354edbfc373e3daa94",
+    "src/tui/view.rs": "a4f8b687749c9380a3193f67467cb66e621640e5d20967eafed99ea68f718a1f",
+    "src/tui/project.rs": "e8565aed8c3604f59bfcc6bbf5f855fc7e044e6c95e6256b170d5ff2078fdf9b",
+    "src/tui/control.rs": "8b59ca3b1dc0612719972e6518f7d889c9801743ac4fbfae95f9949fd3ee4182",
+    "tests/acceptance.rs": "945a03b1eee9b47b8524445b8c8d8d3ce5bc8fe466a5358ef8af1ad787f5146e",
+    "tests/pty_control/native.rs": "f87ca633eca83e08dc40a910b08b6a0479bfba9d8d8a1b96cc68019439c048d8",
+    "tests/codex_native_smoke/complete.rs": "d59e7f702c0b0377bbf034bc8a63cb384f934589441d4676680dd4177722e017"
+  },
+  "limits": {
+    "new_live_provider_requests": 0,
+    "historical_used_cap_remaining": [
+      12,
+      12,
+      0
+    ],
+    "historical_source_review_caps_E03_native_fence_and_parked_E05": "unchanged",
+    "new_independent_review_PASS": false,
+    "global_daemon_config_auth": "untouched",
+    "new_commit_merge_push_release": false,
+    "published_v0_1_0_assets": "unchanged",
+    "deployment_note": "Installed client only; new Save/New session require an updated daemon. No global restart; finish managed work and obtain separate approval first."
+  },
+  "delegation": {
+    "backend_and_dialog_agents": "Both failed at capacity before any work; parent completed inline",
+    "agent_review_PASS_claimed": false
+  }
+}

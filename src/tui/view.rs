@@ -24,12 +24,257 @@ pub(super) struct Geometry {
     pub card: Rect,
     pub close: Rect,
     pub new: Rect,
+    pub menu_list: Rect,
+    pub new_session: Rect,
+    pub save_project: Rect,
+    pub projects: Rect,
+    pub actions: Rect,
 }
 impl Geometry {
     pub fn hit(rect: Rect, x: u16, y: u16) -> bool {
         rect.contains(Position::new(x, y))
     }
 }
+// Keep rendering and mouse targets on the same responsive rectangles.
+pub(super) fn action_buttons<const N: usize>(
+    area: Rect,
+    labels: [&str; N],
+    reserve: u16,
+) -> ([Rect; N], Rect) {
+    let mut buttons = [Rect::default(); N];
+    let count = labels.iter().filter(|label| !label.is_empty()).count() as u16;
+    if count == 0 {
+        return (buttons, area);
+    }
+    let minimum = labels
+        .iter()
+        .map(|label| label.width() as u16 + 4)
+        .max()
+        .unwrap_or(0);
+    let stacked = u32::from(area.width) < u32::from(minimum) * u32::from(count);
+    let rows = if stacked { count } else { 1 };
+    let available = area.height.saturating_sub(reserve);
+    let height = if available >= rows * 3 {
+        3
+    } else if available >= rows {
+        1
+    } else {
+        return (buttons, area);
+    };
+    let content = Rect::new(area.x, area.y, area.width, area.height - rows * height);
+    for (slot, (index, _)) in labels
+        .iter()
+        .enumerate()
+        .filter(|(_, label)| !label.is_empty())
+        .enumerate()
+    {
+        buttons[index] = if stacked {
+            Rect::new(
+                area.x,
+                content.bottom() + slot as u16 * height,
+                area.width,
+                height,
+            )
+        } else {
+            let left = (u32::from(area.width) * slot as u32 / u32::from(count)) as u16;
+            let right = (u32::from(area.width) * (slot + 1) as u32 / u32::from(count)) as u16;
+            Rect::new(area.x + left, content.bottom(), right - left, height)
+        };
+    }
+    (buttons, content)
+}
+
+pub(super) fn help_key(key: crossterm::event::KeyEvent, plain: bool) -> bool {
+    use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
+    // Crossterm decodes legacy Ctrl+/ (0x1f) as Ctrl-7, not Ctrl-_.
+    key.kind == KeyEventKind::Press
+        && !key.modifiers.contains(KeyModifiers::ALT)
+        && ((plain && matches!(key.code, KeyCode::Char('?') | KeyCode::F(1)))
+            || (key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('?' | '/' | '_' | '7'))))
+}
+
+const SHORTCUTS: &str = "\
+SESSION
+F12 (configurable)  Open Menu navigation
+Configured Ctrl prefix  Alternative Menu entry
+Double mode key / double prefix  Send that key deliberately to a native session
+Ordinary Esc, j and k belong to the application.
+On macOS a function key may require Fn.
+No universally unused terminal key exists.
+
+MENU — NAVIGATION
+j / k / arrows  Select a session
+g / G / Home / End  First / last session
+Enter  Open selected session
+i / Esc  Return to current session
+/  Enter literal search; j/k become text
+Esc in search  Leave search; retain filter
+n  New terminal or ACP agent…
+s  Save selected project
+p  Saved projects
+a  Session actions
+r  Rename session
+x  Confirm closing live session; remove exited record
+c  Request / manage control
+f  Explicit force-control confirmation
+v  Send reserved mode key to selected native session
+P / m / D  Promote / move / demote native terminal
+q  Detach UI; work and ownership keep running
+Tab / Shift-Tab  Focus search and action buttons
+? / F1  Contextual shortcut help
+
+FORMS AND PROJECTS
+Tab / Shift-Tab and mouse  Focus fields/actions
+j / k  Navigate lists/selectors, never text fields
+Esc  Close help first, then cancel/back
+Visible Apply/Save/Launch buttons  Explicit submission
+Delete/Backspace  Edit selected text
+Advanced  Exact settings or raw project configuration
+Saved Forget removes only the bookmark, never files/work.
+
+CONTROL
+Control panels retain explicit yield/keep/release/cancel.
+Force never interrupts a turn or kills a process.
+Detaching never releases control or cancels a claim.
+Intercepted input is consumed, never replayed.
+
+COMPATIBILITY ACCELERATORS
+Ctrl-Q detach; Ctrl-S save; Ctrl-G projects; Ctrl-T New
+Ctrl-N native terminal; Ctrl-O native OMP; Ctrl-A ACP
+Ctrl-X close; Ctrl-P promote; Ctrl-R move; Ctrl-D demote
+Prefix then Ctrl-L control; prefix then Ctrl-F force
+Ctrl+/ or enhanced Ctrl+? help in supported editors
+Legacy Ctrl+? is Backspace; it is not stolen.
+
+HELP
+j / k / arrows / wheel  Scroll
+PageUp / PageDown  Scroll a page
+Home / End  First / last page
+Esc  Close help without replaying covered input.";
+
+pub(super) struct Help {
+    scroll: u16,
+    max_scroll: u16,
+    page: u16,
+    paragraph: Paragraph<'static>,
+}
+impl Default for Help {
+    fn default() -> Self {
+        Self::new(SHORTCUTS)
+    }
+}
+impl Help {
+    pub(super) fn new(text: impl Into<ratatui::text::Text<'static>>) -> Self {
+        Self {
+            scroll: 0,
+            max_scroll: 0,
+            page: 1,
+            paragraph: Paragraph::new(text).wrap(Wrap { trim: false }),
+        }
+    }
+    pub(super) fn with_status(status: &str) -> Self {
+        Self::with_context_status(SHORTCUTS, status)
+    }
+    pub(super) fn with_context_status(context: &str, status: &str) -> Self {
+        let status: String = status
+            .chars()
+            .filter(|c| {
+                (!c.is_control() || *c == '\n' || *c == '\t')
+                    && !matches!(*c, '\u{061c}' | '\u{200e}' | '\u{200f}'
+                        | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+            })
+            .collect();
+        Self::new(format!("{context}\n\nLAST ACTION / ERROR\n{status}"))
+    }
+    pub(super) fn event(&mut self, event: &crossterm::event::Event) -> bool {
+        use crossterm::event::{Event, KeyCode, KeyEventKind, MouseEventKind};
+        match event {
+            Event::Key(key) if key.kind != KeyEventKind::Release => match key.code {
+                KeyCode::Esc => return true,
+                KeyCode::Up | KeyCode::Char('k') => self.scroll = self.scroll.saturating_sub(1),
+                KeyCode::Down | KeyCode::Char('j') => self.scroll = self.scroll.saturating_add(1),
+                KeyCode::PageUp => self.scroll = self.scroll.saturating_sub(self.page),
+                KeyCode::PageDown => self.scroll = self.scroll.saturating_add(self.page),
+                KeyCode::Home => self.scroll = 0,
+                KeyCode::End => self.scroll = self.max_scroll,
+                _ => {}
+            },
+            Event::Mouse(mouse) => match mouse.kind {
+                MouseEventKind::ScrollUp => self.scroll = self.scroll.saturating_sub(3),
+                MouseEventKind::ScrollDown => self.scroll = self.scroll.saturating_add(3),
+                _ => {}
+            },
+            _ => {}
+        }
+        self.scroll = self.scroll.min(self.max_scroll);
+        false
+    }
+    pub(super) fn draw(&mut self, frame: &mut Frame<'_>, screen: Rect) {
+        let width = screen.width.min(72);
+        let height = screen.height.min(30);
+        let area = Rect::new(
+            screen.x + (screen.width - width) / 2,
+            screen.y + (screen.height - height) / 2,
+            width,
+            height,
+        );
+        let hint = if width >= 28 {
+            " Esc close · arrows scroll "
+        } else if width >= 13 {
+            " Esc close "
+        } else {
+            ""
+        };
+        let block = panel().title(" Shortcuts ").title_bottom(hint);
+        let inner = block.inner(area);
+        frame.render_widget(ratatui::widgets::Clear, area);
+        frame.render_widget(block, area);
+        if inner.is_empty() {
+            return;
+        }
+        self.max_scroll = self
+            .paragraph
+            .line_count(inner.width)
+            .saturating_sub(usize::from(inner.height))
+            .min(usize::from(u16::MAX)) as u16;
+        self.page = inner.height.saturating_sub(1).max(1);
+        self.scroll = self.scroll.min(self.max_scroll);
+        self.paragraph = std::mem::take(&mut self.paragraph).scroll((self.scroll, 0));
+        frame.render_widget(&self.paragraph, inner);
+    }
+}
+
+pub(super) fn menu_search(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    query: &str,
+    color: Color,
+    searching: bool,
+) {
+    let label = if area.width >= 20 {
+        if searching { " SEARCH  " } else { " NAV  " }
+    } else {
+        ""
+    };
+    let placeholder = if searching {
+        "name / project / directory / branch"
+    } else {
+        "Sessions"
+    };
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(label, Style::default().fg(color)),
+            Span::raw(clip_label(
+                if query.is_empty() { placeholder } else { query },
+                area.width.saturating_sub(label.width() as u16),
+            )),
+        ]))
+        .style(Style::default().fg(color)),
+        area,
+    );
+}
+
 pub(super) fn geometry(area: Rect) -> Geometry {
     let header_height = area.height.min(super::HEADER);
     let switch_width = area.width.min(12);
@@ -41,6 +286,27 @@ pub(super) fn geometry(area: Rect) -> Geometry {
         area.width,
         area.height - header_height,
     );
+    let ([new_session, save_project, projects, actions], menu_list) = action_buttons(
+        body,
+        ["New…", "Save project", "Projects", "Actions"],
+        ROW_HEIGHT,
+    );
+    let (card, close, new) = window_card(body);
+    Geometry {
+        header,
+        switch,
+        body,
+        card,
+        close,
+        new,
+        menu_list,
+        new_session,
+        save_project,
+        projects,
+        actions,
+    }
+}
+fn window_card(body: Rect) -> (Rect, Rect, Rect) {
     let width = body.width.saturating_sub(2).min(60);
     let stacked = width < 46;
     let height = body.height.min(if stacked { 14 } else { 11 });
@@ -74,14 +340,7 @@ pub(super) fn geometry(area: Rect) -> Geometry {
             ),
         )
     };
-    Geometry {
-        header,
-        switch,
-        body,
-        card,
-        close,
-        new,
-    }
+    (card, close, new)
 }
 pub(super) fn list_start(selected: usize, height: u16) -> usize {
     selected.saturating_sub(usize::from(height / ROW_HEIGHT).saturating_sub(1))
@@ -93,7 +352,7 @@ fn panel() -> Block<'static> {
         .border_style(Style::default().fg(MUTED))
         .style(Style::default().bg(CHROME).fg(Color::White))
 }
-fn button(frame: &mut Frame<'_>, area: Rect, label: &str, primary: bool) {
+pub(super) fn button(frame: &mut Frame<'_>, area: Rect, label: &str, primary: bool) {
     let style = if primary {
         Style::default().fg(ACCENT).bg(SELECTED)
     } else {
@@ -103,7 +362,11 @@ fn button(frame: &mut Frame<'_>, area: Rect, label: &str, primary: bool) {
         Paragraph::new(label)
             .alignment(Alignment::Center)
             .style(style.add_modifier(Modifier::BOLD))
-            .block(panel().border_style(style)),
+            .block(if area.height >= 3 {
+                panel().border_style(style)
+            } else {
+                Block::default()
+            }),
         area,
     );
 }
@@ -269,8 +532,8 @@ fn exited(frame: &mut Frame<'_>, geometry: Geometry, terminal: &Value) {
             geometry.card.height.saturating_sub(5),
         ),
     );
-    button(frame, geometry.close, "Close window · X", false);
-    button(frame, geometry.new, "New terminal · N", true);
+    button(frame, geometry.close, "Close window", false);
+    button(frame, geometry.new, "New terminal", true);
 }
 fn empty_windows(frame: &mut Frame<'_>, geometry: Geometry) {
     frame.render_widget(
@@ -291,8 +554,8 @@ fn empty_windows(frame: &mut Frame<'_>, geometry: Geometry) {
             geometry.card.height.saturating_sub(5),
         ),
     );
-    button(frame, geometry.close, "Exit · Esc / Q", false);
-    button(frame, geometry.new, "New terminal · Enter", true);
+    button(frame, geometry.close, "Exit", false);
+    button(frame, geometry.new, "New terminal", true);
 }
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
@@ -305,27 +568,28 @@ pub(super) fn draw(
     rows: &[Row],
     selected: usize,
     query: &str,
+    navigation: &super::menu::Navigation,
     status: &str,
     offset: usize,
     focused: bool,
     selection: Option<Selection>,
 ) -> Geometry {
-    let geometry = geometry(frame.area());
+    let mut geometry = geometry(frame.area());
     let terminal = snapshot["terminals"]
         .as_array()
         .and_then(|ts| ts.iter().find(|t| text(t, "id") == active));
     let agent = super::agent_view(snapshot, active);
-    let empty = active.is_empty()
-        && snapshot["terminals"]
-            .as_array()
-            .is_none_or(|terminals| terminals.is_empty());
+    let empty = active.is_empty() && !super::has_views(snapshot);
+    if picker && empty {
+        (geometry.card, geometry.close, geometry.new) = window_card(geometry.menu_list);
+    }
     let project = terminal.or(agent).and_then(|t| {
         snapshot["projects"]
             .as_array()
             .and_then(|ps| ps.iter().find(|p| text(p, "id") == text(t, "project_id")))
     });
     let title = if picker {
-        " WINDOWS ".to_owned()
+        " MENU ".to_owned()
     } else {
         format!(
             " amux · {} ",
@@ -352,10 +616,12 @@ pub(super) fn draw(
         .unwrap_or_default();
     let hint = if !status.is_empty() {
         status
-    } else if picker && empty {
-        "^A ACP agent · N / Enter terminal · Esc / Q exit"
     } else if picker {
-        "^Q detach · Esc return · Enter open · ^A ACP · ^N terminal · ^O OMP · ^X close"
+        if geometry.header.width >= 10 {
+            "? help"
+        } else {
+            ""
+        }
     } else if !failure.is_empty() {
         &failure
     } else if offset > 0 {
@@ -377,20 +643,7 @@ pub(super) fn draw(
             inner,
         );
     } else if picker {
-        frame.render_widget(
-            Paragraph::new(Line::from(vec![
-                Span::styled(" Search  ", Style::default().fg(ACCENT)),
-                Span::raw(clip_label(
-                    if query.is_empty() {
-                        "name / project / directory / branch"
-                    } else {
-                        query
-                    },
-                    inner.width,
-                )),
-            ])),
-            inner,
-        );
+        menu_search(frame, inner, query, ACCENT, navigation.searching());
     } else if let Some(terminal) = terminal {
         let name = clip_label(text(terminal, "name"), inner.width);
         let activity = terminal["integration"]["agent"]["activity"]
@@ -410,7 +663,12 @@ pub(super) fn draw(
                     clip_label(
                         &format!(
                             "  {activity}  {}",
-                            terminal["workspace"]["cwd"].as_str().unwrap_or("")
+                            super::clip_path(
+                                terminal["workspace"]["cwd"].as_str().unwrap_or(""),
+                                inner
+                                    .width
+                                    .saturating_sub((name.width() + activity.width() + 5) as u16)
+                            )
                         ),
                         inner.width,
                     ),
@@ -424,7 +682,7 @@ pub(super) fn draw(
             Paragraph::new(format!(
                 " ACP · {} · {}",
                 text(agent, "name"),
-                text(agent, "lifecycle")
+                super::agent_status(agent)
             ))
             .style(Style::default().fg(ACCENT)),
             inner,
@@ -438,7 +696,7 @@ pub(super) fn draw(
         } else if picker {
             "Return"
         } else {
-            "Switch"
+            "Menu"
         },
         true,
     );
@@ -454,10 +712,7 @@ pub(super) fn draw(
                     Span::raw(clip_label(summary, geometry.body.width.saturating_sub(4))),
                 ]),
                 Line::styled(
-                    clip_label(
-                        &format!("  {directory}"),
-                        geometry.body.width.saturating_sub(4),
-                    ),
+                    super::clip_path(directory, geometry.body.width.saturating_sub(4)),
                     Style::default().fg(MUTED),
                 ),
             ])
@@ -468,19 +723,18 @@ pub(super) fn draw(
             } else {
                 Some(selected)
             })
-            .with_offset(list_start(selected, geometry.body.height));
+            .with_offset(list_start(selected, geometry.menu_list.height));
         let list = List::new(items).highlight_symbol("› ").highlight_style(
             Style::default()
                 .fg(ACCENT)
                 .bg(SELECTED)
                 .add_modifier(Modifier::BOLD),
         );
-        frame.render_stateful_widget(list, geometry.body, &mut state);
+        frame.render_stateful_widget(list, geometry.menu_list, &mut state);
         if rows.is_empty() {
             frame.render_widget(
-                Paragraph::new("No matching windows. Ctrl-N starts a terminal.")
-                    .style(Style::default().fg(MUTED)),
-                geometry.body,
+                Paragraph::new("No matching windows.").style(Style::default().fg(MUTED)),
+                geometry.menu_list,
             );
         }
     } else if let Some(terminal) = terminal.filter(|t| t["alive"] == false) {
@@ -496,5 +750,103 @@ pub(super) fn draw(
             selection,
         );
     }
+    if picker {
+        button(
+            frame,
+            geometry.new_session,
+            "New…",
+            navigation.button() == Some(0),
+        );
+        button(
+            frame,
+            geometry.save_project,
+            "Save project",
+            navigation.button() == Some(1),
+        );
+        button(
+            frame,
+            geometry.projects,
+            "Projects",
+            navigation.button() == Some(2),
+        );
+        button(
+            frame,
+            geometry.actions,
+            "Actions",
+            navigation.button() == Some(3),
+        );
+    }
     geometry
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+
+    #[test]
+    fn responsive_actions_keep_full_labels_and_disjoint_hit_targets() {
+        for (width, height) in [(110, 28), (32, 42), (32, 12), (80, 6)] {
+            let area = Rect::new(0, 3, width, height - 3);
+            let (buttons, content) = action_buttons(
+                area,
+                ["New session", "Save project", "Projects"],
+                ROW_HEIGHT,
+            );
+            assert!(content.height >= ROW_HEIGHT);
+            for (index, rect) in buttons.iter().enumerate() {
+                assert!(!rect.is_empty());
+                assert!(rect.width >= 12);
+                assert!(rect.x >= area.x && rect.y >= content.bottom());
+                assert!(rect.right() <= area.right() && rect.bottom() <= area.bottom());
+                for other in &buttons[index + 1..] {
+                    assert!(rect.intersection(*other).is_empty());
+                }
+            }
+            if width == 32 {
+                assert!(buttons[0].bottom() <= buttons[1].y && buttons[1].bottom() <= buttons[2].y);
+            } else {
+                assert!(buttons.iter().all(|button| button.y == buttons[0].y));
+            }
+        }
+        let (buttons, _) = action_buttons(Rect::new(0, 0, 32, 12), ["Save", "", "", "Cancel"], 6);
+        assert!(buttons[1].is_empty() && buttons[2].is_empty());
+        assert!(!buttons[0].is_empty() && !buttons[3].is_empty());
+    }
+
+    #[test]
+    fn shortcut_help_does_not_steal_backspace_editor_text_or_releases() {
+        assert!(help_key(
+            KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE),
+            true
+        ));
+        assert!(help_key(
+            KeyEvent::new(KeyCode::Char('_'), KeyModifiers::CONTROL),
+            false
+        ));
+        assert!(help_key(
+            KeyEvent::new(KeyCode::Char('7'), KeyModifiers::CONTROL),
+            false
+        ));
+        assert!(help_key(
+            KeyEvent::new(KeyCode::Char('?'), KeyModifiers::CONTROL),
+            false
+        ));
+        assert!(!help_key(
+            KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
+            true
+        ));
+        assert!(!help_key(
+            KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE),
+            false
+        ));
+        assert!(!help_key(
+            KeyEvent::new_with_kind(
+                KeyCode::Char('?'),
+                KeyModifiers::CONTROL,
+                KeyEventKind::Release
+            ),
+            true
+        ));
+    }
 }

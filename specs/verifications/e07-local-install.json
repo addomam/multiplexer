@@ -1,0 +1,50 @@
+{
+  "status": "installed-and-daemon-stopped",
+  "authorization": "install the update and kill the daemon if there's one running",
+  "scope": "Explicit local installation of the current feature build; not a main merge or published release.",
+  "source": {
+    "worktree": "/Users/addomam/projects/amux-acp",
+    "branch": "feat/cli-projects-help",
+    "includes": ["E07 modal UX", "startup configuration filename diagnostics"],
+    "preinstallation_verification": "specs/verifications/startup-config-path.json",
+    "test_gate": {"raw": "artifact://3196", "workspace_passed": 511, "suites": 30, "ignored": 12, "readiness_passed": 6, "strict_clippy_fmt_build_examples": "passed"},
+    "review": "Prior E07 round4 source reports/manifest remain historical; subsequent config-path change and installed binary are not falsely claimed to match that freeze. No new independent review or cap reset."
+  },
+  "installation": {
+    "command": "cargo install --path . --locked --force --root /Users/addomam/.cargo",
+    "job": "bg_413",
+    "exit_code": 0,
+    "profile": "release optimized",
+    "binary": "/Users/addomam/.cargo/bin/amux",
+    "version_output": "amux 0.1.0",
+    "previous_sha256": "a45a1f7d44605994efe82ae78e43e8506a38baf7f9470f8f2dc3d2e43681b2ab",
+    "installed_and_target_release_sha256": "1ad4b01497b0fcbe7b82a4579dcc551b18eab55278b853736ea91c6372c4e73f",
+    "strict_codesign_verification": "codesign --verify --strict /Users/addomam/.cargo/bin/amux exited 0"
+  },
+  "installed_smoke": {
+    "isolation": "Private HOME/config/runtime/socket/ZDOTDIR/cwd; minimal auth-free environment; no global daemon started by smoke.",
+    "projects_help": "add/remove/save available",
+    "invalid_config": {"exit_code": 1, "config_path_and_original_JSON_cause_in_frontend_and_daemon_log": true, "socket_absent": true},
+    "default_startup": {"native_shell_alive": true, "mode_key": "F12", "acp_profiles": {}, "installed_CLI_snapshot_matches_installed_daemon_id": true},
+    "cleanup": {"installed_CLI_shutdown_exit": 0, "daemon_exit": 0, "owned_children_observed_absent": [46075, 46078, 46079], "socket_absent": true, "private_root_removed": true, "unrelated_sentinel_survived_shutdown": true, "owned_sentinel_terminated_and_reaped": true}
+  },
+  "global_daemon": {
+    "pid": 44646,
+    "old_executable": "/Users/addomam/projects/multiplexer/target/debug/amux",
+    "socket": "/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-501/control.sock",
+    "identity_check": "Same current-user PID and exact command confirmed immediately before shutdown; no broad process-name kill.",
+    "shutdown": "Installed amux --socket <identified socket> shutdown exited 0; version1 ok:true result.shutting_down:true.",
+    "owned_processes_observed_absent": [44646],
+    "socket_absent": true,
+    "remaining_current_user_amux_daemons": 0,
+    "signal_fallback": false,
+    "restarted": false
+  },
+  "boundaries": {
+    "provider_requests": 0,
+    "auth_changed": false,
+    "global_amux_config_changed_during_install": false,
+    "commit_merge_push_tag_release": "not performed",
+    "historical_caps": "unchanged"
+  }
+}

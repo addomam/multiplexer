@@ -389,11 +389,11 @@ fn launch_survives(fault: Fault) {
     native.send(PREFIX);
     native.send(b"\x1b[B");
     native.send(b"\x01");
-    native.wait("New ACP agent");
+    native.wait("New ACP session");
     native.send(b"\t");
     for _ in 0..20 {
         let before = native.text();
-        if before.contains("Profile: Loss fixture") {
+        if before.contains("Loss fixture") {
             break;
         }
         let old = before
@@ -411,15 +411,16 @@ fn launch_survives(fault: Fault) {
                 .then_some(())
         });
     }
-    native.wait("Profile: Loss fixture");
+    native.wait("Loss fixture");
     native.send(b"\t");
     native.paste("Acknowledged new agent");
-    native.send(b"\r");
+    native.click("Launch");
     host.until("causally ordered launch transport fault occurred", || {
         relay.gates.cut.load(Ordering::Acquire).then_some(())
     });
     native.wait("Reconnected");
     let target = relay.gates.launched.lock().clone();
+    native.details();
     native.wait(target["id"].as_str().unwrap());
     native.observer();
     let mut agent = Agent {
@@ -482,6 +483,7 @@ fn e06s03_first_session_established_while_disconnected_is_not_replacement() {
     let pid = fs::read(agent.root.join("peer.pid")).unwrap();
     let relay = super::daily_use::Relay::new(&host);
     let mut native = relay.attachment(&mut host, &agent);
+    native.details();
     native.wait("ACP | starting");
     let paused = Paused::new(&mut native);
     relay.cut(0);
@@ -491,6 +493,8 @@ fn e06s03_first_session_established_while_disconnected_is_not_replacement() {
     assert!(!agent.target["session_id"].is_null());
     drop(paused);
     native.wait("Reconnected");
+    native.wait("ACP · ready");
+    native.details();
     native.wait(agent.target["session_id"].as_str().unwrap());
     native.observer();
     let work = host.prompt(&agent, "first-session-recovered", "add 17 25");
@@ -528,6 +532,7 @@ fn e06s03_first_session_established_between_snapshot_and_inspect_stays_attached(
     let pid = fs::read(agent.root.join("peer.pid")).unwrap();
     let relay = PhaseRelay::new(&host, Fault::BootstrapObservation);
     let mut native = relay.attachment(&mut host, &agent);
+    native.details();
     native.wait("ACP | starting");
     relay.gates.armed.store(true, Ordering::Release);
     host.until(
@@ -537,6 +542,7 @@ fn e06s03_first_session_established_between_snapshot_and_inspect_stays_attached(
     agent.release("session");
     host.ready(&mut agent);
     relay.gates.release_ui.store(true, Ordering::Release);
+    native.details();
     native.wait(agent.target["session_id"].as_str().unwrap());
     native.observer();
     let work = host.prompt(&agent, "snapshot-inspect-first-session", "add 17 25");

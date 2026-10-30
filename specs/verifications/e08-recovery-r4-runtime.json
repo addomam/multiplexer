@@ -1,0 +1,178 @@
+{
+  "type": "actual-runtime-verification",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "round": 4
+  },
+  "status": "passed",
+  "source_manifest": "specs/verifications/e08-review-r4-source.json",
+  "debug_binary_sha256_before": "f92e997a87e9c96b1971de6153926fa7c4f02a29f1daf7cc878724823b3de784",
+  "debug_binary_sha256_after": "f92e997a87e9c96b1971de6153926fa7c4f02a29f1daf7cc878724823b3de784",
+  "provider_requests": 0,
+  "actual_CLI_settings_boundaries": {
+    "status": "passed",
+    "provider_requests": 0,
+    "surface": "actual built CLI API and owned deterministic ACP peers",
+    "saved_choice_values": [
+      42,
+      47,
+      52
+    ],
+    "mixed_legacy_exact_model_values": [
+      342,
+      647,
+      952
+    ],
+    "new_conversation_applies_current_profile_default": 105,
+    "both_exact_and_semantic_default_forms": true,
+    "no_startup_prompt_cancel_or_new_session": true,
+    "same_saved_conversations_fresh_lifetimes": true,
+    "auth": "cleared private environment and absolute deterministic fixture only; no real adapters or credentials",
+    "cleanup": {
+      "daemon_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "daemon_pids": [
+        80516,
+        80544,
+        80576
+      ],
+      "observed_owned_child_pids_absent": [
+        80518,
+        80528,
+        80535,
+        80545,
+        80548,
+        80550,
+        80577,
+        80579,
+        80583,
+        80601
+      ],
+      "socket_absent": true,
+      "private_root_removed": true,
+      "unrelated_sentinel_survived": true,
+      "signal_fallback": false
+    }
+  },
+  "CLI_and_actual_Menu": {
+    "provider_requests": 0,
+    "binary": "/Users/addomam/projects/amux-acp/target/debug/amux",
+    "original_ui_harness_failure": "Raw-byte name matching missed ANSI-separated rendering; preserved artifact3285, not a production RED. New observer strips CSI and waits for the actual shell prompt before one F12.",
+    "automatic_reopen": {
+      "count": 2,
+      "exact_conversations_cwd_projects_names": true,
+      "fresh_lifetimes_ownerless": true,
+      "saved_values": [
+        42,
+        17
+      ],
+      "saved_command_counts": [
+        1,
+        1
+      ],
+      "no_prompt_permission_or_tool_replay": true
+    },
+    "actual_native_UI": {
+      "Menu_lists_both_reopened_conversations": true,
+      "observed_labels_CSI_and_cursor_skipped_whitespace_normalized": [
+        "ACP\u00b7Alphasaved\u00b7Ready",
+        "ACP\u00b7Betasaved\u00b7Ready"
+      ],
+      "no_recovery_picker": true,
+      "detach_exit_code": 0,
+      "termios_restored_while_host_alive": true,
+      "host_exit_code": 0,
+      "stream_bytes": 3506
+    },
+    "cleanup": {
+      "all_peer_pids_absent": [
+        80620,
+        80625,
+        80633,
+        80636
+      ],
+      "daemon_exit_code": 0,
+      "socket_absent": true,
+      "unrelated_sentinel_survived": true,
+      "signal_fallback": false
+    },
+    "private_root_removed": true
+  },
+  "native_OMP_exact_reopen": {
+    "status": "passed",
+    "provider_requests": 0,
+    "native_backend": "installed OMP 18.13.3",
+    "exact_native_session_id_file_cwd_project_name": true,
+    "fresh_terminal_lifetime_and_peer": true,
+    "no_user_assistant_tool_message_replay": true,
+    "launches": 2,
+    "explicit_resume_exact_file_each_time": true,
+    "restore_flag_never_used": true,
+    "network": "sandbox denies all except local Unix IPC",
+    "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+    "cleanup": {
+      "daemon_exit_zero": true,
+      "daemon_pids": [
+        80648,
+        80678
+      ],
+      "native_peer_pids_absent": [
+        80670,
+        80700
+      ],
+      "all_native_pty_pids_absent": [
+        80654,
+        80649,
+        80679,
+        80684
+      ],
+      "socket_absent": true,
+      "unrelated_sentinel_survived": true
+    },
+    "private_root_removed": true
+  },
+  "original_native_OMP_attachment_context_switch": {
+    "status": "passed",
+    "provider_requests": 0,
+    "native_backend": "installed OMP 18.13.3",
+    "actual_original_attachment_keyboard": true,
+    "real_OMP_new_session_command": true,
+    "same_live_native_PID_across_switch": true,
+    "new_conversation_ID_observed": true,
+    "old_conversation_not_reopened": true,
+    "new_context_recoverable": false,
+    "no_automatic_or_slash_command_conversation_messages": true,
+    "physical_UI": {
+      "TUI_exit": 0,
+      "termios_restored_while_host_alive": true,
+      "ctty_host_exit": 0,
+      "drainer_joined": true
+    },
+    "network": "sandbox denies all except local Unix IPC",
+    "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+    "cleanup": {
+      "daemon_exit_zero": true,
+      "daemon_pids": [
+        80710,
+        80731
+      ],
+      "native_peer_pids_absent": [
+        80724
+      ],
+      "all_native_pty_pids_absent": [
+        80711,
+        80732
+      ],
+      "socket_absent": true,
+      "unrelated_sentinel_survived": true
+    },
+    "private_root_removed": true
+  },
+  "authorization_boundaries": "private fixtures only; no real auth reads/new live models/global daemon/config/install/Git delivery; native OMP sandbox denies network except Unix IPC and global auth paths",
+  "preserved_harness_failure": "New settings CLI observer expected an ok envelope, but retained e08_rpc already returns its result. Private fixture was cleaned, observer corrected only; no production RED or source change claimed."
+}

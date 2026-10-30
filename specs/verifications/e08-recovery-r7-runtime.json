@@ -1,0 +1,385 @@
+{
+  "type": "actual-runtime-receipts",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "after_review_round": 6
+  },
+  "status": "passed",
+  "debug_sha256_before": "f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf",
+  "debug_sha256_after": "f36e705d49d4378515a89e599ad11cba7cec2abe91b8a372f7ff983ca4adccdf",
+  "provider_requests": 0,
+  "checks": [
+    {
+      "name": "actual-CLI-native-import-whole-history-no-clobber-alias-safety",
+      "status": "passed",
+      "provider_requests": 0,
+      "surface": "actual built CLI and daemon; private supported-version executable exits before provider work",
+      "whole_history_preserved": true,
+      "source_intact": true,
+      "nested_destination_alias_rejected_before_outside_effects": true,
+      "outside_mode_unchanged": true,
+      "existing_durable_history_not_overwritten": true,
+      "ordinary_owned_date_directory_compatible": true,
+      "no_failed_target_publication": true,
+      "no_native_auth_config_in_durable_store": true,
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          54204,
+          54217,
+          54231,
+          54237,
+          54252,
+          54255,
+          54261
+        ],
+        "socket_absent": true,
+        "sentinel_survived": true,
+        "signal_fallback": false
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "actual-CLI-daemon-setup-before-dependent-project-hook",
+      "status": "passed",
+      "provider_requests": 0,
+      "surface": "actual built CLI and daemon under real private native preparation gate",
+      "explicit_project_open_admitted_during_native_preparation": true,
+      "daemon_setup_precedes_project_hook": true,
+      "dependent_project_arithmetic": 42,
+      "ordered_hooks_once_only": true,
+      "no_extra_blank_shell": true,
+      "startup_completion": true,
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          54317,
+          54328,
+          54341,
+          54513,
+          54552,
+          54613
+        ],
+        "socket_absent": true,
+        "sentinel_survived": true,
+        "signal_fallback": false
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "cold-initial-attachment-quota1",
+      "status": "passed",
+      "terminal_limit": 1,
+      "provider_requests": 0,
+      "safe_wait_quit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit": 0,
+        "drainer_joined": true
+      },
+      "automatic_blank_slots_during_preparation": 0,
+      "exact_selector_waited": true,
+      "resize_and_input_discard": true,
+      "fragmented_paste_discarded": true,
+      "real_OMP_exact_session": "6587fb63-06a6-4cd3-a51e-8065c66444d3",
+      "no_automatic_or_replayed_messages": true,
+      "recovered_native_terminals": 1,
+      "network": "sandbox denied except Unix IPC",
+      "global_auth_paths": "sandbox denied plus private homes",
+      "normal_attachment_exit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          54703,
+          54704,
+          54702,
+          54763,
+          54764,
+          54865,
+          54836,
+          54865
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "cold-initial-attachment-spare-capacity",
+      "status": "passed",
+      "terminal_limit": 2,
+      "provider_requests": 0,
+      "safe_wait_quit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit": 0,
+        "drainer_joined": true
+      },
+      "automatic_blank_slots_during_preparation": 0,
+      "exact_selector_waited": true,
+      "resize_and_input_discard": true,
+      "fragmented_paste_discarded": true,
+      "real_OMP_exact_session": "3ca02864-9404-462f-b186-cfbd40301bf5",
+      "no_automatic_or_replayed_messages": true,
+      "recovered_native_terminals": 1,
+      "network": "sandbox denied except Unix IPC",
+      "global_auth_paths": "sandbox denied plus private homes",
+      "normal_attachment_exit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          55173,
+          55177,
+          55172,
+          55221,
+          55225,
+          55323,
+          55295,
+          55323
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "genuine-original-OMP-shell-quota1-hooks",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "original_shell_UI": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "exact_native_session_id_file_cwd_project_name": true,
+      "fresh_terminal_lifetime_and_peer": true,
+      "no_user_assistant_tool_message_replay": true,
+      "launches": 2,
+      "explicit_resume_exact_file_each_time": true,
+      "restore_flag_never_used": true,
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          55637,
+          56227
+        ],
+        "native_peer_pids_absent": [
+          55670,
+          56261
+        ],
+        "all_native_pty_pids_absent": [
+          55638,
+          56234
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "unchanged_terminal_limit": 1,
+      "original_managed_shell": true,
+      "startup_hook_observations": [
+        {
+          "daemon_ordinal": 1,
+          "terminal_count": 1,
+          "native_present": false
+        },
+        {
+          "daemon_ordinal": 2,
+          "terminal_count": 1,
+          "native_present": true
+        }
+      ],
+      "project_identity_and_name_preserved": true,
+      "unsaved_project_context_policy": "ordinary main-shell cwd refresh remains active; mutable context is not a frozen identity",
+      "private_root_removed": true
+    },
+    {
+      "name": "built-CLI-settings-two-reopenings",
+      "status": "passed",
+      "provider_requests": 0,
+      "surface": "actual built CLI API and owned deterministic ACP peers",
+      "saved_choice_values": [
+        42,
+        47,
+        52
+      ],
+      "mixed_legacy_exact_model_values": [
+        342,
+        647,
+        952
+      ],
+      "new_conversation_applies_current_profile_default": 105,
+      "both_exact_and_semantic_default_forms": true,
+      "no_startup_prompt_cancel_or_new_session": true,
+      "same_saved_conversations_fresh_lifetimes": true,
+      "auth": "cleared private environment and absolute deterministic fixture only; no real adapters or credentials",
+      "cleanup": {
+        "daemon_exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "daemon_pids": [
+          56321,
+          56393,
+          56467
+        ],
+        "observed_owned_child_pids_absent": [
+          56323,
+          56334,
+          56352,
+          56398,
+          56403,
+          56410,
+          56469,
+          56476,
+          56483,
+          56511
+        ],
+        "socket_absent": true,
+        "private_root_removed": true,
+        "unrelated_sentinel_survived": true,
+        "signal_fallback": false
+      }
+    },
+    {
+      "name": "exact-ACP-reopen-actual-Menu",
+      "status": "passed",
+      "provider_requests": 0,
+      "binary": "/Users/addomam/projects/amux-acp/target/debug/amux",
+      "original_ui_harness_failure": "Raw-byte name matching missed ANSI-separated rendering; preserved artifact3285, not a production RED. New observer strips CSI and waits for the actual shell prompt before one F12.",
+      "automatic_reopen": {
+        "count": 2,
+        "exact_conversations_cwd_projects_names": true,
+        "fresh_lifetimes_ownerless": true,
+        "saved_values": [
+          42,
+          17
+        ],
+        "saved_command_counts": [
+          1,
+          1
+        ],
+        "no_prompt_permission_or_tool_replay": true
+      },
+      "actual_native_UI": {
+        "Menu_lists_both_reopened_conversations": true,
+        "observed_labels_CSI_and_cursor_skipped_whitespace_normalized": [
+          "ACP\u00b7Alphasaved\u00b7Ready",
+          "ACP\u00b7Betasaved\u00b7Ready"
+        ],
+        "no_recovery_picker": true,
+        "detach_exit_code": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit_code": 0,
+        "stream_bytes": 3506
+      },
+      "cleanup": {
+        "all_peer_pids_absent": [
+          56579,
+          56591,
+          56623,
+          56625
+        ],
+        "daemon_exit_code": 0,
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true,
+        "signal_fallback": false
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "native-exact-file-reopen",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "exact_native_session_id_file_cwd_project_name": true,
+      "fresh_terminal_lifetime_and_peer": true,
+      "no_user_assistant_tool_message_replay": true,
+      "launches": 2,
+      "explicit_resume_exact_file_each_time": true,
+      "restore_flag_never_used": true,
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          56670,
+          56799
+        ],
+        "native_peer_pids_absent": [
+          56698,
+          56813
+        ],
+        "all_native_pty_pids_absent": [
+          56679,
+          56671,
+          56800
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "original-persistent-attachment-new-session-no-stale-reopen",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "actual_original_attachment_keyboard": true,
+      "real_OMP_new_session_command": true,
+      "same_live_native_PID_across_switch": true,
+      "new_conversation_ID_observed": true,
+      "old_conversation_not_reopened": true,
+      "new_context_recoverable": false,
+      "no_automatic_or_slash_command_conversation_messages": true,
+      "physical_UI": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          56867,
+          56986
+        ],
+        "native_peer_pids_absent": [
+          56893
+        ],
+        "all_native_pty_pids_absent": [
+          56868,
+          56988
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    }
+  ],
+  "limits": [
+    "Real partial-write EFBIG/retry is exercised in a guarded owned child unit-test process, not by filling disk or changing a running daemon limit. Actual CLI additionally exercises import completeness, alias rejection, preservation and real dependent-hook effects.",
+    "Managed Codex fixture advertises supported version then exits before provider work; no successful genuine native Codex0.165/provider acceptance is claimed.",
+    "Genuine OMP runs offline with private state/fake key and sandbox network/global-auth denial; no live auth reads or model requests.",
+    "Historical native application-buffer fence remains unknown/fail-closed; E05 and other historical caps unchanged."
+  ],
+  "source_binding": "Explicit successful focused/strict/build artifact3634 precedes all nine current-binary scenarios; pin measured before/after."
+}

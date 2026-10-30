@@ -1,0 +1,12 @@
+id: e08
+type: epic
+context: {project: amux, baseline_commit: cc468a3, authorization: user-implement-it}
+title: Automatically reopen saved agent conversations
+status: passing
+scope: ../../product/SCOPE_E08.yaml
+plan: PLAN.md
+priority: explicit-user-implement-automatic-context-reopen-without-work-continuation
+integration_owner: parent
+authorization: implementation-and-isolated-verification-no-live-provider-global-install-or-publication-actions
+stories:
+  - {id: e08s01, title: "Durable exact-session recovery on relaunch", bcps: 6, risk: P0, delta: MODIFIED, status: passing, spec: e08s01-story.md, tasks: e08s01-tasks.yaml}

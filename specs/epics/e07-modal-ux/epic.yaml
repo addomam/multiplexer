@@ -1,0 +1,17 @@
+id: e07
+type: epic
+title: Modal daily-use UX
+status: passing
+scope: ../../product/SCOPE_E07.yaml
+plan: PLAN.md
+impact: ../../IMPACT-E07.md
+priority: explicit-user-approval-all-eight-plus-modal-navigation
+integration_owner: parent
+authorization: implementation-only-no-provider-global-or-publication-changes
+stories:
+  - {id: e07s01, title: "Modal Menu and native-safe mode entry", bcps: 5, risk: P0, delta: MODIFIED, status: passing, spec: e07s01-story.md, tasks: e07s01-tasks.yaml}
+  - {id: e07s02, title: "Conversation-first ACP and explicit interaction cards", bcps: 5, risk: P0, delta: MODIFIED, status: passing, spec: e07s02-story.md, tasks: e07s02-tasks.yaml}
+  - {id: e07s03, title: "Safe close and identifiable sessions", bcps: 3, risk: P1, delta: MODIFIED, status: passing, spec: e07s03-story.md, tasks: e07s03-tasks.yaml}
+  - {id: e07s04, title: "Visible native and ACP creation with explicit placement", bcps: 4, risk: P1, delta: MODIFIED, status: passing, spec: e07s04-story.md, tasks: e07s04-tasks.yaml}
+  - {id: e07s05, title: "Structured project editing and authoritative save preview", bcps: 4, risk: P1, delta: MODIFIED, status: passing, spec: e07s05-story.md, tasks: e07s05-tasks.yaml}
+  - {id: e07s06, title: "Consistent controls and truthful attention/status", bcps: 3, risk: P1, delta: MODIFIED, status: passing, spec: e07s06-story.md, tasks: e07s06-tasks.yaml}

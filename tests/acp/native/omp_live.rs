@@ -141,6 +141,28 @@ fn rendered(native: &mut Attachment, marker: &str, deadline: Instant) -> Check<(
         Ok(surface(native)?.contains(marker).then_some(()))
     })
 }
+fn controlled(native: &mut Attachment, deadline: Instant) -> Check<()> {
+    poll(deadline, || {
+        Ok(surface(native)?
+            .lines()
+            .any(|line| {
+                line.starts_with("ACP · ")
+                    && !line.contains("read-only")
+                    && !line.contains("starting")
+                    && !line.contains("unavailable")
+            })
+            .then_some(()))
+    })
+}
+fn rendered_details(native: &mut Attachment, marker: &str, deadline: Instant) -> Check<()> {
+    send(native, b"\x1b[21~")?;
+    rendered(native, "ACP settings (read-only)", deadline)?;
+    rendered(native, marker, deadline)?;
+    send(native, b"\x1b[21~")?;
+    poll(deadline, || {
+        Ok((!surface(native)?.contains("ACP settings (read-only)")).then_some(()))
+    })
+}
 
 #[cfg(target_os = "macos")]
 fn process_executable(pid: i32) -> Option<PathBuf> {
@@ -438,8 +460,8 @@ impl Live {
         )?;
         self.native = Some(Attachment::new(&self.host, self.agent()?));
         let native = self.native.as_mut().ok_or("native-missing")?;
-        rendered(native, "owner (input-admission)", self.deadline)?;
-        rendered(
+        controlled(native, self.deadline)?;
+        rendered_details(
             native,
             &format!(
                 "{} | revision ",
@@ -448,8 +470,10 @@ impl Live {
             self.deadline,
         )?;
         send(native, b"\x1b[14~\x1b[D")?;
+        rendered_details(native, "Selected interaction:", self.deadline)?;
+        rendered(native, "Review (F5)", self.deadline)?;
         send(native, ACCEPT_FORM)?;
-        rendered(native, "REVIEW: F5 accepts", self.deadline)?;
+        rendered(native, "Submit (F5)", self.deadline)?; // fresh painted, input-drained review
         send(native, ACCEPT_FORM)?;
         poll(self.deadline, || {
             let projection = self.projection()?;
@@ -481,7 +505,7 @@ impl Live {
         self.force(self.deadline)?;
         rendered(
             self.native.as_mut().ok_or("native-missing")?,
-            "observer (read-only)",
+            " · read-only",
             self.deadline,
         )?;
         let still_pending = self.pending(&work, "permission")?;

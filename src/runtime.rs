@@ -669,6 +669,12 @@ fn process_info(pid: i32) -> Option<ProcessInfo> {
     })
 }
 
+/// Native start identity for durable recovery pins; never a PID-only liveness test.
+pub(crate) fn process_stamp(pid: i32) -> Option<[u64; 2]> {
+    let info = process_info(pid)?;
+    (!info.exited).then_some([info.identity.start.0, info.identity.start.1])
+}
+
 fn process_snapshot() -> BTreeMap<i32, ProcessInfo> {
     #[cfg(target_os = "linux")]
     let pids = std::fs::read_dir("/proc")

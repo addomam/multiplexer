@@ -6,6 +6,36 @@ status: released-installed-and-verified
 ---
 # Current daily-use checkpoint
 
+## Latest local responsive Menu
+
+Menu/project buttons now stay horizontal when full labels fit, stack on narrow windows and become compact rows when short. Ordinary shortcut legends are removed from both default and locked Menu headers/buttons. **?** in Menu or **Ctrl+/** opens wrapping, scrollable help; Escape closes only help and preserves the search/editor draft. Distinct enhanced Ctrl+? works too; legacy Ctrl+? remains Backspace. Help stays below the ownership header rather than painting over warnings.
+
+[Responsive Menu proof](responsive-menu.json) records the final installed 110×28, 32×42, 80×6 and 20×10 surfaces, 32×12 compact project dialogs, physical mouse actions, literal editor question marks, no input replay and unchanged background native dimensions. Same shell PID 26713 produces 42 then 57; all 2,750 native character/color/style cells restore exactly, including 38 blue cells and zero menu-background artifacts. Final gates: 458 Rust tests/12 ignored, strict Clippy/fmt/release/install, OMP 8/49 and Zsh syntax. Four TUI/host/drainers and both private daemons/native processes/sockets/root finish normally; the final live sentinel survives application shutdown before owner reaping. Initial shortcut/header findings, fixture mistakes, expired bounded guard and ENOSPC are retained in evidence.
+
+Installed SHA256: `a45a1f7d44605994efe82ae78e43e8506a38baf7f9470f8f2dc3d2e43681b2ab`. Reattach the client to load this UI patch; it adds no daemon/protocol/storage changes. The global daemon/config/auth remain untouched, and the earlier project-backend upgrade boundary below still applies. Changes remain uncommitted on `feat/cli-projects-help`; no new providers/review PASS/merge/push/release or historical cap reset. Only the explicitly approved incremental build cache was cleared; the user subsequently reported 60GB free and normal builds continued without settings changes or further cleanup.
+
+## Previous local Menu/project workflow
+
+**Menu → New session → `cd` → Menu → Save project** now bookmarks an existing directory (the confirmed Git root inside a repository), without creating a folder or restarting that session. Each New session gets an independent unsaved project ID; Ctrl-N still adds a terminal to the selected project. **Menu → Projects** opens/reuses saved projects, edits names/hooks/recipes and confirms bookmark removal while keeping files and native/ACP sessions. The visible Switch control is renamed Menu.
+
+[Menu/project verification](menu-projects.json) records 456 passing Rust tests/12 ignored, strict Clippy/fmt/release/install, OMP 8/49, Zsh and 38 installed help paths/76 invocations. Actual controlling-PTY proof covers mouse/keyboard/Tab saves, independent bookmarks, configuration errors, compact resize, same native/ACP 42-to-57 continuity through Forget, private restart/open and a fresh interpreter. All 16 blue native cells survive Menu with zero selected/chrome background artifacts on the final installed client. Fixture-oracle/input failures are retained; all owned TUI/host/daemon/native/peer/drainer/socket/root resources finish normally, the unrelated sentinel survives, and no fallback kill or provider call is used.
+
+The earlier Menu/project build SHA256 `84e49d1e3764af7a08991c4dd076ce6ccc466db6b93034908ade83f24046a179` is superseded locally by the responsive build above, not by a new published release. **New Save/New session require an updated daemon** and fail safely on an old one. The global live daemon/config/auth were not touched: finish its managed work before a separately approved upgrade. Reopening only the client does not upgrade its daemon. Historical provider/review/native-fence/E05 limits remain unchanged.
+
+## Previous local CLI repair
+
+The requested command/argument descriptions and examples now cover short and long help throughout the CLI. Project management is `amux projects list|add|save|open|config|remove`, without the old top-level CLI aliases. Removal forgets saved configuration only: directories, live native/ACP work, runtime identity, hooks and recipes remain. Current changes live uncommitted on `feat/cli-projects-help`, carrying the earlier UI repairs intact.
+
+[CLI and project lifecycle proof](cli-projects-help.json) records38 installed help paths/76 calls/378 documented rows,453 passing Rust tests, strict Clippy/fmt/release, stock OMP8/49 and Zsh syntax. Actual CLI/native and deterministic ACP fixtures prove42-to57 continuity, original RPC completion, conflict rollback without a false success event, retained files and correct saved IDs after private restart. All private processes/sockets/root are cleaned normally; unrelated sentinel survives. No provider calls or global config/auth changes.
+
+The earlier CLI-only build reported `amux 0.1.0` with SHA256 `b62d74d3859af24ad8e499619b7421b801eef918b95ec8d94cc97a7a3e2f4124`; the Menu build above supersedes that local artifact, not the published assets/tag or original receipt. List/remove require an updated daemon; no automatic live restart, commit/merge/push/new release or historical cap reset was performed.
+
+## Previous local UI repair
+
+The quiet ownership/Switch repaint fix was verified and installed from `fix/quiet-ownership-picker-repaint`; its uncommitted changes are retained in the current branch/build. The default controlled-here badge/message is hidden; exceptional control notices remain. Switch exits repaint the client canvas once without clearing the managed application or replaying input. [UI proof](UI-ratatui.md#post-release-quiet-ownership-and-switch-repaint--2026-10-26) records451 passing Rust tests, actual colored native/session/resize checks and installed native plus synthetic-ACP arithmetic42, with normal private cleanup and0 provider calls.
+
+The earlier UI-only install had SHA256`39979c07f94036ca7b2f60543485ecbe3fbd4b3b4c28a7807af76526fb716328`; the CLI build above supersedes that local artifact, not the published release. Reopen existing TUI clients to load the combined patch; normal explicit reacquisition rules still apply. No new model/auth/global-config/publication authorization or E05 scope change.
+
 ## Decision
 
 E06 is complete: all7 tasks and3 stories pass. Its [capsule](../epics/archive/e06-acp-daily-use/PLAN.md) is archived; E05 stays parked with its17 unimplemented tasks still failing. The user explicitly authorized finishing the release, pushing signed main and installing the verified binary. Do not stop the live daemon or alter global config/auth. No new live-model run is authorized:12 actual requests/cap12/0 remaining.

@@ -228,25 +228,46 @@ fn concurrent_real_autostarts_create_one_initialized_daemon_and_shell() {
 
 #[test]
 fn failed_real_autostart_reports_invalid_configuration_and_removes_socket() {
-    let sandbox = Sandbox::new();
-    let config = sandbox.directory.join("config/amux");
-    fs::create_dir_all(&config).unwrap();
-    fs::write(config.join("config.json"), b"not valid JSON").unwrap();
-    let error_path = sandbox.directory.join("frontend.log");
-    let mut frontend = sandbox
-        .command()
-        .arg("attach")
-        .stderr(fs::File::create(&error_path).unwrap())
-        .spawn()
-        .unwrap();
-    assert!(!Sandbox::wait(&mut frontend, Duration::from_secs(5)).success());
-    let error = fs::read_to_string(error_path).unwrap();
-    assert!(error.contains("daemon-start:"), "{error}");
-    assert!(error.contains("invalid project configuration"), "{error}");
-    assert!(
-        !sandbox.socket.exists(),
-        "failed startup left a connectable-looking socket"
-    );
+    let cases: [(&[u8], &str); 3] = [
+        (b"not valid JSON", "invalid project configuration"),
+        (
+            br#"{"version":1,"config":{"projects_dir":"/unused","prefix":"C-a","unknown_setting":true},"projects":[]}"#,
+            "unknown field",
+        ),
+        (
+            br#"{"version":1,"config":{"projects_dir":"/unused","prefix":"C-a","terminal_limit":0},"projects":[]}"#,
+            "terminal_limit must be in 1..256",
+        ),
+    ];
+    for (bytes, cause) in cases {
+        let sandbox = Sandbox::new();
+        let config = sandbox.directory.join("config/amux");
+        fs::create_dir_all(&config).unwrap();
+        let config_path = config.join("config.json");
+        fs::write(&config_path, bytes).unwrap();
+        let error_path = sandbox.directory.join("frontend.log");
+        let mut frontend = sandbox
+            .command()
+            .arg("attach")
+            .stderr(fs::File::create(&error_path).unwrap())
+            .spawn()
+            .unwrap();
+        assert!(!Sandbox::wait(&mut frontend, Duration::from_secs(5)).success());
+        let error = fs::read_to_string(error_path).unwrap();
+        assert!(error.contains("daemon-start:"), "{error}");
+        assert!(error.contains(cause), "{error}");
+        assert!(error.contains(config_path.to_str().unwrap()), "{error}");
+        let daemon_log = fs::read_to_string(sandbox.directory.join("daemon.log")).unwrap();
+        assert!(daemon_log.contains(cause), "{daemon_log}");
+        assert!(
+            daemon_log.contains(config_path.to_str().unwrap()),
+            "{daemon_log}"
+        );
+        assert!(
+            !sandbox.socket.exists(),
+            "failed startup left a connectable-looking socket"
+        );
+    }
 }
 
 #[test]

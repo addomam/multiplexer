@@ -1,0 +1,226 @@
+{
+  "coverage_summary": "FAIL — independent E07 round3/5 source review of /Users/addomam/projects/amux-acp, supplied base cc468a34cd7c055457ec286fc3464dc5ac2103a9, feature branch feat/cli-projects-help. Assessment count: 60. Findings: 1 must-fix, 1 should-fix, 0 consider. Score = 100 × (60 − 1 − 1) / 60 = 96.67. PASS requires BOTH zero must-fix findings and score >=94; the zero-must-fix requirement is not met. These are source assessments, not runtime acceptance results.\n\nPer-story assessed coverage:\n• e07s01 — Modal Menu and native-safe mode entry: 10 assessments, no additional finding. Examined configurable F12/F1–F24/none entry; legacy prefix; shifted-lower upper-function aliases and modifier distinctions; both deliberate reserved-key forwarding routes; native Esc/j/k preservation; deliberate Press versus Repeat handling; command navigation versus literal search; picker mouse/keyboard geometry; mixed native/ACP and empty classifications; covered-input consumption and canvas repaint without application replay. Production routes were followed through src/tui.rs, menu.rs, view.rs, NativeControl and the vendored parser, not merely synthetic key events. The documented legacy Shift-F3/cursor-reply collision remains a limitation, not a new defect.\n• e07s02 — Conversation-first ACP and explicit interaction cards: 12 assessments, 1 should-fix (E07-R3-UX-02). Examined responsive conversation layout; bounded canonical history/gap resynchronization; read-only Details/History; typed form editing/validation; immutable two-step Review/Submit; complete permission context and exact offered allow/deny IDs; all answer/decline/cancel/authentication/interruption accelerator, focused-action and mouse routes; physical presentation→conclusive Empty→armed repaint; target/session/grant/generation/interaction/authentication/foreground replacement; stable same-target prompt paste/Enter and first local Review; canonical completion/error focus transitions; and actual authentication projection/consumer integration. The generalized ACP mutation fence survives source scrutiny, but genuine authentication actions have blank, indistinguishable labels.\n• e07s03 — Safe close and identifiable sessions: 9 assessments, no additional finding. Examined captured native/ACP close identity; original ACP capability/generation; Keep-working default; full warning/Empty/armed close admission; cover/help/resize invalidation; separate detach; exited-native removal; native/ACP runtime rename without peer/tuple/RPC replacement; and type/name/leaf-path presentation. Both mouse and keyboard confirmation use the captured target rather than later selection.\n• e07s04 — Visible native/ACP creation and explicit placement: 10 assessments, no additional finding. Examined kind selection; current/independent placement; exact project/profile/settings/option identities; local field rejection and 128-byte launch-name bounds; UTF-8-safe automatic names; original-controller launch FIFO; frozen pending drafts; definite typed rejection with complete inert cause and deliberate retry only; ambiguous transport failure/acknowledged-receipt continuity; and independent-project rollback/isolation without inherited hooks/recipes or directory creation. Followed launch through the real parent, worker, typed client response boundary, daemon reservation and broker startup rather than treating RPC admission as successful initialization.\n• e07s05 — Structured project editing and authoritative save preview: 10 assessments, no additional finding. Examined exact selected native/ACP save source; preview/project consistency; fresh canonical cwd/Git-root resolution outside metadata locks; expected_context rejection and source recheck; structured name and nested hook/recipe drafts; ordered hook sources/timeouts; exact recipe names/commands; atomic Apply/persistence/conflict rollback; metadata-only Forget; and mixed-session project-open serialization/reuse. Live starting/auth-required/ready ACP-only projects reuse their original view without a shell/hook; retained ended/failed ACP does not suppress ordinary fresh-shell opening.\n• e07s06 — Consistent controls and truthful attention/status: 9 assessments, 1 must-fix (E07-R3-SEC-01). Examined Tab/BackTab focus, mouse/accelerator equivalence, contextual Help/Escape and full error access, canonical attention/outcomes, original controller FIFO and backend capability/generation/RPC admission, force versus explicit interruption, no replay/automatic reacquisition, all ownership mutation panel routes, and owned cleanup/privacy boundaries. Ordinary Owner/Yield is the uncovered provenance route: repaint can bind old physical gestures to a newly arrived manual request even though Force and ACP interaction mutations are fenced.\n\nIntegrated repairs: rechecked the exact ACP save selector, compatibility shortcuts sharing painted Hit admission, reviewed Submit and generalized mutation fences, oversized/clipped permission context, automatic-name sizing, full local error access, retained definite launch rejection, ACP-only project reuse, last-native removal with surviving ACP, and upper-function recognition/encoding. The prior repair implementations are supported by the inspected source and regression assertions; this is not an independently exercised runtime PASS. Saved round1/2 reports were used to validate repairs, not to constrain the new review.\n\nCoverage included every production module in the supplied E07 implementation manifest, actual parent polling/repaint/overlay/event ordering, worker and daemon admission boundaries, mixed project/session consumers, relevant embedded and controlling-PTY regressions, migrated live-consumer source, fixture response identities, documentation, and dependency input-empty/parser/rendering behavior. Historical broker/ownership/runtime code was inspected at the E07 integration and cleanup boundaries rather than represented as a wholesale audit of unrelated subsystems. No edits, Git commands, builds, checks, tests, formatter/linter runs, payload execution, network/provider/auth calls, process/global mutations, or current-round peer access were performed. Parent execution and cleanup observations remain parent-owned. Historical caps are unchanged; E03's native application-buffer settlement limitation is not claimed fixed, E05 remains parked, and E06 provider usage remains cap12/used12/remaining0.",
+  "findings": [
+    {
+      "rule_id": "E07-R3-SEC-01",
+      "title": "Ordinary Yield rebases queued gestures onto a newly arrived ownership request",
+      "summary": "A registered external controller can publish an ordinary manual ownership request while the human's Owner panel is open. draw_panel replaces that panel's claim and observed identity during repaint, but Owner/Yield has no conclusive-input-empty/armed-paint admission. The real parent polls ownership before consuming the next event and explicitly permits ACP repaint while physical input is queued. An old queued y, including a Repeat event, can therefore yield to a requester that did not exist when the gesture was generated. Mouse and focused-button routes also use the repainted current action map rather than claim-bound physical provenance. This is a wrapper consent failure, separate from the deferred native application-buffer settlement limitation. Confidence: 9/10; source-traced execution path, not executed.",
+      "severity": "high",
+      "confidence": "high",
+      "category": "must-fix: physical-event provenance / ownership consent",
+      "locations": [
+        {
+          "path": "src/tui/control.rs",
+          "start_line": 1236,
+          "end_line": 1251,
+          "role": "Owner/Yield submits the repaint-selected claim with the human capability but without presentation readiness"
+        },
+        {
+          "path": "src/tui/control.rs",
+          "start_line": 1843,
+          "end_line": 1858,
+          "role": "Paint silently replaces displayed claim and observed identity with the latest manual reservation"
+        },
+        {
+          "path": "src/tui/control.rs",
+          "start_line": 1080,
+          "end_line": 1099,
+          "role": "Mouse admission checks target and panel-kind discriminant, not claim, observation or armed readiness"
+        },
+        {
+          "path": "src/tui/control.rs",
+          "start_line": 1140,
+          "end_line": 1141,
+          "role": "Ownership action handling accepts Repeat as well as Press"
+        },
+        {
+          "path": "src/tui/control.rs",
+          "start_line": 1375,
+          "end_line": 1386,
+          "role": "The conclusive-empty callback arms Force only, not ordinary Yield"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 1136,
+          "end_line": 1142,
+          "role": "Ownership updates are polled before repaint and physical-event consumption"
+        },
+        {
+          "path": "src/tui.rs",
+          "start_line": 1271,
+          "end_line": 1276,
+          "role": "ACP screen-null repaint is permitted despite pending input"
+        },
+        {
+          "path": "src/control.rs",
+          "start_line": 690,
+          "end_line": 698,
+          "role": "Valid yield-to revokes the human's original authority and advances the named reservation"
+        }
+      ],
+      "cwe": [
+        "CWE-863",
+        "CWE-367"
+      ],
+      "evidence": [
+        {
+          "label": "Attacker-controlled reservation is rebound into the human's consent sink",
+          "explanation": "Owner painting reads the current manual reservation's claim_id and overwrites displayed_claim/displayed_observed. panel_event then accepts y and submits yield-to with that exact newly adopted claim and the genuine human capability. require_source_claim verifies current claim/generation, but cannot establish when the physical gesture was generated.",
+          "excerpt": "if displayed_claim.as_deref() != claim { *displayed_claim = claim.map(str::to_owned); } ... if key.code == KeyCode::Char('y') && claim.is_some() { ... \"method\":\"yield-to\",\"claim_id\":claim ... }"
+        },
+        {
+          "label": "Actual parent ordering permits old input to cross the identity transition",
+          "explanation": "[INFERENCE, source-traced; not executed] Leave the ACP Owner panel open with no manual request, hold the TUI while queuing y, publish a cooperative manual request, allow the ownership projection to become due, then resume. authority.poll observes the request; screen.is_null allows repaint before reading y; draw_panel adopts the claim; y is admitted without Empty or an armed repaint. Alternatively, intervening queued focus events permit consecutive repaints before an old first-button click/Enter, allowing its action map to change from Release to Yield.",
+          "excerpt": "authority.poll(&active, ...) ... if (urgent_frame || frame_at.elapsed() >= interval) && (screen.is_null() || ... || !event::poll(Duration::ZERO)? )"
+        },
+        {
+          "label": "Nearby safeguards do not stop this path",
+          "explanation": "The stale-observation check compares against the observation just adopted during paint. Mouse checks only the target and discriminant(Owner). The key branch excludes Release, not Repeat. NativeControl::after_draw arms only Force and conditional consent. Backend record_activity preserves ordinary manual reservations, so the preceding original-controller activity RPC does not cancel this request. On ACP's input-admission boundary, a valid yield can offer the reservation to its requester without any native settlement fence.",
+          "excerpt": "Event::Key(key) if key.kind != KeyEventKind::Release ... PanelKind::Owner { claim, observed }"
+        },
+        {
+          "label": "Impact is loss of original human authority, not a backend capability bypass",
+          "explanation": "The daemon correctly validates the submitted human control and named current reservation, then revokes the human and progresses the request. The defect is that the wrapper creates that authorized mutation from pre-request physical input. The requester can accept its resulting offer; no force or implicit turn interruption is needed.",
+          "excerpt": "target.require_source_claim(id, &authority)?; target.revoke(); target.resumable_owner = None; target.mark_yielded(now); target.refresh(now);"
+        }
+      ],
+      "anchor": "src/tui/control.rs:1236",
+      "remediation": "Give ordinary Yield immutable painted provenance containing the target, original grant/generation, observed owner state and exact manual claim_id, plus per-visible-action readiness. Invalidate on arrival/replacement, help/cover, clipping, geometry and authority changes. Require complete successful presentation, conclusive Empty, then an armed repaint before y, focused Enter/Space or mouse can yield; reject Repeat for consent. Keep/return may remain immediate. Preserve backend ownership, retained-work and force/interruption semantics. Add an actual-parent queued-input regression with an external manual request arriving before repaint; assert original human authority remains until a fresh armed exact-claim gesture."
+    },
+    {
+      "rule_id": "E07-R3-UX-02",
+      "title": "Real authentication methods render as indistinguishable blank Authenticate buttons",
+      "summary": "The genuine broker projects authentication methods as method_id/kind only, but conversation action labels read name exclusively. Missing/null display_value returns an empty string, so every real offered method renders as 'Authenticate: ' without its ID or kind. With multiple agent methods the active action surface cannot distinguish which path is selected; unsupported client/terminal methods look identical too. New synthetic renderer tests supply names that the real broker never emits. Exact-method backend admission remains intact. Confidence: 10/10.",
+      "severity": "medium",
+      "confidence": "high",
+      "category": "should-fix: integrated authentication UX / projection contract",
+      "locations": [
+        {
+          "path": "src/acp.rs",
+          "start_line": 1284,
+          "end_line": 1291,
+          "role": "Real authentication projection emits method_id and kind, not name"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 668,
+          "end_line": 684,
+          "role": "Renderer computes label solely from absent method.name"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 1646,
+          "end_line": 1650,
+          "role": "Every authentication action uses the resulting empty label"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 3661,
+          "end_line": 3664,
+          "role": "Null display values explicitly become empty strings"
+        },
+        {
+          "path": "src/tui/agent.rs",
+          "start_line": 4552,
+          "end_line": 4557,
+          "role": "Synthetic method-choice test supplies names absent from genuine projections"
+        }
+      ],
+      "cwe": [],
+      "evidence": [
+        {
+          "label": "Producer/consumer contract mismatch",
+          "explanation": "auth_projection emits only method_id and kind. sync_auth retains those identities but computes method.label from method['name'], which is absent in the real projection. display_value(null) returns an empty string.",
+          "excerpt": ".map(|(id, kind)| json!({\"method_id\":id,\"kind\":kind})) ... label: display_value(&method[\"name\"], 256)"
+        },
+        {
+          "label": "The actual activation surface loses distinguishing identity",
+          "explanation": "action_label returns 'Authenticate: '+method.label for each method. Details lists IDs, but the focused/clicked action does not identify which method it invokes or its supported kind. The new tests cannot detect the real shape mismatch because their synthetic methods include a name field.",
+          "excerpt": "format!(\"Authenticate: {}\", method.label)"
+        },
+        {
+          "label": "This affects genuine protocol input, not only a synthetic scenario",
+          "explanation": "The bundled auth fixture advertises agent-login, client-login and terminal-login. Broker initialization retains their ID/kind pairs, discarding display names, so those genuine methods reach the blank-label consumer. This source review did not execute an authentication flow.",
+          "excerpt": "state.auth.push((id, kind));"
+        }
+      ],
+      "anchor": "src/tui/agent.rs:683",
+      "remediation": "Use the sanitized exact method_id as the visible fallback when no real label exists, and expose kind/support status in the focused/full action context so methods remain distinguishable. Do not broaden metadata/privacy exposure merely to satisfy synthetic test data. Add a renderer/integration regression using the broker's actual projection shape, with at least two agent methods and an unsupported method; verify F8, Tab/Enter and mouse identify and activate the intended exact method."
+    }
+  ],
+  "reviewed_paths": [
+    "local://e07-review-r3-brief.md",
+    "CONVENTIONS.md",
+    "specs/product/SCOPE_E07.yaml",
+    "specs/epics/e07-modal-ux/PLAN.md",
+    "specs/epics/e07-modal-ux/epic.yaml",
+    "specs/epics/e07-modal-ux/e07s01-story.md",
+    "specs/epics/e07-modal-ux/e07s02-story.md",
+    "specs/epics/e07-modal-ux/e07s03-story.md",
+    "specs/epics/e07-modal-ux/e07s04-story.md",
+    "specs/epics/e07-modal-ux/e07s05-story.md",
+    "specs/epics/e07-modal-ux/e07s06-story.md",
+    "specs/verifications/AUDIT-e07.md",
+    "specs/verifications/e07-review-response.md",
+    "src/tui.rs",
+    "src/tui/agent.rs",
+    "src/tui/control.rs",
+    "src/tui/menu.rs",
+    "src/tui/launch.rs",
+    "src/tui/project.rs",
+    "src/tui/view.rs",
+    "src/daemon.rs",
+    "src/projects.rs",
+    "src/acp.rs",
+    "src/acp_profiles.rs",
+    "src/control.rs",
+    "src/client.rs",
+    "src/runtime.rs",
+    "src/main.rs",
+    "src/cli.rs",
+    "tests/acp.rs",
+    "tests/acp/profiles.rs",
+    "tests/acp/native.rs",
+    "tests/acp/native/acceptance.rs",
+    "tests/acp/native/daily_use.rs",
+    "tests/acp/native/recovery_edges.rs",
+    "tests/acp/native/live.rs",
+    "tests/acp/native/omp_live.rs",
+    "tests/fixtures/acp_peer.rs",
+    "vendor/crossterm/src/event.rs",
+    "vendor/crossterm/src/event/read.rs",
+    "vendor/crossterm/src/event/source/unix/mio.rs",
+    "vendor/crossterm/src/event/sys/unix/parse.rs",
+    "/Users/addomam/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-core-0.1.0/src/text/span.rs",
+    "/Users/addomam/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-widgets-0.3.0/src/paragraph.rs",
+    "Cargo.toml",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "deferred": [
+    {
+      "reason": "Runtime acceptance, physical-terminal timing, actual arithmetic/tool effects, termios restoration, process/socket disappearance and sentinel survival are parent-owned. This report inspects implementation and regression assertions only; it does not independently exercise or certify those outcomes.",
+      "paths": [
+        "tests/acp/native.rs",
+        "tests/acp/native/acceptance.rs",
+        "tests/acp/native/daily_use.rs",
+        "tests/acp/native/recovery_edges.rs"
+      ]
+    },
+    {
+      "reason": "Live provider/authentication execution was prohibited. Live consumers were inspected for migrated native controls and identity-preserving assertions only; existing ignored tests and E06 cap12/used12/remaining0 are unchanged.",
+      "paths": [
+        "tests/acp/native/live.rs",
+        "tests/acp/native/omp_live.rs"
+      ]
+    },
+    {
+      "reason": "The unresolved E03 native application-buffer settlement fence and parked E05 work are deliberately outside this UX repair. Existing best-effort native transport is not promoted to a full settlement guarantee. Cleanup was traced through pinned owned-process identities, worker joining and incomplete-resource accounting, not executed.",
+      "paths": [
+        "src/control.rs",
+        "src/runtime.rs",
+        "src/acp.rs"
+      ]
+    }
+  ]
+}

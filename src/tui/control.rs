@@ -86,11 +86,19 @@ struct Reply {
     rejected_action: Option<Value>,
 }
 
-#[derive(Clone)]
-enum ForcePresentation {
+#[derive(Clone, Copy)]
+enum Presentation {
     Hidden,
     Drawn,
     Confirmable,
+    Armed,
+}
+
+struct OwnerAction {
+    grant: Arc<Grant>,
+    observed: Value,
+    owner: Value,
+    claim: Option<String>,
 }
 
 #[derive(Clone)]
@@ -98,8 +106,9 @@ enum PanelKind {
     Locked,
     Progress,
     Owner {
-        claim: Option<String>,
-        observed: Value,
+        action: Option<Arc<OwnerAction>>,
+        presentation: Presentation,
+        geometry: Option<(Rect, Rect)>,
     },
     Cancel {
         claim: Value,
@@ -108,7 +117,7 @@ enum PanelKind {
         observed: Value,
         owner: String,
         reservation: String,
-        presentation: ForcePresentation,
+        presentation: Presentation,
     },
 }
 struct Panel {
@@ -132,6 +141,7 @@ pub(super) struct NativeControl {
     rx: Receiver<Reply>,
     controls: HashMap<String, Arc<Grant>>,
     agent_targets: HashSet<String>,
+    ended_targets: HashSet<String>,
     ownership: HashMap<String, Value>,
     claims: HashMap<String, Value>,
     uncertain: HashSet<String>,
@@ -141,6 +151,10 @@ pub(super) struct NativeControl {
     warnings: HashMap<String, Warning>,
     shown_warning: Option<String>,
     panel: Option<Panel>,
+    panel_buttons: [(Rect, KeyCode); 4],
+    panel_button_target: Option<(String, std::mem::Discriminant<PanelKind>)>,
+    panel_focus: Option<usize>,
+    panel_help: Option<super::view::Help>,
     call_offset: usize,
     mouse_tail: HashSet<MouseButton>,
     view: Option<(String, Option<bool>)>,
@@ -156,6 +170,7 @@ pub(super) struct NativeControl {
     worker: Option<std::thread::JoinHandle<()>>,
     auto_acquire: bool,
     launched: Option<Value>,
+    launch_rejection: Option<String>,
 }
 
 impl NativeControl {
@@ -335,6 +350,7 @@ impl NativeControl {
             rx,
             controls: HashMap::new(),
             agent_targets: HashSet::new(),
+            ended_targets: HashSet::new(),
             ownership: HashMap::new(),
             claims: HashMap::new(),
             uncertain: HashSet::new(),
@@ -344,6 +360,10 @@ impl NativeControl {
             warnings: HashMap::new(),
             shown_warning: None,
             panel: None,
+            panel_buttons: [(Rect::default(), KeyCode::Null); 4],
+            panel_button_target: None,
+            panel_focus: None,
+            panel_help: None,
             call_offset: 0,
             mouse_tail: HashSet::new(),
             view: None,
@@ -359,6 +379,7 @@ impl NativeControl {
             worker: Some(worker),
             auto_acquire: true,
             launched: None,
+            launch_rejection: None,
         })
     }
 
@@ -412,6 +433,7 @@ impl NativeControl {
     }
 
     pub(super) fn launch(&mut self, mut request: Value, status: &mut String) {
+        self.launch_rejection = None;
         request["op"] = json!("acp-open");
         request["controller"] = self.controller.clone();
         if self.submit("", Op::Launch, request, status).is_ok() {
@@ -421,6 +443,10 @@ impl NativeControl {
 
     pub(super) fn take_launched(&mut self) -> Option<Value> {
         self.launched.take()
+    }
+
+    pub(super) fn take_launch_rejection(&mut self) -> Option<String> {
+        self.launch_rejection.take()
     }
 
     pub(super) fn launching(&self) -> bool {
@@ -506,6 +532,12 @@ impl NativeControl {
                 self.agent_targets.insert(id.to_owned());
             }
         }
+        self.ended_targets.retain(|id| {
+            views.iter().any(|view| view["id"] == *id)
+                || snapshot["terminals"]
+                    .as_array()
+                    .is_some_and(|terminals| terminals.iter().any(|terminal| terminal["id"] == *id))
+        });
     }
 
     pub(super) fn acp_grant(&self, id: &str) -> Option<&Value> {
@@ -586,6 +618,9 @@ impl NativeControl {
                                     "{}: current facts refreshed; no input or mutation replayed",
                                     safe(&error.code, 48)
                                 );
+                                if reply.op == Op::Launch {
+                                    self.launch_rejection = Some(error.to_string());
+                                }
                                 if matches!(
                                     error.code.as_str(),
                                     "stale-handle" | "target-ended" | "not-found"
@@ -615,6 +650,7 @@ impl NativeControl {
                             }
                         }
                     }
+                    self.invalidate_changed_owner();
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -626,7 +662,7 @@ impl NativeControl {
                 }
             }
         }
-        if controlled_before && !self.can_input(active) {
+        if controlled_before && !self.can_input(active) && !self.ended_targets.contains(active) {
             *status =
                 "Control unavailable; input blocked; intercepted input was not replayed".into();
         }
@@ -681,6 +717,7 @@ impl NativeControl {
                 for grant in controls {
                     self.cache_grant(grant);
                 }
+                self.invalidate_changed_owner();
             }
             if let Some(states) = value["states"].as_array() {
                 for state in states {
@@ -689,7 +726,13 @@ impl NativeControl {
                     };
                     if state["alive"] == false {
                         self.controls.remove(target);
-                        self.uncertain.insert(target.to_owned());
+                        self.uncertain.remove(target);
+                        self.ended_targets.insert(target.to_owned());
+                        if status
+                            == "Control unavailable; input blocked; intercepted input was not replayed"
+                        {
+                            *status = "Session ended; New starts another session, Close removes its record".into();
+                        }
                         self.warnings.remove(target);
                         if self
                             .panel
@@ -777,7 +820,7 @@ impl NativeControl {
                 *status = if value["mode"] == "forced" {
                     "Forced control: prior calls may still apply; work continues".into()
                 } else {
-                    "Controlled here; intercepted input was not replayed".into()
+                    String::new()
                 };
                 if self
                     .panel
@@ -807,11 +850,11 @@ impl NativeControl {
 
     fn cache_grant(&mut self, grant: &Value) {
         if let Some(terminal) = target_id(grant).filter(|_| grant["control"].is_object()) {
-            if self
-                .controls
-                .get(terminal)
-                .is_some_and(|current| current.handle == grant["control"])
-            {
+            if self.controls.get(terminal).is_some_and(|current| {
+                current.handle == grant["control"]
+                    && current.generation == grant["generation"].as_u64().unwrap_or(0)
+                    && current.action_authority.is_some() == (grant["target"]["kind"] == "acp")
+            }) {
                 return;
             }
             self.controls.insert(
@@ -827,6 +870,7 @@ impl NativeControl {
                     }),
                 }),
             );
+            self.invalidate_changed_owner();
         }
     }
 
@@ -845,9 +889,10 @@ impl NativeControl {
                 || previous["unsettled"] != ownership["unsettled"]
                 || previous["retained_work"] != ownership["retained_work"]
         }) {
-            self.invalidate_force_confirmation();
+            self.invalidate_panel_confirmation();
         }
         self.ownership.insert(terminal.to_owned(), ownership);
+        self.invalidate_changed_owner();
     }
 
     fn accept_offers(&mut self, status: &mut String) {
@@ -940,8 +985,9 @@ impl NativeControl {
         }
         let kind = if self.can_input(target) {
             PanelKind::Owner {
-                claim: None,
-                observed: Value::Null,
+                action: None,
+                presentation: Presentation::Hidden,
+                geometry: None,
             }
         } else if self.claims.get(target).is_some_and(pending) || self.busy.contains(target) {
             PanelKind::Progress
@@ -994,35 +1040,157 @@ impl NativeControl {
                         .unwrap_or("none"),
                     40,
                 ),
-                presentation: ForcePresentation::Hidden,
+                presentation: Presentation::Hidden,
             },
         });
     }
 
-    fn invalidate_force_confirmation(&mut self) {
+    fn invalidate_panel_confirmation(&mut self) {
         if let Some(Panel {
-            kind: PanelKind::Force { presentation, .. },
+            kind: PanelKind::Force { presentation, .. } | PanelKind::Owner { presentation, .. },
             ..
         }) = self.panel.as_mut()
         {
-            *presentation = ForcePresentation::Hidden;
+            *presentation = Presentation::Hidden;
         }
+    }
+
+    fn owner_action_matches(&self, target: &str, action: &OwnerAction) -> bool {
+        self.can_input(target)
+            && action.grant.terminal.as_ref() == target
+            && self
+                .controls
+                .get(target)
+                .is_some_and(|grant| Arc::ptr_eq(grant, &action.grant))
+            && self.ownership.get(target).is_some_and(|ownership| {
+                ownership["observed"] == action.observed
+                    && ownership["owner"] == action.owner
+                    && ownership["owner"]["controller_id"] == self.id
+                    && ownership["observed"]["generation"].as_u64() == Some(action.grant.generation)
+                    && manual_claim(ownership) == action.claim.as_deref()
+            })
+    }
+
+    fn invalidate_changed_owner(&mut self) {
+        let changed = self.panel.as_ref().is_some_and(|panel| {
+            matches!(&panel.kind, PanelKind::Owner { action: Some(action), .. }
+                if !self.owner_action_matches(&panel.target, action))
+        });
+        if changed {
+            self.invalidate_panel_confirmation();
+        }
+    }
+
+    pub(super) fn panel_visible(&self) -> bool {
+        self.panel.is_some()
+    }
+
+    pub(super) fn dismiss_panel(&mut self) {
+        // Leaving presentation is not cancelling a claim or releasing control.
+        self.panel = None;
+        self.panel_help = None;
+        self.panel_focus = None;
+        self.panel_button_target = None;
+        self.panel_buttons.fill((Rect::default(), KeyCode::Null));
     }
 
     /// A visible ownership panel captures all application gestures. Local picker
     /// and selection remain available after Escape; no event is held for replay.
     pub(super) fn panel_event(&mut self, event: &Event, status: &mut String) -> bool {
-        if matches!(event, Event::Resize(..)) {
-            self.invalidate_force_confirmation();
+        if matches!(
+            event,
+            Event::Resize(..) | Event::FocusGained | Event::FocusLost
+        ) {
+            self.invalidate_panel_confirmation();
+            self.panel_buttons.fill((Rect::default(), KeyCode::Null));
+            self.panel_button_target = None;
             return false;
+        }
+        if let Some(help) = self.panel_help.as_mut() {
+            if help.event(event) {
+                self.panel_help = None;
+                self.invalidate_panel_confirmation();
+            }
+            return !matches!(
+                event,
+                Event::Resize(..) | Event::FocusGained | Event::FocusLost
+            );
         }
         let Some(panel) = self.panel.as_ref() else {
             return false;
         };
         let target = panel.target.clone();
         let kind = panel.kind.clone();
+        if let Event::Mouse(mouse) = event
+            && mouse.kind == MouseEventKind::Down(MouseButton::Left)
+        {
+            self.remember_gesture(mouse.kind);
+            if self
+                .panel_button_target
+                .as_ref()
+                .is_some_and(|(id, shown)| id == &target && *shown == std::mem::discriminant(&kind))
+                && let Some((_, code)) = self
+                    .panel_buttons
+                    .iter()
+                    .find(|(rect, _)| rect.contains((mouse.column, mouse.row).into()))
+            {
+                let key =
+                    crossterm::event::KeyEvent::new(*code, crossterm::event::KeyModifiers::NONE);
+                return self.panel_event(&Event::Key(key), status);
+            }
+            return true;
+        }
+        if let Event::Key(key) = event
+            && key.kind == KeyEventKind::Press
+        {
+            if key.code == KeyCode::F(1) {
+                self.panel_help = Some(super::view::Help::new(
+                    "SESSION CONTROL\n\nTab/Shift-Tab focus visible actions; Enter/Space activates the focused action. Mouse buttons perform the same explicit actions.\n\nRequest control cooperatively; Yield accepts the exact displayed ordinary request. Release grants nobody. Both wait for complete current choices, drained old input and an armed repaint. Changed requests, authority or presentation require fresh review; repeated keys never confirm. Keep/Return remain local and preserve human control.\n\nForce only changes ownership: it never interrupts a turn, answers a question or kills a process. The complete current warning must be painted and old input drained before confirmation. A clipped warning cannot grant control.\n\nCancel takeover invalidates old control, grants nobody and retains outstanding calls; it is not cancellation of a turn.\n\nEscape closes help, then returns to viewing without cancelling a claim. The configured mode key or prefix returns to Menu. Detaching never releases ownership or cancels a claim.\n\nInput intercepted while viewing or confirming is consumed, never replayed.",
+                ));
+                self.invalidate_panel_confirmation();
+                return true;
+            }
+            if matches!(key.code, KeyCode::Tab | KeyCode::BackTab) {
+                let count = self
+                    .panel_buttons
+                    .iter()
+                    .filter(|(rect, _)| !rect.is_empty())
+                    .count();
+                if count > 0 {
+                    let reverse = key.code == KeyCode::BackTab
+                        || key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::SHIFT);
+                    self.panel_focus = Some(match self.panel_focus {
+                        Some(index) => (index + if reverse { count - 1 } else { 1 }) % count,
+                        None if reverse => count - 1,
+                        None => 0,
+                    });
+                }
+                return true;
+            }
+            if matches!(key.code, KeyCode::Enter | KeyCode::Char(' '))
+                && let Some(index) = self.panel_focus.take()
+                && let Some((_, code)) = self.panel_buttons.get(index)
+                && *code != key.code
+            {
+                let key =
+                    crossterm::event::KeyEvent::new(*code, crossterm::event::KeyModifiers::NONE);
+                return self.panel_event(&Event::Key(key), status);
+            }
+        }
         match event {
             Event::Key(key) if key.kind != KeyEventKind::Release => {
+                if key.kind != KeyEventKind::Press
+                    && matches!(
+                        &kind,
+                        PanelKind::Owner { .. }
+                            | PanelKind::Force { .. }
+                            | PanelKind::Cancel { .. }
+                    )
+                {
+                    return true;
+                }
                 self.activity(&target, status);
                 if key.code == KeyCode::Esc {
                     self.panel = None;
@@ -1032,7 +1200,7 @@ impl NativeControl {
                     match key.code {
                         KeyCode::Up | KeyCode::PageUp => {
                             self.call_offset = self.call_offset.saturating_sub(1);
-                            self.invalidate_force_confirmation();
+                            self.invalidate_panel_confirmation();
                             return true;
                         }
                         KeyCode::Down | KeyCode::PageDown => {
@@ -1049,7 +1217,7 @@ impl NativeControl {
                                 })
                                 .map_or(0, |calls| calls.len().saturating_sub(1));
                             self.call_offset = self.call_offset.saturating_add(1).min(last);
-                            self.invalidate_force_confirmation();
+                            self.invalidate_panel_confirmation();
                             return true;
                         }
                         _ => {}
@@ -1102,7 +1270,7 @@ impl NativeControl {
                                 target,
                                 kind: PanelKind::Progress,
                             });
-                        } else if !matches!(presentation, ForcePresentation::Confirmable) {
+                        } else if !matches!(presentation, Presentation::Confirmable) {
                             *status = "Force confirmation blocked: wait for Enter Force control, or enlarge a clipped warning".into();
                         } else {
                             let _ = self.submit(
@@ -1118,21 +1286,26 @@ impl NativeControl {
                             );
                         }
                     }
-                    PanelKind::Owner { claim, observed } => {
+                    PanelKind::Owner {
+                        action,
+                        presentation,
+                        ..
+                    } => {
                         if key.code == KeyCode::Char('k') {
-                            self.panel = None;
-                        } else if !self.can_input(&target)
-                            || self
-                                .ownership
-                                .get(&target)
-                                .is_none_or(|ownership| ownership["observed"] != observed)
-                        {
-                            *status = "stale-observation: owner/request changed; review the current panel before acting".into();
-                        } else if let Some(grant) = self.controls.get(&target) {
-                            if key.code == KeyCode::Char('y') && claim.is_some() {
-                                let _ = self.submit(&target, Op::Yield, json!({"op":"control-handle","handle":grant.handle,"method":"yield-to","claim_id":claim}), status);
-                            } else if key.code == KeyCode::Char('r') && claim.is_none() {
-                                let _ = self.submit(&target, Op::Release, json!({"op":"control-handle","handle":grant.handle,"method":"release"}), status);
+                            self.dismiss_panel();
+                        } else if matches!(key.code, KeyCode::Char('y' | 'r')) {
+                            let Some(action) = action else {
+                                return true;
+                            };
+                            if !self.owner_action_matches(&target, &action) {
+                                self.invalidate_panel_confirmation();
+                                *status = "stale-observation: owner/request changed; review the current panel before acting".into();
+                            } else if !matches!(presentation, Presentation::Armed) {
+                                *status = "Owner action blocked: wait for the complete current choices and input to settle".into();
+                            } else if key.code == KeyCode::Char('y') && action.claim.is_some() {
+                                let _ = self.submit(&target, Op::Yield, json!({"op":"control-handle","handle":action.grant.handle,"method":"yield-to","claim_id":action.claim}), status);
+                            } else if key.code == KeyCode::Char('r') && action.claim.is_none() {
+                                let _ = self.submit(&target, Op::Release, json!({"op":"control-handle","handle":action.grant.handle,"method":"release"}), status);
                             }
                         }
                     }
@@ -1259,14 +1432,15 @@ impl NativeControl {
 
     pub(super) fn after_draw(&mut self, status: &mut String) -> bool {
         // The caller reaches this only after a successful frame and drained input.
+        self.invalidate_changed_owner();
         let mut repaint = false;
         if let Some(Panel {
-            kind: PanelKind::Force { presentation, .. },
+            kind: PanelKind::Force { presentation, .. } | PanelKind::Owner { presentation, .. },
             ..
         }) = self.panel.as_mut()
-            && matches!(presentation, ForcePresentation::Drawn)
+            && matches!(presentation, Presentation::Drawn)
         {
-            *presentation = ForcePresentation::Confirmable;
+            *presentation = Presentation::Confirmable;
             repaint = true;
         }
         let ready: Vec<_> = self
@@ -1349,6 +1523,9 @@ impl NativeControl {
     }
 
     fn label(&self, terminal: &str) -> (String, Color) {
+        if self.ended_targets.contains(terminal) {
+            return ("Closed".into(), Color::Gray);
+        }
         if !self.connected || self.uncertain.contains(terminal) {
             return ("? Unknown/resynchronizing".into(), Color::Yellow);
         }
@@ -1377,7 +1554,7 @@ impl NativeControl {
     }
 
     /// Reuses exactly the existing header rectangle; native body coordinates,
-    /// dimensions, mouse origin and the Switch button are untouched.
+    /// dimensions, mouse origin and the Menu button are untouched.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn draw(
         &mut self,
@@ -1387,10 +1564,34 @@ impl NativeControl {
         snapshot: &Value,
         picker: bool,
         query: &str,
+        searching: bool,
         status: &str,
         offset: usize,
     ) {
         if active.is_empty() {
+            self.invalidate_panel_confirmation();
+            self.panel_buttons.fill((Rect::default(), KeyCode::Null));
+            self.panel_button_target = None;
+            return;
+        }
+        if super::window_exited(snapshot, active)
+            && self.panel.is_none()
+            && self.warnings.is_empty()
+        {
+            self.shown_warning = None;
+            return;
+        }
+        // Local ownership is the default, not an overlay. Keep the ordinary
+        // project header unless a control interaction needs attention.
+        if self.can_input(active)
+            && self.panel.is_none()
+            && self.warnings.is_empty()
+            && !self
+                .ownership
+                .get(active)
+                .is_some_and(|o| o["reservation"]["purpose"] == "manual")
+        {
+            self.shown_warning = None;
             return;
         }
         let (label, mut color) = self.label(active);
@@ -1409,7 +1610,12 @@ impl NativeControl {
         let mut hint = if !status.is_empty() {
             safe(status, 180)
         } else if picker {
-            "^Q detach · Esc return · Enter open · ^N new · ^O OMP · ^X close · ^L control · ^F force".into()
+            if geometry.header.width >= 10 {
+                "? help"
+            } else {
+                ""
+            }
+            .into()
         } else if let Some(failure) = failure {
             format!(
                 "{}: {}",
@@ -1425,7 +1631,7 @@ impl NativeControl {
         } else if offset > 0 {
             "scrollback · type to return to live surface".into()
         } else {
-            "Prefix ^L control · Prefix ^F force · Prefix ^Q detach".into()
+            "Open Menu for control actions or help".into()
         };
         if let Some(reservation) = self
             .ownership
@@ -1434,7 +1640,7 @@ impl NativeControl {
             .filter(|r| self.can_input(active) && r["purpose"] == "manual")
         {
             hint = format!(
-                "Control requested by #{} · Prefix ^L respond (typing keeps working)",
+                "Control requested by #{} · Menu: Control to respond (typing keeps working)",
                 safe(reservation["requester_id"].as_str().unwrap_or("?"), 40)
             );
         }
@@ -1482,12 +1688,19 @@ impl NativeControl {
             warning.drawn |= geometry.header.height >= 3
                 && hint.width() <= usize::from(geometry.header.width.saturating_sub(2));
         }
+        let title = if picker && geometry.header.width < 20 {
+            format!("{}MENU", label.split_whitespace().next().unwrap_or("?"))
+        } else if picker {
+            format!(" MENU · {} ", label.split(" · ").next().unwrap_or(&label))
+        } else {
+            format!(" amux · {label} ")
+        };
         let block = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(color))
             .title(super::clip_label(
-                &format!(" amux · {} ", if picker { "WINDOWS" } else { &label }),
+                &title,
                 geometry.header.width.saturating_sub(2),
             ))
             .title_bottom(super::clip_label(
@@ -1497,53 +1710,103 @@ impl NativeControl {
         let inner = block.inner(geometry.header);
         frame.render_widget(Clear, geometry.header);
         frame.render_widget(block, geometry.header);
-        let middle = if picker {
-            format!(
-                " Search {} · {}",
-                safe(
-                    if query.is_empty() {
-                        "name / project / directory / branch"
-                    } else {
-                        query
-                    },
-                    48
-                ),
-                label
-            )
+        if picker {
+            super::view::menu_search(frame, inner, query, color, searching);
         } else {
-            format!(" {} · {}", safe(name, 48), label)
-        };
-        frame.render_widget(
-            Paragraph::new(super::clip_label(&middle, inner.width))
-                .style(Style::default().fg(color)),
-            inner,
-        );
+            let middle = format!(" {} · {}", safe(name, 48), label);
+            frame.render_widget(
+                Paragraph::new(super::clip_label(&middle, inner.width))
+                    .style(Style::default().fg(color)),
+                inner,
+            );
+        }
         if let Some(mut panel) = self.panel.take() {
-            self.draw_panel(frame, geometry.body, &mut panel);
+            if let Some(help) = self.panel_help.as_mut() {
+                if let PanelKind::Force { presentation, .. }
+                | PanelKind::Owner { presentation, .. } = &mut panel.kind
+                {
+                    *presentation = Presentation::Hidden;
+                    self.panel_buttons.fill((Rect::default(), KeyCode::Null));
+                    self.panel_button_target = None;
+                }
+                help.draw(frame, geometry.body);
+            } else {
+                self.draw_panel(frame, geometry.body, &mut panel);
+            }
             self.panel = Some(panel);
         }
     }
 
-    fn draw_panel(&self, frame: &mut Frame<'_>, body: Rect, panel: &mut Panel) {
+    fn draw_panel(&mut self, frame: &mut Frame<'_>, body: Rect, panel: &mut Panel) {
+        self.panel_buttons.fill((Rect::default(), KeyCode::Null));
+        self.panel_button_target = None;
+        if let PanelKind::Owner {
+            action,
+            presentation,
+            geometry,
+        } = &mut panel.kind
+        {
+            if action
+                .as_ref()
+                .is_none_or(|action| !self.owner_action_matches(&panel.target, action))
+            {
+                // Replace the entire intent only while painting fresh choices.
+                // A gesture never adopts a newer claim or borrows a later grant.
+                *action = self
+                    .ownership
+                    .get(&panel.target)
+                    .filter(|ownership| {
+                        self.can_input(&panel.target)
+                            && ownership["owner"]["controller_id"] == self.id
+                            && self.controls.get(&panel.target).is_some_and(|grant| {
+                                ownership["observed"]["generation"].as_u64()
+                                    == Some(grant.generation)
+                            })
+                    })
+                    .and_then(|ownership| {
+                        Some(Arc::new(OwnerAction {
+                            grant: self.controls.get(&panel.target)?.clone(),
+                            observed: ownership["observed"].clone(),
+                            owner: ownership["owner"].clone(),
+                            claim: manual_claim(ownership).map(str::to_owned),
+                        }))
+                    });
+                *presentation = Presentation::Hidden;
+                self.panel_focus = None;
+            }
+            let painted_geometry = (frame.area(), body);
+            if *geometry != Some(painted_geometry) {
+                *geometry = Some(painted_geometry);
+                *presentation = Presentation::Hidden;
+            }
+        }
         // Keep a completed presentation across an unchanged repaint, even if
         // fresh input arrives during it. Facts, resize and scrolling invalidate
         // separately; the fit check below still rejects a clipped warning.
         let was_confirmable = matches!(
             panel.kind,
             PanelKind::Force {
-                presentation: ForcePresentation::Confirmable,
+                presentation: Presentation::Confirmable,
                 ..
             }
         );
-        if let PanelKind::Force { presentation, .. } = &mut panel.kind {
-            *presentation = ForcePresentation::Hidden;
+        let owner_ready = matches!(
+            panel.kind,
+            PanelKind::Owner {
+                presentation: Presentation::Confirmable | Presentation::Armed,
+                ..
+            }
+        );
+        if let PanelKind::Force { presentation, .. } | PanelKind::Owner { presentation, .. } =
+            &mut panel.kind
+        {
+            *presentation = Presentation::Hidden;
         }
         let target = &panel.target;
         let width = body.width.saturating_sub(2).min(86);
         let wrapped_call_rows = 100usize.div_ceil(usize::from(width.saturating_sub(2).max(1)));
         let call_limit = (usize::from(body.height.saturating_sub(12)) / wrapped_call_rows).max(1);
         let mut lines = vec![format!("Terminal #{}", safe(target, 64))];
-        let mut owner_observation = None;
         let title = match &panel.kind {
             PanelKind::Locked => {
                 lines.extend([
@@ -1552,18 +1815,30 @@ impl NativeControl {
                 ]);
                 "Locked terminal"
             }
-            PanelKind::Owner { .. } => {
-                let ownership = self.ownership.get(target);
-                let claim = ownership
-                    .map(|ownership| &ownership["reservation"])
-                    .filter(|reservation| reservation["purpose"] == "manual")
-                    .and_then(|reservation| reservation["claim_id"].as_str());
-                owner_observation = ownership.map(|ownership| (claim, &ownership["observed"]));
-                if let Some(claim) = claim {
-                    lines.push(format!("Ordinary request #{}", safe(claim, 48)));
-                    lines.push("y Yield to this request · k Keep working · Esc Return".into());
+            PanelKind::Owner { action, .. } => {
+                if let Some(action) = action {
+                    if let Some(claim) = &action.claim {
+                        lines.push(format!("Ordinary request #{}", safe(claim, 48)));
+                        lines.push(
+                            if owner_ready {
+                                "y Yield to this request · k Keep working · Esc Return"
+                            } else {
+                                "Preparing Yield · k Keep working · Esc Return"
+                            }
+                            .into(),
+                        );
+                    } else {
+                        lines.push(
+                            if owner_ready {
+                                "r Release (grants nobody) · k Keep working · Esc Return"
+                            } else {
+                                "Preparing Release (grants nobody) · k Keep working · Esc Return"
+                            }
+                            .into(),
+                        );
+                    }
                 } else {
-                    lines.push("r Release (grants nobody) · k Keep working · Esc Return".into());
+                    lines.push("Owner state unavailable · k Keep working · Esc Return".into());
                 }
                 "Control owned here"
             }
@@ -1601,10 +1876,11 @@ impl NativeControl {
                 "Force control?"
             }
         };
+        // Reserve the border and a boxed action row as well as warning text.
         let height = body
             .height
             .saturating_sub(2)
-            .min((lines.len() * 2 + 2) as u16);
+            .min((lines.len() * 2 + 5) as u16);
         if width < 4 || height < 3 {
             return;
         }
@@ -1616,41 +1892,107 @@ impl NativeControl {
         );
         let paragraph = Paragraph::new(lines.join("\n")).wrap(Wrap { trim: false });
         // Measure the same wrapping at the interior width, without border rows.
-        let force_visible = matches!(panel.kind, PanelKind::Force { .. })
-            && paragraph.line_count(width - 2) <= usize::from(height - 2);
+        let actions: [(&str, KeyCode); 4] = match &panel.kind {
+            PanelKind::Locked => [
+                ("Request control", KeyCode::Enter),
+                ("Keep viewing", KeyCode::Esc),
+                ("Help", KeyCode::F(1)),
+                ("", KeyCode::Null),
+            ],
+            PanelKind::Owner { action, .. } => [
+                (
+                    if !owner_ready {
+                        "Preparing…"
+                    } else if action.as_ref().is_some_and(|action| action.claim.is_some()) {
+                        "Yield"
+                    } else {
+                        "Release"
+                    },
+                    if action.as_ref().is_some_and(|action| action.claim.is_some()) {
+                        KeyCode::Char('y')
+                    } else {
+                        KeyCode::Char('r')
+                    },
+                ),
+                ("Keep working", KeyCode::Char('k')),
+                ("Return", KeyCode::Esc),
+                ("Help", KeyCode::F(1)),
+            ],
+            PanelKind::Progress => [
+                ("Cancel takeover…", KeyCode::Char('c')),
+                ("Force…", KeyCode::Char('f')),
+                ("Keep waiting", KeyCode::Esc),
+                ("Help", KeyCode::F(1)),
+            ],
+            PanelKind::Cancel { .. } => [
+                ("Cancel takeover", KeyCode::Enter),
+                ("Keep waiting", KeyCode::Esc),
+                ("Help", KeyCode::F(1)),
+                ("", KeyCode::Null),
+            ],
+            PanelKind::Force { .. } => [
+                (
+                    if was_confirmable {
+                        "Force control"
+                    } else {
+                        "Preparing…"
+                    },
+                    KeyCode::Enter,
+                ),
+                ("Keep viewing", KeyCode::Esc),
+                ("Help", KeyCode::F(1)),
+                ("", KeyCode::Null),
+            ],
+        };
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(2),
+        );
+        let (buttons, content) =
+            super::view::action_buttons(inner, actions.map(|(label, _)| label), 1);
+        let complete_visible = paragraph.line_count(content.width.max(1))
+            <= usize::from(content.height)
+            && !buttons[0].is_empty()
+            && usize::from(buttons[0].width.saturating_sub(if buttons[0].height >= 3 {
+                2
+            } else {
+                0
+            })) >= actions[0].0.width();
         frame.render_widget(Clear, area);
         frame.render_widget(
-            paragraph.block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(Color::Yellow)),
-            ),
+            Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .border_style(Style::default().fg(Color::Yellow)),
             area,
         );
-        if force_visible && let PanelKind::Force { presentation, .. } = &mut panel.kind {
+        frame.render_widget(paragraph, content);
+        self.panel_button_target = Some((target.to_owned(), std::mem::discriminant(&panel.kind)));
+        for (index, (rect, (label, code))) in buttons.into_iter().zip(actions).enumerate() {
+            self.panel_buttons[index] = (rect, code);
+            super::view::button(frame, rect, label, self.panel_focus == Some(index));
+        }
+        if complete_visible && let PanelKind::Force { presentation, .. } = &mut panel.kind {
             *presentation = if was_confirmable {
-                ForcePresentation::Confirmable
+                Presentation::Confirmable
             } else {
-                ForcePresentation::Drawn
+                Presentation::Drawn
             };
         }
-        if let (
-            Some((claim, observed)),
-            PanelKind::Owner {
-                claim: displayed_claim,
-                observed: displayed_observed,
-            },
-        ) = (owner_observation, &mut panel.kind)
+        if complete_visible
+            && let PanelKind::Owner {
+                action: Some(_),
+                presentation,
+                ..
+            } = &mut panel.kind
         {
-            // Only an actually drawn ordinary response panel may change the
-            // displayed intent. Force and Cancel keep their captured targets.
-            if displayed_claim.as_deref() != claim {
-                *displayed_claim = claim.map(str::to_owned);
-            }
-            if *displayed_observed != *observed {
-                *displayed_observed = observed.clone();
-            }
+            *presentation = if owner_ready {
+                Presentation::Armed
+            } else {
+                Presentation::Drawn
+            };
         }
     }
 
@@ -1766,6 +2108,12 @@ fn target_id(value: &Value) -> Option<&str> {
     } else {
         value["terminal"].as_str()
     }
+}
+
+fn manual_claim(ownership: &Value) -> Option<&str> {
+    (ownership["reservation"]["purpose"] == "manual")
+        .then(|| ownership["reservation"]["claim_id"].as_str())
+        .flatten()
 }
 
 fn addressed(mut value: Value, id: &str, acp: bool) -> Value {
@@ -1930,6 +2278,359 @@ mod tests {
     use std::io::{BufRead, BufReader, Write};
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::net::UnixListener;
+
+    struct OwnerHarness {
+        native: NativeControl,
+        work: Receiver<Work>,
+        _peer: UnixStream,
+        _replies: mpsc::Sender<Reply>,
+        status: String,
+    }
+
+    impl OwnerHarness {
+        fn new(claim: Option<&str>) -> Self {
+            let (tx, work) = mpsc::sync_channel(128);
+            let (replies, rx) = mpsc::channel();
+            let (stream, peer) = UnixStream::pair().unwrap();
+            let mut native = NativeControl {
+                controller: json!({"ref":"owner-controller"}),
+                id: "owner-controller".into(),
+                tx,
+                rx,
+                controls: HashMap::new(),
+                agent_targets: HashSet::from(["owner-target".into()]),
+                ended_targets: HashSet::new(),
+                ownership: HashMap::new(),
+                claims: HashMap::new(),
+                uncertain: HashSet::new(),
+                attempted: HashSet::new(),
+                busy: HashSet::new(),
+                offers: HashSet::new(),
+                warnings: HashMap::new(),
+                shown_warning: None,
+                panel: None,
+                panel_buttons: [(Rect::default(), KeyCode::Null); 4],
+                panel_button_target: None,
+                panel_focus: None,
+                panel_help: None,
+                call_offset: 0,
+                mouse_tail: HashSet::new(),
+                view: None,
+                serial: 0,
+                acknowledged_serial: 0,
+                refresh_pending: false,
+                refreshed: Instant::now(),
+                connected: true,
+                stop: Arc::new(AtomicBool::new(false)),
+                heartbeat: Arc::new(parking_lot::Mutex::new(SystemTime::now())),
+                stream,
+                socket: std::path::PathBuf::new(),
+                worker: None,
+                auto_acquire: false,
+                launched: None,
+                launch_rejection: None,
+            };
+            native.cache_grant(&Self::grant("original-control", 1));
+            native.observe("owner-target", Self::ownership(claim, 1));
+            let mut status = String::new();
+            native.open("owner-target", false, &mut status);
+            Self {
+                native,
+                work,
+                _peer: peer,
+                _replies: replies,
+                status,
+            }
+        }
+
+        fn grant(reference: &str, generation: u64) -> Value {
+            json!({
+                "target":{"kind":"acp","id":"owner-target"},
+                "control":{"ref":reference},"generation":generation
+            })
+        }
+
+        fn ownership(claim: Option<&str>, generation: u64) -> Value {
+            json!({
+                "target":{"kind":"acp","id":"owner-target"},
+                "observed":{"generation":generation,"reservation_id":claim},
+                "owner":{"controller_id":"owner-controller","role":"attachment","label":"human"},
+                "reservation":claim.map(|claim| json!({
+                    "claim_id":claim,"requester_id":"external-controller",
+                    "purpose":"manual","phase":"waiting"
+                })),
+                "settlement_boundary":"input-admission","retained_work":[]
+            })
+        }
+
+        fn paint(&mut self, width: u16, height: u16) {
+            let mut terminal =
+                ratatui::Terminal::new(ratatui::backend::TestBackend::new(width, height)).unwrap();
+            terminal
+                .draw(|frame| {
+                    let geometry = super::super::view::geometry(frame.area());
+                    self.native.draw(
+                        frame,
+                        geometry,
+                        "owner-target",
+                        &json!({"agent_views":[{"id":"owner-target","name":"human session"}]}),
+                        false,
+                        "",
+                        false,
+                        &self.status,
+                        0,
+                    );
+                })
+                .unwrap();
+        }
+
+        fn input_empty(&mut self) {
+            self.native.after_draw(&mut self.status);
+        }
+
+        fn arm(&mut self) {
+            self.paint(110, 28);
+            self.input_empty();
+            self.paint(110, 28);
+        }
+
+        fn key(&mut self, code: KeyCode, kind: KeyEventKind) {
+            self.native.panel_event(
+                &Event::Key(crossterm::event::KeyEvent::new_with_kind(
+                    code,
+                    crossterm::event::KeyModifiers::NONE,
+                    kind,
+                )),
+                &mut self.status,
+            );
+        }
+
+        fn first_button(&mut self) {
+            let area = self.native.panel_buttons[0].0;
+            if !area.is_empty() {
+                self.native.panel_event(
+                    &Event::Mouse(crossterm::event::MouseEvent {
+                        kind: MouseEventKind::Down(MouseButton::Left),
+                        column: area.x + area.width / 2,
+                        row: area.y + area.height / 2,
+                        modifiers: crossterm::event::KeyModifiers::NONE,
+                    }),
+                    &mut self.status,
+                );
+            }
+        }
+
+        fn mutations(&self) -> Vec<Value> {
+            self.work
+                .try_iter()
+                .filter_map(|work| match work {
+                    Work::Rpc {
+                        op: Op::Yield | Op::Release,
+                        request,
+                        ..
+                    } => Some(request),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        fn assert_blocked(&mut self) {
+            for code in [KeyCode::Char('y'), KeyCode::Char('r')] {
+                self.key(code, KeyEventKind::Press);
+                self.key(code, KeyEventKind::Repeat);
+            }
+            if self.native.panel_focus.is_none() {
+                self.key(KeyCode::Tab, KeyEventKind::Press);
+            }
+            self.key(KeyCode::Enter, KeyEventKind::Repeat);
+            self.key(KeyCode::Char(' '), KeyEventKind::Repeat);
+            self.key(KeyCode::Enter, KeyEventKind::Press);
+            self.key(KeyCode::Char(' '), KeyEventKind::Press);
+            self.first_button();
+            assert!(
+                self.mutations().is_empty(),
+                "unsettled Owner gesture mutated control"
+            );
+        }
+    }
+
+    #[test]
+    fn owner_yield_and_release_need_empty_then_an_armed_exact_presentation() {
+        for claim in [None, Some("manual-request")] {
+            for route in 0..4 {
+                let mut harness = OwnerHarness::new(claim);
+                harness.assert_blocked();
+                harness.paint(110, 28);
+                harness.paint(110, 28);
+                harness.assert_blocked();
+                harness.input_empty();
+                harness.assert_blocked();
+                harness.paint(110, 28);
+                let code = KeyCode::Char(if claim.is_some() { 'y' } else { 'r' });
+                if harness.native.panel_focus.is_none() {
+                    harness.key(KeyCode::Tab, KeyEventKind::Press);
+                }
+                harness.key(code, KeyEventKind::Repeat);
+                harness.key(KeyCode::Enter, KeyEventKind::Repeat);
+                harness.key(KeyCode::Char(' '), KeyEventKind::Repeat);
+                assert!(
+                    harness.mutations().is_empty(),
+                    "Repeat granted Owner consent"
+                );
+                match route {
+                    0 => harness.key(code, KeyEventKind::Press),
+                    1 => harness.key(KeyCode::Enter, KeyEventKind::Press),
+                    2 => harness.key(KeyCode::Char(' '), KeyEventKind::Press),
+                    _ => harness.first_button(),
+                }
+                let requests = harness.mutations();
+                assert_eq!(requests.len(), 1);
+                assert_eq!(requests[0]["handle"], json!({"ref":"original-control"}));
+                if let Some(claim) = claim {
+                    assert_eq!(requests[0]["method"], "yield-to");
+                    assert_eq!(requests[0]["claim_id"], claim);
+                } else {
+                    assert_eq!(requests[0]["method"], "release");
+                    assert!(requests[0].get("claim_id").is_none());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn owner_claim_arrival_replacement_and_withdrawal_cannot_rebase_consent() {
+        for (before, after) in [
+            (None, Some("first-request")),
+            (Some("first-request"), Some("second-request")),
+            (Some("first-request"), None),
+        ] {
+            let mut harness = OwnerHarness::new(before);
+            harness.arm();
+            harness
+                .native
+                .observe("owner-target", OwnerHarness::ownership(after, 1));
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.assert_blocked();
+            harness.input_empty();
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.first_button();
+            let requests = harness.mutations();
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0]["handle"], json!({"ref":"original-control"}));
+            if let Some(claim) = after {
+                assert_eq!(requests[0]["method"], "yield-to");
+                assert_eq!(requests[0]["claim_id"], claim);
+            } else {
+                assert_eq!(requests[0]["method"], "release");
+            }
+        }
+    }
+
+    #[test]
+    fn owner_presentation_is_invalidated_by_cover_geometry_and_transient_authority_changes() {
+        for transition in 0..8 {
+            let mut harness = OwnerHarness::new(Some("manual-request"));
+            harness.arm();
+            match transition {
+                0 => {
+                    harness
+                        .native
+                        .panel_event(&Event::Resize(110, 28), &mut harness.status);
+                }
+                1 => harness.paint(109, 28),
+                2 => harness.paint(6, 5),
+                3 => {
+                    harness.key(KeyCode::F(1), KeyEventKind::Press);
+                    harness.paint(110, 28);
+                    harness.key(KeyCode::Esc, KeyEventKind::Press);
+                }
+                4 => {
+                    harness
+                        .native
+                        .panel_event(&Event::FocusLost, &mut harness.status);
+                }
+                5 => {
+                    harness.native.received(
+                        "",
+                        Op::Refresh,
+                        json!({"private":{"controls":[]},"states":[]}),
+                        &mut harness.status,
+                    );
+                    harness
+                        .native
+                        .cache_grant(&OwnerHarness::grant("original-control", 1));
+                }
+                6 => {
+                    harness.native.observe(
+                        "owner-target",
+                        OwnerHarness::ownership(Some("intervening-request"), 1),
+                    );
+                    harness.native.observe(
+                        "owner-target",
+                        OwnerHarness::ownership(Some("manual-request"), 1),
+                    );
+                }
+                _ => {
+                    let mut ownership = OwnerHarness::ownership(Some("manual-request"), 1);
+                    ownership["owner"]["label"] = json!("changed human owner facts");
+                    harness.native.observe("owner-target", ownership);
+                }
+            }
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.assert_blocked();
+            harness.input_empty();
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.key(KeyCode::Char('y'), KeyEventKind::Press);
+            let requests = harness.mutations();
+            assert_eq!(requests.len(), 1, "transition {transition} did not rearm");
+            assert_eq!(requests[0]["claim_id"], "manual-request");
+        }
+    }
+
+    #[test]
+    fn owner_gesture_never_borrows_a_replacement_grant_or_generation() {
+        for generation in [1, 2] {
+            let mut harness = OwnerHarness::new(Some("manual-request"));
+            harness.arm();
+            harness
+                .native
+                .cache_grant(&OwnerHarness::grant("replacement-control", generation));
+            harness.native.observe(
+                "owner-target",
+                OwnerHarness::ownership(Some("manual-request"), generation),
+            );
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.assert_blocked();
+            harness.input_empty();
+            harness.assert_blocked();
+            harness.paint(110, 28);
+            harness.key(KeyCode::Char('y'), KeyEventKind::Press);
+            let requests = harness.mutations();
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0]["handle"], json!({"ref":"replacement-control"}));
+            assert_eq!(requests[0]["claim_id"], "manual-request");
+        }
+    }
+
+    #[test]
+    fn owner_keep_and_return_remain_local_before_consent_is_armed() {
+        for code in [KeyCode::Char('k'), KeyCode::Esc] {
+            let mut harness = OwnerHarness::new(Some("manual-request"));
+            harness.key(code, KeyEventKind::Press);
+            assert!(harness.native.panel.is_none());
+            assert!(harness.native.can_input("owner-target"));
+            assert_eq!(
+                manual_claim(&harness.native.ownership["owner-target"]),
+                Some("manual-request")
+            );
+            assert!(harness.mutations().is_empty());
+        }
+    }
 
     #[test]
     fn e06s03_queued_native_launch_is_fenced_by_observation_loss() {

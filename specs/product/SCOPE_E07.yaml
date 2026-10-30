@@ -1,0 +1,41 @@
+initiative: e07-modal-ux
+status: verified-local-not-installed
+core_value: Operate amux with discoverable modal controls while leaving native sessions unobstructed and preserving authoritative same-instance agent interaction.
+summary: >-
+  User approved all eight recommendations from the actual isolated UX walkthrough and added modal navigation.
+  Keep the native full-terminal/Menu structure and existing broker. Rework the ACP presentation, not its transport or authority model.
+  Session mode passes application input unchanged except deliberate configurable wrapper keys; Menu is navigation mode and text entry is explicit.
+in_scope:
+  - {story: e07s01, requirement: Configurable F12 mode key plus retained prefix; plain-letter Menu navigation/actions, explicit search and literal text fields, safe reserved-key pass-through}
+  - {story: e07s02, requirement: Conversation-first responsive ACP layout, diagnostic Details, usable question and permission cards with explicit validated actions}
+  - {story: e07s03, requirement: Confirm live close, distinguish detach and exited-record removal, useful session names and rename, type markers and leaf-preserving paths}
+  - {story: e07s04, requirement: Visible Terminal/ACP creation with explicit current-project versus independent-project placement}
+  - {story: e07s05, requirement: Structured project name/hooks/recipes editing with exact authoritative saved-directory preview}
+  - {story: e07s06, requirement: Consistent focus, mouse actions, contextual help and Escape; canonical work/attention states and truthful normal exits}
+out_of_scope:
+  - {item: PTY/ACP/broker rewrite or new protocol, why: Existing transport and authoritative same-instance contracts are retained}
+  - {item: Global daemon/config/auth changes or OS keyboard remapping, why: Not authorized; only isolated local verification is allowed}
+  - {item: New live-provider runs, why: Existing aggregate provider budget is exhausted and this UI work is demonstrable with deterministic real ACP peers}
+  - {item: Commit/merge/push/install/release, why: Requires a separate current delivery request}
+  - {item: Native unknown-settlement repair and e05 implementation, why: Existing explicit historical limitation and parked initiative remain unchanged}
+  - {item: Auto-answer, auto-force, implicit reacquisition or intercepted-input replay, why: Violates preserved interaction and ownership safety contracts}
+constraints:
+  - Preserve stock Zsh, native OMP, original ACP tuple/RPC identities, force/cancel/conditional-control semantics and all historical review counters.
+  - Ordinary Esc, j and k remain native application input in session mode; Menu letters are commands only outside explicit text entry.
+  - F12 is not an ASCII control character but is an application-bindable escape sequence; reserve it explicitly, allow function-key configuration and deliberate gated pass-through.
+  - No automatic permission selection, premium/model fallback, inferred application acknowledgement or silently filtered/truncated edits.
+  - Runtime session names/state stay in daemon memory; only existing configuration/project bookmarks persist.
+  - Changes extend the existing feature branch and preserve earlier uncommitted repairs; parent exclusively owns shared routing, integration, verification and saved-state updates.
+success_criteria:
+  - Private actual TUI proves modal navigation versus literal search/form/session text, reserved-key pass-through and no covered-input replay.
+  - ACP content, current question and usable explicit controls remain visible at normal and 80x14 layouts; smaller layouts expose scrolling instead of silently hiding active content.
+  - Actual native and ACP close cancel/confirm, rename and launch placement preserve exact identities until explicitly closed.
+  - Project name/hooks/recipes edit without raw JSON; preview is authoritative and a changed directory cannot silently save a different bookmark.
+  - Menu and ACP attention reflect pending questions/permissions, working/completed/failed states without hiding genuine safety failures.
+  - Affected existing regression boundaries, full project checks, stock OMP/Zsh and normal owned process/PTY/socket/root cleanup pass before tasks are marked passing.
+references:
+  - ../epics/e07-modal-ux/PLAN.md
+  - ../verifications/responsive-menu.json
+  - ../verifications/menu-projects.json
+  - ../security/epics/e06/THREAT_MODEL.md
+  - ../verifications/e06-omp-live-final.json

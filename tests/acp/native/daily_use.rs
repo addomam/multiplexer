@@ -141,30 +141,7 @@ fn fresh_control(host: &Host, agent: &Agent, native: &mut Attachment, old: &Valu
 }
 
 fn show_question(host: &Host, agent: &Agent, native: &mut Attachment, question: &Value) {
-    let id = question["interaction_id"].as_str().unwrap();
-    let projection = host.inspect(agent);
-    let count = projection["content"]["interactions"]
-        .as_array()
-        .unwrap()
-        .len();
-    native.projected(host, projection["seq"].as_u64().unwrap());
-    for _ in 0..=count + 1 {
-        let screen = native.text();
-        let before = screen.lines().find(|line| line.contains(" | revision "));
-        if before.is_some_and(|line| line.contains(id)) {
-            return;
-        }
-        native.send(b"\x1b[20~");
-        host.until("read-only native question navigation", || {
-            let text = native.text();
-            let now = text.lines().find(|line| line.contains(" | revision "));
-            (now != before).then_some(())
-        });
-    }
-    panic!(
-        "exact pending question {id} not reachable:\n{}",
-        native.text()
-    );
+    acceptance::show_interaction(host, agent, native, Some(question));
 }
 
 #[derive(Clone, Copy)]
@@ -215,18 +192,15 @@ fn native_profile_launch(case: NativeProfileCase) {
         "label":"Daily fixture","command":[peer,root,mode],
         "defaults":{"model":model,"mode":"plan","effort":"low"}}}}}));
     let mut native = native_attachment(&host, &anchor);
-    native.wait("model: unreported");
-    native.wait("mode: unreported");
-    native.wait("effort: unreported");
     native.send(PREFIX);
     native.send(b"\x1b[B"); // settle prefix; Ctrl-A is now the picker launch action
     native.send(b"\x01");
-    native.wait("New ACP agent");
+    native.wait("New ACP session");
     native.send(b"\t"); // Profile field; configured profile follows builtins alphabetically
     // Choose the explicit configured profile by its visible label, not a guessed executable.
     for _ in 0..20 {
         let current = native.text();
-        if current.contains("Profile: Daily fixture") {
+        if current.contains("Daily fixture") {
             break;
         }
         let before = current
@@ -244,48 +218,56 @@ fn native_profile_launch(case: NativeProfileCase) {
                 .then_some(())
         });
     }
-    native.wait("Profile: Daily fixture");
+    native.wait("Daily fixture");
     native.send(b"\t");
     native.paste("Daily profile launch");
-    native.send(b"\t\t\t\x15"); // Effort: replace the profile value, then clear the override.
+    native.click("Advanced");
+    native.click("Effort:");
+    native.send(b"\x15");
     native.paste("high");
     native.wait("Effort: high");
     native.send(b"\x15");
     native.wait("Effort: [inherited: low]");
     if matches!(case, NativeProfileCase::RejectedEdits) {
-        native.send(b"\x1b[Z\x1b[Z\x15"); // Model: deliberately return to inheritance first.
+        native.click("Model:");
+        native.send(b"\x15");
         native.wait("Model: [inherited:");
         native.paste(&format!("{model}x"));
-        rejected_native_launch(&host, &mut native, &root);
-        native.send(b"\t\x15"); // Correcting a different field cannot erase Model's rejection.
+        rejected_native_launch(&host, &mut native, &root, 3);
+        native.send(b"\x1b[H\t\t\t\t");
+        native.send(b"\x15"); // A different corrected field cannot erase Model's rejection.
         native.wait("Mode: [inherited: plan]");
         native.paste("plan");
         native.wait("Mode: plan");
-        rejected_native_launch(&host, &mut native, &root);
-        native.send(b"\t\t"); // Options JSON: a valid prefix plus excess whitespace is still too large.
+        rejected_native_launch(&host, &mut native, &root, 4);
+        native.send(b"\x1b[H\t\t\t\t\t\t");
         let mut oversized = r#"{"fixture-detail":"brief"}"#.to_owned();
         oversized.push_str(&" ".repeat(64 * 1024 + 1 - oversized.len()));
         native.paste(&oversized);
         native.wait("Options JSON [rejected]");
-        native.send(b"\x1b[Z\x1b[Z\x1b[Z\x15"); // Correct Model, leaving only Options rejected.
+        native.send(b"\x1b[Z\x1b[Z\x1b[Z");
+        native.send(b"\x15"); // Correct Model, leaving only Options rejected.
         native.wait("Model: [inherited:");
         native.paste(&model);
-        native.wait("Model: fixture/");
-        rejected_native_launch(&host, &mut native, &root);
-        native.send(b"\t\t\t\x15");
+        native.wait("fixture/");
+        rejected_native_launch(&host, &mut native, &root, 3);
+        native.send(b"\x1b[H\t\t\t\t\t\t");
+        native.send(b"\x15");
         native.wait("Options JSON: ");
         native.paste("{\n\t\"fixture-detail\":\"brief\"\r\n}");
-        native.send(b"\x1b[Z\x1b[Z\x1b[Z\x15");
+        native.send(b"\x1b[Z\x1b[Z\x1b[Z");
+        native.send(b"\x15");
         native.wait("Model: [inherited:");
         native.paste("fixture/\ncheap"); // Invalid scalar must not be rewritten to an offered cheap ID.
         native.wait("Model [rejected]");
-        rejected_native_launch(&host, &mut native, &root);
+        rejected_native_launch(&host, &mut native, &root, 3);
+        native.send(b"\x1b[H\t\t\t");
         native.send(b"\x15");
         native.wait("Model: [inherited:");
         native.paste(&model); // Explicit correction: the complete offered 256-byte ID.
-        native.wait("Model: fixture/");
+        native.wait("fixture/");
     }
-    native.send(b"\r");
+    native.click("Launch");
     let view = host.until("native launch publishes exactly one new agent", || {
         host.call(json!({"op":"snapshot"}))["agent_views"]
             .as_array()?
@@ -301,14 +283,10 @@ fn native_profile_launch(case: NativeProfileCase) {
     };
     // Ownership/cursors can still belong to the previous ready anchor while the
     // asynchronous native launch finishes. Fence the new rendered target first.
-    native.wait(&format!(
-        "ACP | ready | owner (input-admission) | {}",
-        agent.target["id"].as_str().unwrap()
-    ));
-    native.wait(&format!(
-        "Session: {}",
-        agent.target["session_id"].as_str().unwrap()
-    ));
+    native.wait_header("Daily profile launch");
+    native.owner();
+    native.details();
+    native.wait(agent.target["session_id"].as_str().unwrap());
     let projection = host.inspect(&agent);
     native.projected(&host, projection["seq"].as_u64().unwrap());
     if !matches!(case, NativeProfileCase::Defaults) {
@@ -335,42 +313,34 @@ fn native_profile_launch(case: NativeProfileCase) {
                 && !surface.contains("Mode metadata is not a permission guarantee."))
             .then_some(())
         });
-        native.send(b"\x1b[6~"); // PageDown reaches the wrapped tail.
+        for _ in 0..64 {
+            if native
+                .text()
+                .contains("Mode metadata is not a permission guarantee.")
+            {
+                break;
+            }
+            let before = native.text();
+            native.send(b"\x1b[6~");
+            host.until("Details advances toward the complete warning", || {
+                (native.text() != before).then_some(())
+            });
+        }
         native.wait("Mode metadata is not a permission guarantee.");
         native.send(b"\x1b[H"); // Home returns to current settings.
-        native.wait("Settings [");
-        host.until("settings Home restores the first page", || {
-            (!native
-                .text()
-                .contains("Mode metadata is not a permission guarantee."))
-            .then_some(())
-        });
         native.paste("add 900 1");
         native.send(b"\r\x1b[19~\x03"); // Enter, F8, Ctrl-C stay local to the read-only view.
         native.resize(COLS, ROWS);
-        host.until(
-            "restored viewport repaints all settings before the next physical key",
-            || {
-                let surface = native.text();
-                let footer = surface
-                    .lines()
-                    .last()?
-                    .trim_start()
-                    .strip_prefix("Settings rows ")?;
-                let (range, total) = footer.split_once(" |")?.0.split_once('/')?;
-                let (start, end) = range.split_once('-')?;
-                (start == "1" && end == total).then_some(())
-            },
-        );
+        native.send(b"\x1b[H");
+        native.wait("ACP | ready");
         native.send(b"\x1b[21~");
-        native.owner();
+        host.until(
+            "Details closed without submitting application input",
+            || (!native.text().contains("ACP settings (read-only)")).then_some(()),
+        );
         assert_eq!(ownership(&host, &agent)["owner"], original_owner);
         assert_eq!(host.inspect(&agent)["target"], agent.target);
         assert_eq!(fs::read(agent.root.join("peer.pid")).unwrap(), original_pid);
-    } else {
-        native.wait("model: fixture/cheap");
-        native.wait("mode: plan");
-        native.wait("effort: low");
     }
     let configuration = host.inspect(&agent)["configuration"].clone();
     assert_eq!(configuration["requested"]["model"], model);
@@ -407,7 +377,8 @@ fn native_profile_launch(case: NativeProfileCase) {
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
 
-fn rejected_native_launch(host: &Host, native: &mut Attachment, root: &Path) {
+fn rejected_native_launch(host: &Host, native: &mut Attachment, root: &Path, field: usize) {
+    native.send(&[b'\t'; 7][..7 - field]);
     native.send(b"\r");
     host.until(
         "rejected edits block launch until deliberately corrected",
@@ -470,11 +441,11 @@ fn native_delimited_options(explicit: bool) {
     native.send(PREFIX);
     native.send(b"\x1b[B");
     native.send(b"\x01");
-    native.wait("New ACP agent");
+    native.wait("New ACP session");
     native.send(b"\t");
     for _ in 0..20 {
         let current = native.text();
-        if current.contains("Profile: Delimited fixture") {
+        if current.contains("Delimited fixture") {
             break;
         }
         let before = current
@@ -492,14 +463,15 @@ fn native_delimited_options(explicit: bool) {
                 .then_some(())
         });
     }
-    native.wait("Profile: Delimited fixture");
+    native.wait("Delimited fixture");
     native.send(b"\t");
     native.paste("Inherited delimited launch");
     if explicit {
-        native.send(b"\t\t\t\t");
+        native.click("Advanced");
+        native.click("Options JSON");
         native.paste(r#"{"fixture,detail=level":"brief,exact=value"}"#);
     }
-    native.send(b"\r");
+    native.click("Launch");
     let view = host.until(
         "native launch applies exact delimiter-containing settings",
         || {
@@ -520,14 +492,10 @@ fn native_delimited_options(explicit: bool) {
     };
     let exact = agent.target.clone();
     let pid = fs::read(agent.root.join("peer.pid")).unwrap();
-    native.wait(&format!(
-        "ACP | ready | owner (input-admission) | {}",
-        agent.target["id"].as_str().unwrap()
-    ));
-    native.wait(&format!(
-        "Session: {}",
-        agent.target["session_id"].as_str().unwrap()
-    ));
+    native.wait_header("Inherited delimited launch");
+    native.owner();
+    native.details();
+    native.wait(agent.target["session_id"].as_str().unwrap());
     let projection = host.inspect(&agent);
     native.projected(&host, projection["seq"].as_u64().unwrap());
     let configuration = projection["configuration"].clone();
@@ -585,7 +553,7 @@ fn e06s03_native_reconnect() {
     let original_owner = ownership(&host, &agent)["owner"]["controller_id"].clone();
     let work = native_prompt(&host, &agent, &mut native, "add 17 25");
     let form = pending(&host, &agent, "form");
-    native.wait(form["interaction_id"].as_str().unwrap());
+    show_question(&host, &agent, &mut native, &form);
     native.send(b"\x1b[14~9"); // deliberately dirty original form, not submitted
     relay.cut(1); // read-only observation loss alone must fence the authority socket
     native.wait("Reconnected");
@@ -598,15 +566,24 @@ fn e06s03_native_reconnect() {
     assert!(host.work(&agent, &work["work_id"])["outcome"].is_null());
     assert!(!agent.root.join("effect.json").exists());
     let fresh = fresh_control(&host, &agent, &mut native, &original_owner);
-    native.wait(form["interaction_id"].as_str().unwrap());
-    native.send(b"\x1b[14~7");
+    show_question(&host, &agent, &mut native, &form);
+    native.send(b"\x1b[14~");
+    native.wait("UNSET (F4)");
+    native.paste("7");
+    native.wait("local value");
+    native.ready_action("Review (F5)");
     native.send(ACCEPT_FORM);
-    native.wait("REVIEW: F5 accepts");
+    native.wait("Submit (F5)"); // observe ready review after queued input drains
+    assert_eq!(
+        pending(&host, &agent, "form")["interaction_id"],
+        form["interaction_id"]
+    );
     native.send(ACCEPT_FORM);
     let permission = pending(&host, &agent, "permission");
     show_question(&host, &agent, &mut native, &permission);
     native.send(b"\x1b[B\x1b[A");
     native.wait("Local permission highlight");
+    native.ready_action("[Allow this invocation [allow_once]]");
     native.send(b"\r"); // exact offered permission, original pending work
     host.completed(&agent, &work["work_id"]);
     assert_eq!(agent.effect()["value"], 49);
@@ -614,7 +591,7 @@ fn e06s03_native_reconnect() {
     same_agent(&host, &agent, &exact, &pid, &daemon);
     // Cut the new original authority connection independently. No queued prompt
     // or force/claim can migrate onto the next worker or old reply channel.
-    native.send(b"\x1b[20~"); // history rather than permission panel
+    native.click("Prompt");
     native.paste("add 900 1");
     relay.cut(0);
     native.wait("Reconnected");

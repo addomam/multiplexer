@@ -1,4 +1,12 @@
-# amux e06 verified-delivery security disposition
+# amux E07/E08 signed-delivery security disposition
+
+Current recovery approval: `../verifications/e08-review-r7-A.json` and `e08-review-r7-B.json`, independent blind A100/B100, zero findings, each independently matched all21 frozen source hashes in `e08-review-r7-source.json`. Both full reports were read before acceptance. The MEDIUM native-import alias issue and the two other R6 findings are repaired and independently cleared; all earlier FAILs remain.
+
+The combined tree retains the previously approved modal/project/CLI work: `../verifications/e07-review-response.md`, E07 round4 A100/B100, and `e07-ux.json`. Its later startup-config diagnostics retain their separate actual proof in `startup-config-path.json`; no historical freeze is misrepresented as current. Current complete-tree verification is `e08-recovery.json`:593 workspace cases plus one guarded child, strict checks, stock OMP/Zsh and nine actual private CLI/TUI scenarios. No new live-provider run.
+
+The user explicitly authorizes signed commits, main integration and push, including re-signing unpublished old commits if needed. No unpublished commits precede this delivery; published main is preserved. No new supported unresolved HIGH finding is waived. Existing coverage waiver, unknown/fail-closed native application fence, E05 parking and historical caps remain. Installation, daemon/config/auth changes, tags and releases are not part of this authorization.
+
+## Historical e06 verified-delivery security disposition
 
 Current source/security approval: `../verifications/e06-review-round11.json`, independent A100/B100/security100 with zero findings. All92 frozen paths matched at verdict; before the authorized commit, all86 production/test/vendor/Cargo-manifest paths still match that approved snapshot. Subsequent changes only record verified acceptance, status and landing authorization.
 

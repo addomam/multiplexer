@@ -1,0 +1,230 @@
+{
+  "type": "verification-report",
+  "context": {
+    "project": "amux",
+    "epic": "e08",
+    "story": "e08s01",
+    "review_rounds_used": 1,
+    "max_review_rounds": 5
+  },
+  "status": "local-proof-passed-independent-round2-failed",
+  "acceptance": "failing",
+  "provider_requests": 0,
+  "source_manifest": "specs/verifications/e08-review-r2-source.json",
+  "last_verified_source_manifest": "specs/verifications/e08-review-r1-source.json",
+  "previous_evidence": "specs/verifications/e08-recovery-r1.json",
+  "actual_smoke": {
+    "status": "passed",
+    "binary_sha256_before_and_after": "c9bce8c7c4b8be8b00c29aee9501f8bf399a2daf1ccf8de3c165989c82ba9781",
+    "CLI_and_Menu": {
+      "provider_requests": 0,
+      "binary": "/Users/addomam/projects/amux-acp/target/debug/amux",
+      "original_ui_harness_failure": "Raw-byte name matching missed ANSI-separated rendering; preserved artifact3285, not a production RED. New observer strips CSI and waits for the actual shell prompt before one F12.",
+      "automatic_reopen": {
+        "count": 2,
+        "exact_conversations_cwd_projects_names": true,
+        "fresh_lifetimes_ownerless": true,
+        "saved_values": [
+          42,
+          17
+        ],
+        "saved_command_counts": [
+          1,
+          1
+        ],
+        "no_prompt_permission_or_tool_replay": true
+      },
+      "actual_native_UI": {
+        "Menu_lists_both_reopened_conversations": true,
+        "observed_labels_CSI_and_cursor_skipped_whitespace_normalized": [
+          "ACP\u00b7Alphasaved\u00b7Ready",
+          "ACP\u00b7Betasaved\u00b7Ready"
+        ],
+        "no_recovery_picker": true,
+        "detach_exit_code": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit_code": 0,
+        "stream_bytes": 3506
+      },
+      "cleanup": {
+        "all_peer_pids_absent": [
+          20766,
+          20773,
+          20782,
+          20784
+        ],
+        "daemon_exit_code": 0,
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true,
+        "signal_fallback": false
+      },
+      "private_root_removed": true
+    },
+    "native_exact_context": {
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "exact_native_session_id_file_cwd_project_name": true,
+      "fresh_terminal_lifetime_and_peer": true,
+      "no_user_assistant_tool_message_replay": true,
+      "launches": 2,
+      "explicit_resume_exact_file_each_time": true,
+      "restore_flag_never_used": true,
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          20796,
+          20834
+        ],
+        "native_peer_pids_absent": [
+          20818,
+          20856
+        ],
+        "all_native_pty_pids_absent": [
+          20797,
+          20802,
+          20840,
+          20835
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    "native_original_attachment_session_switch": {
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "actual_original_attachment_keyboard": true,
+      "real_OMP_new_session_command": true,
+      "same_live_native_PID_across_switch": true,
+      "new_conversation_ID_observed": true,
+      "old_conversation_not_reopened": true,
+      "new_context_recoverable": false,
+      "no_automatic_or_slash_command_conversation_messages": true,
+      "physical_UI": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          20858,
+          20878
+        ],
+        "native_peer_pids_absent": [
+          20872
+        ],
+        "all_native_pty_pids_absent": [
+          20859,
+          20879
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    }
+  },
+  "review": {
+    "rounds_used": 2,
+    "maximum_rounds": 5,
+    "R1": {
+      "A": 75,
+      "B": 81.25,
+      "gate": "FAIL",
+      "source": "specs/verifications/e08-review-r1-source.json"
+    },
+    "R2": {
+      "A": 84.375,
+      "B": 93.75,
+      "gate": "FAIL",
+      "A_hashes": {
+        "matched": 19,
+        "required": 19
+      },
+      "B_hashes": {
+        "matched": 0,
+        "unverified": 19,
+        "required": 19
+      },
+      "reports": [
+        "specs/verifications/e08-review-r2-A.json",
+        "specs/verifications/e08-review-r2-B.json"
+      ]
+    },
+    "response": "specs/verifications/e08-review-response.md"
+  },
+  "historical_caps": "unchanged",
+  "installation_global_changes_and_publication": "not-authorized-not-performed; installed binary unchanged",
+  "checks": {
+    "full": {
+      "status": "passed",
+      "job": "bg_25",
+      "raw": "artifact://3374",
+      "workspace_passed": 571,
+      "suites": 31,
+      "ignored": 12,
+      "wall_seconds": 128.07,
+      "commands": "cargo build --examples && cargo test --workspace && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check && cargo build"
+    },
+    "focused": {
+      "status": "passed",
+      "job": "bg_22",
+      "raw": "artifact://3354",
+      "recovery_filtered_units": 26,
+      "store_units": 25,
+      "daemon_birth_pin_units": 1,
+      "recovery_integration": 17,
+      "native_integration": 9,
+      "native_Codex_units": 6,
+      "OMP_tests": 8,
+      "OMP_assertions": 49,
+      "Zsh_syntax": "passed"
+    },
+    "native_fixture_repair": {
+      "job": "bg_24",
+      "status": "passed targeted actual safe-offer plus strict Clippy/fmt/build"
+    }
+  },
+  "repair_failures_preserved": [
+    {
+      "raw": "artifact://3352",
+      "classification": "old timestamp validator rejected migrated boot UUID; fixed validator/fixtures/canonicalization"
+    },
+    {
+      "raw": "artifact://3357",
+      "classification": "fixture sent y during disabled Preparing Yield; fixed actionable repaint wait, production ownership unchanged"
+    }
+  ],
+  "private_harness_attempts": [
+    {
+      "raw": "artifact://3361",
+      "classification": "CLI and native exact reopening passed; expanded driver used wrong public rename op, corrected to existing name op"
+    },
+    {
+      "raw": "artifact://3363",
+      "classification": "physical driver typed before committed control; not a native launch defect"
+    },
+    {
+      "raw": "artifact://3367",
+      "classification": "captured d instead of cd, initial c intercepted before committed control; fixed driver to existing committed-owner plus ordinary-header fence, no input replay"
+    },
+    {
+      "raw": "artifact://3369",
+      "classification": "genuine native conversation/idle present; assumed model slug differs from observed GPT-4.1 nano label; driver now observes idle composer"
+    }
+  ],
+  "coverage_limits": [
+    "No global clock shift: immutable boot correctness uses XNU primary source plus current/rebooted identity tests.",
+    "Starting-load close is exercised; no artificial exact CPU publication-before-association pause is claimed.",
+    "Native Codex installed0.165/live providers, Linux/minimum Rust and historical native application fence are not accepted by these checks.",
+    "No claim each added regression independently failed on R1."
+  ],
+  "throwaway_scripts": "Removed both owned local smoke files after final pinned proof; definitions retained in the running kernel, no repository scaffold."
+}

@@ -1,0 +1,523 @@
+{
+  "type": "actual-runtime-receipts",
+  "status": "passed",
+  "source_binding": "Current binary measured before/after all seven actual checks after cfg(test)-only removal of a redundant staged-copy assertion.",
+  "debug_sha256_before": "0a3ba8b49849d9f20a1b298cc5abf3039f57430bbfc7eeef3eaaaac03af30062",
+  "debug_sha256_after": "0a3ba8b49849d9f20a1b298cc5abf3039f57430bbfc7eeef3eaaaac03af30062",
+  "provider_requests": 0,
+  "checks": [
+    {
+      "name": "cold-initial-attachment-quota1",
+      "status": "passed",
+      "terminal_limit": 1,
+      "provider_requests": 0,
+      "safe_wait_quit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit": 0,
+        "drainer_joined": true
+      },
+      "automatic_blank_slots_during_preparation": 0,
+      "exact_selector_waited": true,
+      "resize_and_input_discard": true,
+      "fragmented_paste_discarded": true,
+      "real_OMP_exact_session": "5e4acb0c-481f-4284-959c-2433725c832b",
+      "no_automatic_or_replayed_messages": true,
+      "recovered_native_terminals": 1,
+      "network": "sandbox denied except Unix IPC",
+      "global_auth_paths": "sandbox denied plus private homes",
+      "normal_attachment_exit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          28932,
+          28933,
+          28931,
+          28941,
+          28942,
+          28970,
+          28957,
+          28970
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "cold-initial-attachment-spare-capacity",
+      "status": "passed",
+      "terminal_limit": 2,
+      "provider_requests": 0,
+      "safe_wait_quit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit": 0,
+        "drainer_joined": true
+      },
+      "automatic_blank_slots_during_preparation": 0,
+      "exact_selector_waited": true,
+      "resize_and_input_discard": true,
+      "fragmented_paste_discarded": true,
+      "real_OMP_exact_session": "f2230ea8-8d3c-44cb-bf96-ef4ad035ffcc",
+      "no_automatic_or_replayed_messages": true,
+      "recovered_native_terminals": 1,
+      "network": "sandbox denied except Unix IPC",
+      "global_auth_paths": "sandbox denied plus private homes",
+      "normal_attachment_exit": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "owned_pids_absent": [
+          28979,
+          28980,
+          28978,
+          28992,
+          28993,
+          29024,
+          29011,
+          29024
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "genuine-original-OMP-shell-quota1-hooks",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "original_shell_UI": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "exact_native_session_id_file_cwd_project_name": true,
+      "fresh_terminal_lifetime_and_peer": true,
+      "no_user_assistant_tool_message_replay": true,
+      "launches": 2,
+      "explicit_resume_exact_file_each_time": true,
+      "restore_flag_never_used": true,
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          29039,
+          29066
+        ],
+        "native_peer_pids_absent": [
+          29056,
+          29083
+        ],
+        "all_native_pty_pids_absent": [
+          29040,
+          29067
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "unchanged_terminal_limit": 1,
+      "original_managed_shell": true,
+      "startup_hook_observations": [
+        {
+          "daemon_ordinal": 1,
+          "terminal_count": 1,
+          "native_present": false
+        },
+        {
+          "daemon_ordinal": 2,
+          "terminal_count": 1,
+          "native_present": true
+        }
+      ],
+      "project_identity_and_name_preserved": true,
+      "unsaved_project_context_policy": "ordinary main-shell cwd refresh remains active; mutable context is not a frozen identity",
+      "private_root_removed": true
+    },
+    {
+      "name": "built-CLI-settings-two-reopenings",
+      "status": "passed",
+      "provider_requests": 0,
+      "surface": "actual built CLI API and owned deterministic ACP peers",
+      "saved_choice_values": [
+        42,
+        47,
+        52
+      ],
+      "mixed_legacy_exact_model_values": [
+        342,
+        647,
+        952
+      ],
+      "new_conversation_applies_current_profile_default": 105,
+      "both_exact_and_semantic_default_forms": true,
+      "no_startup_prompt_cancel_or_new_session": true,
+      "same_saved_conversations_fresh_lifetimes": true,
+      "auth": "cleared private environment and absolute deterministic fixture only; no real adapters or credentials",
+      "cleanup": {
+        "daemon_exit_codes": [
+          0,
+          0,
+          0
+        ],
+        "daemon_pids": [
+          29093,
+          29120,
+          29144
+        ],
+        "observed_owned_child_pids_absent": [
+          29094,
+          29104,
+          29112,
+          29121,
+          29124,
+          29126,
+          29145,
+          29148,
+          29151,
+          29169
+        ],
+        "socket_absent": true,
+        "private_root_removed": true,
+        "unrelated_sentinel_survived": true,
+        "signal_fallback": false
+      }
+    },
+    {
+      "name": "exact-ACP-reopen-actual-Menu",
+      "status": "passed",
+      "provider_requests": 0,
+      "binary": "/Users/addomam/projects/amux-acp/target/debug/amux",
+      "original_ui_harness_failure": "Raw-byte name matching missed ANSI-separated rendering; preserved artifact3285, not a production RED. New observer strips CSI and waits for the actual shell prompt before one F12.",
+      "automatic_reopen": {
+        "count": 2,
+        "exact_conversations_cwd_projects_names": true,
+        "fresh_lifetimes_ownerless": true,
+        "saved_values": [
+          42,
+          17
+        ],
+        "saved_command_counts": [
+          1,
+          1
+        ],
+        "no_prompt_permission_or_tool_replay": true
+      },
+      "actual_native_UI": {
+        "Menu_lists_both_reopened_conversations": true,
+        "observed_labels_CSI_and_cursor_skipped_whitespace_normalized": [
+          "ACP\u00b7Alphasaved\u00b7Ready",
+          "ACP\u00b7Betasaved\u00b7Ready"
+        ],
+        "no_recovery_picker": true,
+        "detach_exit_code": 0,
+        "termios_restored_while_host_alive": true,
+        "host_exit_code": 0,
+        "stream_bytes": 3506
+      },
+      "cleanup": {
+        "all_peer_pids_absent": [
+          29189,
+          29193,
+          29202,
+          29205
+        ],
+        "daemon_exit_code": 0,
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true,
+        "signal_fallback": false
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "native-exact-file-reopen",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "exact_native_session_id_file_cwd_project_name": true,
+      "fresh_terminal_lifetime_and_peer": true,
+      "no_user_assistant_tool_message_replay": true,
+      "launches": 2,
+      "explicit_resume_exact_file_each_time": true,
+      "restore_flag_never_used": true,
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          29216,
+          29251
+        ],
+        "native_peer_pids_absent": [
+          29238,
+          29265
+        ],
+        "all_native_pty_pids_absent": [
+          29217,
+          29225,
+          29252
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    },
+    {
+      "name": "original-persistent-attachment-new-session-no-stale-reopen",
+      "status": "passed",
+      "provider_requests": 0,
+      "native_backend": "installed OMP 18.13.3",
+      "actual_original_attachment_keyboard": true,
+      "real_OMP_new_session_command": true,
+      "same_live_native_PID_across_switch": true,
+      "new_conversation_ID_observed": true,
+      "old_conversation_not_reopened": true,
+      "new_context_recoverable": false,
+      "no_automatic_or_slash_command_conversation_messages": true,
+      "physical_UI": {
+        "TUI_exit": 0,
+        "termios_restored_while_host_alive": true,
+        "ctty_host_exit": 0,
+        "drainer_joined": true
+      },
+      "network": "sandbox denies all except local Unix IPC",
+      "global_auth_paths": "sandbox-denied plus private HOME/PI_CODING_AGENT_DIR",
+      "cleanup": {
+        "daemon_exit_zero": true,
+        "daemon_pids": [
+          29267,
+          29287
+        ],
+        "native_peer_pids_absent": [
+          29281
+        ],
+        "all_native_pty_pids_absent": [
+          29268,
+          29288
+        ],
+        "socket_absent": true,
+        "unrelated_sentinel_survived": true
+      },
+      "private_root_removed": true
+    }
+  ],
+  "preserved_observer_failures": [
+    {
+      "scenario": "cold initial attachment quota1",
+      "stage": "native preparation gate not reached",
+      "production_defect_confirmed": false,
+      "snapshot": {
+        "daemon_id": "d5e58ae9f36647de849252ed4d14e88f",
+        "seq": 3,
+        "detach_generation": 0,
+        "config": {
+          "projects_dir": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/projects",
+          "prefix": "Ctrl-a",
+          "mode_key": "F12",
+          "terminal_limit": 1,
+          "daemon_start_hooks": [],
+          "acp_profiles": {}
+        },
+        "projects": [
+          {
+            "id": "12d0c85d-0510-4a98-9424-f566c327bf59",
+            "name": "unsaved",
+            "context": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b",
+            "saved": false,
+            "main_terminal": null,
+            "hooks": [],
+            "recipes": {}
+          },
+          {
+            "id": "a2525f99-c1a6-456a-b3c7-7c848c2dd21d",
+            "name": "Cold native project",
+            "context": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/workspace",
+            "saved": true,
+            "main_terminal": null,
+            "hooks": [],
+            "recipes": {}
+          },
+          {
+            "id": "d77cbc6a-fd17-4ff3-b4cb-41b1211932e2",
+            "name": "unsaved",
+            "context": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b",
+            "saved": false,
+            "main_terminal": "d93b85de-f91e-452d-92a5-442b24c5f67c",
+            "hooks": [],
+            "recipes": {}
+          }
+        ],
+        "terminals": [
+          {
+            "pid": 8326,
+            "alive": true,
+            "exit_status": null,
+            "size": {
+              "cols": 80,
+              "rows": 24
+            },
+            "id": "d93b85de-f91e-452d-92a5-442b24c5f67c",
+            "name": "Cold exact OMP",
+            "project_id": "d77cbc6a-fd17-4ff3-b4cb-41b1211932e2",
+            "parent_id": null,
+            "workspace": {
+              "cwd": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/workspace",
+              "git": {
+                "repository_root": null,
+                "git_dir": null,
+                "common_dir": null,
+                "worktree_id": null,
+                "branch": null,
+                "detached": null,
+                "commit": null,
+                "isolated": null,
+                "upstream": null,
+                "ahead": null,
+                "behind": null,
+                "staged": null,
+                "unstaged": null,
+                "untracked": null,
+                "refreshed_at_ms": 1793321531398,
+                "error": "Git rev-parse --path-format=absolute --show-toplevel --absolute-git-dir --git-common-dir failed: fatal: not a git repository (or any of the parent directories): .git",
+                "workspace": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/workspace",
+                "refreshing": false,
+                "freshness": "error",
+                "age_ms": 3
+              }
+            },
+            "integration": {
+              "shell": {
+                "ready": false,
+                "partial_input": false,
+                "prompt_generation": 0,
+                "pid": null,
+                "cwd": null,
+                "captured_at_ms": null,
+                "freshness": "unknown"
+              },
+              "agent": {
+                "activity": "unknown",
+                "settled": false,
+                "reason": "not-observed",
+                "children": []
+              },
+              "executions": [],
+              "executions_discarded": 0
+            },
+            "ownership": {
+              "observed": {
+                "generation": 1,
+                "reservation_id": null
+              },
+              "owner": {
+                "controller_id": "5fcb02a0-9c86-423a-8681-0d51865cb913",
+                "role": "external",
+                "label": "automatic launch"
+              },
+              "reservation": null,
+              "activity_revision": 0,
+              "view_revision": 0,
+              "views": [],
+              "terminal": "d93b85de-f91e-452d-92a5-442b24c5f67c",
+              "unsettled": []
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "kind": "recovery",
+            "message": "unsupported: private Codex socket path exceeds Unix transport limit",
+            "target": "0-gated-codex"
+          }
+        ],
+        "project_save_terminal": true,
+        "startup_pending": false,
+        "agent_views": []
+      },
+      "seeded_records": [
+        {
+          "id": "0-gated-codex",
+          "project": {
+            "id": "d77cbc6a-fd17-4ff3-b4cb-41b1211932e2",
+            "name": "unsaved",
+            "context": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b"
+          },
+          "name": "Cold exact OMP",
+          "cwd": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/workspace",
+          "agent": {
+            "kind": "codex",
+            "model": "fixture-model-no-network"
+          },
+          "session_id": "f8909b7b-0673-4bc2-a270-b79b866e31a6",
+          "session_file": null,
+          "launch_hash": null,
+          "settings": {},
+          "peer": {
+            "pid": 8307,
+            "start": [
+              1793321530,
+              938714
+            ],
+            "boot": "darwin:75bb15b6-e3b2-4c33-a9e2-a7fadc46f257"
+          },
+          "launch_pending": false,
+          "blocked": null
+        },
+        {
+          "id": "1-exact-omp",
+          "project": {
+            "id": "d77cbc6a-fd17-4ff3-b4cb-41b1211932e2",
+            "name": "unsaved",
+            "context": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b"
+          },
+          "name": "Cold exact OMP",
+          "cwd": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/workspace",
+          "agent": {
+            "kind": "omp"
+          },
+          "session_id": "edd906e8-81c4-41e0-86c2-f27d59e9602e",
+          "session_file": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e08-cold-iswre84b/sessions/exact.jsonl",
+          "launch_hash": null,
+          "settings": {},
+          "peer": {
+            "pid": 8307,
+            "start": [
+              1793321530,
+              938714
+            ],
+            "boot": "darwin:75bb15b6-e3b2-4c33-a9e2-a7fadc46f257"
+          },
+          "launch_pending": false,
+          "blocked": null
+        }
+      ],
+      "cause": "Private runtime root used macOS long TMPDIR, so managed Codex correctly rejected its >104-byte socket path before the gated executable.",
+      "classification": "observer-fixture error; no production defect",
+      "fix": "Use canonical /tmp private root, matching existing native preparation regression fixtures."
+    },
+    {
+      "artifact": "artifact://3565",
+      "stage": "waiting for literal idle in native output after genuine exact OMP was already visible",
+      "classification": "incidental presentation assertion removed, not re-pinned; no production change",
+      "proof": "Full captured physical surface shows original saved text, Ready input-discarded status and Unowned header; native footer does not promise idle text."
+    }
+  ],
+  "limits": [
+    "Cold native-Codex gate intentionally rejects its private version probe; the later resumed OMP is genuine, sandboxed and offline. No successful new managed-native Codex provider acceptance is claimed.",
+    "Cold attachment is actual controlling-PTY smoke coverage; permanent regressions cover startup metadata and fallback-hook failure, not a duplicated new PTY-driver suite.",
+    "Prior source-proven R5 defects were fixed directly; no old-source runtime RED is claimed for these final findings.",
+    "No sixth independent review or cap reset; formal acceptance remains failing after final local proof."
+  ]
+}

@@ -20,6 +20,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+mod recovery;
+
 static SIGNAL_STOP: AtomicBool = AtomicBool::new(false);
 const DIAGNOSTIC_LIMIT: usize = 20;
 const DIAGNOSTIC_TEXT_LIMIT: usize = 16 * 1024;
@@ -63,6 +65,7 @@ struct HookJob {
     cwd: PathBuf,
     env: BTreeMap<String, String>,
     kind: &'static str,
+    startup_ready: Option<std::sync::mpsc::Receiver<()>>,
 }
 struct Daemon {
     daemon_id: String,
@@ -75,7 +78,9 @@ struct Daemon {
     integration: Arc<Integration>,
     git: GitCache,
     stopping: AtomicBool,
+    startup_pending: AtomicBool,
     hook_jobs: std::sync::mpsc::SyncSender<Option<HookJob>>,
+    recovery: Mutex<recovery::RecoveryState>,
 }
 struct LaunchControl {
     controller: Value,
@@ -117,11 +122,42 @@ impl Drop for TerminalAdmission {
         }
     }
 }
+struct StartupReady<'a>(&'a Daemon);
+impl Drop for StartupReady<'_> {
+    fn drop(&mut self) {
+        self.0.startup_pending.store(false, Ordering::Release);
+        self.0.changed.notify_all();
+    }
+}
 struct SocketFile(PathBuf);
 impl Drop for SocketFile {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.0);
     }
+}
+
+fn default_view_name(kind: &str, cwd: &Path, discriminator: &str) -> String {
+    let leaf = cwd
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("/");
+    let mut name = String::new();
+    for part in [kind, " · ", leaf] {
+        for c in part.chars() {
+            let c = if crate::acp::safe_view_character(c) {
+                c
+            } else {
+                '\u{fffd}'
+            };
+            if name.len() + c.len_utf8() > 220 {
+                break;
+            }
+            name.push(c);
+        }
+    }
+    name.push_str(" · ");
+    name.push_str(discriminator);
+    name
 }
 fn diagnostic_text(text: &str) -> &str {
     let mut end = text.len().min(DIAGNOSTIC_TEXT_LIMIT);
@@ -265,7 +301,8 @@ impl Daemon {
             (
                 json!({"daemon_id":self.daemon_id,"seq":state.seq,"detach_generation":state.detach_generation,
                 "config":state.store.config,"projects":state.store.projects.values().collect::<Vec<_>>(),
-                "terminals":terminals,"diagnostics":state.diagnostics}),
+                "terminals":terminals,"diagnostics":state.diagnostics,"project_save_terminal":true,
+                "startup_pending":self.startup_pending.load(Ordering::Acquire)}),
                 views,
             )
         };
@@ -281,17 +318,89 @@ impl Daemon {
             let mut ownership = self.controls.lock().snapshot(id);
             ownership["retained_work"] = metadata["work"].take();
             ownership["work_as_of_seq"] = metadata["seq"].clone();
-            agents.push(json!({"id":id,"kind":"acp","name":view["name"],
+            agents.push(json!({"id":id,"kind":"acp","name":metadata["name"],
                 "project_id":view["project_id"],"instance_id":view["instance_id"],
                 "connection_generation":metadata["target"]["connection_generation"],
                 "session_id":metadata["target"]["session_id"],"lifecycle":metadata["lifecycle"],
                 "configuration":metadata["configuration"].take(),
+                "attention":metadata["attention"].take(),
                 "ownership":ownership,"seq":metadata["seq"]}));
         }
         snapshot["agent_views"] = agents.into();
         Ok(snapshot)
     }
-    fn acp_open(&self, request: &Value) -> Result<Value> {
+    /// Capture only in-memory source identity under topology. Both preview and
+    /// save normalize this directory outside the lock, then reject source drift.
+    fn project_save_source(&self, state: &State, request: &Value) -> Result<(String, PathBuf)> {
+        let project = request
+            .get("project")
+            .map(|value| {
+                let selector = value
+                    .as_str()
+                    .context("invalid-request: project selector must be a string")?;
+                state.store.resolve(selector)
+            })
+            .transpose()?;
+        if let Some(terminal) = request.get("terminal") {
+            let selector = terminal
+                .as_str()
+                .context("invalid-request: terminal selector must be a string")?;
+            let (id, cwd) = if let Some(view) = state.agent_views.get(selector) {
+                (
+                    view["project_id"]
+                        .as_str()
+                        .context("not-found: ACP project unavailable")?
+                        .to_owned(),
+                    PathBuf::from(
+                        view["cwd"]
+                            .as_str()
+                            .context("not-found: ACP directory unavailable")?,
+                    ),
+                )
+            } else {
+                let terminal = Self::resolve(state, selector)?;
+                let entry = &state.terminals[&terminal];
+                (
+                    entry.project_id.clone(),
+                    self.integration
+                        .captured_cwd(&terminal)
+                        .unwrap_or_else(|| entry.cwd.clone()),
+                )
+            };
+            ensure!(
+                project.as_ref().is_none_or(|project| project == &id),
+                "invalid-request: terminal belongs to a different project"
+            );
+            ensure!(
+                state.store.projects.contains_key(&id),
+                "not-found: project unavailable"
+            );
+            return Ok((id, cwd));
+        }
+        let id = project.unwrap_or_else(|| state.store.unsaved_id());
+        let project = state
+            .store
+            .projects
+            .get(&id)
+            .context("not-found: project unavailable")?;
+        let cwd = project
+            .main_terminal
+            .as_ref()
+            .and_then(|terminal| state.terminals.get(terminal))
+            .map(|entry| {
+                self.integration
+                    .captured_cwd(&entry.terminal.id)
+                    .unwrap_or_else(|| entry.cwd.clone())
+            })
+            .unwrap_or_else(|| project.context.clone());
+        Ok((id, cwd))
+    }
+
+    fn acp_open(
+        &self,
+        request: &Value,
+        restored: Option<&crate::recovery::Record>,
+    ) -> Result<Value> {
         validate_mutation_fields(
             request,
             &[
@@ -305,8 +414,15 @@ impl Daemon {
                 "command",
                 "agent",
                 "settings",
+                "new_project",
             ],
         )?;
+        let new_project = match request.get("new_project") {
+            None => false,
+            Some(value) => value
+                .as_bool()
+                .context("invalid-request: new_project must be boolean")?,
+        };
         ensure!(
             !(request.get("agent").is_some() && request.get("command").is_some()),
             "invalid-request: agent profile and raw command are mutually exclusive"
@@ -346,27 +462,25 @@ impl Daemon {
             } else {
                 bail!("project-not-found: exact project ID required");
             };
-            let project = if chosen.id == requested_project {
-                std::borrow::Cow::Borrowed(requested_project)
+            let project = if new_project {
+                Uuid::new_v4().to_string()
             } else {
-                std::borrow::Cow::Owned(chosen.id.clone())
+                chosen.id.clone()
             };
             (project, chosen.context.clone(), profile)
         };
-        let name = match request.get("name") {
-            None => "ACP agent",
-            Some(Value::String(name))
-                if !name.is_empty()
-                    && name.len() <= 128
-                    && name.chars().all(|c| {
-                        !c.is_control()
-                            && !matches!(c, '\u{061c}' | '\u{200e}' | '\u{200f}'
-                                | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
-                    }) =>
-            {
-                name
+        // Renamed/generated labels already accepted by the broker remain valid
+        // on internal reopening; keep the ordinary explicit launch bound.
+        let name_limit = if restored.is_some() { 256 } else { 128 };
+        let requested_name = match request.get("name") {
+            None => None,
+            Some(Value::String(name)) if name.len() <= name_limit => {
+                crate::acp::validate_view_name(name).with_context(|| {
+                    format!("invalid-request: ACP name must be a safe 1..{name_limit} byte label")
+                })?;
+                Some(name.as_str())
             }
-            _ => bail!("invalid-request: ACP name must be a safe 1..128 byte label"),
+            _ => bail!("invalid-request: ACP name must be a safe 1..{name_limit} byte label"),
         };
         let cwd = match request.get("cwd") {
             None => default_cwd,
@@ -382,8 +496,27 @@ impl Daemon {
             .canonicalize()
             .context("invalid-request: ACP cwd is unavailable")?;
         ensure!(cwd.is_dir(), "invalid-request: ACP cwd must be a directory");
-        let (command, settings) = if let Some(profile) = profile {
-            crate::acp_profiles::prepare(profile, request.get("settings"))?
+        let default_name = requested_name.is_none().then(|| {
+            let kind = profile
+                .as_ref()
+                .map_or("ACP", |profile| profile.label.as_str());
+            let mut buffer = Uuid::encode_buffer();
+            default_view_name(
+                kind,
+                &cwd,
+                &Uuid::new_v4().simple().encode_lower(&mut buffer)[..8],
+            )
+        });
+        let name = requested_name.unwrap_or_else(|| default_name.as_deref().expect("default name"));
+        let (command, settings) = if let Some(mut profile) = profile {
+            if let Some(record) = restored {
+                // Saved acknowledged choices, not launch defaults, govern the
+                // exact conversation being reopened. Reuse normal validation.
+                profile.defaults = record.settings.clone();
+                crate::acp_profiles::prepare(profile, None)?
+            } else {
+                crate::acp_profiles::prepare(profile, request.get("settings"))?
+            }
         } else {
             let args = request["command"]
                 .as_array()
@@ -419,36 +552,87 @@ impl Daemon {
                     .unwrap_or_else(|| json!({})),
             )
         };
+        let launch_hash = agent.map(|_| recovery::launch_hash(&command));
+        if let Some(record) = restored {
+            ensure!(
+                record.launch_hash == launch_hash,
+                "recovery-unavailable: agent profile launch command changed; saved conversation retained"
+            );
+        }
         ensure!(
             !self.stopping.load(Ordering::Acquire),
             "daemon-stopping: cannot open ACP view"
         );
-        let descriptor = Arc::new(self.acp.reserve(&project, name, &cwd, command, settings)?);
+        let descriptor = Arc::new(self.acp.reserve(
+            &project,
+            name,
+            &cwd,
+            command,
+            settings,
+            restored.map(|record| record.session_id.clone()),
+        )?);
         let id = descriptor["id"]
             .as_str()
             .context("acp-internal: missing reserved target")?;
+        // Establish durable launch exclusion and the saved-record association
+        // before another connection can observe and close this reservation.
+        if let Some(record) = restored
+            && let Err(error) = self.mark_reopen(record, true)
+        {
+            self.acp.end(id);
+            self.acp.cleanup(id);
+            if self.acp.discard_empty_ended(id) {
+                self.flush_runtime_events();
+            }
+            return Err(error);
+        }
+        self.stage_acp_recovery(id, &project, name, &cwd, agent.zip(launch_hash), restored);
         let admitted = (|| {
             let mut state = self.state.lock();
             ensure!(
                 !self.stopping.load(Ordering::Acquire),
                 "daemon-stopping: cannot publish ACP view"
             );
+            ensure!(
+                new_project || state.store.projects.contains_key(&project),
+                "context-changed: ACP project was removed before publication"
+            );
             let mut controls = self.controls.lock();
             let lifetime = controls.add_acp_target(id)?;
             let observed = controls.snapshot(id)["observed"].clone();
-            let grant = match controls.claim(&json!({
-                "version":1,"op":"ownership-claim","controller":request["controller"],
-                "target":{"kind":"acp","id":id},"observed":observed,
-                "mode":"cooperative","when":{"kind":"now"},
-            })) {
-                Ok(grant) => grant,
-                Err(error) => {
-                    controls.end_acp(id, || {})?;
-                    controls.remove_target(id);
-                    return Err(error);
+            let grant = if restored.is_some() {
+                // Loading saved context is not an input grant. A fresh human
+                // attachment must acquire this new lifetime explicitly.
+                json!({})
+            } else {
+                match controls.claim(&json!({
+                    "version":1,"op":"ownership-claim","controller":request["controller"],
+                    "target":{"kind":"acp","id":id},"observed":observed,
+                    "mode":"cooperative","when":{"kind":"now"},
+                })) {
+                    Ok(grant) => grant,
+                    Err(error) => {
+                        controls.end_acp(id, || {})?;
+                        controls.remove_target(id);
+                        return Err(error);
+                    }
                 }
             };
             // Publishing a reservation and its authority is one topology step.
+            if new_project {
+                state.store.projects.insert(
+                    project.clone(),
+                    projects::Project {
+                        id: project.clone(),
+                        name: "unsaved".into(),
+                        context: cwd.clone(),
+                        saved: false,
+                        main_terminal: None,
+                        hooks: Vec::new(),
+                        recipes: Default::default(),
+                    },
+                );
+            }
             state
                 .agent_views
                 .insert(id.to_owned(), Arc::clone(&descriptor));
@@ -465,17 +649,50 @@ impl Daemon {
             Err(error) => {
                 self.acp.end(id);
                 self.acp.cleanup(id);
+                self.abandon_recovery_target(id);
+                if let Some(record) = restored
+                    && let Err(rollback) = self.mark_reopen(record, false)
+                {
+                    self.recovery_diagnostic(Some(&record.id), &rollback);
+                }
                 if self.acp.discard_empty_ended(id) {
                     self.flush_runtime_events();
                 }
                 return Err(error);
             }
         };
-        if let Err(error) = self.acp.start(id, lifetime) {
+        let started = self.acp.start(id, lifetime);
+        if let Err(error) = started {
             self.controls.lock().end_acp(id, || self.acp.end(id))?;
             self.acp.cleanup(id);
+            self.abandon_recovery_target(id);
             if self.acp.discard_empty_ended(id) {
                 self.flush_runtime_events();
+            }
+            if new_project {
+                let mut state = self.state.lock();
+                let referenced = state
+                    .terminals
+                    .values()
+                    .any(|entry| entry.project_id == project)
+                    || state
+                        .agent_views
+                        .values()
+                        .any(|view| view["project_id"] == project);
+                if !referenced
+                    && state
+                        .store
+                        .projects
+                        .get(&project)
+                        .is_some_and(|project| !project.saved)
+                {
+                    state.store.projects.remove(&project);
+                }
+            }
+            if let Some(record) = restored
+                && let Err(rollback) = self.mark_reopen(record, false)
+            {
+                self.recovery_diagnostic(Some(&record.id), &rollback);
             }
             return Err(error);
         }
@@ -508,7 +725,9 @@ impl Daemon {
             self.acp.commit(prepared, generation)
         })?;
         if op == "acp-close" {
+            let forgotten = self.retire_recovery_target(id);
             self.acp.cleanup(id);
+            forgotten?;
         }
         self.flush_runtime_events();
         Ok(result)
@@ -541,6 +760,7 @@ impl Daemon {
     }
 
     fn begin_shutdown(&self) {
+        self.checkpoint_recovery_before_shutdown();
         self.stopping.store(true, Ordering::Release);
         let views: Vec<_> = self.state.lock().agent_views.values().cloned().collect();
         for view in views {
@@ -651,12 +871,16 @@ impl Daemon {
         if hooks.is_empty() {
             return;
         }
-        if let Err(error) = self.hook_jobs.try_send(Some(HookJob {
+        self.queue_hooks(HookJob {
             hooks,
             cwd,
             env,
             kind,
-        })) {
+            startup_ready: None,
+        });
+    }
+    fn queue_hooks(&self, job: HookJob) {
+        if let Err(error) = self.hook_jobs.try_send(Some(job)) {
             let (message, job) = match error {
                 std::sync::mpsc::TrySendError::Full(job) => ("hook queue is full", job),
                 std::sync::mpsc::TrySendError::Disconnected(job) => ("hook worker stopped", job),
@@ -668,7 +892,7 @@ impl Daemon {
                         &mut state,
                         "hook",
                         None,
-                        json!({"kind":kind,"message":format!("hook-backpressure: {message}"),
+                        json!({"kind":job.kind,"message":format!("hook-backpressure: {message}"),
                             "index":index,"command":diagnostic_text(&hook.source),
                             "command_truncated":hook.source.len() > DIAGNOSTIC_TEXT_LIMIT}),
                     );
@@ -738,9 +962,15 @@ impl Daemon {
         }
         self.codex.end_terminal(terminal);
         self.integration.remove(terminal);
+        self.abandon_recovery_target(terminal);
     }
 
-    fn agent_open(self: &Arc<Self>, request: &Value, connection: u64) -> Result<Value> {
+    fn agent_open(
+        self: &Arc<Self>,
+        request: &Value,
+        connection: u64,
+        restored: Option<&crate::recovery::Record>,
+    ) -> Result<Value> {
         let controller = &request["controller"];
         let recovered = self.controls.lock().handle(
             &json!({
@@ -754,8 +984,42 @@ impl Daemon {
         let context = self.open_context(request)?;
         let mut launch_request = request.clone();
         launch_request["cwd"] = json!(&context.cwd);
-        let prepared = self.codex.prepare(&launch_request)?;
-        let opened = self.open_inner(request, context, Some((controller, &prepared)))?;
+        if let Some(record) = restored {
+            self.mark_reopen(record, true)?;
+        }
+        let prepared = match self.codex.prepare(&launch_request) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                if let Some(record) = restored
+                    && crate::codex::prepare_failure_settled(&error)
+                    && let Err(rollback) = self.mark_reopen(record, false)
+                {
+                    self.recovery_diagnostic(Some(&record.id), &rollback);
+                }
+                return Err(error);
+            }
+        };
+        let opened = match self.open_inner(
+            request,
+            context,
+            Some((restored.is_none().then_some(controller), &prepared)),
+            restored,
+        ) {
+            Ok(opened) => opened,
+            Err(error) => {
+                let settled = prepared.cleanup_failed_launch();
+                if let Some(record) = restored
+                    && settled
+                    && let Err(rollback) = self.mark_reopen(record, false)
+                {
+                    self.recovery_diagnostic(Some(&record.id), &rollback);
+                }
+                return Err(error);
+            }
+        };
+        if restored.is_some() {
+            return Ok(json!({"terminal":opened.terminal,"instance_id":prepared.instance_id}));
+        }
         self.flush_runtime_events();
         let mut grant = opened
             .control
@@ -774,12 +1038,21 @@ impl Daemon {
     }
 
     fn open(self: &Arc<Self>, request: &Value) -> Result<Value> {
-        let context = self.open_context(request)?;
-        self.open_inner(request, context, None)
+        let mut context = self.open_context(request)?;
+        if request["new_project"] == true {
+            context.project_id = Uuid::new_v4().to_string();
+        }
+        self.open_inner(request, context, None, None)
             .map(|opened| opened.terminal)
     }
 
     fn open_context(self: &Arc<Self>, request: &Value) -> Result<OpenContext> {
+        if let Some(name) = request.get("name") {
+            crate::acp::validate_view_name(
+                name.as_str()
+                    .context("invalid-name: name must be a string")?,
+            )?;
+        }
         let admission = self.reserve_terminal()?;
         let (project_id, cwd, env, freshness, command) = {
             let state = self.state.lock();
@@ -864,7 +1137,8 @@ impl Daemon {
         self: &Arc<Self>,
         request: &Value,
         context: OpenContext,
-        managed: Option<(&Value, &crate::codex::Prepared)>,
+        managed: Option<(Option<&Value>, &crate::codex::Prepared)>,
+        restored: Option<&crate::recovery::Record>,
     ) -> Result<Opened> {
         let OpenContext {
             mut admission,
@@ -904,7 +1178,7 @@ impl Daemon {
         }
         self.controls.lock().add_target(&id);
         let startup_control = if command.is_some() {
-            match self.launch_control(&id, managed.map(|(controller, _)| controller)) {
+            match self.launch_control(&id, managed.and_then(|(controller, _)| controller)) {
                 Ok(control) => Some(control),
                 Err(error) => {
                     self.discard_unpublished(&id, None);
@@ -924,6 +1198,30 @@ impl Daemon {
             self.discard_unpublished(&id, startup_control.as_ref());
             return Err(error);
         }
+        let name = request["name"]
+            .as_str()
+            .map(str::to_owned)
+            .unwrap_or_else(|| {
+                default_view_name(
+                    if managed.is_some() {
+                        "Codex"
+                    } else if request["omp"] == true {
+                        "OMP"
+                    } else {
+                        "Shell"
+                    },
+                    &cwd,
+                    &id[..8],
+                )
+            });
+        self.stage_native_recovery(
+            &id,
+            &project_id,
+            &name,
+            &cwd,
+            managed.and_then(|_| request["model"].as_str()),
+            restored,
+        );
         let weak = Arc::downgrade(self);
         let exit_id = id.clone();
         let terminal = match Terminal::spawn(
@@ -935,6 +1233,12 @@ impl Daemon {
                     daemon.controls.lock().end_target(&exit_id);
                     daemon.retire_settled_launch(&exit_id);
                     daemon.codex.end_terminal(&exit_id);
+                    if !daemon.stopping.load(Ordering::Acquire)
+                        && !SIGNAL_STOP.load(Ordering::Relaxed)
+                        && let Err(error) = daemon.native_recovery_exited(&exit_id)
+                    {
+                        daemon.recovery_diagnostic(Some(&exit_id), &error);
+                    }
                     daemon.flush_runtime_events();
                     let mut state = daemon.state.lock();
                     Self::emit(
@@ -962,36 +1266,54 @@ impl Daemon {
                 return Err(error);
             }
         };
-        let entry = {
+        let mut entry = Entry {
+            terminal,
+            name,
+            project_id: project_id.clone(),
+            parent_id: None,
+            cwd: cwd.clone(),
+            agent_instance,
+        };
+        // No fallible snapshot or preparation remains after publication. A
+        // failed open therefore cannot conceal an admitted application launch.
+        let mut result = match self.terminal_snapshot(&entry) {
+            Ok(result) => result,
+            Err(error) => {
+                entry.terminal.close();
+                self.discard_unpublished(&id, startup_control.as_ref());
+                return Err(error);
+            }
+        };
+        {
             let mut state = self.state.lock();
             if self.stopping.load(Ordering::Acquire) {
                 drop(state);
-                terminal.close();
+                entry.terminal.close();
                 self.discard_unpublished(&id, startup_control.as_ref());
                 bail!("shutdown: daemon is stopping");
             }
-            let project = state.store.projects.get_mut(&project_id).unwrap();
-            let parent = project.main_terminal.clone();
-            let name = request["name"]
-                .as_str()
-                .map(str::to_owned)
-                .unwrap_or_else(|| {
-                    if request["omp"] == true {
-                        "OMP".into()
-                    } else if parent.is_none() {
-                        "main".into()
-                    } else {
-                        format!("shell-{}", &id[..8])
-                    }
-                });
-            let entry = Entry {
-                terminal,
-                name,
-                project_id: project_id.clone(),
-                parent_id: parent,
-                cwd: cwd.clone(),
-                agent_instance,
+            if request["new_project"] == true {
+                state
+                    .store
+                    .projects
+                    .entry(project_id.clone())
+                    .or_insert_with(|| projects::Project {
+                        id: project_id.clone(),
+                        name: "unsaved".into(),
+                        context: cwd.clone(),
+                        saved: false,
+                        main_terminal: None,
+                        hooks: Vec::new(),
+                        recipes: Default::default(),
+                    });
+            }
+            let Some(project) = state.store.projects.get_mut(&project_id) else {
+                drop(state);
+                entry.terminal.close();
+                self.discard_unpublished(&id, startup_control.as_ref());
+                bail!("context-changed: project was removed before native publication");
             };
+            entry.parent_id = project.main_terminal.clone();
             if project.main_terminal.is_none() {
                 project.main_terminal = Some(id.clone());
             }
@@ -1005,8 +1327,7 @@ impl Daemon {
                 json!({"project_id":project_id,"cwd":cwd,"source_freshness":freshness}),
             );
             self.changed.notify_all();
-            entry
-        };
+        }
         self.git.refresh(&cwd);
         if let Some(command) = command {
             let daemon = self.clone();
@@ -1063,7 +1384,7 @@ impl Daemon {
                 daemon.changed.notify_all();
             });
         }
-        let mut result = self.terminal_snapshot(&entry)?;
+        result["parent_id"] = json!(entry.parent_id);
         result["source_freshness"] = freshness;
         Ok(Opened {
             terminal: result,
@@ -1239,6 +1560,16 @@ impl Daemon {
             self.decorate_acp_work(data);
         }
         let agent_events = self.acp.drain_events();
+        let changed: std::collections::BTreeSet<_> = events
+            .iter()
+            .filter(|(kind, _, _)| kind.starts_with("agent-"))
+            .map(|(_, terminal, _)| terminal.clone())
+            .chain(
+                agent_events
+                    .iter()
+                    .filter_map(|event| event["id"].as_str().map(str::to_owned)),
+            )
+            .collect();
         let mut removed = Vec::new();
         if events.is_empty() && agent_events.is_empty() {
             return;
@@ -1280,6 +1611,10 @@ impl Daemon {
         }
         for id in removed {
             self.controls.lock().remove_target(&id);
+            self.abandon_recovery_target(&id);
+        }
+        for id in changed {
+            self.checkpoint_recovery(&id);
         }
         self.changed.notify_all();
     }
@@ -1305,7 +1640,8 @@ impl Daemon {
         {
             bail!("wrong-target-kind: native operation cannot address ACP");
         }
-        if let Some(id) = request["terminal"].as_str()
+        if !matches!(op, "name" | "project-save" | "project-save-preview")
+            && let Some(id) = request["terminal"].as_str()
             && self.state.lock().agent_views.contains_key(id)
         {
             bail!("wrong-target-kind: ACP views are not terminals");
@@ -1316,7 +1652,7 @@ impl Daemon {
                 let profiles = self.state.lock().store.config.acp_profiles.clone();
                 Ok(crate::acp_profiles::list(profiles))
             }
-            "acp-open" => self.acp_open(&request),
+            "acp-open" => self.acp_open(&request, None),
             "acp-inspect" => self.acp.inspect(&request),
             "acp-prompt" | "acp-authenticate" | "acp-answer" | "acp-permission"
             | "acp-interrupt" | "acp-close" => self.acp_action(op, &request, connection),
@@ -1397,7 +1733,7 @@ impl Daemon {
             }
             "snapshot" | "list" => self.snapshot(),
             "open" => self.open(&request),
-            "agent-open" => self.agent_open(&request, connection),
+            "agent-open" => self.agent_open(&request, connection, None),
             "agent-inspect" => {
                 let mut result = self.codex.inspect(&request)?;
                 result["seq"] = self.state.lock().seq.into();
@@ -1564,6 +1900,16 @@ impl Daemon {
                     self.retire_settled_launch(&id);
                 }
                 let result = result?;
+                if request["event"]["kind"] == "agent"
+                    && request["event"]["shutdown"] == true
+                    && request["event"]["agent_kind"] == "main"
+                {
+                    if let Some(root) = request["event"]["instance_id"].as_str() {
+                        self.forget_root_recovery(&id, root)?;
+                    }
+                } else {
+                    self.checkpoint_recovery(&id);
+                }
                 let mut state = self.state.lock();
                 Self::emit(
                     &mut state,
@@ -1575,27 +1921,45 @@ impl Daemon {
                 Ok(result)
             }
             "name" => {
-                let entry = self.entry(&request)?;
+                let selector = request["terminal"]
+                    .as_str()
+                    .context("invalid-request: exact terminal or ACP view ID required")?;
                 let name = request["name"]
                     .as_str()
                     .context("invalid-name: name required")?;
-                if name.is_empty() || name.len() > 256 {
-                    bail!("invalid-name: expected 1..256 bytes");
+                crate::acp::validate_view_name(name)?;
+                let is_acp = self.state.lock().agent_views.contains_key(selector);
+                if is_acp {
+                    let descriptor = self.acp.rename(selector, name)?;
+                    let mut state = self.state.lock();
+                    let view = state
+                        .agent_views
+                        .get_mut(selector)
+                        .context("not-found: ACP view was removed")?;
+                    *view = Arc::new(descriptor);
+                    Self::emit(
+                        &mut state,
+                        "acp-named",
+                        None,
+                        json!({"target":{"kind":"acp","id":selector},"name":name}),
+                    );
+                } else {
+                    let mut state = self.state.lock();
+                    state
+                        .terminals
+                        .get_mut(selector)
+                        .context("not-found: exact terminal or ACP view ID required")?
+                        .name = name.to_owned();
+                    Self::emit(
+                        &mut state,
+                        "terminal-named",
+                        Some(selector),
+                        json!({"name":name}),
+                    );
                 }
-                let mut state = self.state.lock();
-                state
-                    .terminals
-                    .get_mut(&entry.terminal.id)
-                    .context("not-found: terminal was removed")?
-                    .name = name.into();
-                Self::emit(
-                    &mut state,
-                    "terminal-named",
-                    Some(&entry.terminal.id),
-                    json!({"name":name}),
-                );
                 self.changed.notify_all();
-                Ok(json!({"id":entry.terminal.id,"name":name}))
+                self.checkpoint_recovery(selector);
+                Ok(json!({"id":selector,"name":name}))
             }
             "reparent" | "demote" => {
                 let entry = self.entry(&request)?;
@@ -1616,7 +1980,9 @@ impl Daemon {
                 let entry = self.entry(&request)?;
                 self.controls.lock().end_target(&entry.terminal.id);
                 self.retire_settled_launch(&entry.terminal.id);
+                let forgotten = self.retire_recovery_target(&entry.terminal.id);
                 entry.terminal.close();
+                forgotten?;
                 Ok(entry.terminal.status())
             }
             "remove" => {
@@ -1625,7 +1991,9 @@ impl Daemon {
                     bail!("alive: close terminal before removing it");
                 }
                 self.controls.lock().end_target(&entry.terminal.id);
+                let forgotten = self.retire_recovery_target(&entry.terminal.id);
                 entry.terminal.close();
+                forgotten?;
                 let mut state = self.state.lock();
                 // Cleanup ran without the tree lock; ancestry may have changed meanwhile.
                 let entry = state
@@ -1668,44 +2036,86 @@ impl Daemon {
                 Duration::from_millis(request["timeout_ms"].as_u64().unwrap_or(30000).min(300000)),
             ),
             "wait" => self.wait_state(&request),
-            "project-save" => {
-                let (id, cwd) = {
-                    let state = self.state.lock();
-                    let id = request["project"]
-                        .as_str()
-                        .map(|selector| state.store.resolve(selector))
-                        .transpose()?
-                        .unwrap_or_else(|| state.store.unsaved_id());
-                    let project = state
+            "project-list" => {
+                let state = self.state.lock();
+                Ok(Value::Array(
+                    state
                         .store
                         .projects
-                        .get(&id)
-                        .context("not-found: project unavailable")?;
-                    let cwd = project
-                        .main_terminal
-                        .as_ref()
-                        .and_then(|id| self.integration.captured_cwd(id));
-                    (id, cwd)
-                };
-                let context = cwd
-                    .as_deref()
-                    .map(projects::resolve_workspace_context)
-                    .transpose()?;
+                        .values()
+                        .filter(|project| project.saved)
+                        .map(|project| json!(project))
+                        .collect(),
+                ))
+            }
+            "project-remove" => {
                 let mut state = self.state.lock();
-                if let Some(context) = context {
-                    let project = state
-                        .store
-                        .projects
-                        .get_mut(&id)
-                        .context("not-found: project unavailable")?;
-                    project.context = context;
+                let selector = request["project"]
+                    .as_str()
+                    .context("invalid-request: project selector required")?;
+                let project = json!(state.store.remove_saved(selector)?);
+                Self::emit(&mut state, "project-removed", None, project.clone());
+                self.changed.notify_all();
+                Ok(project)
+            }
+            "project-save" | "project-save-preview" => {
+                let preview = op == "project-save-preview";
+                validate_mutation_fields(
+                    &request,
+                    if preview {
+                        &["version", "op", "persistent", "terminal", "project"]
+                    } else {
+                        &[
+                            "version",
+                            "op",
+                            "persistent",
+                            "terminal",
+                            "project",
+                            "name",
+                            "expected_context",
+                        ]
+                    },
+                )?;
+                let expected = request
+                    .get("expected_context")
+                    .map(|value| {
+                        let path = value.as_str().context(
+                            "invalid-request: expected_context must be an absolute path string",
+                        )?;
+                        ensure!(
+                            Path::new(path).is_absolute(),
+                            "invalid-request: expected_context must be absolute"
+                        );
+                        Ok::<_, anyhow::Error>(Path::new(path))
+                    })
+                    .transpose()?;
+                let source = self.project_save_source(&self.state.lock(), &request)?;
+                let context = projects::resolve_workspace_context(&source.1)?;
+                ensure!(
+                    expected.is_none_or(|expected| expected == context.as_path()),
+                    "context-changed: project directory changed since preview"
+                );
+                let mut state = self.state.lock();
+                ensure!(
+                    self.project_save_source(&state, &request)? == source,
+                    "context-changed: project source changed during directory resolution"
+                );
+                if preview {
+                    return Ok(json!({"project":source.0,"context":context}));
                 }
                 let name = request["name"]
                     .as_str()
                     .context("invalid-request: name required")?;
-                let project = state.store.save(&id, name)?;
+                let project = state.store.save(&source.0, name, Some(context))?;
                 Self::emit(&mut state, "project-saved", None, json!(project));
                 self.changed.notify_all();
+                drop(state);
+                if let Err(error) = self.sync_recovery_project(&project.id) {
+                    self.recovery_diagnostic(
+                        None,
+                        &error.context("project saved but recovery metadata was not synchronized"),
+                    );
+                }
                 Ok(json!(project))
             }
             "project-new" => {
@@ -1715,7 +2125,11 @@ impl Daemon {
                         request["name"]
                             .as_str()
                             .context("invalid-request: name required")?,
-                        request["directory"].as_str().map(PathBuf::from),
+                        PathBuf::from(
+                            request["directory"]
+                                .as_str()
+                                .context("invalid-request: existing project directory required")?,
+                        ),
                         request.get("config").cloned().unwrap_or_else(|| json!({})),
                     )?;
                     state.opening_projects.insert(project.id.clone());
@@ -1736,7 +2150,7 @@ impl Daemon {
                 Ok(json!({"project":project,"terminal":terminal}))
             }
             "project-open" => {
-                let (project, already_open) = loop {
+                let (project, already_open, agent_views) = loop {
                     let mut state = self.state.lock();
                     if self.stopping.load(Ordering::Acquire) {
                         bail!("shutdown: daemon is stopping");
@@ -1755,10 +2169,17 @@ impl Daemon {
                         .terminals
                         .values()
                         .any(|entry| entry.project_id == project.id);
-                    if !already {
-                        state.opening_projects.insert(project.id.clone());
+                    if already {
+                        break (project, true, Vec::new());
                     }
-                    break (project, already);
+                    let agent_views: Vec<_> = state
+                        .agent_views
+                        .values()
+                        .filter(|view| view["project_id"] == project.id)
+                        .cloned()
+                        .collect();
+                    state.opening_projects.insert(project.id.clone());
+                    break (project, false, agent_views);
                 };
                 if already_open {
                     return Ok(json!({"project":project,"reattached":true}));
@@ -1767,6 +2188,21 @@ impl Daemon {
                     daemon: self.clone(),
                     id: project.id.clone(),
                 };
+                // Keep project-open serialized, but release topology before
+                // reading broker lifecycle, as in snapshot(). Descriptors can
+                // outlive their agent; only a current live projection is reuse.
+                if agent_views.iter().any(|view| {
+                    view["id"].as_str().is_some_and(|id| {
+                        self.acp.metadata(id).is_ok_and(|metadata| {
+                            matches!(
+                                metadata["lifecycle"].as_str(),
+                                Some("starting" | "auth-required" | "ready")
+                            )
+                        })
+                    })
+                }) {
+                    return Ok(json!({"project":project,"reattached":true}));
+                }
                 let terminal = self.open(&json!({"project":project.id}))?;
                 self.hooks(
                     project.hooks.clone(),
@@ -1797,6 +2233,15 @@ impl Daemon {
                 let project = state.store.configure(&id, request["config"].clone())?;
                 Self::emit(&mut state, "project-configured", None, json!(project));
                 self.changed.notify_all();
+                drop(state);
+                if let Err(error) = self.sync_recovery_project(&project.id) {
+                    self.recovery_diagnostic(
+                        None,
+                        &error.context(
+                            "project configured but recovery metadata was not synchronized",
+                        ),
+                    );
+                }
                 Ok(json!(project))
             }
             "config" => {
@@ -2040,6 +2485,8 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     listener.set_nonblocking(true)?;
     let integration = Integration::new(runtime, socket, &std::env::current_exe()?)?;
     let store = Store::load(&client::config_path(), projects_dir)?;
+    let (recovery, recovery_error) = recovery::RecoveryState::open(&client::config_path(), socket);
+    let native_store = recovery.agent_store();
     let startup = store.config.daemon_start_hooks.clone();
     let cwd = std::env::current_dir()?;
     let (hook_jobs, hook_receiver) = std::sync::mpsc::sync_channel::<Option<HookJob>>(64);
@@ -2061,16 +2508,28 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         changed: Condvar::new(),
         controls: Mutex::new(crate::control::Registry::new()),
         pending_launches: Mutex::new(BTreeMap::new()),
-        codex: crate::codex::Broker::new(runtime)?,
+        codex: crate::codex::Broker::new(runtime, native_store.as_deref())?,
         acp: crate::acp::Broker::new(),
         integration,
         git: GitCache::new(),
         stopping: AtomicBool::new(false),
+        startup_pending: AtomicBool::new(true),
         hook_jobs,
+        recovery: Mutex::new(recovery),
     });
+    if let Some(error) = recovery_error {
+        daemon.recovery_diagnostic(None, &error);
+    }
     let weak = Arc::downgrade(&daemon);
     let hook_worker = thread::spawn(move || {
         while let Ok(Some(job)) = hook_receiver.recv() {
+            // Only deferred native startup reserves a gated FIFO position.
+            // Wait without daemon/runtime guards; cancellation drops the sender.
+            if let Some(ready) = job.startup_ready
+                && ready.recv().is_err()
+            {
+                continue;
+            }
             for (index, hook) in job.hooks.iter().enumerate() {
                 let Some(daemon) = weak.upgrade() else {
                     return;
@@ -2102,9 +2561,65 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
             }
         }
     });
-    // First shell exists regardless of hook failures.
-    daemon.open(&json!({"cwd":cwd}))?;
-    daemon.hooks(startup, cwd, std::env::vars().collect(), "daemon-start");
+    let records = daemon.recovery_records();
+    let defer_initial_shell = records.iter().any(|record| {
+        matches!(
+            &record.agent,
+            crate::recovery::Agent::Omp | crate::recovery::Agent::Codex { .. }
+        )
+    });
+    let deferred_startup = if defer_initial_shell {
+        // Native contexts already occupied these slots before restart. Do not
+        // publish a disposable shell that either steals their quota or would
+        // need to be taken away from a newly attached human.
+        let ready = if startup.is_empty() {
+            None
+        } else {
+            let (ready, receiver) = std::sync::mpsc::sync_channel(1);
+            daemon.queue_hooks(HookJob {
+                hooks: startup,
+                cwd: cwd.clone(),
+                env: std::env::vars().collect(),
+                kind: "daemon-start",
+                startup_ready: Some(receiver),
+            });
+            Some(ready)
+        };
+        Some((ready, cwd))
+    } else {
+        // Ordinary startup still has a shell before any hook can fail.
+        daemon.open(&json!({"cwd":cwd}))?;
+        daemon.hooks(startup, cwd, std::env::vars().collect(), "daemon-start");
+        None
+    };
+    let reopen = Arc::clone(&daemon);
+    let recovery_worker = thread::Builder::new()
+        .name("conversation-reopen".into())
+        .spawn(move || {
+            let _ready = StartupReady(&reopen);
+            reopen.reopen_conversations(records);
+            if let Some((ready, cwd)) = deferred_startup {
+                if reopen.stopping.load(Ordering::Acquire) || SIGNAL_STOP.load(Ordering::Relaxed) {
+                    return;
+                }
+                let needs_shell = reopen.state.lock().terminals.is_empty();
+                if needs_shell && let Err(error) = reopen.open(&json!({"cwd":cwd})) {
+                    reopen.recovery_diagnostic(
+                        None,
+                        &error.context(
+                            "initial shell unavailable after native conversation reopening",
+                        ),
+                    );
+                    return;
+                }
+                if !reopen.stopping.load(Ordering::Acquire)
+                    && !SIGNAL_STOP.load(Ordering::Relaxed)
+                    && let Some(ready) = ready
+                {
+                    let _ = ready.send(());
+                }
+            }
+        })?;
     unsafe {
         libc::signal(
             libc::SIGTERM,
@@ -2198,7 +2713,8 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                 if let Some(current) = state.terminals.get_mut(&entry.terminal.id) {
                     current.cwd = cwd;
                 }
-                if let Some(project) = state.store.projects.get_mut(&entry.project_id)
+                let project_changed = if let Some(project) =
+                    state.store.projects.get_mut(&entry.project_id)
                     && !project.saved
                     && project.main_terminal.as_deref() == Some(&entry.terminal.id)
                     && project.context != context
@@ -2211,6 +2727,20 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
                         json!({"project_id":entry.project_id,"context":context}),
                     );
                     daemon.changed.notify_all();
+                    true
+                } else {
+                    false
+                };
+                drop(state);
+                if project_changed
+                    && let Err(error) = daemon.sync_recovery_project(&entry.project_id)
+                {
+                    daemon.recovery_diagnostic(
+                        None,
+                        &error.context(
+                            "project context changed but recovery metadata was not synchronized",
+                        ),
+                    );
                 }
             }
         }
@@ -2225,12 +2755,13 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         entry.terminal.close();
         daemon.integration.remove(&entry.terminal.id);
     }
-    // Late opens own a request slot until their post-spawn shutdown check and
-    // process cleanup finish. Socket shutdown unblocks slow readers/writers.
+    // Native setup owns a request slot too: publish its stop signal and join
+    // its owned preparation before waiting for those handlers to depart.
+    daemon.codex.shutdown();
     while !connections.lock().is_empty() {
         thread::sleep(Duration::from_millis(5));
     }
-    daemon.codex.shutdown();
+    let _ = recovery_worker.join();
     daemon.acp.shutdown();
     let _ = daemon.hook_jobs.send(None);
     let _ = hook_worker.join();

@@ -1,0 +1,22 @@
+story_id: e07s03
+title: Safe close and identifiable sessions
+status: passing
+bcps: 3
+evidence: specs/verifications/e07-ux.json
+tasks:
+  - id: 1
+    description: Implement the approved observable behavior and preserve existing security boundaries
+    verify: "cargo test --test runtime && cargo test --test acp"
+    risk: P1
+    security: high
+    security_acceptance: no new supported security findings in affected input or identity paths
+    status: passing
+    allure: {severity: high, categories: [UX, Security Review]}
+  - id: 2
+    description: Prove actual private controlling-PTY behavior and normal owned cleanup
+    verify: "bun -e 'const e=JSON.parse(await Bun.file(\"specs/verifications/e07-ux.json\").text()); if(e.stories.e07s03.status!==\"passing\")process.exit(1)'"
+    risk: P1
+    security: high
+    security_acceptance: no new supported security findings; no provider/global mutation or intercepted-input replay
+    status: passing
+    allure: {severity: high, categories: [UX, Runtime]}

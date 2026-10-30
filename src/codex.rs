@@ -9,18 +9,20 @@ use anyhow::{Context, Result, bail, ensure};
 use parking_lot::Mutex;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::ffi::{CStr, CString};
 use std::fs;
-use std::io::{ErrorKind, Read};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::net::Shutdown;
-use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
+use std::os::fd::{AsRawFd, FromRawFd};
+use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt, symlink};
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak, mpsc};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 use tungstenite::client::client_with_config;
 use tungstenite::protocol::{Message, WebSocket, WebSocketConfig};
 use uuid::Uuid;
@@ -36,32 +38,100 @@ const BACKEND_DEADLINE: Duration = Duration::from_secs(30);
 type Event = (String, String, Value);
 type Socket = WebSocket<UnixStream>;
 
+/// Transparent diagnostic wrapper: settlement evidence is not a public error code.
+struct PrepareFailure {
+    error: anyhow::Error,
+    settled: bool,
+}
+
+impl std::fmt::Debug for PrepareFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self.error, formatter)
+    }
+}
+
+impl std::fmt::Display for PrepareFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.error, formatter)
+    }
+}
+
+impl std::error::Error for PrepareFailure {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.error.source()
+    }
+}
+
+fn prepare_failure(error: anyhow::Error, settled: bool) -> anyhow::Error {
+    PrepareFailure { error, settled }.into()
+}
+
+/// Absence of evidence, including an unrecognized error, is never settlement.
+pub(crate) fn prepare_failure_settled(error: &anyhow::Error) -> bool {
+    error
+        .chain()
+        .find_map(|cause| {
+            cause
+                .downcast_ref::<PrepareFailure>()
+                .map(|failure| failure.settled)
+        })
+        .unwrap_or(false)
+}
+
+fn remove_owned_root(root: &Path) -> bool {
+    match fs::remove_dir_all(root) {
+        Ok(()) => true,
+        Err(error) => error.kind() == ErrorKind::NotFound,
+    }
+}
+
 pub(crate) struct Broker {
     inner: Arc<Inner>,
 }
 
 struct Inner {
     runtime: PathBuf,
+    recovery_store: Option<PathBuf>,
     instances: Mutex<BTreeMap<String, Arc<Instance>>>,
+    preparing: Mutex<()>,
     stopped: AtomicBool,
 }
 
-/// An unbound lease removes only its own instance on every failure path.
+impl Inner {
+    fn remove_settled(&self, instance: &Arc<Instance>) {
+        if *instance.cleanup.lock() != Some(true) {
+            return;
+        }
+        let mut instances = self.instances.lock();
+        if instances
+            .get(&instance.id)
+            .is_some_and(|retained| Arc::ptr_eq(retained, instance))
+        {
+            instances.remove(&instance.id);
+        }
+    }
+}
+
+/// An unbound lease closes only its own instance; uncertain cleanup stays charged.
 /// After bind, the Broker owns the execution, not this stack value.
 pub(crate) struct Prepared {
     pub instance_id: String,
     pub command: String,
     pub env: BTreeMap<String, String>,
     broker: Weak<Inner>,
+    instance: Arc<Instance>,
 }
 
 struct Instance {
     id: String,
     root: PathBuf,
+    model: String,
+    recovery_store: Option<PathBuf>,
+    checkpoint: Mutex<Option<Checkpoint>>,
     state: Mutex<State>,
     sender: mpsc::SyncSender<Job>,
     stop: AtomicBool,
-    cleanup: Mutex<()>,
+    cleanup: Mutex<Option<bool>>,
     process: Mutex<Option<OwnedBackend>>,
     connection: Mutex<Option<UnixStream>>,
     worker: Mutex<Option<JoinHandle<()>>>,
@@ -78,7 +148,10 @@ impl OwnedBackend {
         let Some(tree) = crate::runtime::ProcessTree::capture_owned_session(child.id() as i32)
         else {
             terminate(&mut child);
-            bail!("unavailable: cannot capture private backend process identity");
+            return Err(prepare_failure(
+                anyhow::anyhow!("unavailable: cannot capture private backend process identity"),
+                false,
+            ));
         };
         Ok(Self {
             child,
@@ -118,6 +191,8 @@ struct State {
     provider_session: Option<String>,
     joining_session: Option<String>,
     expected_resume: Option<String>,
+    // Replacement is irreversible for this instance, independent of later diagnostics.
+    native_session_replaced: bool,
     frontend: &'static str,
     backend: &'static str,
     connection: &'static str,
@@ -136,6 +211,16 @@ struct State {
     ambiguous_requests: BTreeSet<RequestId>,
     calls: VecDeque<Call>,
     events: VecDeque<Event>,
+}
+
+/// Only a file observation, never transcript content. Unchanged heartbeats do
+/// not reread or copy the native conversation.
+struct Checkpoint {
+    path: PathBuf,
+    len: u64,
+    modified: SystemTime,
+    device: u64,
+    inode: u64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -234,17 +319,36 @@ struct Job {
 
 impl Broker {
     /// Lazy: ordinary daemon/shell startup does not require Codex or authentication.
-    pub fn new(runtime: &Path) -> Result<Self> {
+    pub fn new(runtime: &Path, recovery_store: Option<&Path>) -> Result<Self> {
+        if let Some(store) = recovery_store {
+            ensure!(
+                store.is_absolute(),
+                "invalid-request: Codex conversation store must be absolute"
+            );
+        }
         Ok(Self {
             inner: Arc::new(Inner {
                 runtime: runtime.to_owned(),
+                recovery_store: recovery_store.map(Path::to_owned),
                 instances: Mutex::new(BTreeMap::new()),
+                preparing: Mutex::new(()),
                 stopped: AtomicBool::new(false),
             }),
         })
     }
 
     pub fn prepare(&self, request: &Value) -> Result<Prepared> {
+        self.prepare_unstarted(request).map_err(|error| {
+            if error.downcast_ref::<PrepareFailure>().is_some() {
+                error
+            } else {
+                // Every post-spawn failure is classified at its ownership boundary.
+                prepare_failure(error, true)
+            }
+        })
+    }
+
+    fn prepare_unstarted(&self, request: &Value) -> Result<Prepared> {
         request_shape(
             request,
             &[
@@ -288,6 +392,10 @@ impl Broker {
                 "invalid-request: resume_thread must be a persisted Codex UUID"
             );
         }
+        // Keep admission bounded even when a rejected spawn cannot be cleaned
+        // conclusively and must retain its broker slot. This is not a map,
+        // topology, authority or PTY guard; existing instances remain independent.
+        let _preparing = self.inner.preparing.lock();
         ensure!(
             !self.inner.stopped.load(Ordering::Acquire),
             "target-ended: broker stopped"
@@ -302,7 +410,9 @@ impl Broker {
         fs::create_dir_all(&self.inner.runtime)?;
         private_dir(&root)?;
         let result = self.prepare_at(request, &id, &root, model, resume);
-        if result.is_err() {
+        if result.as_ref().err().is_some_and(|error| {
+            error.downcast_ref::<PrepareFailure>().is_none() || prepare_failure_settled(error)
+        }) {
             let _ = fs::remove_dir_all(&root);
         }
         result
@@ -318,6 +428,22 @@ impl Broker {
     ) -> Result<Prepared> {
         for dir in ["home", "config", "runtime", "codex"] {
             private_dir(&root.join(dir))?;
+        }
+        // Only the provider's native rollout directory outlives this private
+        // backend. Auth, config, caches and transport state remain ephemeral.
+        let recovery_store = self
+            .inner
+            .recovery_store
+            .as_deref()
+            .map(prepare_recovery_store)
+            .transpose()?;
+        if let Some(store) = recovery_store.as_ref() {
+            let owned = fs::canonicalize(root)?;
+            ensure!(
+                !store.starts_with(&owned) && !owned.starts_with(store),
+                "invalid-request: Codex conversation store overlaps owned backend cleanup"
+            );
+            symlink(store.join("sessions"), root.join("codex/sessions"))?;
         }
         let endpoint = root.join("server.sock");
         ensure!(
@@ -349,14 +475,21 @@ impl Broker {
                 &root.join("codex/auth.json"),
                 false,
             )?;
-            if let Some(resume) = resume {
-                copy_resume(source, &root.join("codex"), resume)?;
+        }
+        if let Some(resume) = resume {
+            let destination = recovery_store
+                .as_deref()
+                .map_or_else(|| root.join("codex"), Path::to_owned);
+            if find_resume(&destination, resume)?.is_none() {
+                let source = source_home
+                    .as_deref()
+                    .context("unavailable: persisted resume source is unavailable")?;
+                copy_resume(source, &destination, resume)?;
             }
-        } else {
-            ensure!(
-                resume.is_none(),
-                "unavailable: persisted resume source is unavailable"
-            );
+            // An explicit resume must never fall through to a fresh thread.
+            let saved = find_resume(&destination, resume)?
+                .context("unavailable: selected persisted thread not found")?;
+            checkpoint_rollout(&saved, resume, &destination)?;
         }
         let address = format!("unix://{}", path_text(&endpoint)?);
         let mut command = Command::new(&executable);
@@ -370,6 +503,7 @@ impl Broker {
         // never an owned-resource identity.
         unsafe {
             command.pre_exec(|| {
+                libc::umask(0o077);
                 if libc::setsid() < 0 {
                     return Err(std::io::Error::last_os_error());
                 }
@@ -379,21 +513,29 @@ impl Broker {
         if let Some(cwd) = request.get("cwd").and_then(Value::as_str) {
             command.current_dir(cwd);
         }
+        ensure!(
+            !self.inner.stopped.load(Ordering::Acquire),
+            "target-ended: broker stopped before native backend startup"
+        );
         let child = command
             .spawn()
             .context("unavailable: cannot start private Codex backend")?;
-        let backend = OwnedBackend::new(child)?;
-        let socket = connect_backend(&endpoint, &backend)?;
-        let control_socket = socket.get_ref().try_clone()?;
+        let (backend, ownership_error) = match OwnedBackend::new(child) {
+            Ok(backend) => (Some(backend), None),
+            Err(error) => (None, Some(error)),
+        };
         let (sender, receiver) = mpsc::sync_channel(32);
         let instance = Arc::new(Instance {
             id: id.to_owned(),
             root: root.to_owned(),
+            model: model.to_owned(),
+            recovery_store,
+            checkpoint: Mutex::new(None),
             sender,
             stop: AtomicBool::new(false),
-            cleanup: Mutex::new(()),
-            process: Mutex::new(Some(backend)),
-            connection: Mutex::new(Some(control_socket)),
+            cleanup: Mutex::new(None),
+            process: Mutex::new(backend),
+            connection: Mutex::new(None),
             worker: Mutex::new(None),
             state: Mutex::new(State {
                 terminal: None,
@@ -401,6 +543,7 @@ impl Broker {
                 provider_session: None,
                 joining_session: None,
                 expected_resume: resume.map(str::to_owned),
+                native_session_replaced: false,
                 frontend: "starting",
                 backend: "running",
                 connection: "ready",
@@ -421,15 +564,51 @@ impl Broker {
                 events: VecDeque::new(),
             }),
         });
-        {
+        // Retain every spawned backend, including an uncaptured identity's
+        // uncertain settlement. Shutdown waits for setup or its cleanup.
+        let cleanup = instance.cleanup.lock();
+        let cancelled = {
             let mut instances = self.inner.instances.lock();
-            if self.inner.stopped.load(Ordering::Acquire) || instances.len() >= INSTANCE_LIMIT {
-                drop(instances);
-                instance.close("launch-cancelled");
-                bail!("target-ended: launch cancelled or instance limit reached");
-            }
+            let cancelled =
+                self.inner.stopped.load(Ordering::Acquire) || instances.len() >= INSTANCE_LIMIT;
+            // Even an admission race cannot discard an already spawned backend.
             instances.insert(id.to_owned(), instance.clone());
+            cancelled
+        };
+        if let Some(error) = ownership_error {
+            drop(cleanup);
+            instance.close("native-start-failed");
+            self.inner.remove_settled(&instance);
+            return Err(error);
         }
+        if cancelled {
+            drop(cleanup);
+            let settled = instance.close("launch-cancelled");
+            self.inner.remove_settled(&instance);
+            return Err(prepare_failure(
+                anyhow::anyhow!("target-ended: launch cancelled or instance limit reached"),
+                settled,
+            ));
+        }
+        let connected = (|| -> Result<_> {
+            let process = instance.process.lock();
+            let backend = process
+                .as_ref()
+                .context("unavailable: prepared backend already failed")?;
+            let socket = connect_backend(&endpoint, backend, &self.inner.stopped)?;
+            let control_socket = socket.get_ref().try_clone()?;
+            Ok((socket, control_socket))
+        })();
+        let (socket, control_socket) = match connected {
+            Ok(connected) => connected,
+            Err(error) => {
+                drop(cleanup);
+                let settled = instance.close("native-start-failed");
+                self.inner.remove_settled(&instance);
+                return Err(prepare_failure(error, settled));
+            }
+        };
+        *instance.connection.lock() = Some(control_socket);
         let worker_instance = instance.clone();
         match thread::Builder::new()
             .name(format!("codex-{}", &id[..8]))
@@ -437,11 +616,13 @@ impl Broker {
         {
             Ok(worker) => *instance.worker.lock() = Some(worker),
             Err(error) => {
-                self.inner.instances.lock().remove(id);
-                instance.close("worker-start-failed");
-                return Err(error.into());
+                drop(cleanup);
+                let settled = instance.close("worker-start-failed");
+                self.inner.remove_settled(&instance);
+                return Err(prepare_failure(error.into(), settled));
             }
         }
+        drop(cleanup);
         // Executable + arguments ONLY. Parent applies exec/env within its startup source.
         let mut args = vec![executable];
         if let Some(resume) = resume {
@@ -470,6 +651,7 @@ impl Broker {
                 .join(" "),
             env,
             broker: Arc::downgrade(&self.inner),
+            instance,
         })
     }
 
@@ -526,6 +708,58 @@ impl Broker {
             "stale-target: terminal does not match instance"
         );
         Ok(state.snapshot(&instance.id))
+    }
+
+    /// Saved provider-native thread identity, not the separate transport session.
+    /// The caller must not hold topology/authority locks across this method.
+    pub fn recovery(&self, terminal: &str) -> Result<Option<Value>> {
+        let Some(instance) = self.bound(terminal).into_iter().next() else {
+            return Ok(None);
+        };
+        let session = {
+            let state = instance.state.lock();
+            if state.native_session_replaced {
+                return Ok(Some(json!({"agent":"codex","recoverable":false,
+                    "reason":"native-session-replaced","root_lifetime":instance.id})));
+            }
+            if instance.recovery_store.is_none() {
+                return Ok(None);
+            }
+            if state.frontend != "attached" || state.session_state != "ready" {
+                return Ok(None);
+            }
+            let Some(session) = state.session.clone() else {
+                return Ok(None);
+            };
+            session
+        };
+        let peer_pid = instance
+            .process
+            .lock()
+            .as_ref()
+            .map(|backend| backend.child.id());
+        let checkpoint = if peer_pid.is_some() {
+            instance.checkpoint(&session)
+        } else {
+            Ok(None)
+        };
+        // Backing-store I/O does not hold State. Do not publish old intent if
+        // the native replacement was observed while its checkpoint was running.
+        let state = instance.state.lock();
+        if state.native_session_replaced {
+            return Ok(Some(json!({"agent":"codex","recoverable":false,
+                "reason":"native-session-replaced","root_lifetime":instance.id})));
+        }
+        let Some(peer_pid) = peer_pid else {
+            return Ok(None);
+        };
+        let Some(path) = checkpoint? else {
+            return Ok(None);
+        };
+        Ok(Some(
+            json!({"agent":"codex","recoverable":true,"root_lifetime":instance.id,
+            "session_id":session,"model":instance.model,"session_file":path,"peer_pid":peer_pid}),
+        ))
     }
 
     pub fn mutate(&self, op: &str, request: &Value, authority: Arc<Authority>) -> Result<Value> {
@@ -605,6 +839,9 @@ impl Broker {
 
     pub fn shutdown(&self) {
         self.inner.stopped.store(true, Ordering::Release);
+        // A preparing child may not be in the map yet. Join that ownership
+        // scope before taking the final cleanup snapshot.
+        let _preparing = self.inner.preparing.lock();
         let instances: Vec<_> = self.inner.instances.lock().values().cloned().collect();
         for instance in instances {
             instance.close("broker-stopped");
@@ -649,33 +886,86 @@ impl Drop for Broker {
     }
 }
 
+impl Prepared {
+    /// Roll back this exact preparation after native terminal creation fails.
+    /// A missing broker/map entry is not evidence; the retained owned instance is.
+    pub(crate) fn cleanup_failed_launch(&self) -> bool {
+        let settled = self.instance.close("native-start-failed");
+        if let Some(broker) = self.broker.upgrade() {
+            broker.remove_settled(&self.instance);
+        }
+        settled
+    }
+}
+
 impl Drop for Prepared {
     fn drop(&mut self) {
-        let Some(broker) = self.broker.upgrade() else {
-            return;
+        let broker = self.broker.upgrade();
+        // Match bind's map -> State order, then revoke admission before releasing
+        // either guard. Cleanup I/O and worker joins never retain the map lock.
+        let instances = broker.as_ref().map(|broker| broker.instances.lock());
+        let unbound = {
+            let state = self.instance.state.lock();
+            if state.terminal.is_none() {
+                self.instance.stop.store(true, Ordering::Release);
+                true
+            } else {
+                false
+            }
         };
-        let mut instances = broker.instances.lock();
-        if instances
-            .get(&self.instance_id)
-            .is_some_and(|instance| instance.state.lock().terminal.is_none())
-        {
-            let instance = instances.remove(&self.instance_id);
-            drop(instances);
-            if let Some(instance) = instance {
-                instance.close("unbound-launch-dropped");
+        drop(instances);
+        if unbound {
+            self.instance.close("unbound-launch-dropped");
+            if let Some(broker) = broker {
+                broker.remove_settled(&self.instance);
             }
         }
     }
 }
 
 impl Instance {
-    fn close(&self, reason: &'static str) {
-        // Stop revokes work; this lock makes concurrent callers wait for the
-        // same worker/process/resource teardown attempt to finish.
-        let _cleanup = self.cleanup.lock();
-        if self.stop.swap(true, Ordering::AcqRel) {
-            return;
+    fn checkpoint(&self, session: &str) -> Result<Option<PathBuf>> {
+        let Some(store) = self.recovery_store.as_ref() else {
+            return Ok(None);
+        };
+        // This dedicated I/O lock never nests a state/authority guard.
+        let mut checkpoint = self.checkpoint.lock();
+        let path = match checkpoint.as_ref() {
+            Some(saved) => saved.path.clone(),
+            None => match find_resume(store, session)? {
+                Some(path) => path,
+                None => return Ok(None), // Allocated IDs may not yet have a rollout.
+            },
+        };
+        let metadata = fs::symlink_metadata(&path)
+            .context("unavailable: saved Codex conversation disappeared")?;
+        let modified = metadata.modified()?;
+        if checkpoint.as_ref().is_none_or(|saved| {
+            saved.len != metadata.len()
+                || saved.modified != modified
+                || saved.device != metadata.dev()
+                || saved.inode != metadata.ino()
+        }) {
+            checkpoint_rollout(&path, session, store)?;
+            *checkpoint = Some(Checkpoint {
+                path: path.clone(),
+                len: metadata.len(),
+                modified,
+                device: metadata.dev(),
+                inode: metadata.ino(),
+            });
         }
+        Ok(Some(path))
+    }
+
+    fn close(&self, reason: &'static str) -> bool {
+        // Stop revokes work; concurrent callers read the same completed teardown
+        // result, never infer success from emptied handles or a missing map entry.
+        let mut cleanup = self.cleanup.lock();
+        if let Some(settled) = *cleanup {
+            return settled;
+        }
+        self.stop.store(true, Ordering::Release);
         {
             let mut state = self.state.lock();
             state.degrade(reason);
@@ -683,19 +973,45 @@ impl Instance {
         if let Some(socket) = self.connection.lock().take() {
             let _ = socket.shutdown(Shutdown::Both);
         }
-        if let Some(worker) = self.worker.lock().take() {
-            let _ = worker.join();
-        }
-        let cleaned = self
-            .process
+        let joined = self
+            .worker
             .lock()
             .take()
-            .is_none_or(|mut backend| backend.terminate());
+            .is_none_or(|worker| worker.join().is_ok());
+        let backend = self.process.lock().take();
+        let cleaned = backend.is_some_and(|mut backend| {
+            if backend.terminate() {
+                true
+            } else {
+                // Keep exact owned process identities as well as the budget
+                // charge when termination cannot be conclusively established.
+                *self.process.lock() = Some(backend);
+                false
+            }
+        });
+        let session = {
+            let state = self.state.lock();
+            if state.native_session_replaced {
+                None
+            } else {
+                state.session.clone()
+            }
+        };
+        let checkpoint_failed = session
+            .as_deref()
+            .is_some_and(|session| self.checkpoint(session).is_err());
         {
             let mut state = self.state.lock();
             state.backend = if cleaned { "exited" } else { "unknown" };
             if !cleaned {
                 state.problem = Some("owned-process-cleanup-incomplete");
+            }
+            if checkpoint_failed {
+                state.problem = Some("native-conversation-checkpoint-failed");
+                state.emit(
+                    "agent-lifecycle",
+                    json!({"reason":"native-conversation-checkpoint-failed"}),
+                );
             }
             let backend = state.backend;
             state.emit(
@@ -703,7 +1019,8 @@ impl Instance {
                 json!({"instance_id":self.id,"backend":backend,"reason":reason}),
             );
         }
-        if fs::remove_dir_all(&self.root).is_err() && self.root.exists() {
+        let resources_removed = cleaned && joined && remove_owned_root(&self.root);
+        if !resources_removed {
             let mut state = self.state.lock();
             state.problem = Some("owned-resource-cleanup-incomplete");
             state.emit(
@@ -711,6 +1028,9 @@ impl Instance {
                 json!({"reason":"owned-resource-cleanup-incomplete"}),
             );
         }
+        let settled = cleaned && joined && resources_removed;
+        *cleanup = Some(settled);
+        settled
     }
 }
 
@@ -1627,6 +1947,7 @@ fn handle_message(
             // thread. That auxiliary is not a replacement conversation.
             && !(thread["ephemeral"] == true && thread["threadSource"] == "thread_title")
         {
+            state.native_session_replaced = true;
             state.degrade("native-session-replaced");
         }
         return Ok(());
@@ -1836,9 +2157,17 @@ fn public_details(kind: &str, params: &Value) -> Value {
     Value::Object(result)
 }
 
-fn connect_backend(endpoint: &Path, backend: &OwnedBackend) -> Result<Socket> {
+fn connect_backend(
+    endpoint: &Path,
+    backend: &OwnedBackend,
+    stopped: &AtomicBool,
+) -> Result<Socket> {
     let deadline = Instant::now() + BACKEND_DEADLINE;
     let stream = loop {
+        ensure!(
+            !stopped.load(Ordering::Acquire),
+            "target-ended: broker stopped during native backend startup"
+        );
         ensure!(
             !backend.tree.root_exited(),
             "unavailable: private Codex backend exited during startup"
@@ -1873,6 +2202,10 @@ fn connect_backend(endpoint: &Path, backend: &OwnedBackend) -> Result<Socket> {
         "capabilities":{"experimentalApi":true}}}),
     )?;
     loop {
+        ensure!(
+            !stopped.load(Ordering::Acquire),
+            "target-ended: broker stopped during native backend initialization"
+        );
         ensure!(
             Instant::now() < deadline,
             "unavailable: Codex initialization timeout"
@@ -1992,6 +2325,108 @@ fn private_dir(path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn ensure_store_directory(path: &Path) -> Result<()> {
+    match fs::DirBuilder::new().mode(0o700).create(path) {
+        Ok(()) => {}
+        Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
+        Err(error) => {
+            return Err(error).context("unavailable: cannot create Codex conversation store");
+        }
+    }
+    let metadata = fs::symlink_metadata(path)?;
+    ensure!(
+        metadata.is_dir()
+            && !metadata.file_type().is_symlink()
+            && metadata.uid() == unsafe { libc::geteuid() }
+            && metadata.mode() & 0o077 == 0,
+        "unavailable: Codex conversation store must be a private owned directory"
+    );
+    Ok(())
+}
+
+fn prepare_recovery_store(store: &Path) -> Result<PathBuf> {
+    ensure_store_directory(store)?;
+    let store = fs::canonicalize(store)?;
+    ensure_store_directory(&store.join("sessions"))?;
+    fs::File::open(store.join("sessions"))?.sync_all()?;
+    fs::File::open(&store)?.sync_all()?;
+    fs::File::open(
+        store
+            .parent()
+            .context("unavailable: Codex conversation store has no parent")?,
+    )?
+    .sync_all()?;
+    Ok(store)
+}
+
+/// Validate only the bounded native header; transcript content stays in the
+/// provider store and is never returned as journal metadata.
+fn rollout_file(path: &Path, session: &str) -> Result<fs::File> {
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(path)
+        .context("unavailable: saved Codex conversation is unavailable")?;
+    validate_rollout(&mut file, session)?;
+    Ok(file)
+}
+
+fn validate_rollout(file: &mut fs::File, session: &str) -> Result<()> {
+    let metadata = file.metadata()?;
+    ensure!(
+        metadata.is_file()
+            && metadata.uid() == unsafe { libc::geteuid() }
+            && metadata.nlink() == 1
+            && metadata.len() <= 64 * 1024 * 1024,
+        "unsupported: saved Codex conversation must be a bounded owned regular file"
+    );
+    let mut header = Vec::new();
+    BufReader::new(&mut *file)
+        .take(64 * 1024 + 1)
+        .read_until(b'\n', &mut header)?;
+    ensure!(
+        header.len() <= 64 * 1024 && header.last() == Some(&b'\n'),
+        "unsupported: saved Codex conversation header is incomplete or oversized"
+    );
+    let header: Value = serde_json::from_slice(&header)
+        .context("unsupported: saved Codex conversation header is invalid")?;
+    ensure!(
+        header["type"] == "session_meta" && header["payload"]["id"].as_str() == Some(session),
+        "stale-target: saved Codex conversation header names another thread"
+    );
+    file.rewind()?;
+    Ok(())
+}
+
+fn checkpoint_rollout(path: &Path, session: &str, store: &Path) -> Result<()> {
+    ensure!(
+        path.starts_with(store.join("sessions")),
+        "unsupported: Codex conversation is outside its native store"
+    );
+    let file = rollout_file(path, session)?;
+    file.sync_all()?;
+    let mut directory = path
+        .parent()
+        .context("unavailable: saved Codex conversation has no parent")?;
+    loop {
+        let metadata = fs::symlink_metadata(directory)?;
+        ensure!(
+            metadata.is_dir()
+                && !metadata.file_type().is_symlink()
+                && metadata.uid() == unsafe { libc::geteuid() },
+            "unsupported: saved Codex conversation directory is not owned"
+        );
+        fs::File::open(directory)?.sync_all()?;
+        if directory == store {
+            break;
+        }
+        directory = directory
+            .parent()
+            .context("unsupported: invalid Codex conversation path")?;
+    }
+    Ok(())
+}
+
 fn copy_private_file(source: &Path, destination: &Path, required: bool) -> Result<()> {
     let metadata = match fs::symlink_metadata(source) {
         Ok(metadata) => metadata,
@@ -2021,8 +2456,19 @@ fn copy_private_file(source: &Path, destination: &Path, required: bool) -> Resul
     Ok(())
 }
 
-fn copy_resume(source: &Path, destination: &Path, resume: &str) -> Result<()> {
+fn find_resume(source: &Path, resume: &str) -> Result<Option<PathBuf>> {
+    ensure!(
+        Uuid::parse_str(resume).is_ok(),
+        "unsupported: saved Codex thread identity is not a UUID"
+    );
     let sessions = source.join("sessions");
+    match fs::symlink_metadata(&sessions) {
+        Ok(_) => {}
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).context("unavailable: persisted resume history unavailable");
+        }
+    }
     let mut queue = vec![(sessions.clone(), 0usize)];
     let mut found = None;
     let mut inspected = 0usize;
@@ -2057,19 +2503,175 @@ fn copy_resume(source: &Path, destination: &Path, resume: &str) -> Result<()> {
             }
         }
     }
-    let found = found.context("unavailable: selected persisted thread not found")?;
+    Ok(found)
+}
+
+fn import_directory(parent: &fs::File, name: &CStr, private: bool) -> Result<fs::File> {
+    let open = || unsafe {
+        libc::openat(
+            parent.as_raw_fd(),
+            name.as_ptr(),
+            libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+        )
+    };
+    let mut descriptor = open();
+    if descriptor < 0 && std::io::Error::last_os_error().kind() == ErrorKind::NotFound {
+        if unsafe { libc::mkdirat(parent.as_raw_fd(), name.as_ptr(), 0o700) } != 0
+            && std::io::Error::last_os_error().kind() != ErrorKind::AlreadyExists
+        {
+            return Err(std::io::Error::last_os_error())
+                .context("unavailable: cannot create native import directory");
+        }
+        descriptor = open();
+    }
+    if descriptor < 0 {
+        return Err(std::io::Error::last_os_error())
+            .context("unsupported: native import directory is unavailable or aliased");
+    }
+    let directory = unsafe { fs::File::from_raw_fd(descriptor) };
+    let metadata = directory.metadata()?;
+    ensure!(
+        metadata.is_dir()
+            && metadata.uid() == unsafe { libc::geteuid() }
+            && (!private || metadata.mode() & 0o077 == 0),
+        "unsupported: native import directory must be owned and its store root private"
+    );
+    Ok(directory)
+}
+
+fn publish_rollout(directory: &fs::File, temporary: &CStr, target: &CStr) -> Result<()> {
+    // Exclusive rename publishes one complete inode without a hard-link window:
+    // a crash cannot leave a discoverable rollout with a second staging link.
+    #[cfg(target_os = "macos")]
+    let result = unsafe {
+        libc::renameatx_np(
+            directory.as_raw_fd(),
+            temporary.as_ptr(),
+            directory.as_raw_fd(),
+            target.as_ptr(),
+            libc::RENAME_EXCL,
+        )
+    };
+    #[cfg(target_os = "linux")]
+    let result = unsafe {
+        libc::renameat2(
+            directory.as_raw_fd(),
+            temporary.as_ptr(),
+            directory.as_raw_fd(),
+            target.as_ptr(),
+            libc::RENAME_NOREPLACE,
+        )
+    };
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        if result != 0 {
+            return Err(std::io::Error::last_os_error())
+                .context("unavailable: cannot exclusively publish native conversation");
+        }
+        Ok(())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        let _ = (directory, temporary, target);
+        bail!("unsupported: atomic native import publication requires macOS or Linux")
+    }
+}
+
+fn copy_resume(source: &Path, destination: &Path, resume: &str) -> Result<()> {
+    let found =
+        find_resume(source, resume)?.context("unavailable: selected persisted thread not found")?;
+    let mut input = rollout_file(&found, resume)?;
+    let source_len = input.metadata()?.len();
+    let sessions = source.join("sessions");
     let relative = found.strip_prefix(&sessions)?;
-    let target = destination.join("sessions").join(relative);
-    let parent = target
+    let parent = relative
         .parent()
         .context("unavailable: invalid resume destination")?;
-    fs::create_dir_all(parent)?;
-    let mut path = parent;
-    while path != destination {
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
-        path = path.parent().context("unavailable: invalid resume path")?;
+    let target = CString::new(
+        relative
+            .file_name()
+            .context("unavailable: invalid native conversation name")?
+            .as_encoded_bytes(),
+    )?;
+    let root = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(destination)?;
+    let metadata = root.metadata()?;
+    ensure!(
+        metadata.is_dir()
+            && metadata.uid() == unsafe { libc::geteuid() }
+            && metadata.mode() & 0o077 == 0,
+        "unsupported: native import store must be a private owned directory"
+    );
+    // Root, sessions, and at most five levels admitted by find_resume.
+    let mut directories = Vec::with_capacity(7);
+    directories.push(root);
+    directories.push(import_directory(&directories[0], c"sessions", true)?);
+    for component in parent.components() {
+        let Component::Normal(name) = component else {
+            bail!("unsupported: invalid native import directory component");
+        };
+        let name = CString::new(name.as_encoded_bytes())?;
+        directories.push(import_directory(directories.last().unwrap(), &name, false)?);
     }
-    copy_private_file(&found, &target, true)
+    let directory = directories.last().unwrap();
+    // This name cannot match find_resume's exact UUID/.jsonl discovery suffix.
+    let temporary = CString::new(format!(".amux-import-{}.tmp", Uuid::new_v4()))?;
+    let mut created = false;
+    let mut published = false;
+    let result = (|| -> Result<()> {
+        let descriptor = unsafe {
+            libc::openat(
+                directory.as_raw_fd(),
+                temporary.as_ptr(),
+                libc::O_RDWR | libc::O_CREAT | libc::O_EXCL | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                0o600,
+            )
+        };
+        if descriptor < 0 {
+            return Err(std::io::Error::last_os_error())
+                .context("unavailable: cannot create private native import");
+        }
+        created = true;
+        let mut output = unsafe { fs::File::from_raw_fd(descriptor) };
+        let copied = std::io::copy(&mut input.by_ref().take(64 * 1024 * 1024 + 1), &mut output)?;
+        ensure!(
+            copied <= 64 * 1024 * 1024
+                && copied == source_len
+                && input.metadata()?.len() == source_len,
+            "unavailable: native conversation changed or exceeded the import bound"
+        );
+        // Publish the copied identity, not merely the source's earlier header.
+        output.rewind()?;
+        validate_rollout(&mut output, resume)?;
+        output.sync_all()?;
+        publish_rollout(directory, &temporary, &target)?;
+        published = true;
+        for ancestor in directories.iter().rev() {
+            ancestor
+                .sync_all()
+                .context("unavailable: published native conversation durability is unconfirmed")?;
+        }
+        Ok(())
+    })();
+    if let Err(error) = result {
+        if created && !published {
+            if unsafe { libc::unlinkat(directory.as_raw_fd(), temporary.as_ptr(), 0) } != 0 {
+                return Err(error).context(format!(
+                    "unavailable: cannot remove owned partial native import: {}",
+                    std::io::Error::last_os_error()
+                ));
+            }
+            if let Err(cleanup) = directory.sync_all() {
+                return Err(error).context(format!(
+                    "unavailable: partial native import cleanup durability is unconfirmed: {cleanup}"
+                ));
+            }
+        }
+        return Err(error);
+    }
+    Ok(())
 }
 
 fn request_shape(request: &Value, allowed: &[&str], required: &[&str]) -> Result<()> {
@@ -2120,6 +2722,7 @@ fn shell_quote(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::PermissionsExt;
 
     struct PrivateRoot(PathBuf);
 
@@ -2130,11 +2733,753 @@ mod tests {
     }
 
     #[test]
+    fn rejected_preparation_is_settled_without_starting_a_backend() {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-prepare-rejected-{}", Uuid::new_v4().simple())),
+        );
+        let broker = Broker::new(&root.0, None).unwrap();
+        let request = json!({"version":1,"op":"agent-open",
+            "controller":{"kind":"controller","ref":"fixture"},"model":"fixture",
+            "resume_thread":"not-a-persisted-thread"});
+        let error = broker.prepare(&request).err().unwrap();
+        assert!(prepare_failure_settled(&error));
+        assert_eq!(
+            error.to_string(),
+            "invalid-request: resume_thread must be a persisted Codex UUID"
+        );
+        assert!(
+            !root.0.exists(),
+            "validation unexpectedly reached backend setup"
+        );
+        assert!(prepare_failure_settled(&error.context("consumer boundary")));
+        assert!(!prepare_failure_settled(&anyhow::anyhow!(
+            "unavailable: unknown launch"
+        )));
+    }
+
+    #[test]
+    fn filesystem_preparation_failure_retains_its_cause_and_is_retryable() {
+        let root = PrivateRoot(std::env::temp_dir().join(format!(
+            "amux-prepare-filesystem-{}",
+            Uuid::new_v4().simple()
+        )));
+        private_dir(&root.0).unwrap();
+        let runtime = root.0.join("runtime");
+        fs::write(&runtime, "not a directory").unwrap();
+        let broker = Broker::new(&runtime, None).unwrap();
+        let request = json!({"version":1,"op":"agent-open",
+            "controller":{"kind":"controller","ref":"fixture"},"model":"fixture"});
+        let original = fs::create_dir_all(&runtime).unwrap_err();
+        let error = broker.prepare(&request).err().unwrap();
+        assert!(prepare_failure_settled(&error));
+        assert_eq!(format!("{error:#}"), original.to_string());
+        assert_eq!(error.root_cause().to_string(), original.to_string());
+        assert_eq!(fs::read_to_string(&runtime).unwrap(), "not a directory");
+    }
+
+    #[test]
+    fn uncaptured_backend_identity_never_supplies_settlement_evidence() {
+        // Deliberately not a new session: killing/reaping this child cannot prove
+        // that an unobserved backend descendant or endpoint has been settled.
+        let child = Command::new("/bin/sleep")
+            .arg("60")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let pid = child.id() as i32;
+        let error = OwnedBackend::new(child).err().unwrap();
+        assert_eq!(
+            error.to_string(),
+            "unavailable: cannot capture private backend process identity"
+        );
+        assert!(!prepare_failure_settled(
+            &error.context("consumer boundary")
+        ));
+        assert_eq!(
+            unsafe { libc::kill(pid, 0) },
+            -1,
+            "direct child was not reaped"
+        );
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ESRCH)
+        );
+    }
+
+    #[test]
+    fn native_store_rejects_aliases_and_ambiguous_exact_threads() {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-native-alias-{}", Uuid::new_v4().simple())),
+        );
+        private_dir(&root.0).unwrap();
+        let outside = root.0.join("outside");
+        private_dir(&outside).unwrap();
+        let store = root.0.join("store");
+        symlink(&outside, &store).unwrap();
+        assert!(prepare_recovery_store(&store).is_err());
+        fs::remove_file(&store).unwrap();
+        let store = prepare_recovery_store(&store).unwrap();
+        let session = Uuid::new_v4().to_string();
+        let first = store
+            .join("sessions")
+            .join(format!("rollout-first-{session}.jsonl"));
+        symlink(outside.join("never-created"), &first).unwrap();
+        assert!(rollout_file(&first, &session).is_err());
+        assert_eq!(find_resume(&store, &session).unwrap(), None);
+        fs::remove_file(&first).unwrap();
+        let data = format!(
+            "{}\n",
+            json!({"type":"session_meta","payload":{"id":session}})
+        );
+        fs::write(&first, &data).unwrap();
+        let second = store
+            .join("sessions")
+            .join(format!("rollout-second-{session}.jsonl"));
+        fs::write(&second, data).unwrap();
+        assert!(find_resume(&store, &session).is_err());
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
+    }
+
+    struct NativeImport {
+        root: PrivateRoot,
+        source: PathBuf,
+        store: PathBuf,
+        session: String,
+        relative: PathBuf,
+        history: Vec<u8>,
+    }
+
+    impl NativeImport {
+        fn new() -> Self {
+            let root = PrivateRoot(
+                std::env::temp_dir()
+                    .join(format!("amux-native-import-{}", Uuid::new_v4().simple())),
+            );
+            private_dir(&root.0).unwrap();
+            let source = root.0.join("source");
+            let session = Uuid::new_v4().to_string();
+            let relative = PathBuf::from("2026/10/29")
+                .join(format!("rollout-2026-10-29T00-00-00-{session}.jsonl"));
+            let mut history = format!(
+                "{}\n",
+                json!({"type":"session_meta","payload":{"id":session,"cwd":"/original"}})
+            )
+            .into_bytes();
+            for turn in 0..512 {
+                history.extend_from_slice(
+                    format!(
+                        "{}\n",
+                        json!({"type":"response_item","payload":{"turn":turn,"text":"history".repeat(128)}})
+                    )
+                    .as_bytes(),
+                );
+            }
+            let source_file = source.join("sessions").join(&relative);
+            fs::create_dir_all(source_file.parent().unwrap()).unwrap();
+            fs::write(source_file, &history).unwrap();
+            let store = prepare_recovery_store(&root.0.join("store")).unwrap();
+            Self {
+                root,
+                source,
+                store,
+                session,
+                relative,
+                history,
+            }
+        }
+
+        fn target(&self) -> PathBuf {
+            self.store.join("sessions").join(&self.relative)
+        }
+    }
+
+    #[test]
+    fn native_import_preserves_whole_history_and_provider_directory_modes() {
+        let fixture = NativeImport::new();
+        let parent = fixture.target().parent().unwrap().to_owned();
+        fs::create_dir_all(&parent).unwrap();
+        for directory in [parent.clone(), parent.parent().unwrap().to_owned()] {
+            fs::set_permissions(directory, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let source = fixture.source.join("sessions").join(&fixture.relative);
+        let mut validated = rollout_file(&source, &fixture.session).unwrap();
+        let mut whole_history = Vec::new();
+        validated.read_to_end(&mut whole_history).unwrap();
+        assert_eq!(whole_history, fixture.history);
+        copy_resume(&fixture.source, &fixture.store, &fixture.session).unwrap();
+        assert_eq!(fs::read(fixture.target()).unwrap(), fixture.history);
+        assert_eq!(fs::read(&source).unwrap(), fixture.history);
+        for directory in [parent.clone(), parent.parent().unwrap().to_owned()] {
+            assert_eq!(fs::metadata(directory).unwrap().mode() & 0o777, 0o755);
+        }
+        let metadata = fs::metadata(fixture.target()).unwrap();
+        assert_eq!(metadata.mode() & 0o777, 0o600);
+        assert_eq!(metadata.nlink(), 1);
+        assert_eq!(fs::read_dir(parent).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn native_import_never_clobbers_an_existing_target() {
+        let fixture = NativeImport::new();
+        let target = fixture.target();
+        fs::create_dir_all(target.parent().unwrap()).unwrap();
+        let existing = format!(
+            "{}\n{}\n",
+            json!({"type":"session_meta","payload":{"id":fixture.session}}),
+            json!({"type":"response_item","payload":{"text":"existing complete conversation"}})
+        );
+        fs::write(&target, &existing).unwrap();
+        fs::set_permissions(&target, fs::Permissions::from_mode(0o640)).unwrap();
+        let original = fs::metadata(&target).unwrap();
+        assert!(copy_resume(&fixture.source, &fixture.store, &fixture.session).is_err());
+        let retained = fs::metadata(&target).unwrap();
+        assert_eq!(fs::read(&target).unwrap(), existing.as_bytes());
+        assert_eq!(retained.ino(), original.ino());
+        assert_eq!(retained.mode(), original.mode());
+        assert_eq!(fs::read_dir(target.parent().unwrap()).unwrap().count(), 1);
+        assert_eq!(
+            fs::read(fixture.source.join("sessions").join(&fixture.relative)).unwrap(),
+            fixture.history
+        );
+    }
+
+    fn tree_contents(path: &Path) -> Vec<(PathBuf, u32, Vec<u8>)> {
+        let mut queue = vec![path.to_owned()];
+        let mut contents = Vec::new();
+        while let Some(entry) = queue.pop() {
+            let metadata = fs::symlink_metadata(&entry).unwrap();
+            let bytes = if metadata.is_dir() {
+                queue.extend(
+                    fs::read_dir(&entry)
+                        .unwrap()
+                        .map(|child| child.unwrap().path()),
+                );
+                Vec::new()
+            } else {
+                fs::read(&entry).unwrap()
+            };
+            contents.push((
+                entry.strip_prefix(path).unwrap().to_owned(),
+                metadata.mode(),
+                bytes,
+            ));
+        }
+        contents.sort();
+        contents
+    }
+
+    #[test]
+    fn native_import_rejects_nested_aliases_before_outside_tree_mutation() {
+        for alias_depth in 0..3 {
+            let fixture = NativeImport::new();
+            let outside = fixture.root.0.join("outside");
+            private_dir(&outside).unwrap();
+            fs::set_permissions(&outside, fs::Permissions::from_mode(0o751)).unwrap();
+            let dates = ["2026", "10", "29"];
+            let mut outside_parent = outside.clone();
+            for date in &dates[alias_depth + 1..] {
+                outside_parent.push(date);
+                fs::create_dir(&outside_parent).unwrap();
+                fs::set_permissions(&outside_parent, fs::Permissions::from_mode(0o755)).unwrap();
+            }
+            fs::write(outside_parent.join("sentinel"), "unrelated outside history").unwrap();
+            fs::set_permissions(
+                outside_parent.join("sentinel"),
+                fs::Permissions::from_mode(0o640),
+            )
+            .unwrap();
+            let before = tree_contents(&outside);
+            let mut destination = fixture.store.join("sessions");
+            for date in &dates[..alias_depth] {
+                destination.push(date);
+                fs::create_dir(&destination).unwrap();
+                fs::set_permissions(&destination, fs::Permissions::from_mode(0o755)).unwrap();
+            }
+            let alias = destination.join(dates[alias_depth]);
+            symlink(&outside, &alias).unwrap();
+            assert!(copy_resume(&fixture.source, &fixture.store, &fixture.session).is_err());
+            assert_eq!(tree_contents(&outside), before, "alias depth {alias_depth}");
+            assert!(
+                fs::symlink_metadata(alias)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
+            assert_eq!(find_resume(&fixture.store, &fixture.session).unwrap(), None);
+            assert_eq!(
+                fs::read(fixture.source.join("sessions").join(&fixture.relative)).unwrap(),
+                fixture.history
+            );
+        }
+    }
+
+    #[test]
+    fn native_import_rejects_non_directory_destination_without_mutation() {
+        let fixture = NativeImport::new();
+        let unexpected = fixture.store.join("sessions/2026");
+        fs::write(&unexpected, "provider-created non-directory").unwrap();
+        fs::set_permissions(&unexpected, fs::Permissions::from_mode(0o640)).unwrap();
+        let before = tree_contents(&fixture.store);
+        assert!(copy_resume(&fixture.source, &fixture.store, &fixture.session).is_err());
+        assert_eq!(tree_contents(&fixture.store), before);
+    }
+
+    #[test]
+    fn native_import_write_failure_is_retryable_without_partial_history() {
+        const CHILD_ROOT: &str = "AMUX_NATIVE_IMPORT_LIMIT_CHILD_ROOT";
+        const CHILD_SESSION: &str = "AMUX_NATIVE_IMPORT_LIMIT_CHILD_SESSION";
+        if let Some(root) = std::env::var_os(CHILD_ROOT) {
+            let root = PathBuf::from(root);
+            let session = std::env::var(CHILD_SESSION).unwrap();
+            let source = root.join("source");
+            let store = root.join("store");
+            let original = find_resume(&source, &session).unwrap().unwrap();
+            let history = fs::read(&original).unwrap();
+            assert!(history.len() > 8192);
+            let mut limit = std::mem::MaybeUninit::<libc::rlimit>::uninit();
+            assert_eq!(
+                unsafe { libc::getrlimit(libc::RLIMIT_FSIZE, limit.as_mut_ptr()) },
+                0
+            );
+            let limit = unsafe { limit.assume_init() };
+            let restricted = libc::rlimit {
+                rlim_cur: 8192,
+                rlim_max: limit.rlim_max,
+            };
+            let signal = unsafe { libc::signal(libc::SIGXFSZ, libc::SIG_IGN) };
+            assert_ne!(signal, libc::SIG_ERR);
+            assert_eq!(
+                unsafe { libc::setrlimit(libc::RLIMIT_FSIZE, &restricted) },
+                0
+            );
+            let result = copy_resume(&source, &store, &session);
+            assert_eq!(unsafe { libc::setrlimit(libc::RLIMIT_FSIZE, &limit) }, 0);
+            assert_ne!(
+                unsafe { libc::signal(libc::SIGXFSZ, signal) },
+                libc::SIG_ERR
+            );
+            let error = result.unwrap_err();
+            assert_eq!(
+                error
+                    .chain()
+                    .find_map(|cause| cause.downcast_ref::<std::io::Error>())
+                    .and_then(std::io::Error::raw_os_error),
+                Some(libc::EFBIG),
+                "{error:#}"
+            );
+            assert_eq!(find_resume(&store, &session).unwrap(), None);
+            assert_eq!(
+                fs::read_dir(store.join("sessions/2026/10/29"))
+                    .unwrap()
+                    .count(),
+                0
+            );
+            assert_eq!(fs::read(&original).unwrap(), history);
+            copy_resume(&source, &store, &session).unwrap();
+            let imported = find_resume(&store, &session).unwrap().unwrap();
+            assert_eq!(fs::read(&imported).unwrap(), history);
+            assert_eq!(fs::metadata(&imported).unwrap().nlink(), 1);
+            assert_eq!(fs::read_dir(imported.parent().unwrap()).unwrap().count(), 1);
+            return;
+        }
+
+        struct ImportChild(Child);
+        impl Drop for ImportChild {
+            fn drop(&mut self) {
+                if self.0.try_wait().is_ok_and(|status| status.is_none()) {
+                    let _ = self.0.kill();
+                }
+                let _ = self.0.wait();
+            }
+        }
+
+        let fixture = NativeImport::new();
+        let mut child = ImportChild(
+            Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "codex::tests::native_import_write_failure_is_retryable_without_partial_history",
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env_clear()
+                .env(CHILD_ROOT, &fixture.root.0)
+                .env(CHILD_SESSION, &fixture.session)
+                .stdin(Stdio::null())
+                .spawn()
+                .unwrap(),
+        );
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if let Some(status) = child.0.try_wait().unwrap() {
+                assert!(
+                    status.success(),
+                    "bounded native import child failed: {status}"
+                );
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "bounded native import child timed out"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(fs::read(fixture.target()).unwrap(), fixture.history);
+        assert_eq!(
+            fs::read(fixture.source.join("sessions").join(&fixture.relative)).unwrap(),
+            fixture.history
+        );
+    }
+
+    fn cleanup_instance(
+        root: PathBuf,
+        backend: Option<OwnedBackend>,
+        worker: Option<JoinHandle<()>>,
+        recovery_store: Option<PathBuf>,
+    ) -> Arc<Instance> {
+        let (sender, _receiver) = mpsc::sync_channel(1);
+        Arc::new(Instance {
+            id: "cleanup-fixture".to_owned(),
+            root,
+            model: "fixture-model".to_owned(),
+            recovery_store,
+            checkpoint: Mutex::new(None),
+            sender,
+            stop: AtomicBool::new(false),
+            process: Mutex::new(backend),
+            cleanup: Mutex::new(None),
+            connection: Mutex::new(None),
+            worker: Mutex::new(worker),
+            state: Mutex::new(State {
+                terminal: Some("pty".to_owned()),
+                session: None,
+                provider_session: None,
+                joining_session: None,
+                expected_resume: None,
+                native_session_replaced: false,
+                frontend: "running",
+                backend: "running",
+                connection: "ready",
+                session_state: "discovering",
+                observation: "waiting-for-first-turn",
+                observation_started: None,
+                activity: "unknown",
+                turn: None,
+                turn_outcome: None,
+                ended_turns: BTreeMap::new(),
+                direct_input: false,
+                gap: false,
+                problem: None,
+                pending: BTreeMap::new(),
+                tombstones: BTreeMap::new(),
+                ambiguous_requests: BTreeSet::new(),
+                calls: VecDeque::new(),
+                events: VecDeque::new(),
+            }),
+        })
+    }
+
+    fn owned_sleep() -> OwnedBackend {
+        let mut command = Command::new("/bin/sleep");
+        command
+            .arg("60")
+            .env_clear()
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        unsafe {
+            command.pre_exec(|| {
+                if libc::setsid() < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        OwnedBackend::new(command.spawn().unwrap()).unwrap()
+    }
+
+    #[test]
+    fn native_replacement_blocks_saved_thread_even_after_later_cleanup() {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-native-replaced-{}", Uuid::new_v4().simple())),
+        );
+        private_dir(&root.0).unwrap();
+        let owned_root = root.0.join("backend");
+        private_dir(&owned_root).unwrap();
+        let store = prepare_recovery_store(&root.0.join("store")).unwrap();
+        let session = Uuid::new_v4().to_string();
+        let path = store
+            .join("sessions")
+            .join(format!("rollout-saved-{session}.jsonl"));
+        let data = format!(
+            "{}\n",
+            json!({"type":"session_meta","payload":{"id":session}})
+        );
+        fs::write(&path, &data).unwrap();
+        let instance = cleanup_instance(owned_root, Some(owned_sleep()), None, Some(store));
+        {
+            let mut state = instance.state.lock();
+            state.session = Some(session.clone());
+            state.frontend = "attached";
+            state.session_state = "ready";
+            state.activity = "idle";
+            state.direct_input = true;
+        }
+        let broker = Broker::new(&root.0, None).unwrap();
+        broker
+            .inner
+            .instances
+            .lock()
+            .insert(instance.id.clone(), instance.clone());
+        let saved = broker.recovery("pty").unwrap().unwrap();
+        assert_eq!(saved["session_id"], session);
+        assert_eq!(saved["recoverable"], true);
+        assert_eq!(saved["root_lifetime"], instance.id);
+        let (stream, _peer) = UnixStream::pair().unwrap();
+        let mut socket =
+            WebSocket::from_raw_socket(stream, tungstenite::protocol::Role::Client, None);
+        let mut discovery = None;
+        let mut replacement = json!({"method":"thread/started","params":{"thread":{
+            "id":Uuid::new_v4().to_string(),"source":"cli","parentThreadId":null,
+            "ephemeral":true,"threadSource":"thread_title"}}});
+        handle_message(&instance, &mut socket, &replacement, &mut discovery).unwrap();
+        assert_eq!(
+            broker.recovery("pty").unwrap().unwrap()["session_id"],
+            session
+        );
+        replacement["params"]["thread"]["ephemeral"] = json!(false);
+        handle_message(&instance, &mut socket, &replacement, &mut discovery).unwrap();
+        let inspect =
+            json!({"version":1,"op":"agent-inspect","terminal":"pty","instance_id":instance.id});
+        let degraded = broker.inspect(&inspect).unwrap();
+        assert_eq!(degraded["problem"], "native-session-replaced");
+        assert_eq!(degraded["capabilities"]["prompt"], false);
+        // Losing A's backing-file validity must not turn an explicit native
+        // replacement back into a transient observation or a checkpoint of A.
+        let superseded = "old backing context is no longer current\n";
+        fs::write(&path, superseded).unwrap();
+        for after_close in [false, true] {
+            if after_close {
+                broker.end_terminal("pty");
+                assert!(!instance.root.exists());
+                assert_ne!(
+                    broker.inspect(&inspect).unwrap()["problem"],
+                    "native-conversation-checkpoint-failed"
+                );
+            }
+            let unavailable = broker.recovery("pty").unwrap().unwrap();
+            assert_eq!(unavailable["recoverable"], false);
+            assert_eq!(unavailable["reason"], "native-session-replaced");
+            assert_eq!(unavailable["root_lifetime"], instance.id);
+            assert!(unavailable.get("session_id").is_none());
+            assert!(unavailable.get("session_file").is_none());
+            assert!(unavailable.get("peer_pid").is_none());
+            assert_eq!(fs::read_to_string(&path).unwrap(), superseded);
+        }
+    }
+
+    #[test]
+    fn failed_preparations_release_capacity_only_after_conclusive_cleanup() {
+        for bound in [false, true] {
+            for (has_backend, removable) in [(true, false), (true, true), (false, true)] {
+                let settled = has_backend && removable;
+                let root = PrivateRoot(
+                    std::env::temp_dir()
+                        .join(format!("amux-retained-cleanup-{}", Uuid::new_v4().simple())),
+                );
+                private_dir(&root.0).unwrap();
+                let runtime = root.0.join("runtime");
+                // A free capacity slot stops at this filesystem error, before
+                // executable resolution or any external provider could run.
+                fs::write(&runtime, "not a directory").unwrap();
+                let broker = Broker::new(&runtime, None).unwrap();
+                // Existing completed bound instances retain their ordinary
+                // broker slots. Only the preparation under test can free one.
+                for index in 0..INSTANCE_LIMIT - 1 {
+                    let mut retired =
+                        cleanup_instance(root.0.join(format!("retired-{index}")), None, None, None);
+                    let retired_id = format!("retired-{index}");
+                    let instance = Arc::get_mut(&mut retired).unwrap();
+                    instance.id = retired_id.clone();
+                    instance.stop.store(true, Ordering::Release);
+                    *instance.cleanup.lock() = Some(true);
+                    {
+                        let mut state = instance.state.lock();
+                        state.terminal = Some(format!("retired-terminal-{index}"));
+                        state.frontend = "exited";
+                        state.backend = "exited";
+                        state.connection = "lost";
+                        state.session_state = "unknown";
+                    }
+                    broker.inner.instances.lock().insert(retired_id, retired);
+                }
+                let owned_root = root.0.join("backend");
+                if removable {
+                    private_dir(&owned_root).unwrap();
+                } else {
+                    fs::write(&owned_root, "retained resource").unwrap();
+                }
+                let backend = has_backend.then(owned_sleep);
+                let pid = backend.as_ref().map(|backend| backend.child.id() as i32);
+                let instance = cleanup_instance(owned_root.clone(), backend, None, None);
+                if !bound {
+                    instance.state.lock().terminal = None;
+                }
+                let id = instance.id.clone();
+                broker
+                    .inner
+                    .instances
+                    .lock()
+                    .insert(id.clone(), instance.clone());
+                let prepared = Prepared {
+                    instance_id: id.clone(),
+                    command: String::new(),
+                    env: BTreeMap::new(),
+                    broker: Arc::downgrade(&broker.inner),
+                    instance,
+                };
+                if bound {
+                    assert_eq!(prepared.cleanup_failed_launch(), settled);
+                    assert_eq!(prepared.cleanup_failed_launch(), settled);
+                }
+                drop(prepared);
+                if let Some(pid) = pid {
+                    assert_eq!(unsafe { libc::kill(pid, 0) }, -1, "owned backend survived");
+                    assert_eq!(
+                        std::io::Error::last_os_error().raw_os_error(),
+                        Some(libc::ESRCH)
+                    );
+                }
+                let request = json!({"version":1,"op":"agent-open",
+                    "controller":{"kind":"controller","ref":"fixture"},"model":"fixture"});
+                let error = broker.prepare(&request).err().unwrap();
+                if settled {
+                    assert!(!owned_root.exists());
+                    assert!(prepare_failure_settled(&error));
+                    assert_ne!(
+                        error.to_string().split(':').next(),
+                        Some("settlement-unavailable"),
+                        "conclusive cleanup must release capacity before the guarded filesystem failure"
+                    );
+                    assert_eq!(
+                        broker
+                            .bind(&id, "diagnostic")
+                            .unwrap_err()
+                            .to_string()
+                            .split(':')
+                            .next(),
+                        Some("stale-target")
+                    );
+                } else {
+                    assert_eq!(
+                        error.to_string().split(':').next(),
+                        Some("settlement-unavailable")
+                    );
+                    if removable {
+                        assert!(
+                            owned_root.is_dir(),
+                            "missing handles were accepted as cleanup"
+                        );
+                    } else {
+                        assert_eq!(
+                            fs::read_to_string(&owned_root).unwrap(),
+                            "retained resource"
+                        );
+                    }
+                    if bound {
+                        let request = json!({"version":1,"op":"agent-inspect","terminal":"pty","instance_id":id});
+                        let state = broker.inspect(&request).unwrap();
+                        assert_eq!(state["problem"], "owned-resource-cleanup-incomplete");
+                        assert_eq!(state["capabilities"]["prompt"], false);
+                        assert!(broker.take_events().iter().any(|(kind, terminal, data)| {
+                            kind == "agent-lifecycle"
+                                && terminal == "pty"
+                                && data["reason"] == "owned-resource-cleanup-incomplete"
+                        }));
+                        broker.end_terminal("pty");
+                        broker.shutdown();
+                        assert_eq!(
+                            broker.inspect(&request).unwrap()["problem"],
+                            state["problem"]
+                        );
+                    } else {
+                        assert_eq!(
+                            broker
+                                .bind(&id, "diagnostic")
+                                .unwrap_err()
+                                .to_string()
+                                .split(':')
+                                .next(),
+                            Some("unavailable")
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn failed_resource_cleanup_stays_unsettled_after_handles_and_map_are_gone() {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-cleanup-failed-{}", Uuid::new_v4().simple())),
+        );
+        private_dir(&root.0).unwrap();
+        let owned_root = root.0.join("backend");
+        // A replaced root cannot be conclusively removed as the owned directory.
+        fs::write(&owned_root, "retained resource").unwrap();
+        let mut command = Command::new("/bin/sleep");
+        command
+            .arg("60")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        unsafe {
+            command.pre_exec(|| {
+                if libc::setsid() < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let backend = OwnedBackend::new(command.spawn().unwrap()).unwrap();
+        let pid = backend.child.id() as i32;
+        let instance = cleanup_instance(owned_root.clone(), Some(backend), None, None);
+        let prepared = Prepared {
+            instance_id: instance.id.clone(),
+            command: String::new(),
+            env: BTreeMap::new(),
+            broker: Weak::new(),
+            instance,
+        };
+        assert!(!prepared.cleanup_failed_launch());
+        assert_eq!(unsafe { libc::kill(pid, 0) }, -1, "owned backend survived");
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ESRCH)
+        );
+        assert_eq!(
+            fs::read_to_string(&owned_root).unwrap(),
+            "retained resource"
+        );
+        fs::remove_file(&owned_root).unwrap();
+        // A second call must remember the failed teardown, not accept empty handles.
+        assert!(!prepared.cleanup_failed_launch());
+    }
+
+    #[test]
     fn shutdown_waits_for_concurrent_terminal_cleanup_and_owned_resources() {
         let root = PrivateRoot(
             std::env::temp_dir().join(format!("amux-close-{}", Uuid::new_v4().simple())),
         );
         fs::DirBuilder::new().mode(0o700).create(&root.0).unwrap();
+        let store = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-native-store-{}", Uuid::new_v4().simple())),
+        );
+        let durable = prepare_recovery_store(&store.0).unwrap();
+        private_dir(&root.0.join("codex")).unwrap();
+        symlink(durable.join("sessions"), root.0.join("codex/sessions")).unwrap();
         let marker = root.0.join("descendant.pid");
         let mut command = Command::new("/bin/sh");
         command
@@ -2172,48 +3517,53 @@ mod tests {
         let worker = thread::spawn(move || {
             let _ = paused.recv();
         });
-        let (sender, _receiver) = mpsc::sync_channel(1);
-        let instance = Arc::new(Instance {
-            id: "cleanup-fixture".to_owned(),
-            root: root.0.clone(),
-            sender,
-            stop: AtomicBool::new(false),
-            process: Mutex::new(Some(backend)),
-            cleanup: Mutex::new(()),
-            connection: Mutex::new(None),
-            worker: Mutex::new(Some(worker)),
-            state: Mutex::new(State {
-                terminal: Some("pty".to_owned()),
-                session: None,
-                provider_session: None,
-                joining_session: None,
-                expected_resume: None,
-                frontend: "running",
-                backend: "running",
-                connection: "ready",
-                session_state: "discovering",
-                observation: "waiting-for-first-turn",
-                observation_started: None,
-                activity: "unknown",
-                turn: None,
-                turn_outcome: None,
-                ended_turns: BTreeMap::new(),
-                direct_input: false,
-                gap: false,
-                problem: None,
-                pending: BTreeMap::new(),
-                tombstones: BTreeMap::new(),
-                ambiguous_requests: BTreeSet::new(),
-                calls: VecDeque::new(),
-                events: VecDeque::new(),
-            }),
-        });
-        let broker = Arc::new(Broker::new(&root.0).unwrap());
+        let instance = cleanup_instance(
+            root.0.clone(),
+            Some(backend),
+            Some(worker),
+            Some(durable.clone()),
+        );
+        let broker = Arc::new(Broker::new(&root.0, None).unwrap());
         broker
             .inner
             .instances
             .lock()
             .insert(instance.id.clone(), instance.clone());
+        let prepared = Arc::new(Prepared {
+            instance_id: instance.id.clone(),
+            command: String::new(),
+            env: BTreeMap::new(),
+            broker: Arc::downgrade(&broker.inner),
+            instance: instance.clone(),
+        });
+        let session = Uuid::new_v4().to_string();
+        {
+            let mut state = instance.state.lock();
+            state.session = Some(session.clone());
+            state.provider_session = Some("not-the-resumable-thread".to_owned());
+            state.frontend = "attached";
+            state.session_state = "ready";
+        }
+        // Native creation can allocate an identity before its first durable write.
+        assert_eq!(broker.recovery("pty").unwrap(), None);
+        let filename = format!("rollout-2026-10-29T00-00-00-{session}.jsonl");
+        let native_path = root.0.join("codex/sessions").join(&filename);
+        fs::write(
+            &native_path,
+            "{\"type\":\"session_meta\",\"payload\":{\"id\":\"wrong-thread\"}}\n",
+        )
+        .unwrap();
+        assert!(broker.recovery("pty").is_err());
+        let native_data = format!(
+            "{}\n{}\n",
+            json!({"type":"session_meta","payload":{"id":session,"cwd":"/private/project"}}),
+            json!({"type":"response_item","payload":{"fixture":"native transcript only"}}),
+        );
+        fs::write(&native_path, &native_data).unwrap();
+        let saved = broker.recovery("pty").unwrap().unwrap();
+        assert_eq!(saved["session_id"], session);
+        assert_eq!(saved["peer_pid"], backend_pid);
+        let saved_path = PathBuf::from(saved["session_file"].as_str().unwrap());
         let ending = {
             let broker = broker.clone();
             thread::spawn(move || broker.end_terminal("pty"))
@@ -2235,10 +3585,42 @@ mod tests {
         };
         let shutdown_started = attempt.recv_timeout(Duration::from_secs(3)).is_ok();
         let premature = finish.recv_timeout(Duration::from_millis(250)).is_ok();
+        let (rollback_started, rollback_start) = mpsc::channel();
+        let (rolled_back, rollback_result) = mpsc::channel();
+        let rollback = {
+            let prepared = prepared.clone();
+            thread::spawn(move || {
+                rollback_started.send(()).unwrap();
+                rolled_back.send(prepared.cleanup_failed_launch()).unwrap();
+            })
+        };
+        let rollback_attempted = rollback_start.recv_timeout(Duration::from_secs(3)).is_ok();
+        let premature_rollback = rollback_result
+            .recv_timeout(Duration::from_millis(250))
+            .is_ok();
         release.send(()).unwrap();
         ending.join().unwrap();
         shutdown.join().unwrap();
+        rollback.join().unwrap();
+        let rollback_settled = rollback_result
+            .recv_timeout(Duration::from_secs(3))
+            .unwrap();
+        assert!(rollback_attempted && !premature_rollback && rollback_settled);
+        assert!(
+            prepared.cleanup_failed_launch(),
+            "exact instance lost completed cleanup evidence"
+        );
         let resources_removed = !root.0.exists();
+        assert_eq!(fs::read_to_string(&saved_path).unwrap(), native_data);
+        assert!(!durable.join("auth.json").exists());
+        assert!(!durable.join("config.toml").exists());
+        let reopened = store.0.join("reopened-private-home");
+        private_dir(&reopened).unwrap();
+        copy_resume(&durable, &reopened, &session).unwrap();
+        assert_eq!(
+            fs::read_to_string(reopened.join("sessions").join(filename)).unwrap(),
+            native_data
+        );
         for pid in [backend_pid, descendant_pid] {
             assert_eq!(
                 unsafe { libc::kill(pid, 0) },

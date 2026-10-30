@@ -1,0 +1,1370 @@
+{
+  "epic": "e07",
+  "status": "passing",
+  "authorization": "eight-UX-improvements-plus-modal-implementation-only",
+  "provider_calls": 0,
+  "global_daemon_config_auth": "untouched",
+  "installation": "untouched",
+  "publication": "not-requested-not-performed",
+  "mechanical_before_review": {
+    "job": "bg_390",
+    "raw": "artifact://3006",
+    "exit_code": 0,
+    "rust_passed": 475,
+    "ignored": 12,
+    "omp_passed": 8
+  },
+  "source_review": {
+    "round": 4,
+    "maximum": 5,
+    "status": "passing-dual-independent-source-AND",
+    "prior_round2_scores": [
+      96.875,
+      90.0
+    ],
+    "prior_round2_reports": [
+      "e07-review-r2-A.json",
+      "e07-review-r2-B.json"
+    ],
+    "scores": [
+      100.0,
+      100.0
+    ],
+    "reports": [
+      "specs/verifications/e07-review-r4-A.json",
+      "specs/verifications/e07-review-r4-B.json"
+    ],
+    "unique_must_fix": 0,
+    "unique_should_fix": 0,
+    "all_actionable_accepted": true,
+    "next_round": null,
+    "previous_round3_scores": [
+      96.67,
+      96.67
+    ],
+    "previous_round3_reports": [
+      "specs/verifications/e07-review-r3-A.json",
+      "specs/verifications/e07-review-r3-B.json"
+    ],
+    "previous_round3_unique_findings": {
+      "must_fix": 2,
+      "should_fix": 1
+    },
+    "reviewer_A": {
+      "status": "passing-source-only",
+      "score": 100.0,
+      "assessments": 72,
+      "must_fix": 0,
+      "should_fix": 0,
+      "consider": 0,
+      "report": "specs/verifications/e07-review-r4-A.json"
+    },
+    "assessments": [
+      72,
+      84
+    ],
+    "consider": 0,
+    "both_complete_reports_read_before_action": true,
+    "reviewer_B": {
+      "status": "passing-source-only",
+      "score": 100.0,
+      "assessments": 84,
+      "must_fix": 0,
+      "should_fix": 0,
+      "consider": 0,
+      "report": "specs/verifications/e07-review-r4-B.json"
+    }
+  },
+  "stories": {
+    "e07s01": {
+      "status": "passing",
+      "verified_case_labels": [
+        "modal-navigation-search-help-and-literal-rename",
+        "responsive-narrow-stacked-menu",
+        "responsive-short-menu",
+        "native-Esc-j-k-and-deliberate-double-F12-byte-proof",
+        "canonical-native-background-fully-restored-after-Menu",
+        "configured-F11-mode-entry",
+        "mode-none-preserves-native-F12",
+        "F24-double-key-and-explicit-action-deliver-xterm-kf24",
+        "actual-parser-upper-function-recognition-and-gated-two-route-forwarding",
+        "ordinary-owner-no-request-complete-armed-release",
+        "ordinary-owner-fresh-release-grants-nobody-retains-agent-and-work",
+        "fresh-stock-zsh-terminal-arithmetic42-before-final-isolated-cleanup"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    },
+    "e07s02": {
+      "status": "passing",
+      "verified_case_labels": [
+        "short-conversation-and-genuine-question",
+        "completed-question-returns-to-prompt",
+        "details-enter-auth-interrupt-inert-during-original-pending-question",
+        "ACP-rename-and-cancel-close-preserve-original-RPC-and-peer",
+        "post-fix-deliberate-force-complete-warning-original-permission-pending",
+        "fixed-80x14-all-genuine-permission-choices-visible",
+        "same-live-agent-explicit-deny-no-tool-effect",
+        "same-live-agent-explicit-allow-arithmetic42",
+        "narrow-real-broker-authentication-methods",
+        "narrow-authentication-full-inert-context-and-unsupported-no-effect",
+        "narrow-authenticated-original-peer-fresh-arithmetic49"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    },
+    "e07s03": {
+      "status": "passing",
+      "verified_case_labels": [
+        "native-stock-shell",
+        "ACP-rename-and-cancel-close-preserve-original-RPC-and-peer",
+        "live-native-close-deliberate-confirmation",
+        "ordinary-native-exit-not-ownership-resync",
+        "exited-record-removal-without-live-close-warning",
+        "maximum-128-byte-Unicode-profile-untouched-automatic-name-launches",
+        "captured-live-ACP-close-warning",
+        "confirmed-ACP-end-owned-cleanup-truthful-original-target-stop",
+        "ordinary-owner-no-request-complete-armed-release",
+        "ordinary-owner-fresh-release-grants-nobody-retains-agent-and-work"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    },
+    "e07s04": {
+      "status": "passing",
+      "verified_case_labels": [
+        "independent-native-created",
+        "independent-ACP-no-inherited-hooks-recipes-or-directory",
+        "full-local-invalid-directory-cause-reachable-in-scrolled-context-help",
+        "maximum-128-byte-Unicode-profile-untouched-automatic-name-launches",
+        "narrow-new-dialog-wraps-placement-and-stacks-complete-buttons",
+        "unavailable-profile-rejection-retains-literal-name-with-no-launch",
+        "startup-EOF-is-canonical-failure-without-fallback-or-relaunch",
+        "missing-capability-native-New-refuses-locally",
+        "missing-capability-ACP-New-refuses-before-profile-or-launch-RPC"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    },
+    "e07s05": {
+      "status": "passing",
+      "verified_case_labels": [
+        "ACP-save-preview-exact-live-launch-directory",
+        "structured-hook-invalid-timeout-retains-source-and-draft",
+        "structured-project-atomic-apply",
+        "structured-hook-recipe-edit-remove-help-and-atomic-apply",
+        "native-save-preview-canonical-Git-root-not-subdirectory",
+        "fixed-ACP-save-pins-selected-session-when-native-main-cwd-differs",
+        "saved-ACP-only-Projects-Open-reuses-original-pending-question-without-shell-or-hook",
+        "missing-capability-native-New-refuses-locally",
+        "missing-capability-ACP-New-refuses-before-profile-or-launch-RPC"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    },
+    "e07s06": {
+      "status": "passing",
+      "verified_case_labels": [
+        "modal-navigation-search-help-and-literal-rename",
+        "short-conversation-and-genuine-question",
+        "details-enter-auth-interrupt-inert-during-original-pending-question",
+        "ordinary-native-exit-not-ownership-resync",
+        "post-fix-deliberate-force-complete-warning-original-permission-pending",
+        "full-local-invalid-directory-cause-reachable-in-scrolled-context-help",
+        "narrow-new-dialog-wraps-placement-and-stacks-complete-buttons",
+        "confirmed-ACP-end-owned-cleanup-truthful-original-target-stop",
+        "startup-EOF-is-canonical-failure-without-fallback-or-relaunch",
+        "narrow-real-broker-authentication-methods",
+        "narrow-authentication-full-inert-context-and-unsupported-no-effect",
+        "narrow-authenticated-original-peer-fresh-arithmetic49",
+        "ordinary-owner-no-request-complete-armed-release",
+        "ordinary-owner-fresh-release-grants-nobody-retains-agent-and-work",
+        "fresh-stock-zsh-terminal-arithmetic42-before-final-isolated-cleanup"
+      ],
+      "mechanical": "passed current bg_410 complete workspace and exact applicable lib/runtime/ACP/default strict ledger components; overlapping counts not added",
+      "remaining_gate": "none; current mechanical components, actual private runtime/cleanup, dual round4 source AND and exact evidence command all pass",
+      "source_review": "both independent round4 source PASS100/100 zero findings"
+    }
+  },
+  "cases": [
+    {
+      "label": "native-stock-shell",
+      "width": 100,
+      "height": 32,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Shell · amux-e07-final-0170ou6x · 418b5558     /private/tmp/amux-e07-final-0170ou6x  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nUX> rintf 'NATIVE_VALUE=%s\\n' $((40+2))                                                             \nzsh: command not found: rintf                                                                       \nUX> printf 'NATIVE_VALUE=%s\\n' $((40+2))                                                            \nNATIVE_VALUE=42                                                                                     \nUX>                                                                                                 \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "modal-navigation-search-help-and-literal-rename",
+      "width": 100,
+      "height": 32,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n› Terminal · jk? native smoke  [unsaved]                                                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "responsive-narrow-stacked-menu",
+      "width": 35,
+      "height": 32,
+      "surface": "╭ MENU ───────────────╮╭──────────╮\n│ NAV  Sessions       ││  Return  │\n╰? help───────────────╯╰──────────╯\n› Terminal · jk? native smoke  [u  \n  …te/tmp/amux-e07-final-0170ou6x  \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n╭─────────────────────────────────╮\n│              New…               │\n╰─────────────────────────────────╯\n╭─────────────────────────────────╮\n│          Save project           │\n╰─────────────────────────────────╯\n╭─────────────────────────────────╮\n│            Projects             │\n╰─────────────────────────────────╯\n╭─────────────────────────────────╮\n│             Actions             │\n╰─────────────────────────────────╯",
+      "facts": {
+        "action_rows": [
+          21,
+          24,
+          27,
+          30
+        ]
+      },
+      "status": "passing"
+    },
+    {
+      "label": "responsive-short-menu",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                    ││  Return  │\n╰? help────────────────────────────────────────────────────────────╯╰──────────╯\n› Terminal · jk? native smoke  [unsaved]                                        \n  /private/tmp/amux-e07-final-0170ou6x                                          \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n╭──────────────────╮╭──────────────────╮╭──────────────────╮╭──────────────────╮\n│       New…       ││   Save project   ││     Projects     ││      Actions     │\n╰──────────────────╯╰──────────────────╯╰──────────────────╯╰──────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "independent-native-created",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Shell · amux-e07-final-0170ou6x · 900782ee     /private/tmp/amux-e07-final-0170ou6x  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nUX>                                                                                                 \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {
+        "project": "8a8beddb-192e-4ecf-84ab-789d0789540b"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "short-conversation-and-genuine-question",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Form fixture 2e5b2236 · Ready                              ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · needs answer                                                              \nQuestion · local answer only until Review, then Submit                          \nChoose arithmetic adjustment                                                    \n                                                                                \n                                                                                \n┌ Adjustment · required 1/1 · local value ─────────────────────────────────────┐\n│0                                                                             │\n└──────────────────────────────────────────────────────────────────────────────┘\n Review (F5)   Decline (F6)   Cancel (F7)   Interrupt                           \nPrompt captured; canonical work records admission and outcome.                  \n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "completed-question-returns-to-prompt",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Form fixture 2e5b2236 · Finished                           ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                  \nYou: add 17 25                                                                  \nAgent: Total=57; commands=1                                                     \nFinished: end_turn                                                              \n                                                                                \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────┐\n│                                                                              │\n└──────────────────────────────────────────────────────────────────────────────┘\n Send                                                                           \nDeliberate interaction action captured; no optimistic history or automatic retry\n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "details-enter-auth-interrupt-inert-during-original-pending-question",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Form fixture 2e5b2236 · Needs your answer                  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP settings (read-only) · Details                                              \nPgUp/PgDn, arrows, Home/End, wheel · Esc back                                   \nACP | ready | owner (input-admission)                                           \nSession: arithmetic-82579                                                       \nSelected interaction: interaction-3be137b4f6b34c9095ea03ad85aac7b8 | revision 1 \nCursor 17 | following                                                           \n                                                                                \nSettings [agent-default] · model: unreported · mode: unreported · effort: unrepo\nrted                                                                            \nDetails rows 1-7/105 · Application input discarded                              \n Back Esc   Help F1                                                             ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "ACP-rename-and-cancel-close-preserve-original-RPC-and-peer",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ ACP · jk? same live ACP · Needs your answer                                          ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                                      \nYou: add 17 25                                                                                      \nAgent: Total=57; commands=1                                                                         \nFinished: end_turn                                                                                  \nYou: add 1 2                                                                                        \nAgent: Total=67; commands=2                                                                         \nFinished: end_turn                                                                                  \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────────────────────────┐\n│                                                                                                  │\n└──────────────────────────────────────────────────────────────────────────────────────────────────┘\n Send                                                                                               \nDeliberate interaction action captured; no optimistic history or automatic retry.                   \n Prompt   Questions F9   History   Details F10   Help F1                                            ",
+      "facts": {
+        "effect": {
+          "session_id": "arithmetic-82579",
+          "value": 67,
+          "commands": 2,
+          "rpc_id": 3
+        },
+        "attention": {
+          "state": "finished",
+          "questions": 0,
+          "permissions": 0
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "ACP-save-preview-exact-live-launch-directory",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [unsaved]                                                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  Term┌ Save project ────────────────────────────────────────────────────────────────────────┐      \n  /pri│Project name                                                                          │      \n› ACP │E07 saved ACP                                                                         │      \n  unsa│                                                                                      │      \n      │Exact saved directory (read-only):                                                    │      \n      │/private/tmp/amux-e07-final-0170ou6x                                                  │      \n      │                                                                                      │      \n      │Bookmark this directory; no directory is created. If it changes before Save, nothing i│      \n      │s saved.                                                                              │      \n      │                                                                                      │      \n      │[ Save ]                                                                              │      \n      │                                                                                      │      \n      │[ Cancel ]                                                                            │      \n      │                                                                                      │      \n      │[ Help ]                                                                              │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │Tab: focus · Enter: action · F1: Help · Esc: back · PgUp/PgDn: scroll                 │      \n      └──────────────────────────────────────────────────────────────────────────────────────┘      \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "structured-hook-invalid-timeout-retains-source-and-draft",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰Saved project E07 saved ACP───────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [unsaved]                                                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  Term┌ Hook draft ──────────────────────────────────────────────────────────────────────────┐      \n  /pri│Keep changes this draft only; Apply on the project form saves all changes together.   │      \n› ACP │                                                                                      │      \n  E07 │Hook source (multiline)                                                               │      \n      │printf fixture-hook                                                                   │      \n      │                                                                                      │      \n      │Timeout in milliseconds (1–300000)                                                    │      \n      │0                                                                                     │      \n      │                                                                                      │      \n      │[ Keep hook ]                                                                         │      \n      │                                                                                      │      \n      │[ Cancel ]                                                                            │      \n      │                                                                                      │      \n      │[ Help ]                                                                              │      \n      │                                                                                      │      \n      │Error: Timeout must be between 1 and 300000 milliseconds                              │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │Error retained below · PgDn: inspect · Tab: edit · F1: Help · Esc: back               │      \n      └──────────────────────────────────────────────────────────────────────────────────────┘      \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "structured-project-atomic-apply",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [unsaved]                                                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  Term┌ Projects ────────────────────────────────────────────────────────────────────────────┐      \n  /pri│> E07 saved ACP                                                                       │      \n› ACP │/private/tmp/amux-e07-final-0170ou6x                                                  │      \n  E07 │                                                                                      │      \n      │[ Open ]                                                                              │      \n      │                                                                                      │      \n      │[ Edit ]                                                                              │      \n      │                                                                                      │      \n      │[ Forget… ]                                                                           │      \n      │                                                                                      │      \n      │[ Return ]                                                                            │      \n      │                                                                                      │      \n      │[ Help ]                                                                              │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │Tab: focus · Enter: action · F1: Help · Esc: back · PgUp/PgDn: scroll                 │      \n      └──────────────────────────────────────────────────────────────────────────────────────┘      \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "structured-hook-recipe-edit-remove-help-and-atomic-apply",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [unsaved]                                                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  Term┌ Projects ────────────────────────────────────────────────────────────────────────────┐      \n  /pri│> E07 saved ACP                                                                       │      \n› ACP │/private/tmp/amux-e07-final-0170ou6x                                                  │      \n  E07 │                                                                                      │      \n      │[ Open ]                                                                              │      \n      │                                                                                      │      \n      │[ Edit ]                                                                              │      \n      │                                                                                      │      \n      │[ Forget… ]                                                                           │      \n      │                                                                                      │      \n      │[ Return ]                                                                            │      \n      │                                                                                      │      \n      │[ Help ]                                                                              │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │Tab: focus · Enter: action · F1: Help · Esc: back · PgUp/PgDn: scroll                 │      \n      └──────────────────────────────────────────────────────────────────────────────────────┘      \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "saved": {
+          "id": "8a8beddb-192e-4ecf-84ab-789d0789540b",
+          "name": "E07 saved ACP",
+          "context": "/private/tmp/amux-e07-final-0170ou6x",
+          "saved": true,
+          "main_terminal": "900782ee-5a5b-4f86-9e90-5ae863e7cc35",
+          "hooks": [
+            {
+              "source": "printf hook-edited",
+              "timeout_ms": 1000
+            }
+          ],
+          "recipes": {
+            "check": "printf recipe-edited"
+          }
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "independent-ACP-no-inherited-hooks-recipes-or-directory",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Math fixture cdcc21ae · Ready                                                  ││   Menu   │\n╰ACP launched on this original native controller───────────────────────────────────────╯╰──────────╯\nACP · ready                                                                                         \nConversation · no canonical messages yet                                                            \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────────────────────────┐\n│                                                                                                  │\n└──────────────────────────────────────────────────────────────────────────────────────────────────┘\n Send                                                                                               \nDeliberate interaction action captured; no optimistic history or automatic retry.                   \n Prompt   Questions F9   History   Details F10   Help F1                                            ",
+      "facts": {
+        "project": {
+          "id": "6a0811f7-eb33-4cb7-84ca-bf9a8683f4a7",
+          "name": "unsaved",
+          "context": "/private/tmp/amux-e07-final-0170ou6x",
+          "saved": false,
+          "main_terminal": null,
+          "hooks": [],
+          "recipes": {}
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "native-Esc-j-k-and-deliberate-double-F12-byte-proof",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ jk? native smoke     /private/tmp/amux-e07-final-0170ou6x                            ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nUX> rintf 'NATIVE_VALUE=%s\\n' $((40+2))                                                             \nzsh: command not found: rintf                                                                       \nUX> printf 'NATIVE_VALUE=%s\\n' $((40+2))                                                            \nNATIVE_VALUE=42                                                                                     \nUX> /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time\n,pathlib; f=0; old=termios.tcgetattr(f); tty.setraw(f); pathlib.Path('\"'\"'/private/tmp/amux-e07-fina\nl-0170ou6x/raw-ready'\"'\"').write_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20   \nquote> try:                                                                                         \nquote>  while len(data)<8 and time.monotonic()<end:                                                 \nquote>   if select.select([f],[],[],.1)[0]: data+=os.read(f,256)                                    \nquote> finally:                                                                                     \nquote>  termios.tcsetattr(f,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170\nou6x/raw-keys.bin'\"'\"').write_bytes(data)'                                                          \nUX>                                                                                                 \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {
+        "bytes_hex": "1b6a6b1b5b32347e"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "native-save-preview-canonical-Git-root-not-subdirectory",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n› Terminal · jk? native smoke  [unsaved]    main staged:0 unstaged:0 untracked:0                    \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                      \n  Term┌ Save project ────────────────────────────────────────────────────────────────────────┐      \n  /pri│Project name                                                                          │      \n  ACP │Native canonical git root                                                             │      \n  E07 │                                                                                      │      \n  ACP │Exact saved directory (read-only):                                                    │      \n  unsa│/private/tmp/amux-e07-final-0170ou6x/existing-repository                              │      \n  ACP │                                                                                      │      \n  unsa│Bookmark this directory; no directory is created. If it changes before Save, nothing i│      \n      │s saved.                                                                              │      \n      │                                                                                      │      \n      │[ Save ]                                                                              │      \n      │                                                                                      │      \n      │[ Cancel ]                                                                            │      \n      │                                                                                      │      \n      │[ Help ]                                                                              │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │                                                                                      │      \n      │Tab: focus · Enter: action · F1: Help · Esc: back · PgUp/PgDn: scroll                 │      \n      └──────────────────────────────────────────────────────────────────────────────────────┘      \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "preview": {
+          "project": "88ed4986-095c-4bab-bf1d-1d65da3d1c09",
+          "context": "/private/tmp/amux-e07-final-0170ou6x/existing-repository"
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "canonical-native-background-fully-restored-after-Menu",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · Native canonical git root ────────────────────────────────────────────────────╮╭──────────╮\n│ jk? native smoke     /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub    ││   Menu   │\n╰Saved project Native canonical git root───────────────────────────────────────────────╯╰──────────╯\nBG-PROOF                                                                                            \nUX>                                                                                                 \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {
+        "compared_cells": 3300,
+        "colored_cells": 100
+      },
+      "status": "passing"
+    },
+    {
+      "label": "configured-F11-mode-entry",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰Saved project Native canonical git root───────────────────────────────────────────────╯╰──────────╯\n› Terminal · jk? native smoke  [Native canonical git root]    main staged:0 unstaged:0 untracked:0  \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                      \n  Terminal · Shell · amux-e07-final-0170ou6x · 900782ee  [E07 saved ACP]                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  ACP · jk? same live ACP · Finished                                                                \n  E07 saved ACP                                                                                     \n  ACP · Permission fixture 09f8c23c · Permission needed                                             \n  unsaved                                                                                           \n  ACP · Math fixture cdcc21ae · Ready                                                               \n  unsaved                                                                                           \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "live-native-close-deliberate-confirmation",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [Native canonical git root]    main staged:0 unstaged:0 untracked:0  \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                      \n› Terminal · Shell · amux-e07-final-0170ou6x · 900782ee  [E07 saved ACP]                            \n  /private/tmp/amux-e07-final-0170ou6x                                                              \n  ACP · jk? same live ACP · Finished                                                                \n  E07 saved ACP                                                                                     \n  ACP · Permission fixture 09f8c23c · Permission needed                                             \n  unsaved                                                                                           \n  ACP · Math┌ Close session? ──────────────────────────────────────────────────────────┐            \n  unsaved   │Close Shell · amux-e07-final-0170ou6x · 900782ee in E07 saved ACP?        │            \n            │This ends the session and its running work.                               │            \n            │Detach UI keeps work running and does not release control.                │            \n            │y closes; n/Esc keeps working; d detaches.                                │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │╭──────────────────────╮╭───────────────────────╮╭───────────────────────╮│            \n            ││     Close session    ││     Keep working      ││       Detach UI       ││            \n            │╰──────────────────────╯╰───────────────────────╯╰───────────────────────╯│            \n            └──────────────────────────────────────────────────────────────────────────┘            \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "ordinary-native-exit-not-ownership-resync",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · E07 saved ACP ────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Shell · amux-e07-final-0170ou6x · 900782ee     /private/tmp/amux-e07-final-0170ou6x  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                    ╭ Shell · amux-e07-final-0170ou6x · 900782ee ──────────────╮                    \n                    │                      Process exited                      │                    \n                    │                                                          │                    \n                    │                       Exit code: 1                       │                    \n                    │       Close this window or start another terminal.       │                    \n                    │                                                          │                    \n                    │                                                          │                    \n                    │  ╭────────────────────╮          ╭────────────────────╮  │                    \n                    │  │    Close window    │          │    New terminal    │  │                    \n                    │  ╰────────────────────╯          ╰────────────────────╯  │                    \n                    ╰──────────────────────────────────────────────────────────╯                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "exited-record-removal-without-live-close-warning",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ amux · Native canonical git root ────────────────────────────────────────────────────╮╭──────────╮\n│ jk? native smoke     /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub    ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nBG-PROOF                                                                                            \nUX>                                                                                                 \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "post-fix-deliberate-force-complete-warning-original-permission-pending",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ MENU · 🔒 Locked ────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                                            ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [Native canonical git root]    main staged:0 unstaged:0 untracked:0                      \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  Terminal · Shell · amux-e07-final-0170ou6x · f15384dc  [E07 saved ACP]    main staged:0 unstaged:0 untracked:0        \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  ACP · jk? same live ACP · Finished                                                                                    \n  E07 saved ACP                                                                                                         \n› ACP · Permission fixture 09f8c23c · Permission needed                                                                 \n  unsaved                                                                                                               \n  ACP · Math fixture cdcc21ae · Ready                                                                                   \n  unsaved        ┌Force control?──────────────────────────────────────────────────────────────────────┐                 \n                 │Terminal #acp-1fc9e658d8df46898554e54020aca334                                      │                 \n                 │Current owner: #b5acd8e0-c680-4d9b-b188-f4db1a2b2bbc · native TUI                   │                 \n                 │Reservation: none                                                                   │                 \n                 │Prior calls may still apply. Turn/process keeps running.                            │                 \n                 │ACP input-admission boundary; accepted work may continue.                           │                 \n                 │Canonical retained work 0 / 1 · ↑/↓ inspect                                         │                 \n                 │#06aeacf3-9304-44be-8167-df6515ca4d29 · generation 1 · submitted / unknown          │                 \n                 │Enter Force control · Esc Keep viewing                                              │                 \n                 │                                                                                    │                 \n                 │                                                                                    │                 \n                 │                                                                                    │                 \n                 │                                                                                    │                 \n                 │                                                                                    │                 \n                 │╭──────────────────────────╮╭──────────────────────────╮╭──────────────────────────╮│                 \n                 ││       Force control      ││       Keep viewing       ││           Help           ││                 \n                 │╰──────────────────────────╯╰──────────────────────────╯╰──────────────────────────╯│                 \n                 └────────────────────────────────────────────────────────────────────────────────────┘                 \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮\n│            New…            ││        Save project        ││          Projects          ││           Actions          │\n╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "fixed-80x14-all-genuine-permission-choices-visible",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Permission fixture 09f8c23c · Permission needed            ││   Menu   │\n╰Forced control: prior calls may still apply; work continues───────╯╰──────────╯\nACP · permission needed                                                         \nPermission · explicitly choose one of the offered options                       \nSynthetic private tool                                                          \n                                                                                \n                                                                                \n                                                                                \n Allow this invocation [allow_once]   Remember allow [allow_always]             \n Reject this invocation [reject_once]   Remember rejection [reject_always]      \n Interrupt                                                                      \nTab / Shift-Tab focus · Enter acts · Esc back · PgUp/PgDn scroll · F1 help      \n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "same-live-agent-explicit-deny-no-tool-effect",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Permission fixture 09f8c23c · Finished                     ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                  \nYou: add 17 25                                                                  \nAgent: Total=0; commands=1                                                      \nFinished: end_turn                                                              \n                                                                                \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────┐\n│                                                                              │\n└──────────────────────────────────────────────────────────────────────────────┘\n Send                                                                           \nDeliberate interaction action captured; no optimistic history or automatic retry\n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "facts": {
+        "effect": {
+          "session_id": "arithmetic-93792",
+          "value": 0,
+          "commands": 1,
+          "rpc_id": 2
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "same-live-agent-explicit-allow-arithmetic42",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Permission fixture 09f8c23c · Finished                     ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                  \nFinished: end_turn                                                              \nYou: add 17 25                                                                  \nAgent: Total=42; commands=2                                                     \nFinished: end_turn                                                              \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────┐\n│                                                                              │\n└──────────────────────────────────────────────────────────────────────────────┘\n Send                                                                           \nDeliberate interaction action captured; no optimistic history or automatic retry\n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "facts": {
+        "effect": {
+          "session_id": "arithmetic-93792",
+          "value": 42,
+          "commands": 2,
+          "rpc_id": 3
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "fixed-ACP-save-pins-selected-session-when-native-main-cwd-differs",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ MENU · 🔒 Locked ────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                                            ││  Return  │\n╰Saved project Exact ACP despite native cwd────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [Native canonical git root]    main staged:0 unstaged:0 untracked:0                      \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  Terminal · Shell · amux-e07-final-0170ou6x · f15384dc  [Exact ACP despite native cwd]    main staged:0 unstaged:0 un  \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n› ACP · jk? same live ACP · Finished                                                                                    \n  Exact ACP despite native cwd                                                                                          \n  ACP · Permission fixture 09f8c23c · Finished                                                                          \n  unsaved                                                                                                               \n  ACP · Math fixture cdcc21ae · Ready                                                                                   \n  unsaved                                                                                                               \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮\n│            New…            ││        Save project        ││          Projects          ││           Actions          │\n╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯",
+      "facts": {
+        "saved_context": "/private/tmp/amux-e07-final-0170ou6x",
+        "main_cwd": "/private/tmp/amux-e07-final-0170ou6x/existing-repository/sub",
+        "same_peer": "arithmetic-82579"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "mode-none-preserves-native-F12",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Shell · sub · ccaa8620     /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nUX> /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termio\ns.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-none.ready'\"'\"').write_text('\n\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                                                              \nquote> try:                                                                                                             \nquote>  while len(data)<5 and time.monotonic()<end:                                                                     \nquote>   if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                        \nquote> finally:                                                                                                         \nquote>  termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-none.bin'\"\n'\"').write_bytes(data)'                                                                                                 \nUX>                                                                                                                     \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        ",
+      "facts": {
+        "bytes_hex": "1b5b32347e"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "F24-double-key-and-explicit-action-deliver-xterm-kf24",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Shell · sub · ccaa8620     /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                  ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nUX> /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termio\ns.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-none.ready'\"'\"').write_text('\n\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                                                              \nquote> try:                                                                                                             \nquote>  while len(data)<5 and time.monotonic()<end:                                                                     \nquote>   if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                        \nquote> finally:                                                                                                         \nquote>  termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-none.bin'\"\n'\"').write_bytes(data)'                                                                                                 \nUX> /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termio\ns.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-f24-two-routes.ready'\"'\"').wr\nite_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                                                    \nquote> try:                                                                                                             \nquote>  while len(data)<14 and time.monotonic()<end:                                                                    \nquote>   if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                        \nquote> finally:                                                                                                         \nquote>  termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/tmp/amux-e07-final-0170ou6x/mode-f24-two-ro\nutes.bin'\"'\"').write_bytes(data)'                                                                                       \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        ",
+      "facts": {
+        "bytes_hex": "1b5b32343b327e1b5b32343b327e"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "full-local-invalid-directory-cause-reachable-in-scrolled-context-help",
+      "width": 80,
+      "height": 14,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                    ││  Return  │\n╰? help────────────────────────────────────────────────────────────╯╰──────────╯\n  ┌ ╭ Shortcuts ───────────────────────────────────────────────────────────╮─┐  \n  │K│cancels the action. Nothing intercepted is replayed.                  │ │  \n› │P│                                                                      │ │  \n  │ │LAST ACTION / ERROR                                                   │ │  \n  │ │invalid-directory: invalid-directory:                                 │ │  \n  │ │/private/tmp/amux-e07-final-0170ou6x/error-path/segment-0-xxxxxxxxxxxx│ │  \n  │i│xxxxxxxxxxxxxxxx/segment-1-xxxxxxxxxxxxxxxxxxxxxxxxxxxx/segment-2-xxxx│x│  \n  │╭│xxxxxxxxxxxxxxxxxxxxxxxx/segment-3-xxxxxxxxxxxxxxxxxxxxxxxxxxxx/segmen│╮│  \n╭─│││t-4-xxxxxxxxxxxxxxxxxxxxxxxxxxxx/segment-5-xxxxxxxxxxxxxxxxxxxxxxxxxxx│││─╮\n│ │╰│x/segment-6-xxxxxxxxxxxxxxxxxxxxxxxxxxxx/E07-END-OF-LONG-ERROR        │╯│ │\n╰─└─╰ Esc close · arrows scroll ───────────────────────────────────────────╯─┘─╯",
+      "facts": {
+        "error_tail": "E07-END-OF-LONG-ERROR",
+        "no_partial_session_or_project": true
+      },
+      "status": "passing"
+    },
+    {
+      "label": "maximum-128-byte-Unicode-profile-untouched-automatic-name-launches",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ ACP · ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé a8c7a9ca · Finished                    ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                                                          \nYou: add 20 22                                                                                                          \nAgent: Total=42; commands=1                                                                                             \nFinished: end_turn                                                                                                      \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────────────────────────────────────────────┐\n│                                                                                                                      │\n└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\n Send                                                                                                                   \nPrompt captured; canonical work records admission and outcome.                                                          \n Prompt   Questions F9   History   Details F10   Help F1                                                                ",
+      "facts": {
+        "name": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé a8c7a9ca",
+        "name_utf8_bytes": 127,
+        "effect": {
+          "session_id": "arithmetic-51085",
+          "value": 42,
+          "commands": 1,
+          "rpc_id": 2
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "narrow-new-dialog-wraps-placement-and-stacks-complete-buttons",
+      "width": 35,
+      "height": 32,
+      "surface": "╭ MENU ───────────────╮╭──────────╮\n│ NAV  Sessions       ││  Return  │\n╰? help───────────────╯╰──────────╯\n  Terminal · jk? native smoke  [N  \n  …70ou6x/existing-repository/sub  \n  Terminal · Shell · sub · ccaa86  \n  …70ou6x/existing-repository/sub  \n  Terminal · Shell · amux-e07-fin  \n  …70ou6x/existing-repository/sub  \n ┌ New session ──────────────────┐ \n │Kind: Terminal                 │ \n │Placement: New independent     │ \n │project                        │ \n›│                               │ \n │                               │ \n │╭─────────────────────────────╮│ \n ││          Continue           ││ \n │╰─────────────────────────────╯│ \n │╭─────────────────────────────╮│ \n ││           Cancel            ││ \n╭│╰─────────────────────────────╯│╮\n││╭─────────────────────────────╮││\n╰││            Help             ││╯\n╭│╰─────────────────────────────╯│╮\n│└───────────────────────────────┘│\n╰─────────────────────────────────╯\n╭─────────────────────────────────╮\n│            Projects             │\n╰─────────────────────────────────╯\n╭─────────────────────────────────╮\n│             Actions             │\n╰─────────────────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "captured-live-ACP-close-warning",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                                            ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · jk? native smoke  [Native canonical git root]    main staged:0 unstaged:0 untracked:0                      \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  Terminal · Shell · sub · ccaa8620  [unsaved]    main staged:0 unstaged:0 untracked:0                                  \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  Terminal · Shell · amux-e07-final-0170ou6x · f15384dc  [Exact ACP despite native cwd]    main staged:0 unstaged:0 un  \n  /private/tmp/amux-e07-final-0170ou6x/existing-repository/sub                                                          \n  ACP · jk? same live ACP · Finished                                                                                    \n  Exact ACP despite native cwd                                                                                          \n  ACP · Permission fixture 09f8c23c · Finished                                                                          \n  unsaved                                                                                                               \n› ACP · éééééééééééééé┌ Close session? ──────────────────────────────────────────────────────────┐                      \n  unsaved             │Close ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé a8c7a9ca│                      \n  ACP · Math fixture c│in unsaved?                                                               │                      \n  unsaved             │This ends the session and its running work.                               │                      \n                      │Detach UI keeps work running and does not release control.                │                      \n                      │y closes; n/Esc keeps working; d detaches.                                │                      \n                      │                                                                          │                      \n                      │                                                                          │                      \n                      │                                                                          │                      \n                      │                                                                          │                      \n                      │                                                                          │                      \n                      │                                                                          │                      \n                      │╭──────────────────────╮╭───────────────────────╮╭───────────────────────╮│                      \n                      ││     Close session    ││     Keep working      ││       Detach UI       ││                      \n                      │╰──────────────────────╯╰───────────────────────╯╰───────────────────────╯│                      \n                      └──────────────────────────────────────────────────────────────────────────┘                      \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮\n│            New…            ││        Save project        ││          Projects          ││           Actions          │\n╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯",
+      "facts": {},
+      "status": "passing"
+    },
+    {
+      "label": "confirmed-ACP-end-owned-cleanup-truthful-original-target-stop",
+      "width": 120,
+      "height": 40,
+      "surface": "Ended · original attachment unavailable                                                                                 \nAgent/daemon was not relaunched                                                                                         \n                                                                                                                        \nLocal input, drafts, claim/consent state discarded. Broker work and questions retained; no mutation replay or automatic \ncontrol acquisition.                                                                                                    \nCtrl-Q / Esc quits safely.                                                                                              \n                                                                                                                        \nEnded: original ACP agent ended; no replacement launched                                                                \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        ",
+      "facts": {
+        "lifecycle": "ended",
+        "resource": {
+          "failure": null,
+          "stderr_truncated": false,
+          "cleanup_complete": true
+        },
+        "other_views_retained": 4
+      },
+      "status": "passing"
+    },
+    {
+      "label": "actual-parser-upper-function-recognition-and-gated-two-route-forwarding",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ Protocol proof complete     …te/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-protocol-jwsjurb││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nE07% /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termi\nos.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-prot\nocol-jwsjurbo/fn-21.ready'\"'\"').write_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                  \ntry:                                                                                                                    \n while len(data)<14 and time.monotonic()<end:                                                                           \n  if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                               \nfinally:                                                                                                                \n termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/am\nux-e07-protocol-jwsjurbo/fn-21.bin'\"'\"').write_bytes(data)'                                                             \nE07% /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termi\nos.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-prot\nocol-jwsjurbo/fn-22.ready'\"'\"').write_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                  \ntry:                                                                                                                    \n while len(data)<14 and time.monotonic()<end:                                                                           \n  if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                               \nfinally:                                                                                                                \n termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/am\nux-e07-protocol-jwsjurbo/fn-22.bin'\"'\"').write_bytes(data)'                                                             \nE07% /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termi\nos.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-prot\nocol-jwsjurbo/fn-23.ready'\"'\"').write_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                  \ntry:                                                                                                                    \n while len(data)<14 and time.monotonic()<end:                                                                           \n  if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                               \nfinally:                                                                                                                \n termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/am\nux-e07-protocol-jwsjurbo/fn-23.bin'\"'\"').write_bytes(data)'                                                             \nE07% /Applications/Xcode.app/Contents/Developer/usr/bin/python3 -c 'import os,tty,termios,select,time,pathlib; old=termi\nos.tcgetattr(0); tty.setraw(0); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-prot\nocol-jwsjurbo/fn-24.ready'\"'\"').write_text('\"'\"'ready'\"'\"'); data=b'\"'\"''\"'\"'; end=time.monotonic()+20                  \ntry:                                                                                                                    \n while len(data)<14 and time.monotonic()<end:                                                                           \n  if select.select([0],[],[],.1)[0]: data+=os.read(0,256)                                                               \nfinally:                                                                                                                \n termios.tcsetattr(0,termios.TCSANOW,old); pathlib.Path('\"'\"'/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/am\nux-e07-protocol-jwsjurbo/fn-24.bin'\"'\"').write_bytes(data)'                                                             \nE07%                                                                                                                    ",
+      "facts": {
+        "results": [
+          {
+            "configured": "F13",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b313b3250",
+            "native_bytes_hex": "1b5b313b32501b5b313b3250",
+            "expected_terminfo_hex": "1b5b313b3250",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F14",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b313b3251",
+            "native_bytes_hex": "1b5b313b32511b5b313b3251",
+            "expected_terminfo_hex": "1b5b313b3251",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F15",
+            "input_protocol": "extended",
+            "physical_hex": "1b5b353733373875",
+            "native_bytes_hex": "1b5b313b32521b5b313b3252",
+            "expected_terminfo_hex": "1b5b313b3252",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F16",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b313b3253",
+            "native_bytes_hex": "1b5b313b32531b5b313b3253",
+            "expected_terminfo_hex": "1b5b313b3253",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F17",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b31353b327e",
+            "native_bytes_hex": "1b5b31353b327e1b5b31353b327e",
+            "expected_terminfo_hex": "1b5b31353b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F18",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b31373b327e",
+            "native_bytes_hex": "1b5b31373b327e1b5b31373b327e",
+            "expected_terminfo_hex": "1b5b31373b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F19",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b31383b327e",
+            "native_bytes_hex": "1b5b31383b327e1b5b31383b327e",
+            "expected_terminfo_hex": "1b5b31383b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F20",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b31393b327e",
+            "native_bytes_hex": "1b5b31393b327e1b5b31393b327e",
+            "expected_terminfo_hex": "1b5b31393b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F21",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b32303b327e",
+            "native_bytes_hex": "1b5b32303b327e1b5b32303b327e",
+            "expected_terminfo_hex": "1b5b32303b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F22",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b32313b327e",
+            "native_bytes_hex": "1b5b32313b327e1b5b32313b327e",
+            "expected_terminfo_hex": "1b5b32313b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F23",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b32333b327e",
+            "native_bytes_hex": "1b5b32333b327e1b5b32333b327e",
+            "expected_terminfo_hex": "1b5b32333b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          },
+          {
+            "configured": "F24",
+            "input_protocol": "legacy",
+            "physical_hex": "1b5b32343b327e",
+            "native_bytes_hex": "1b5b32343b327e1b5b32343b327e",
+            "expected_terminfo_hex": "1b5b32343b327e",
+            "menu_single_press": true,
+            "double_and_actions_exactly_one_each": true
+          }
+        ],
+        "legacy_F15_cursor_reply_collision": "source-confirmed dependency ambiguity; extended F15 exercised instead"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "unavailable-profile-rejection-retains-literal-name-with-no-launch",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                                            ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · Shell · amux-e07-protocol-jwsjurbo · 625d7732  [unsaved]                                                   \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-protocol-jwsjurbo                                   \n›   Terminal · Protocol proof complete  [unsaved]                                                                       \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-protocol-jwsjurbo                                   \n          ┌ New ACP session ─────────────────────────────────────────────────────────────────────────────────┐          \n          │Independent project: source supplies its directory only. Creates an unsaved project; no inherited │          \n          │hooks or directory creation.                                                                      │          \n          │  Project/source: < unsaved [ee315fa3-df29-4367-b434-20778a0e5efe] >                              │          \n          │  Profile: < codex disabled [codex] > [UNAVAILABLE — cannot launch]                               │          \n          │  Name: ACP only reuse smoke                                                                      │          \n          │Error: Selected agent executable is unavailable; nothing launched                                 │          \n          │         Launch                  Cancel                  Advanced                  Help           │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │                                                                                                  │          \n          │Error: Selected agent executable is unavailable; nothing launched                                 │          \n          └ Tab focus · F1 help · Esc cancel · PgUp/PgDn scroll ─────────────────────────────────────────────┘          \n                                                                                                                        \n                                                                                                                        \n╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮╭────────────────────────────╮\n│            New…            ││        Save project        ││          Projects          ││           Actions          │\n╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯╰────────────────────────────╯",
+      "facts": {
+        "harness_note": "selector helper observed its previous paint; unavailable selection was correctly rejected",
+        "agent_views": 0
+      },
+      "status": "passing"
+    },
+    {
+      "label": "startup-EOF-is-canonical-failure-without-fallback-or-relaunch",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · Closed ───────────────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ ACP only reuse smoke · Closed                                                                            ││   Menu   │\n╰ACP launched on this original native controller───────────────────────────────────────────────────────────╯╰──────────╯\nACP · failed · read-only                                                                                                \nconfiguration: startup-ended (no fallback)resource: eof                                                                 \nConversation · no canonical messages yet                                                                                \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n┌ Observer; no prompt authority ───────────────────────────────────────────────────────────────────────────────────────┐\n│                                                                                                                      │\n└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\nTab / Shift-Tab focus · Enter acts · Esc back · PgUp/PgDn scroll · F1 help                                              \n Prompt   Questions F9   History   Details F10   Help F1                                                                ",
+      "facts": {
+        "resource": {
+          "failure": "eof",
+          "stderr_truncated": false,
+          "cleanup_complete": true
+        },
+        "harness_cause": "local fixture root was not provisioned; peer writes peer.pid without mkdir"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "saved-ACP-only-Projects-Open-reuses-original-pending-question-without-shell-or-hook",
+      "width": 120,
+      "height": 40,
+      "surface": "╭ amux · Live ACP only bookmark ───────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ ACP · ACP only live reuse · Finished                                                                     ││   Menu   │\n╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · finished                                                                                                          \nYou: add 17 25                                                                                                          \nAgent: Total=57; commands=1                                                                                             \nFinished: end_turn                                                                                                      \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n                                                                                                                        \n┌ Local draft 0/65536 B | rows 1..1/1; not history ────────────────────────────────────────────────────────────────────┐\n│                                                                                                                      │\n└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\n Send                                                                                                                   \nDeliberate interaction action captured; no optimistic history or automatic retry.                                       \n Prompt   Questions F9   History   Details F10   Help F1                                                                ",
+      "facts": {
+        "original_peer_pid": "98686",
+        "original_target": {
+          "kind": "acp",
+          "id": "acp-c0a514296e254985b2e779bfaae5c0fe",
+          "instance_id": "instance-129016f4612f4d37af497292d64b85b3",
+          "connection_generation": 1,
+          "session_id": "arithmetic-98686"
+        },
+        "original_prompt_work": {
+          "work_id": "work-61d5bb70821741c4aee04c8ad40cafe0",
+          "call_id": "ead44d59-e257-4539-b95a-2afd4619634f",
+          "controller_id": "6e17eaff-2c76-4a85-8cb3-04eb3c278ee3",
+          "owner_generation": 1,
+          "op": "acp-prompt",
+          "rpc_id": 2,
+          "prompt_id": "prompt-b3fdc6dc77c0478ca986ddaa255e9e6f",
+          "interaction_id": null,
+          "state": "submitted",
+          "delivery": "submitted",
+          "application": "unknown",
+          "outcome": null
+        },
+        "saved_project": "ed441f2f-1b15-4923-8014-f93403620fc2",
+        "native_ids_unchanged": [
+          "625d7732-4c44-4397-a55f-72806ebe27d5",
+          "78b787e6-53d3-49c0-bee2-098d4be6c9d5"
+        ],
+        "hook_not_run": true,
+        "effect": {
+          "session_id": "arithmetic-98686",
+          "value": 57,
+          "commands": 1,
+          "rpc_id": 2
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "missing-capability-native-New-refuses-locally",
+      "width": 100,
+      "height": 32,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n› Terminal · Shell · amux-e07-r3-e76lxapg · eebc6916  [unsaved]                                     \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-r3-e76lxapg                     \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n            ┌ New session ─────────────────────────────────────────────────────────────┐            \n            │Kind: Terminal                                                            │            \n            │Placement: New independent project                                        │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │This daemon cannot safely create the requested session. It must advertise │            \n            │╭──────────────────────╮╭───────────────────────╮╭───────────────────────╮│            \n            ││       Continue       ││        Cancel         ││         Help          ││            \n            │╰──────────────────────╯╰───────────────────────╯╰───────────────────────╯│            \n            └──────────────────────────────────────────────────────────────────────────┘            \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "snapshot_capability_absent": true,
+        "no_backend_creation": true
+      },
+      "status": "passing"
+    },
+    {
+      "label": "missing-capability-ACP-New-refuses-before-profile-or-launch-RPC",
+      "width": 100,
+      "height": 32,
+      "surface": "╭ MENU ────────────────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n› Terminal · Shell · amux-e07-r3-e76lxapg · eebc6916  [unsaved]                                     \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-r3-e76lxapg                     \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n            ┌ New session ─────────────────────────────────────────────────────────────┐            \n            │Kind: ACP agent                                                           │            \n            │Placement: New independent project                                        │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │                                                                          │            \n            │This daemon cannot safely create the requested session. It must advertise │            \n            │╭──────────────────────╮╭───────────────────────╮╭───────────────────────╮│            \n            ││       Continue       ││        Cancel         ││         Help          ││            \n            │╰──────────────────────╯╰───────────────────────╯╰───────────────────────╯│            \n            └──────────────────────────────────────────────────────────────────────────┘            \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "snapshot_capability_absent": true,
+        "backend_creation_or_catalog_ops": [],
+        "native_ids": [
+          "eebc6916-39e1-4d9a-917a-2846ba2773d8"
+        ],
+        "agent_ids": []
+      },
+      "status": "passing"
+    },
+    {
+      "label": "narrow-real-broker-authentication-methods",
+      "width": 35,
+      "height": 32,
+      "surface": "╭ amux · unsaved ─────╮╭──────────╮\n│ ACP · E07 genuine au││   Menu   │\n╰ACP launched on thi──╯╰──────────╯\nACP · auth-required                \n┌Authentication method────────────┐\n│agent-login [agent]              │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n│                                 │\n└─────────────────────────────────┘\n[agent-login [agent]]              \n[agent-login-alt [agent]]          \n     Review method 3 · context     \n     Review method 4 · context     \nTab / Shift-Tab focus · Enter acts \n Prompt   Questions F9   History   ",
+      "facts": {
+        "target_id": "acp-acbca9a717dc4e79b50486a35e582806",
+        "lifecycle": "auth-required",
+        "fixture_only": true,
+        "original_instance": "instance-a6f231e66864466fbc596d8d9daedb48"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "narrow-authentication-full-inert-context-and-unsupported-no-effect",
+      "width": 35,
+      "height": 32,
+      "surface": "╭ amux · unsaved ─────╮╭──────────╮\n│ ACP · E07 genuine au││   Menu   │\n╰ACP launched on thi──╯╰──────────╯\n╭ Shortcuts ──────────────────────╮\n│Authentication method 3 of 4     │\n│client-login [unsupported] ·     │\n│unsupported                      │\n│                                 │\n│Only advertised agent-type       │\n│authentication is supported.     │\n│Client/terminal methods never    │\n│open a URL, credentials or       │\n│process. Tab selects a method;   │\n│F8, Enter or a mouse action      │\n│authenticates only the exact     │\n│visible method after input       │\n│settles. Esc returns without     │\n│authenticating.                  │\n│                                 │\n│ACP conversation                 │\n│                                 │\n│Tab / Shift-Tab moves between    │\n│inputs and visible actions. Enter│\n│activates a focused action. Click│\n│a field to edit it; j, k and ?   │\n│are literal text while editing.  │\n│Escape leaves an input for       │\n│actions; Escape again returns to │\n│the prompt. Drafts are preserved │\n│unless their original authority  │\n│or target changes.               │\n╰ Esc close · arrows scroll ──────╯",
+      "facts": {
+        "projected_methods": [
+          {
+            "method_id": "agent-login",
+            "kind": "agent"
+          },
+          {
+            "method_id": "agent-login-alt",
+            "kind": "agent"
+          },
+          {
+            "method_id": "client-login",
+            "kind": "unsupported"
+          },
+          {
+            "method_id": "terminal-login",
+            "kind": "terminal"
+          }
+        ],
+        "authentication_effect": false
+      },
+      "status": "passing"
+    },
+    {
+      "label": "narrow-authenticated-original-peer-fresh-arithmetic49",
+      "width": 35,
+      "height": 32,
+      "surface": "╭ amux · unsaved ─────╮╭──────────╮\n│ ACP · E07 genuine au││   Menu   │\n╰─────────────────────╯╰──────────╯\nACP · finished                     \nYou: add 17 25                     \nAgent: Total=49; commands=1        \nFinished: end_turn                 \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n                                   \n┌ Local draft 0/65536 B | rows 1..┐\n│                                 │\n└─────────────────────────────────┘\n Send                              \nPrompt captured; canonical work rec\n Prompt   Questions F9   History   ",
+      "facts": {
+        "auth_rpc_id": 2,
+        "method": "agent-login-alt",
+        "effect": {
+          "session_id": "arithmetic-51954",
+          "value": 49,
+          "commands": 1,
+          "rpc_id": 4
+        },
+        "original_instance": {
+          "kind": "acp",
+          "id": "acp-acbca9a717dc4e79b50486a35e582806",
+          "instance_id": "instance-a6f231e66864466fbc596d8d9daedb48",
+          "connection_generation": 1,
+          "session_id": "arithmetic-51954"
+        },
+        "first_session_established": true,
+        "old_bootstrap_tuple_rejected": "stale-target"
+      },
+      "status": "passing"
+    },
+    {
+      "label": "ordinary-owner-no-request-complete-armed-release",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU · ● Controlled here ────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰? help────────────────────────────────────────────────────────────────────────────────╯╰──────────╯\n  Terminal · Shell · amux-e07-r3-e76lxapg · eebc6916  [unsaved]                                     \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-r3-e76lxapg                     \n› ACP · E07 genuine authentication d75e2d69 · Finished                                              \n  unsaved                                                                                           \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n       ┌Control owned here──────────────────────────────────────────────────────────────────┐       \n       │Terminal #acp-acbca9a717dc4e79b50486a35e582806                                      │       \n       │r Release (grants nobody) · k Keep working · Esc Return                             │       \n       │                                                                                    │       \n       │                                                                                    │       \n       │╭───────────────────╮╭───────────────────╮╭───────────────────╮╭───────────────────╮│       \n       ││      Release      ││   Keep working    ││      Return       ││       Help        ││       \n       │╰───────────────────╯╰───────────────────╯╰───────────────────╯╰───────────────────╯│       \n       └────────────────────────────────────────────────────────────────────────────────────┘       \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "original_controller": "64a3c9c0-2207-44d5-833a-64a6375fcc7f",
+        "generation": 1,
+        "peer_effect": {
+          "session_id": "arithmetic-51954",
+          "value": 49,
+          "commands": 1,
+          "rpc_id": 4
+        }
+      },
+      "status": "passing"
+    },
+    {
+      "label": "ordinary-owner-fresh-release-grants-nobody-retains-agent-and-work",
+      "width": 100,
+      "height": 36,
+      "surface": "╭ MENU · ○ Unowned ────────────────────────────────────────────────────────────────────╮╭──────────╮\n│ NAV  Sessions                                                                        ││  Return  │\n╰Control unavailable; input blocked; intercepted input was not replayed────────────────╯╰──────────╯\n  Terminal · Shell · amux-e07-r3-e76lxapg · eebc6916  [unsaved]                                     \n  /private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-r3-e76lxapg                     \n› ACP · E07 genuine authentication d75e2d69 · Finished                                              \n  unsaved                                                                                           \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n                                                                                                    \n╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮╭───────────────────────╮\n│         New…          ││     Save project      ││       Projects        ││        Actions        │\n╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯╰───────────────────────╯",
+      "facts": {
+        "owner": null,
+        "reservation": null,
+        "target_id": "acp-acbca9a717dc4e79b50486a35e582806",
+        "generation": 2,
+        "effect_unchanged": {
+          "session_id": "arithmetic-51954",
+          "value": 49,
+          "commands": 1,
+          "rpc_id": 4
+        },
+        "retained_work": [
+          {
+            "work_id": "work-af30c96aaeac4a109265246bd672d09b",
+            "call_id": "37de85a2-0433-4b10-a783-59ec00e624aa",
+            "controller_id": "64a3c9c0-2207-44d5-833a-64a6375fcc7f",
+            "owner_generation": 1,
+            "op": "acp-authenticate",
+            "rpc_id": 2,
+            "prompt_id": null,
+            "interaction_id": null,
+            "state": "completed",
+            "delivery": "submitted",
+            "application": "unknown",
+            "outcome": {
+              "kind": "response"
+            }
+          },
+          {
+            "work_id": "work-5794c55853b14fc69e5fb0b2f1c845d3",
+            "call_id": "8051b16b-f407-46ce-b2b1-2b372418eb07",
+            "controller_id": "64a3c9c0-2207-44d5-833a-64a6375fcc7f",
+            "owner_generation": 1,
+            "op": "acp-prompt",
+            "rpc_id": 4,
+            "prompt_id": "prompt-94358a9273864afea2226d893ecb327f",
+            "interaction_id": null,
+            "state": "completed",
+            "delivery": "submitted",
+            "application": "unknown",
+            "outcome": {
+              "kind": "response",
+              "stop_reason": "end_turn"
+            }
+          }
+        ]
+      },
+      "status": "passing"
+    },
+    {
+      "label": "fresh-stock-zsh-terminal-arithmetic42-before-final-isolated-cleanup",
+      "width": 80,
+      "height": 24,
+      "surface": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ Shell · amux-e7c-8sf1vu16 · b0dda26c     …00gn/T/amux-e7c-8sf1vu1││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nE07_FINAL_PROMPT> rintf 'E07_FINAL_EFFECT=%s\\n' \"$((17+25))\"                    \nzsh: command not found: rintf                                                   \nE07_FINAL_PROMPT> printf 'E07_FINAL_EFFECT=%s\\n' \"$((17+25))\"                   \nE07_FINAL_EFFECT=42                                                             \nE07_FINAL_PROMPT>                                                               \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                ",
+      "facts": {
+        "effect": "E07_FINAL_EFFECT=42",
+        "sentinel_poll": null,
+        "fresh_input_after_explicit_owner_observation": true
+      },
+      "status": "passing"
+    }
+  ],
+  "defects": [
+    {
+      "case": "permission options at80x14",
+      "observed": "╭ amux · unsaved ──────────────────────────────────────────────────╮╭──────────╮\n│ ACP · Permission fixture 09f8c23c · Permission needed            ││   Menu   │\n╰──────────────────────────────────────────────────────────────────╯╰──────────╯\nACP · permission needed                                                         \nPermission · explicitly choose one of the offered options                       \nSynthetic private tool                                                          \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n Allow this invocation [allow_once]   Remember allow [allow_always]  Reject thi…\nPrompt captured; canonical work records admission and outcome.                  \n Prompt   Questions F9   History   Details F10   Help F1                        ",
+      "status": "resolved-and-actual-private-PTY-verified",
+      "reason": "single-row primary actions clip reject/remember choices",
+      "repair": "Bounded wrapped focus-following permission choices and full-context routes preserve every explicit action at80x14; actual original-RPC Reject0 and Allow42 cases, plus queued real-TUI admission regressions, passed."
+    }
+  ],
+  "cleanup": {
+    "status": "passing",
+    "root": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e7c-8sf1vu16",
+    "daemon_pid": 73973,
+    "daemon_exit": 0,
+    "child_pids_observed_absent": [
+      73977,
+      73979
+    ],
+    "tui_exit0_modes_restored_host0_drainer_joined": true,
+    "socket_absent": true,
+    "no_root_holders_lsof_exit1": true,
+    "unrelated_sentinel_alive_through_shutdown": true,
+    "unrelated_sentinel_observed_with_poll_not_kill0": true,
+    "unrelated_sentinel_pid": 73974,
+    "fallback_used": false,
+    "root_removed": true
+  },
+  "attempts": [
+    {
+      "job": "bg_378",
+      "status": "failed-baseline-native-detach",
+      "raw": "artifact://2944"
+    },
+    {
+      "job": "bg_384",
+      "passed": 89,
+      "failed": 20,
+      "ignored_live": 2,
+      "raw": "artifact://2970"
+    },
+    {
+      "job": "bg_385",
+      "passed": 102,
+      "failed": 7,
+      "ignored_live": 2,
+      "raw": "artifact://2978"
+    },
+    {
+      "job": "bg_386",
+      "passed": 107,
+      "failed": 2,
+      "ignored_live": 2,
+      "raw": "artifact://2981"
+    },
+    {
+      "job": "bg_387",
+      "passed": 108,
+      "failed": 1,
+      "ignored_live": 2,
+      "raw": "artifact://2985"
+    },
+    {
+      "job": "bg_389",
+      "rust_passed": 475,
+      "status": "failed-three-Clippy-lints"
+    },
+    {
+      "job": "bg_390",
+      "rust_passed": 475,
+      "status": "passed-before-review",
+      "raw": "artifact://3006"
+    },
+    {
+      "job": "bg_391",
+      "library_passed": 163,
+      "acp_passed": 108,
+      "acp_failed": 2,
+      "ignored_live": 2,
+      "status": "failed-form-correction-focus",
+      "raw": "artifact://3048"
+    },
+    {
+      "job": "bg_394",
+      "status": "failed-post-round2-test-consumers",
+      "raw": "artifact://3080",
+      "observed": "lib165 passed; ACP113 passed2 failed2 ignored; existing complete-broker permission consumer had not selected the armed visible action, and new launch Help observation demanded one contiguous line across soft wrap."
+    },
+    {
+      "job": "bg_395",
+      "status": "failed-test-consumer-selector-and-native-exit-ordering",
+      "raw": "artifact://3083",
+      "observed": "ACP112 passed3 failed2 ignored; permission armed-label selector needed actual kind brackets, and Escape dismissal required original-connection activity/panel disappearance before physical exit input. Retained, not represented as production RED."
+    },
+    {
+      "job": "bg_396",
+      "status": "passed-full-current-gate",
+      "raw": "artifact://3087",
+      "observed": "495 Rust passed across30 suites,12 ignored; strict workspace Clippy/fmt/build/examples passed; OMP8/49expects and Zsh passed."
+    },
+    {
+      "job": "bg_398",
+      "status": "failed-new-parent-widget-integration-compilation",
+      "raw": "artifact://3118",
+      "observed": "Wrap was not imported and view::panel was private; parent reused imported Block::bordered and requested LSP code actions (none available) before explicit Wrap import."
+    },
+    {
+      "job": "bg_399",
+      "status": "failed-two-new-owner-transition-cases",
+      "raw": "artifact://3122",
+      "observed": "171 library tests:169 passed2 failed; blocked-gesture helper could select local Keep and omit fresh focused-route setup; native chain did not execute."
+    },
+    {
+      "job": "bg_400",
+      "status": "failed-two-owner-transition-cases",
+      "raw": "artifact://3125",
+      "observed": "7 targeted passed2 failed. Source trace found No-claim Owner panel allocated only1 content row for2 required rows after boxed controls; full-presentation fence correctly refused admission. Parent reserved border+boxed-action space."
+    },
+    {
+      "job": "bg_401",
+      "status": "failed-one-fresh-focused-route-precondition",
+      "raw": "artifact://3128",
+      "observed": "8 targeted passed1 failed. Claim arrival/replacement/withdrawal transitions now pass after layout repair; final focused activation needed deliberate Tab onto its visible mutation, not an unfocused Enter. Production admission was not relaxed."
+    },
+    {
+      "job": "bg_402",
+      "raw": "artifact://3130",
+      "status": "owner9-pass-native12-partial8-pass4-fail",
+      "observed": "Five new Owner semantic transitions and existing Owner cases pass after correct fresh-focus setup and full-height panel. Native failures identified stale example executable/projection-shape and wrong ordinary-withdraw setup; no cancellation relaxation."
+    },
+    {
+      "job": "bg_403",
+      "raw": "artifact://3134",
+      "status": "native12-partial9-pass3-fail",
+      "observed": "Rebuilt examples. All six real queued Owner routes passed; three auth consumers sent prompt before frontend established-session readiness. No intercepted input replayed."
+    },
+    {
+      "job": "bg_404",
+      "raw": "artifact://3137",
+      "status": "auth3-fail",
+      "observed": "New projection barrier exposed first same-instance session establishment silently closing read-only Details; repaired pane lifetime while mutation drafts still clear."
+    },
+    {
+      "job": "bg_405",
+      "status": "auth3-pass",
+      "observed": "All three genuine broker-shaped native F8/focused-Enter/mouse authentication cases passed, original RPC and arithmetic45/49; tests1.38s."
+    },
+    {
+      "job": "bg_406",
+      "raw": "artifact://3144",
+      "status": "workspace-partial-one-old-consumer-caption-wait-failed",
+      "observed": "Lib171 and acceptance17 passed; ACP123passed1failed2ignored. Removed incidental automatic Details-close caption wait only; exact session/PID/original arithmetic assertions retained. Later command-chain components did not run."
+    },
+    {
+      "job": "bg_407",
+      "raw": "artifact://3152",
+      "status": "workspace-partial-mouse-driver-readiness-failed",
+      "observed": "Lib171 and acceptance17 passed; ACP123passed1failed2ignored. Real mouse auth did not submit. Driver compared unequal styles symmetrically and could accept inverse selection; now selected and other styles are separately compared with inactive Details, no color pin/retry/replay."
+    },
+    {
+      "job": "bg_408",
+      "raw": "artifact://3161",
+      "status": "targeted-auth3-pass-workspace-partial-capacity-recovery-failed",
+      "observed": "All3 exact auth routes pass; lib171/acceptance17 pass; ACP123passed1failed2ignored. Existing retained-capacity native test unexpectedly recovered observer before Details. Actual initiating cause not retained and not claimed; read-only source investigations found synchronous large wrap work and unchanged2s heartbeat fence."
+    },
+    {
+      "job": "bg_409",
+      "status": "measured-wrap-boundaries-and-real-capacity-pass",
+      "observed": "Throwaway actual debug wrap comparison4,992,023bytes: old1.225391125s/current64.118417ms, exact range equivalence. Permanent blank/newline/wide/combining boundary case passed. Existing real-PTY retained-capacity definite-rejection/correction/cancel case passed12.18s. Throwaway benchmark subsequently removed; no timing threshold test retained."
+    }
+  ],
+  "review_repairs": "PASS: every accepted round1–3 finding repaired and exercised; actual queued Owner, exact real broker authentication, compatibility New admission, readonly session establishment and retained-wrap boundaries pass current bg410/45 private captures. Fresh round4 independent AND100/100 zero findings; all prior failed attempts retained. No timeout/authority-policy workaround and no claim that bg408 initiating recovery cause was established.",
+  "post_repair_focus_defect": "Observed bg_391 failed Review/correction focus; field editing and definite non-admission recovery fixed without replay or authority changes; verified current lib165, ACP115 and actual genuine-question corrections/completion. Failure retained in attempts.",
+  "mechanical_after_review_round1": {
+    "command": "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check && cargo build --workspace && cargo build --examples && bun test integrations/omp/lifecycle.test.ts && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 0,
+    "rust_passed": 488,
+    "rust_ignored": 12,
+    "rust_suites": 30,
+    "omp_passed": 8,
+    "omp_expects": 49,
+    "output": "artifact://3055"
+  },
+  "prior_smoke_cleanup": {
+    "status": "passing",
+    "daemon_pid": 73524,
+    "daemon_exit": 0,
+    "child_pids_observed_absent": [
+      11307,
+      47717,
+      51085,
+      73530,
+      82295,
+      82579,
+      93782,
+      93792
+    ],
+    "socket_absent": true,
+    "no_root_holders": true,
+    "all_tui_exit0_modes_restored_hosts0_drainers_joined": true,
+    "unrelated_sentinel_pid": 23622,
+    "unrelated_sentinel_alive_through_shutdown": true,
+    "fallback_used": false,
+    "private_root_removed": true
+  },
+  "mechanical_after_round2_repairs": {
+    "command": "cargo fmt --all && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check && cargo build --workspace && cargo build --examples && bun test integrations/omp/lifecycle.test.ts && zsh -n integrations/zsh/adapter.zsh",
+    "exit_code": 0,
+    "rust_passed": 495,
+    "rust_ignored": 12,
+    "rust_suites": 30,
+    "omp_passed": 8,
+    "omp_expects": 49,
+    "output": "artifact://3087"
+  },
+  "remaining_verification": [],
+  "mechanical_task_commands": {
+    "job": "bg_410",
+    "raw": "artifact://3169",
+    "exit_code": 0,
+    "workspace_passed": 511,
+    "workspace_ignored": 12,
+    "lib_passed": 172,
+    "runtime_passed": 8,
+    "runtime_ignored": 2,
+    "acp_passed": 124,
+    "acp_ignored": 2,
+    "strict_workspace_default_clippy_fmt_build_examples": "passing",
+    "component_reuse": "Exact task command components actually executed on identical reviewed source; repeated shared components are not represented as six independent full-suite runs. Six evidence guard programs separately executed and exited0."
+  },
+  "round3_smoke_cleanup": {
+    "status": "resource-cleanup-complete-sentinel-window-expired",
+    "root": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-r3-e76lxapg",
+    "daemon_pid": 40624,
+    "daemon_exit": 0,
+    "child_pids_observed_absent": [
+      40627,
+      51954
+    ],
+    "tui_exit0_modes_restored_host0_drainer_joined": true,
+    "legacy_proxy_threads_joined_and_socket_removed": true,
+    "socket_absent": true,
+    "no_root_holders_lsof_exit1": true,
+    "owned_log_closed_before_final_root_holder_observation": true,
+    "unrelated_sentinel_alive_through_shutdown": false,
+    "unrelated_sentinel_pid": 40626,
+    "fallback_used": false,
+    "root_removed": true,
+    "sentinel_exit": 0,
+    "sentinel_expired_normally": true
+  },
+  "prior_protocol_cleanup": {
+    "status": "passing",
+    "root": "/private/var/folders/v0/hty0td5j5696vf026czy5t140000gn/T/amux-e07-protocol-jwsjurbo",
+    "daemon_pid": 80054,
+    "daemon_exit": 0,
+    "child_pids_observed_absent": [
+      80055,
+      80344,
+      98686
+    ],
+    "failed_fixture_resource_cleanup_complete": true,
+    "tui_exit0_modes_restored_host0_drainer_joined": true,
+    "socket_absent": true,
+    "no_root_holders_lsof_exit1": true,
+    "unrelated_sentinel_alive_through_shutdown": true,
+    "unrelated_sentinel_pid": 92634,
+    "fallback_used": false,
+    "root_removed": true
+  },
+  "retained_render_work": {
+    "status": "measured-targeted-and-complete-parallel-runtime-passing",
+    "bytes": 4992023,
+    "old_debug_seconds": 1.225391125,
+    "current_debug_seconds": 0.064118417,
+    "exact_wrapped_ranges_equivalent": true,
+    "temporary_measurement_removed": true,
+    "permanent_semantic_boundary_test": true,
+    "capacity_native_runtime_seconds": 12.18,
+    "original_bg408_recovery_cause": "unproven; no pause/socket timeout increase or authority recovery change",
+    "bounded_inert_recovery_screen_failure_evidence": true
+  },
+  "mechanical_after_round3_repairs": {
+    "status": "passing",
+    "job": "bg_410",
+    "raw": "artifact://3169",
+    "workspace_unique_rust_passed": 511,
+    "workspace_suites": 30,
+    "workspace_ignored": 12,
+    "literal_ledger_components": {
+      "lib": 172,
+      "runtime": 8,
+      "runtime_ignored": 2,
+      "acp": 124,
+      "acp_ignored": 2
+    },
+    "components_overlap_workspace_not_additional_unique_tests": true,
+    "strict_workspace_default_all_target_clippy": "passing",
+    "fmt_check": "passing",
+    "workspace_default_examples_build": "passing",
+    "OMP_tests_passed": 8,
+    "OMP_expect_calls": 49,
+    "Zsh_syntax": "passing",
+    "temporary_benchmark_present": false
+  },
+  "manual_driver_attempts": [
+    {
+      "status": "rejected-no-effect",
+      "observation": "Native-only state op without terminal selector rejected invalid-request; used exact snapshot agent-view ownership instead."
+    },
+    {
+      "status": "fresh-deliberate-correction-no-replay",
+      "observation": "Adjacent Esc+Up and Esc+Esc bytes were not treated as separate unmodified keys in the legacy parser; separate observed surface/fresh key or explicit Return used. No deferred automatic action."
+    },
+    {
+      "status": "bootstrap-tuple-fail-closed",
+      "observation": "Inspect using pre-auth null-session tuple after establishment returned stale-target; refreshed descriptor retained same id/instance/generation and original peer, then exact inspect succeeded."
+    },
+    {
+      "status": "owned-log-cleanup-order-corrected",
+      "observation": "Initial lsof found only the owned Python daemon.log FD; closed it before the final no-holder observation."
+    },
+    {
+      "status": "old-timer-not-liveness-proof",
+      "observation": "R3 sleep1200 expired normally0; kill0 sees zombies and was not counted as alive proof. Fresh sleep86400 poll()==None sentinel remained running through normal final cleanup, then owned termination reaped-15."
+    },
+    {
+      "status": "initial-native-input-precondition-corrected",
+      "observation": "A command sent before observing local ownership lost its first intercepted p (rintf was rejected by Zsh); nothing replayed. After explicit Owner observation and fresh Return, a new deliberate complete printf produced actual42."
+    }
+  ],
+  "source_identity_verification": {
+    "status": "passing",
+    "manifest": "specs/verifications/e07-review-r4-source.sha256",
+    "checked_paths": 31,
+    "includes_installed_binary": true,
+    "command": "shasum -a 256 -c specs/verifications/e07-review-r4-source.sha256",
+    "all_31_checks": "OK",
+    "source_changed_since_bg410_and_review": false,
+    "installed_binary_sha256": "a45a1f7d44605994efe82ae78e43e8506a38baf7f9470f8f2dc3d2e43681b2ab",
+    "installed_binary_changed": false
+  },
+  "task_command_receipts": {
+    "e07s01": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --workspace",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    },
+    "e07s02": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --test acp",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    },
+    "e07s03": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --test runtime && cargo test --test acp",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    },
+    "e07s04": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --test acp",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    },
+    "e07s05": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --lib && cargo test --test runtime",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    },
+    "e07s06": {
+      "task1": {
+        "status": "passing",
+        "verify": "cargo test --workspace && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check && cargo build",
+        "source": "bg_410/artifact://3169",
+        "execution": "All exact component programs exited0 on identical source; shared/repeated components are not falsely represented as six independent full-suite runs."
+      },
+      "task2": {
+        "status": "passing",
+        "execution": "Actual six saved bun -e evidence commands run as an AND chain, exit0,0.54seconds; no status inferred without execution."
+      }
+    }
+  },
+  "prior_literal_task_commands": {
+    "job": "bg_397",
+    "raw": "artifact://3106",
+    "exit_code": 0,
+    "command": "cargo test --lib && cargo test --test runtime && cargo test --test acp && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check && cargo build",
+    "lib_passed": 165,
+    "runtime_passed": 8,
+    "runtime_ignored": 2,
+    "acp_passed": 115,
+    "acp_ignored": 2,
+    "default_Clippy_fmt_build": "passed",
+    "workspace_task_component": "bg_396/artifact://3087 passed current cargo test --workspace; no source changed afterward; common task components are reused rather than pretending six distinct full-suite runs occurred."
+  },
+  "metadata_consistency": {
+    "status": "passing",
+    "yaml_files_parsed": 12,
+    "story_specs_checked": 6,
+    "stories_passing": 6,
+    "tasks_passing": 12,
+    "exact_verification_strings_unchanged": true,
+    "affected_reference_paths": 31,
+    "all_affected_references_exist": true,
+    "historical_state_execution_fields_unchanged": true,
+    "old_handoff_reading_and_progress_preserved": true,
+    "phase6_requires_separate_authorization": true,
+    "review_round": 4,
+    "review_maximum": 5,
+    "provider_requests": 0
+  },
+  "delivery": "All approved local implementation/runtime/source/ledger gates complete on feat/cli-projects-help. Built only; not installed, committed, merged, pushed or released. Existing installed binary/global daemon/config/auth unchanged. Separate user delivery authorization required."
+}
