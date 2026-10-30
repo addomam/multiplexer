@@ -6,5 +6,5 @@ epics:
   - {id: e04, capsule: archive/e04-acp-agent-interaction, wsjf: null, priority_source: explicit-user-next-initiative, title: ACP-first agent interaction}
   - {id: e05, capsule: e05-thin-tool-integration, wsjf: null, priority_source: explicitly-parked-by-user-until-concrete-non-ACP-consumer, status: parked, title: Language-neutral thin tool integration}
   - {id: e06, capsule: archive/e06-acp-daily-use, wsjf: null, priority_source: explicit-user-three-item-implementation-authorization, status: released, release: v0.1.0, title: ACP-first daily agent workflow}
-  - {id: e07, capsule: e07-modal-ux, wsjf: null, priority_source: explicit-user-approved-eight-UX-improvements-plus-modal-navigation, status: installed-local, title: Modal daily-use UX}
-  - {id: e08, capsule: e08-conversation-recovery, wsjf: null, priority_source: explicit-user-implement-automatic-reopen-no-auto-work, status: verified-local-not-delivered, title: Automatically reopen saved agent conversations}
+  - {id: e07, capsule: e07-modal-ux, wsjf: null, priority_source: explicit-user-approved-eight-UX-improvements-plus-modal-navigation, status: merged-main-installed-local, title: Modal daily-use UX}
+  - {id: e08, capsule: e08-conversation-recovery, wsjf: null, priority_source: explicit-user-implement-automatic-reopen-no-auto-work, status: merged-main-not-installed, title: Automatically reopen saved agent conversations}

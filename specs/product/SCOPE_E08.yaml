@@ -1,7 +1,7 @@
 type: scope
 context: {project: amux, epic: e08, authorization: user-implement-it}
 initiative: e08-conversation-recovery
-status: implemented-verified-not-delivered
+status: merged-main-not-installed
 core_value: Relaunch amux with every previously open supported saved agent conversation already reopened and waiting for fresh user input.
 authorization: explicit-user-implement-after-automatic-context-only-reopening-clarification
 in_scope:
