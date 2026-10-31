@@ -13,4 +13,6 @@ jobs:
         with:
           components: clippy
       - run: cargo test
+        env:
+          RUST_TEST_THREADS: "1"
       - run: cargo clippy --all-targets -- -D warnings
