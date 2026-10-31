@@ -64,25 +64,32 @@ impl Relay {
         }
     }
 
-    pub(super) fn cut(&self, connection: usize) {
+    pub(super) fn try_cut(&self, connection: usize) -> bool {
         // Startup also makes short-lived readiness/selector connections. Select
         // among live streams only; never infer native provenance from a global
-        // accept count or interpret the forwarded protocol bytes. One sample
-        // races an interrupted poll and a socket the client is still opening.
-        // Every caller waits for the same live index.
+        // accept count or interpret the forwarded protocol bytes.
+        let streams = self.streams.lock();
+        let Some(stream) = streams
+            .iter()
+            .filter(|stream| transport_live(stream))
+            .nth(connection)
+        else {
+            return false;
+        };
+        stream.shutdown(Shutdown::Both).unwrap();
+        true
+    }
+
+    pub(super) fn cut(&self, connection: usize) {
+        // An interrupted poll is not a dead socket, and the client can still
+        // be accepting the one this caller asked for. Absence after the
+        // deadline is real.
         let deadline = Instant::now() + super::super::DEADLINE;
         loop {
-            let streams = self.streams.lock();
-            if let Some(stream) = streams
-                .iter()
-                .filter(|stream| transport_live(stream))
-                .nth(connection)
-            {
-                stream.shutdown(Shutdown::Both).unwrap();
+            if self.try_cut(connection) {
                 return;
             }
-            let accepted = streams.len();
-            drop(streams);
+            let accepted = self.streams.lock().len();
             assert!(
                 Instant::now() < deadline,
                 "original native transport {connection} is live ({accepted} accepted)"
@@ -693,7 +700,17 @@ fn e06s03_ended_target_never_substitutes_same_name() {
     let mut replacement = host.open("arithmetic");
     host.ready(&mut replacement);
     assert_ne!(replacement.target["id"], agent.target["id"]);
-    relay.cut(1);
+    // Closing the original agent drops the second transport before a later
+    // sample can see it. Either that socket is still live, or the client has
+    // already painted Ended and must not be given a different connection.
+    let deadline = Instant::now() + super::super::DEADLINE;
+    while !native.text().contains("Ended") && !relay.try_cut(1) {
+        assert!(
+            Instant::now() < deadline,
+            "original native transport 1 or the Ended screen"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    }
     native.wait("Ended");
     native.send(b"\r");
     native.paste("add 900 1");
