@@ -12,7 +12,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-1.88.0-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo test
-        env:
-          RUST_TEST_THREADS: "1"
       - run: cargo clippy --all-targets -- -D warnings
