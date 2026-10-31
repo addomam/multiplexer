@@ -64,38 +64,38 @@ impl Relay {
         }
     }
 
-    pub(super) fn cut(&self, connection: usize) {
+    pub(super) fn try_cut(&self, connection: usize) -> bool {
         // Startup also makes short-lived readiness/selector connections. Select
         // among live streams only; never infer native provenance from a global
         // accept count or interpret the forwarded protocol bytes.
         let streams = self.streams.lock();
-        let stream = streams
+        let Some(stream) = streams
             .iter()
-            .filter(|stream| {
-                let mut state = libc::pollfd {
-                    fd: stream.as_raw_fd(),
-                    events: libc::POLLIN,
-                    revents: 0,
-                };
-                if unsafe { libc::poll(&mut state, 1, 0) } < 0
-                    || state.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0
-                {
-                    return false;
-                }
-                let mut byte = 0u8;
-                let n = unsafe {
-                    libc::recv(
-                        stream.as_raw_fd(),
-                        (&mut byte as *mut u8).cast(),
-                        1,
-                        libc::MSG_PEEK | libc::MSG_DONTWAIT,
-                    )
-                };
-                n > 0 || n < 0 && io::Error::last_os_error().kind() == io::ErrorKind::WouldBlock
-            })
+            .filter(|stream| transport_live(stream))
             .nth(connection)
-            .expect("original native transport is live");
+        else {
+            return false;
+        };
         stream.shutdown(Shutdown::Both).unwrap();
+        true
+    }
+
+    pub(super) fn cut(&self, connection: usize) {
+        // An interrupted poll is not a dead socket, and the client can still
+        // be accepting the one this caller asked for. Absence after the
+        // deadline is real.
+        let deadline = Instant::now() + super::super::DEADLINE;
+        loop {
+            if self.try_cut(connection) {
+                return;
+            }
+            let accepted = self.streams.lock().len();
+            assert!(
+                Instant::now() < deadline,
+                "original native transport {connection} is live ({accepted} accepted)"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 
     pub(super) fn attachment(&self, host: &mut Host, agent: &Agent) -> Attachment {
@@ -118,6 +118,46 @@ impl Drop for Relay {
             worker.join().unwrap();
         }
         let _ = fs::remove_file(&self.path);
+    }
+}
+
+fn transport_live(stream: &UnixStream) -> bool {
+    let mut state = libc::pollfd {
+        fd: stream.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    loop {
+        if unsafe { libc::poll(&mut state, 1, 0) } >= 0 {
+            break;
+        }
+        if io::Error::last_os_error().kind() != io::ErrorKind::Interrupted {
+            return false;
+        }
+    }
+    if state.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 {
+        return false;
+    }
+    let mut byte = 0u8;
+    loop {
+        let n = unsafe {
+            libc::recv(
+                stream.as_raw_fd(),
+                (&mut byte as *mut u8).cast(),
+                1,
+                libc::MSG_PEEK | libc::MSG_DONTWAIT,
+            )
+        };
+        if n > 0 {
+            return true;
+        }
+        if n == 0 {
+            return false;
+        }
+        let kind = io::Error::last_os_error().kind();
+        if kind != io::ErrorKind::Interrupted {
+            return kind == io::ErrorKind::WouldBlock;
+        }
     }
 }
 
@@ -660,7 +700,17 @@ fn e06s03_ended_target_never_substitutes_same_name() {
     let mut replacement = host.open("arithmetic");
     host.ready(&mut replacement);
     assert_ne!(replacement.target["id"], agent.target["id"]);
-    relay.cut(1);
+    // Closing the original agent drops the second transport before a later
+    // sample can see it. Either that socket is still live, or the client has
+    // already painted Ended and must not be given a different connection.
+    let deadline = Instant::now() + super::super::DEADLINE;
+    while !native.text().contains("Ended") && !relay.try_cut(1) {
+        assert!(
+            Instant::now() < deadline,
+            "original native transport 1 or the Ended screen"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    }
     native.wait("Ended");
     native.send(b"\r");
     native.paste("add 900 1");
