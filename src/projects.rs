@@ -1266,6 +1266,36 @@ mod tests {
         }
     }
 
+    fn descendant_running(pid: i32) -> bool {
+        // kill(pid, 0) stays true for an unreaped zombie. Linux shows that in
+        // /proc; Darwin only reports it through libproc, including zombies.
+        #[cfg(target_os = "linux")]
+        {
+            fs::read_to_string(format!("/proc/{pid}/stat"))
+                .ok()
+                .and_then(|stat| {
+                    stat.rsplit_once(") ")
+                        .map(|(_, fields)| !fields.starts_with('Z'))
+                })
+                .unwrap_or(false)
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let mut info = std::mem::MaybeUninit::<libc::proc_bsdinfo>::uninit();
+            let size = std::mem::size_of::<libc::proc_bsdinfo>() as i32;
+            unsafe {
+                libc::proc_pidinfo(
+                    pid,
+                    libc::PROC_PIDTBSDINFO,
+                    1,
+                    info.as_mut_ptr().cast(),
+                    size,
+                ) == size
+                    && info.assume_init().pbi_status != libc::SZOMB
+            }
+        }
+    }
+
     fn git(cwd: &Path, args: &[&str]) {
         let result = Command::new("git")
             .arg("-C")
@@ -2002,20 +2032,7 @@ mod tests {
             Some(libc::ECHILD)
         );
         let deadline = Instant::now() + Duration::from_secs(2);
-        loop {
-            if unsafe { libc::kill(descendant, 0) } != 0 {
-                break;
-            }
-            let zombie = fs::read_to_string(format!("/proc/{descendant}/stat"))
-                .ok()
-                .and_then(|stat| {
-                    stat.rsplit_once(") ")
-                        .map(|(_, tail)| tail.starts_with('Z'))
-                })
-                .unwrap_or(false);
-            if zombie {
-                break;
-            }
+        while descendant_running(descendant) {
             assert!(
                 Instant::now() < deadline,
                 "descendant survived hook cancellation"
@@ -2071,22 +2088,7 @@ mod tests {
             .parse()
             .unwrap();
         let deadline = Instant::now() + Duration::from_secs(2);
-        loop {
-            let alive = unsafe { libc::kill(pid, 0) } == 0;
-            if !alive {
-                break;
-            }
-            // Linux may retain an already killed orphan as a zombie until init reaps it.
-            let zombie = fs::read_to_string(format!("/proc/{pid}/stat"))
-                .ok()
-                .and_then(|stat| {
-                    stat.rsplit_once(") ")
-                        .map(|(_, tail)| tail.starts_with('Z'))
-                })
-                .unwrap_or(false);
-            if zombie {
-                break;
-            }
+        while descendant_running(pid) {
             assert!(
                 Instant::now() < deadline,
                 "descendant {pid} survived hook timeout"
@@ -2390,20 +2392,7 @@ mod tests {
             .parse()
             .unwrap();
         let deadline = Instant::now() + Duration::from_secs(2);
-        loop {
-            if unsafe { libc::kill(pid, 0) } != 0 {
-                break;
-            }
-            let zombie = fs::read_to_string(format!("/proc/{pid}/stat"))
-                .ok()
-                .and_then(|stat| {
-                    stat.rsplit_once(") ")
-                        .map(|(_, tail)| tail.starts_with('Z'))
-                })
-                .unwrap_or(false);
-            if zombie {
-                break;
-            }
+        while descendant_running(pid) {
             assert!(Instant::now() < deadline, "Git descendant survived timeout");
             thread::sleep(Duration::from_millis(10));
         }
