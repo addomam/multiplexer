@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Check conversation reopen cannot start a second live process."""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+SKILL_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = SKILL_DIR.parents[2]
+SYNC_COMMIT = "2033f4a588d835d4011ce70d2790b6eaa261aa5d"
+COVERED = ("src/daemon/recovery.rs", "src/daemon.rs")
+JAR_URL = "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar"
+JAR = SKILL_DIR / "tla2tools.jar"
+
+
+def fail(message: str, code: int = 1) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(code)
+
+
+def extract_fn(source: str, name: str) -> str:
+    match = re.search(rf"\bfn {re.escape(name)}\b", source)
+    if match is None:
+        fail(f"{name} is missing from the covered source")
+    start = match.start()
+    brace = source.find("{", start)
+    if brace < 0:
+        fail(f"{name} has no body")
+    depth = 0
+    for index in range(brace, len(source)):
+        char = source[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[brace : index + 1]
+    fail(f"{name} body did not close")
+    return ""
+
+
+def require_before(body: str, earlier: str, later: str, message: str) -> None:
+    left = body.find(earlier)
+    right = body.find(later)
+    if left < 0 or right < 0 or left > right:
+        fail(message)
+
+
+def check_source() -> None:
+    recovery = (REPO_ROOT / "src/daemon/recovery.rs").read_text()
+    daemon = (REPO_ROOT / "src/daemon.rs").read_text()
+    reopen = extract_fn(recovery, "reopen_conversation")
+    require_before(
+        reopen,
+        "!record.launch_pending",
+        "mark_reopen",
+        "reopen_conversation no longer refuses a launch while launch_pending is set, "
+        "so a crash between mark_reopen and peer settlement can start a second process.",
+    )
+    if "refusing a duplicate conversation process" not in reopen:
+        fail(
+            "reopen_conversation no longer states that an unknown settlement refuses a duplicate process."
+        )
+    omp = reopen.split("Agent::Omp =>", 1)
+    if len(omp) != 2:
+        fail("reopen_conversation no longer has the OMP reopen arm")
+    omp_arm = omp[1].split("Agent::Codex =>", 1)[0]
+    require_before(
+        omp_arm,
+        "mark_reopen(record, true)",
+        "open_inner",
+        "OMP reopen now starts the shell before mark_reopen records the attempt.",
+    )
+    require_before(
+        omp_arm,
+        "open_inner",
+        "mark_reopen(record, false)",
+        "OMP reopen no longer rolls back launch_pending when the shell was not started.",
+    )
+    mark = extract_fn(recovery, "mark_reopen")
+    require_before(
+        mark,
+        "same_reopen_intent",
+        "current.launch_pending = pending",
+        "mark_reopen writes launch_pending without checking that the saved intent still matches.",
+    )
+    refresh = extract_fn(recovery, "refresh_observed_peer")
+    if "Peer::capture" not in refresh or "launch_pending = false" not in refresh:
+        fail("refresh_observed_peer no longer records the peer and clears launch_pending together.")
+    checkpoint = extract_fn(recovery, "checkpoint_recovery_inner")
+    require_before(
+        checkpoint,
+        'observed["peer_pid"]',
+        "refresh_observed_peer(",
+        "peer settlement runs before a peer pid is known.",
+    )
+    acp = extract_fn(daemon, "acp_open")
+    require_before(
+        acp,
+        "mark_reopen(record, true)",
+        "self.acp.start",
+        "ACP reopen starts the adapter before mark_reopen records the attempt.",
+    )
+    agent = extract_fn(daemon, "agent_open")
+    require_before(
+        agent,
+        "mark_reopen(record, true)",
+        "self.codex.prepare",
+        "Codex reopen prepares the process before mark_reopen records the attempt.",
+    )
+    require_before(
+        agent,
+        "mark_reopen(record, true)",
+        "open_inner",
+        "Codex reopen opens the terminal before mark_reopen records the attempt.",
+    )
+
+
+def check_sync() -> None:
+    diff = subprocess.run(
+        ["git", "diff", "--exit-code", SYNC_COMMIT, "--", *COVERED],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if diff.returncode != 0:
+        fail(
+            "covered code changed since "
+            f"{SYNC_COMMIT}. The model was last confirmed there. "
+            "Read the diff, and move the sync commit in bin/check only after the "
+            "model still describes reopen_conversation, mark_reopen, "
+            "refresh_observed_peer, acp_open, and agent_open.\n"
+            + diff.stdout
+            + diff.stderr,
+            code=2,
+        )
+
+
+def java_bin() -> str:
+    candidates = []
+    home = os.environ.get("JAVA_HOME")
+    if home:
+        candidates.append(str(Path(home) / "bin" / "java"))
+    candidates.extend(
+        [
+            "/opt/homebrew/opt/openjdk/bin/java",
+            "/usr/local/opt/openjdk/bin/java",
+        ]
+    )
+    found = shutil.which("java")
+    if found:
+        candidates.append(found)
+    for candidate in candidates:
+        if not candidate or not Path(candidate).is_file():
+            continue
+        probe = subprocess.run(
+            [candidate, "-version"],
+            capture_output=True,
+            text=True,
+        )
+        text = probe.stdout + probe.stderr
+        if probe.returncode == 0 and "version" in text:
+            return candidate
+    fail("install a JDK 17 or newer, then re-run this check. brew install openjdk is enough.")
+    return ""
+
+
+def ensure_jar() -> None:
+    if JAR.is_file() and JAR.stat().st_size > 0:
+        return
+    print(f"downloading TLC from {JAR_URL}", file=sys.stderr)
+    urllib.request.urlretrieve(JAR_URL, JAR)
+
+
+def run_tlc(java: str, config: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            java,
+            "-XX:+UseParallelGC",
+            "-cp",
+            str(JAR),
+            "tlc2.TLC",
+            "-workers",
+            "1",
+            "-config",
+            config.name,
+            "ReopenSettlement.tla",
+        ],
+        cwd=SKILL_DIR,
+        capture_output=True,
+        text=True,
+    )
+
+
+def main() -> None:
+    check_source()
+    check_sync()
+    java = java_bin()
+    ensure_jar()
+    good = run_tlc(java, SKILL_DIR / "ReopenSettlement.cfg")
+    if good.returncode != 0 or "Model checking completed. No error has been found." not in good.stdout:
+        fail("the reopen model failed\n" + good.stdout + good.stderr)
+    broken = run_tlc(java, SKILL_DIR / "ReopenSettlementBroken.cfg")
+    if "Invariant NoDuplicate is violated" not in broken.stdout + broken.stderr:
+        fail(
+            "removing the launch_pending check did not produce a second process in the model\n"
+            + broken.stdout
+            + broken.stderr
+        )
+    print(
+        "reopen settlement holds for one saved conversation: "
+        "a pending launch is not started again, and a model without that refusal starts a second process."
+    )
+    print(f"sync commit {SYNC_COMMIT}")
+    print("TLC " + [line for line in good.stdout.splitlines() if "states generated" in line][-1])
+
+
+if __name__ == "__main__":
+    main()

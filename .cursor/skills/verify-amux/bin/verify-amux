@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+"""Drive an isolated amux daemon. Never touches the user's socket or config."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+SKILL_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = SKILL_DIR.parents[2]
+STATE_PATH = SKILL_DIR / "run" / "current.json"
+ARTIFACTS = SKILL_DIR / "artifacts"
+READY_TIMEOUT_S = 45
+
+
+def fail(message: str) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def load_state() -> dict:
+    if not STATE_PATH.is_file():
+        fail("no verification daemon is running; run verify-amux launch first")
+    return json.loads(STATE_PATH.read_text())
+
+
+def save_state(state: dict) -> None:
+    STATE_PATH.parent.mkdir(mode=0o700, exist_ok=True)
+    temporary = STATE_PATH.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(state, indent=2) + "\n")
+    os.chmod(temporary, 0o600)
+    temporary.replace(STATE_PATH)
+
+
+def private_dir(path: Path) -> None:
+    path.mkdir(mode=0o700, exist_ok=True)
+    os.chmod(path, 0o700)
+
+
+def command_line(pid: int) -> str:
+    completed = subprocess.run(
+        ["ps", "-p", str(pid), "-o", "command="],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return ""
+    return completed.stdout.strip()
+
+
+def daemon_matches(state: dict) -> bool:
+    line = command_line(state["pid"])
+    return bool(line) and state["socket"] in line and " daemon " in f" {line} "
+
+
+def build_binary() -> Path:
+    subprocess.run(
+        ["cargo", "build", "--locked", "-p", "amux"],
+        cwd=REPO_ROOT,
+        check=True,
+    )
+    binary = REPO_ROOT / "target" / "debug" / "amux"
+    if not binary.is_file():
+        fail(f"build did not produce {binary}")
+    return binary
+
+
+def spawn_daemon(binary: Path, socket: Path, projects: Path, log_path: Path, cwd: Path, env: dict) -> int:
+    pid = os.fork()
+    if pid == 0:
+        try:
+            os.setsid()
+            os.chdir(cwd)
+            os.environ.update(env)
+            fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.dup2(fd, 1)
+            os.dup2(fd, 2)
+            os.execv(
+                str(binary),
+                [str(binary), "--socket", str(socket), "daemon", "--projects-dir", str(projects)],
+            )
+        except Exception as error:
+            try:
+                Path(log_path).write_text(f"failed to start daemon: {error}\n")
+            except Exception:
+                pass
+            os._exit(127)
+    return pid
+
+
+def amux(state: dict, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [state["binary"], "--socket", state["socket"], *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def snapshot_result(state: dict) -> tuple[int, dict | None, str, str]:
+    completed = amux(state, ["snapshot"])
+    payload = None
+    if completed.returncode == 0 and completed.stdout.strip():
+        try:
+            parsed = json.loads(completed.stdout)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict) and parsed.get("ok") is True and isinstance(parsed.get("result"), dict):
+            payload = parsed["result"]
+    return completed.returncode, payload, completed.stdout, completed.stderr
+
+
+def doctor_report(state: dict) -> dict:
+    report = {
+        "ok": False,
+        "pid": state["pid"],
+        "socket": state["socket"],
+        "binary": state["binary"],
+        "root": state["root"],
+        "config_home": state["config_home"],
+    }
+    if not daemon_matches(state):
+        report["reason"] = "daemon process is not the isolated amux started by verify-amux"
+        return report
+    version = subprocess.run(
+        [state["binary"], "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    report["version"] = version.stdout.strip()
+    code, payload, stdout, stderr = snapshot_result(state)
+    report["snapshot_exit"] = code
+    if payload is None:
+        report["reason"] = "snapshot is not a version-1 ok result yet"
+        report["snapshot_stderr"] = stderr.strip()
+        report["snapshot_stdout"] = stdout.strip()[:500]
+        return report
+    terminals = payload.get("terminals")
+    ready = (
+        payload.get("startup_pending") is False
+        and isinstance(terminals, list)
+        and len(terminals) >= 1
+        and isinstance(payload.get("daemon_id"), str)
+        and payload["daemon_id"] != ""
+    )
+    report["daemon_id"] = payload.get("daemon_id")
+    report["startup_pending"] = payload.get("startup_pending")
+    report["terminals"] = len(terminals) if isinstance(terminals, list) else None
+    if not ready:
+        report["reason"] = "daemon answered before the startup shell was usable"
+        return report
+    report["ok"] = True
+    report["reason"] = "isolated daemon is serving a startup shell"
+    return report
+
+
+def print_doctor(report: dict) -> None:
+    print(json.dumps(report))
+    if not report["ok"]:
+        raise SystemExit(1)
+
+
+def launch() -> None:
+    if STATE_PATH.is_file():
+        existing = json.loads(STATE_PATH.read_text())
+        if daemon_matches(existing):
+            fail(
+                "an isolated daemon is already running; run verify-amux cleanup before launch"
+            )
+        fail(f"stale state at {STATE_PATH}; run verify-amux cleanup")
+    binary = build_binary()
+    root = Path(tempfile.mkdtemp(prefix="amux-verify-"))
+    os.chmod(root, 0o700)
+    (root / ".amux-verify-root").write_text("verify-amux\n")
+    runtime = root / "runtime"
+    config_home = root / "config"
+    projects = root / "projects"
+    workspace = root / "workspace"
+    home = root / "home"
+    for path in (runtime, config_home, projects, workspace, home):
+        private_dir(path)
+    socket = runtime / "control.sock"
+    log_path = root / "daemon.log"
+    env = {
+        "HOME": str(home),
+        "ZDOTDIR": str(home),
+        "HISTFILE": "/dev/null",
+        "XDG_CONFIG_HOME": str(config_home),
+        "AMUX_RUNTIME_DIR": str(runtime),
+        "AMUX_SOCKET": str(socket),
+    }
+    pid = spawn_daemon(binary, socket, projects, log_path, workspace, env)
+    state = {
+        "pid": pid,
+        "root": str(root),
+        "socket": str(socket),
+        "binary": str(binary),
+        "config_home": str(config_home),
+        "projects": str(projects),
+        "workspace": str(workspace),
+        "log": str(log_path),
+        "transcript": str(root / "transcript.txt"),
+    }
+    save_state(state)
+    deadline = time.monotonic() + READY_TIMEOUT_S
+    report = doctor_report(state)
+    while not report["ok"] and time.monotonic() < deadline:
+        if not daemon_matches(state):
+            log = log_path.read_text(errors="replace") if log_path.is_file() else ""
+            cleanup()
+            fail(f"isolated daemon exited before it was usable\n{log[-4000:]}")
+        time.sleep(0.25)
+        report = doctor_report(state)
+    if not report["ok"]:
+        log = log_path.read_text(errors="replace") if log_path.is_file() else ""
+        cleanup()
+        fail(
+            "isolated daemon did not serve a startup shell within "
+            f"{READY_TIMEOUT_S}s\n{json.dumps(report)}\n{log[-4000:]}"
+        )
+    print_doctor(report)
+
+
+def doctor() -> None:
+    print_doctor(doctor_report(load_state()))
+
+
+def remember(state: dict, args: list[str], completed: subprocess.CompletedProcess[str]) -> None:
+    last = Path(state["root"]) / "last"
+    last.mkdir(mode=0o700, exist_ok=True)
+    (last / "argv.txt").write_text("verify-amux cli -- " + " ".join(args) + "\n")
+    (last / "stdout.txt").write_text(completed.stdout)
+    (last / "stderr.txt").write_text(completed.stderr)
+    (last / "exit_code").write_text(f"{completed.returncode}\n")
+    with open(state["transcript"], "a", encoding="utf-8") as transcript:
+        transcript.write(f"$ verify-amux cli -- {' '.join(args)}\n")
+        transcript.write(f"exit {completed.returncode}\n")
+        transcript.write(completed.stdout)
+        if completed.stderr:
+            transcript.write("stderr:\n")
+            transcript.write(completed.stderr)
+        if not completed.stdout.endswith("\n"):
+            transcript.write("\n")
+        transcript.write("---\n")
+
+
+def cli(args: list[str]) -> None:
+    if not args:
+        fail("usage: verify-amux cli -- <amux arguments>")
+    state = load_state()
+    if not daemon_matches(state):
+        fail("the isolated daemon is not running; run verify-amux doctor")
+    completed = amux(state, args)
+    remember(state, args, completed)
+    sys.stdout.write(completed.stdout)
+    sys.stderr.write(completed.stderr)
+    raise SystemExit(completed.returncode)
+
+
+def evidence(feature: str) -> None:
+    if not feature or "/" in feature or feature.startswith("."):
+        fail("evidence name must be a single path segment")
+    state = load_state()
+    last = Path(state["root"]) / "last"
+    if not (last / "stdout.txt").is_file():
+        fail("no command has been driven yet")
+    destination = ARTIFACTS / feature
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in ("argv.txt", "stdout.txt", "stderr.txt", "exit_code"):
+        shutil.copyfile(last / name, destination / name)
+    transcript = Path(state["transcript"])
+    if transcript.is_file():
+        shutil.copyfile(transcript, destination / "transcript.txt")
+    log = Path(state["log"])
+    if log.is_file():
+        shutil.copyfile(log, destination / "daemon.log")
+    print(destination)
+
+
+def cleanup() -> None:
+    if not STATE_PATH.is_file():
+        print("no isolated daemon state")
+        return
+    state = json.loads(STATE_PATH.read_text())
+    pid = int(state["pid"])
+    root = Path(state["root"])
+    if daemon_matches(state):
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        deadline = time.monotonic() + 5
+        while daemon_matches(state) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        if daemon_matches(state):
+            try:
+                os.killpg(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+    marker = root / ".amux-verify-root"
+    if root.is_dir() and marker.is_file() and marker.read_text().strip() == "verify-amux":
+        shutil.rmtree(root)
+    STATE_PATH.unlink(missing_ok=True)
+    print("cleaned up the isolated daemon; proof artifacts were left in place")
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        fail("usage: verify-amux launch|doctor|cli|evidence|cleanup")
+    command = sys.argv[1]
+    if command == "launch":
+        launch()
+    elif command == "doctor":
+        doctor()
+    elif command == "cli":
+        if len(sys.argv) < 4 or sys.argv[2] != "--":
+            fail("usage: verify-amux cli -- <amux arguments>")
+        cli(sys.argv[3:])
+    elif command == "evidence":
+        if len(sys.argv) != 3:
+            fail("usage: verify-amux evidence <feature>")
+        evidence(sys.argv[2])
+    elif command == "cleanup":
+        cleanup()
+    else:
+        fail(f"unknown command {command}")
+
+
+if __name__ == "__main__":
+    main()
