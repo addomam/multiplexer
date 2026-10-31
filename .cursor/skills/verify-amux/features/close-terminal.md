@@ -23,7 +23,7 @@ Preconditions:
 - `verify-build` was opened in this run by the open-terminal recipe. Record its id as `BUILD_ID` and the startup id as `START_ID`.
 
 - **Close.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- close BUILD_ID`, with the recorded id in place of `BUILD_ID`. Exit code 0.
-- **See it stopped.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- wait BUILD_ID exited`. Exit code 0. `result.id` equals `BUILD_ID` and `result.alive` is false.
+- **See it stopped.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- wait BUILD_ID exited`. Exit code 0. `result.seq` is a number, `result.state.id` equals `BUILD_ID`, and `result.state.alive` is false.
 - **See the other shell.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- state START_ID`. Exit code 0. `result.id` equals `START_ID` and `result.alive` is true.
 - **Proof.** Run `.cursor/skills/verify-amux/bin/verify-amux evidence close-terminal`. The artifact stdout is the startup state, and the transcript contains the close and the exited wait.
 

@@ -21,7 +21,7 @@ Preconditions:
 - The startup terminal id comes from a snapshot in this same run.
 
 - **Read the id.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- snapshot`. Exit code 0. Record `result.terminals[0].id` as `START_ID`.
-- **Wait.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- wait START_ID shell-ready`, with the recorded id in place of `START_ID`. Exit code 0. `result.id` equals `START_ID` and `result.integration.shell.ready` is true.
+- **Wait.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- wait START_ID shell-ready`, with the recorded id in place of `START_ID`. Exit code 0. `result.seq` is a number, `result.state.id` equals `START_ID`, and `result.state.integration.shell.ready` is true.
 - **Read.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- screen START_ID`, with the same id. Exit code 0. `result.lines` and `result.cells` are arrays of equal length. At least one string in `result.lines` contains a non-space character.
 - **Confirm the terminal remains.** Run `.cursor/skills/verify-amux/bin/verify-amux cli -- state START_ID`. Exit code 0. `result.id` equals `START_ID` and `result.alive` is true.
 - **Proof.** Run `.cursor/skills/verify-amux/bin/verify-amux evidence read-screen`. The artifact stdout is the state read, and the transcript contains the wait and the screen command.
