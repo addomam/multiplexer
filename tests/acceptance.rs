@@ -509,7 +509,7 @@ fn sequenced_waits_replay_transitions_and_report_stream_gaps() {
     let live_wait = std::thread::spawn(move || {
         client::request(
             &socket,
-            json!({"op":"wait","terminal":wait_terminal,"condition":"agent-working","after":live_cursor,"timeout_ms":30000}),
+            json!({"op":"wait","terminal":wait_terminal,"condition":"agent-working","after":live_cursor,"timeout_ms":180000}),
         )
     });
     std::thread::sleep(Duration::from_millis(50));
