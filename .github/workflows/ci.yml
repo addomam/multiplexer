@@ -17,7 +17,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zsh
           test -x /bin/zsh
+          printf '\nskip_global_compinit=1\n' | sudo tee -a /etc/zsh/zshenv >/dev/null
       - run: cargo test
-        env:
-          skip_global_compinit: "1"
       - run: cargo clippy --all-targets -- -D warnings
