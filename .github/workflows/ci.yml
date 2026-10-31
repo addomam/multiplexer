@@ -6,17 +6,11 @@ permissions:
   contents: read
 jobs:
   rust:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy
-      - name: Install zsh
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zsh
-          test -x /bin/zsh
-          printf '\nskip_global_compinit=1\n' | sudo tee -a /etc/zsh/zshenv >/dev/null
       - run: cargo test
       - run: cargo clippy --all-targets -- -D warnings
