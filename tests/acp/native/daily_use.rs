@@ -67,35 +67,28 @@ impl Relay {
     pub(super) fn cut(&self, connection: usize) {
         // Startup also makes short-lived readiness/selector connections. Select
         // among live streams only; never infer native provenance from a global
-        // accept count or interpret the forwarded protocol bytes.
-        let streams = self.streams.lock();
-        let stream = streams
-            .iter()
-            .filter(|stream| {
-                let mut state = libc::pollfd {
-                    fd: stream.as_raw_fd(),
-                    events: libc::POLLIN,
-                    revents: 0,
-                };
-                if unsafe { libc::poll(&mut state, 1, 0) } < 0
-                    || state.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0
-                {
-                    return false;
-                }
-                let mut byte = 0u8;
-                let n = unsafe {
-                    libc::recv(
-                        stream.as_raw_fd(),
-                        (&mut byte as *mut u8).cast(),
-                        1,
-                        libc::MSG_PEEK | libc::MSG_DONTWAIT,
-                    )
-                };
-                n > 0 || n < 0 && io::Error::last_os_error().kind() == io::ErrorKind::WouldBlock
-            })
-            .nth(connection)
-            .expect("original native transport is live");
-        stream.shutdown(Shutdown::Both).unwrap();
+        // accept count or interpret the forwarded protocol bytes. One sample
+        // races an interrupted poll and a socket the client is still opening.
+        // Every caller waits for the same live index.
+        let deadline = Instant::now() + super::super::DEADLINE;
+        loop {
+            let streams = self.streams.lock();
+            if let Some(stream) = streams
+                .iter()
+                .filter(|stream| transport_live(stream))
+                .nth(connection)
+            {
+                stream.shutdown(Shutdown::Both).unwrap();
+                return;
+            }
+            let accepted = streams.len();
+            drop(streams);
+            assert!(
+                Instant::now() < deadline,
+                "original native transport {connection} is live ({accepted} accepted)"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 
     pub(super) fn attachment(&self, host: &mut Host, agent: &Agent) -> Attachment {
@@ -118,6 +111,46 @@ impl Drop for Relay {
             worker.join().unwrap();
         }
         let _ = fs::remove_file(&self.path);
+    }
+}
+
+fn transport_live(stream: &UnixStream) -> bool {
+    let mut state = libc::pollfd {
+        fd: stream.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    loop {
+        if unsafe { libc::poll(&mut state, 1, 0) } >= 0 {
+            break;
+        }
+        if io::Error::last_os_error().kind() != io::ErrorKind::Interrupted {
+            return false;
+        }
+    }
+    if state.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 {
+        return false;
+    }
+    let mut byte = 0u8;
+    loop {
+        let n = unsafe {
+            libc::recv(
+                stream.as_raw_fd(),
+                (&mut byte as *mut u8).cast(),
+                1,
+                libc::MSG_PEEK | libc::MSG_DONTWAIT,
+            )
+        };
+        if n > 0 {
+            return true;
+        }
+        if n == 0 {
+            return false;
+        }
+        let kind = io::Error::last_os_error().kind();
+        if kind != io::ErrorKind::Interrupted {
+            return kind == io::ErrorKind::WouldBlock;
+        }
     }
 }
 
