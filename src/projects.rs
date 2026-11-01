@@ -308,24 +308,21 @@ fn read_config_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
         Err(error) => return Err(error).context("reading project configuration"),
     };
     let metadata = file.metadata()?;
-    // Atomic replacement splits hard-link aliases into independent files; reject
-    // that ambiguous identity rather than claiming they share a writer lock.
-    ensure!(
-        metadata.is_file() && metadata.nlink() == 1,
-        "configuration must be a regular file without hard-link aliases"
-    );
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)
         .context("reading project configuration")?;
+    if !crate::recovery::private_owner_file(&metadata) {
+        parse_config(&bytes)?;
+        bail!(
+            "configuration must be a 0600 regular file owned by this user without hard-link aliases"
+        );
+    }
     Ok(Some(bytes))
 }
 
-fn read_disk(path: &Path) -> Result<Option<(DiskConfig, Vec<u8>)>> {
-    let Some(bytes) = read_config_bytes(path)? else {
-        return Ok(None);
-    };
+fn parse_config(bytes: &[u8]) -> Result<DiskConfig> {
     let disk: DiskConfig =
-        serde_json::from_slice(&bytes).context("invalid project configuration")?;
+        serde_json::from_slice(bytes).context("invalid project configuration")?;
     ensure!(
         disk.version == 1,
         "unsupported project configuration version {}",
@@ -345,31 +342,35 @@ fn read_disk(path: &Path) -> Result<Option<(DiskConfig, Vec<u8>)>> {
         );
         validate_hooks(&project.hooks)?;
     }
-    Ok(Some((disk, bytes)))
+    Ok(disk)
+}
+
+fn read_disk(path: &Path) -> Result<Option<(DiskConfig, Vec<u8>)>> {
+    let Some(bytes) = read_config_bytes(path)? else {
+        return Ok(None);
+    };
+    Ok(Some((parse_config(&bytes)?, bytes)))
+}
+
+fn ensure_private_parent(path: &Path) -> Result<()> {
+    let parent = path
+        .parent()
+        .context("configuration has no parent directory")?;
+    let metadata = fs::metadata(parent).context("reading configuration directory")?;
+    ensure!(
+        crate::recovery::private_owner_directory(&metadata),
+        "configuration parent must be owned by this user and not writable by others"
+    );
+    Ok(())
 }
 
 impl Store {
     pub fn load(path: &Path, projects_override: Option<PathBuf>) -> Result<Self> {
         let path = configuration_path(path)
             .with_context(|| format!("resolving project configuration {}", path.display()))?;
-        let mut config = Config::default();
-        let mut projects = BTreeMap::new();
-        let mut expected = None;
-        if let Some((disk, bytes)) = read_disk(&path)
-            .with_context(|| format!("loading project configuration {}", path.display()))?
-        {
-            expected = Some(bytes);
-            config = disk.config;
-            for saved in disk.projects {
-                let project = Project::from(saved);
-                projects.insert(project.id.clone(), project);
-            }
-        }
-        if let Some(directory) = projects_override {
-            config.projects_dir = absolute(&directory)?;
-        }
-        validate_config(&config)?;
+        ensure_private_parent(&path)?;
         let unsaved = Uuid::new_v4().to_string();
+        let mut projects = BTreeMap::new();
         projects.insert(
             unsaved.clone(),
             Project {
@@ -382,27 +383,38 @@ impl Store {
                 recipes: BTreeMap::new(),
             },
         );
-        Ok(Self {
-            config,
+        let mut store = Self {
+            config: Config::default(),
             projects,
             path,
-            expected: Mutex::new(expected),
+            expected: Mutex::new(None),
             unsaved,
-        })
+        };
+        if let Some((disk, bytes)) = read_disk(&store.path)
+            .with_context(|| format!("loading project configuration {}", store.path.display()))?
+        {
+            store.replace_from_disk(disk, bytes);
+        }
+        if let Some(directory) = projects_override {
+            store.config.projects_dir = absolute(&directory)?;
+        }
+        validate_config(&store.config)?;
+        Ok(store)
     }
 
     pub fn unsaved_id(&self) -> String {
         self.unsaved.clone()
     }
 
+    pub(crate) fn matches_selector(&self, project: &Project, selector: &str) -> bool {
+        project.id == selector || (project.id != self.unsaved && project.name == selector)
+    }
+
     pub(crate) fn resolve(&self, selector: &str) -> Result<String> {
-        if self.projects.contains_key(selector) {
-            return Ok(selector.to_owned());
-        }
         let mut matches = self
             .projects
             .values()
-            .filter(|project| project.name == selector);
+            .filter(|project| self.matches_selector(project, selector));
         let first = matches.next().context("project not found")?;
         ensure!(
             matches.next().is_none(),
@@ -424,41 +436,41 @@ impl Store {
     }
 
     pub fn save(&mut self, id: &str, name: &str, context: Option<PathBuf>) -> Result<Project> {
-        let id = self.resolve(id)?;
-        self.check_name(&id, name)?;
-        let old = self.projects[&id].clone();
-        let project = self.projects.get_mut(&id).expect("resolved project");
-        project.name = name.to_owned();
-        project.saved = true;
-        if let Some(context) = context {
-            project.context = context;
-        }
-        let result = project.clone();
-        if let Err(error) = self.persist() {
-            self.projects.insert(id, old);
-            return Err(error);
-        }
-        Ok(result)
+        let mut saved = None;
+        self.commit(|store| {
+            let id = store.resolve(id)?;
+            store.check_name(&id, name)?;
+            let project = store.projects.get_mut(&id).expect("resolved project");
+            project.name = name.to_owned();
+            project.saved = true;
+            if let Some(context) = context.clone() {
+                project.context = context;
+            }
+            saved = Some(project.clone());
+            Ok(())
+        })?;
+        Ok(saved.expect("committed project"))
     }
 
     /// Forget only durable configuration; live terminal/ACP references keep this identity.
     pub(crate) fn remove_saved(&mut self, selector: &str) -> Result<&Project> {
-        let id = self.resolve(selector)?;
-        ensure!(
-            self.projects[&id].saved,
-            "invalid-request: project is not saved"
-        );
-        self.projects.get_mut(&id).expect("resolved project").saved = false;
-        if let Err(error) = self.persist() {
-            self.projects.get_mut(&id).expect("retained project").saved = true;
-            return Err(error);
-        }
+        let mut resolved = None;
+        self.commit(|store| {
+            let id = store.resolve(selector)?;
+            ensure!(
+                store.projects[&id].saved,
+                "invalid-request: project is not saved"
+            );
+            store.projects.get_mut(&id).expect("resolved project").saved = false;
+            resolved = Some(id);
+            Ok(())
+        })?;
+        let id = resolved.expect("committed removal");
         Ok(&self.projects[&id])
     }
 
     /// Register an existing directory; project management never creates work directories.
     pub fn create(&mut self, name: &str, directory: PathBuf, patch: Value) -> Result<Project> {
-        self.check_name("", name)?;
         ensure!(
             name.bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'),
@@ -491,25 +503,20 @@ impl Store {
             hooks,
             recipes,
         };
-        self.projects.insert(project.id.clone(), project.clone());
-        if let Err(error) = self.persist() {
-            self.projects.remove(&project.id);
-            return Err(error);
-        }
-        Ok(project)
+        let mut created = None;
+        self.commit(|store| {
+            store.check_name("", name)?;
+            store.projects.insert(project.id.clone(), project.clone());
+            created = Some(project.clone());
+            Ok(())
+        })?;
+        Ok(created.expect("committed project"))
     }
 
     pub fn open(&mut self, selector: &str) -> Result<Project> {
-        // Reload saved projects only, not runtime state or the expected write
-        // generation: this partial read cannot make a stale global config current.
-        if let Some((disk, _)) = read_disk(&self.path)? {
-            for saved in disk.projects {
-                let mut project = Project::from(saved);
-                if let Some(active) = self.projects.get(&project.id) {
-                    project.main_terminal = active.main_terminal.clone();
-                }
-                self.projects.insert(project.id.clone(), project);
-            }
+        ensure_private_parent(&self.path)?;
+        if let Some((disk, bytes)) = read_disk(&self.path)? {
+            self.replace_from_disk(disk, bytes);
         }
         let id = self.resolve(selector)?;
         let project = self.projects[&id].clone();
@@ -522,96 +529,161 @@ impl Store {
     }
 
     pub fn configure(&mut self, id: &str, patch: Value) -> Result<Project> {
-        let id = self.resolve(id)?;
-        let fields = patch
-            .as_object()
-            .context("project config must be an object")?;
-        let mut updated = self.projects[&id].clone();
-        for (field, value) in fields {
-            match field.as_str() {
-                "name" => {
-                    updated.name = value.as_str().context("name must be a string")?.to_owned();
-                    self.check_name(&id, &updated.name)?;
+        let mut configured = None;
+        self.commit(|store| {
+            let id = store.resolve(id)?;
+            let fields = patch
+                .as_object()
+                .context("project config must be an object")?;
+            let mut updated = store.projects[&id].clone();
+            for (field, value) in fields {
+                match field.as_str() {
+                    "name" => {
+                        updated.name = value.as_str().context("name must be a string")?.to_owned();
+                        store.check_name(&id, &updated.name)?;
+                    }
+                    "context" if !updated.saved => {
+                        updated.context = absolute(Path::new(
+                            value.as_str().context("context must be a string")?,
+                        ))?;
+                        ensure!(
+                            updated.context.is_dir(),
+                            "context must be an existing directory"
+                        );
+                    }
+                    "context" => bail!("saved project context cannot be changed"),
+                    "hooks" => {
+                        updated.hooks = serde_json::from_value(value.clone())?;
+                        validate_hooks(&updated.hooks)?;
+                    }
+                    "recipes" => {
+                        updated.recipes = serde_json::from_value(value.clone())?;
+                    }
+                    _ => bail!("unknown or runtime-only project setting: {field}"),
                 }
-                "context" if !updated.saved => {
-                    updated.context = absolute(Path::new(
-                        value.as_str().context("context must be a string")?,
-                    ))?;
-                    ensure!(
-                        updated.context.is_dir(),
-                        "context must be an existing directory"
-                    );
-                }
-                "context" => bail!("saved project context cannot be changed"),
-                "hooks" => {
-                    updated.hooks = serde_json::from_value(value.clone())?;
-                    validate_hooks(&updated.hooks)?;
-                }
-                "recipes" => {
-                    updated.recipes = serde_json::from_value(value.clone())?;
-                }
-                _ => bail!("unknown or runtime-only project setting: {field}"),
             }
-        }
-        let old = self
-            .projects
-            .insert(id.clone(), updated.clone())
-            .expect("resolved project");
-        if let Err(error) = self.persist() {
-            self.projects.insert(id, old);
-            return Err(error);
-        }
-        Ok(updated)
+            store.projects.insert(id, updated.clone());
+            configured = Some(updated);
+            Ok(())
+        })?;
+        Ok(configured.expect("committed project"))
     }
 
     pub fn configure_global(&mut self, patch: Value) -> Result<Config> {
-        let fields = patch
-            .as_object()
-            .context("global config must be an object")?;
-        let mut updated = self.config.clone();
-        for (field, value) in fields {
-            match field.as_str() {
-                "projects_dir" => {
-                    updated.projects_dir = absolute(Path::new(
-                        value.as_str().context("projects_dir must be a string")?,
-                    ))?
+        let mut configured = None;
+        self.commit(|store| {
+            let fields = patch
+                .as_object()
+                .context("global config must be an object")?;
+            let mut updated = store.config.clone();
+            for (field, value) in fields {
+                match field.as_str() {
+                    "projects_dir" => {
+                        updated.projects_dir = absolute(Path::new(
+                            value.as_str().context("projects_dir must be a string")?,
+                        ))?
+                    }
+                    "prefix" => {
+                        updated.prefix = value
+                            .as_str()
+                            .context("prefix must be a string")?
+                            .to_owned()
+                    }
+                    "mode_key" => {
+                        updated.mode_key = value
+                            .as_str()
+                            .context("mode_key must be a string")?
+                            .to_owned();
+                    }
+                    "terminal_limit" => {
+                        updated.terminal_limit = serde_json::from_value(value.clone())
+                            .context("terminal_limit must be an integer in 1..256")?;
+                    }
+                    "daemon_start_hooks" => {
+                        updated.daemon_start_hooks = serde_json::from_value(value.clone())?
+                    }
+                    "acp_profiles" => {
+                        updated.acp_profiles = serde_json::from_value(value.clone())
+                            .context("acp_profiles must be a map of bounded ACP launch profiles")?;
+                    }
+                    _ => bail!("unknown global setting: {field}"),
                 }
-                "prefix" => {
-                    updated.prefix = value
-                        .as_str()
-                        .context("prefix must be a string")?
-                        .to_owned()
-                }
-                "mode_key" => {
-                    updated.mode_key = value
-                        .as_str()
-                        .context("mode_key must be a string")?
-                        .to_owned();
-                }
-                "terminal_limit" => {
-                    updated.terminal_limit = serde_json::from_value(value.clone())
-                        .context("terminal_limit must be an integer in 1..256")?;
-                }
-                "daemon_start_hooks" => {
-                    updated.daemon_start_hooks = serde_json::from_value(value.clone())?
-                }
-                "acp_profiles" => {
-                    updated.acp_profiles = serde_json::from_value(value.clone())
-                        .context("acp_profiles must be a map of bounded ACP launch profiles")?;
-                }
-                _ => bail!("unknown global setting: {field}"),
+            }
+            validate_config(&updated)?;
+            store.config = updated.clone();
+            configured = Some(updated);
+            Ok(())
+        })?;
+        Ok(configured.expect("committed config"))
+    }
+
+    fn replace_from_disk(&mut self, disk: DiskConfig, bytes: Vec<u8>) {
+        self.config = disk.config;
+        let previous = std::mem::take(&mut self.projects);
+        let mut projects = BTreeMap::new();
+        for saved in disk.projects {
+            let mut project = Project::from(saved);
+            if let Some(active) = previous.get(&project.id) {
+                project.main_terminal = active.main_terminal.clone();
+            }
+            projects.insert(project.id.clone(), project);
+        }
+        for (id, project) in previous {
+            if !project.saved {
+                projects.entry(id).or_insert(project);
             }
         }
-        validate_config(&updated)?;
-        let old = std::mem::replace(&mut self.config, updated);
-        if let Err(error) = self.persist() {
-            self.config = old;
-            return Err(error);
+        self.projects = projects;
+        *self.expected.lock() = Some(bytes);
+    }
+
+    fn adopt_moved_generation(&mut self) -> Result<()> {
+        ensure_private_parent(&self.path)?;
+        let _lock = configuration_lock(&self.path)?;
+        let current = read_disk(&self.path)?;
+        let expected = self.expected.lock().clone();
+        match current {
+            None if expected.is_some() => {
+                bail!("config-conflict: configuration changed on disk; reload before saving");
+            }
+            None => Ok(()),
+            Some((_, ref bytes)) if Some(bytes) == expected.as_ref() => Ok(()),
+            Some((disk, bytes)) => {
+                self.replace_from_disk(disk, bytes);
+                Ok(())
+            }
         }
-        Ok(self.config.clone())
+    }
+
+    fn commit(&mut self, mut mutate: impl FnMut(&mut Self) -> Result<()>) -> Result<()> {
+        for _ in 0..4 {
+            self.adopt_moved_generation()?;
+            let projects = self.projects.clone();
+            let config = self.config.clone();
+            if let Err(error) = mutate(self) {
+                self.projects = projects;
+                self.config = config;
+                return Err(error);
+            }
+            match self.persist() {
+                Ok(()) => return Ok(()),
+                Err(error) if error.to_string().contains("config-conflict") => {
+                    self.projects = projects;
+                    self.config = config;
+                    continue;
+                }
+                Err(error) => {
+                    self.projects = projects;
+                    self.config = config;
+                    return Err(error);
+                }
+            }
+        }
+        bail!("config-conflict: configuration changed on disk; reload before saving")
     }
 
     pub fn persist(&self) -> Result<()> {
+        ensure_private_parent(&self.path)?;
         let disk = DiskConfig {
             version: 1,
             config: self.config.clone(),
@@ -627,8 +699,8 @@ impl Store {
             .path
             .parent()
             .context("configuration has no parent directory")?;
-        let mut expected = self.expected.lock();
         let _lock = configuration_lock(&self.path)?;
+        let mut expected = self.expected.lock();
         ensure!(
             read_config_bytes(&self.path)? == *expected,
             "config-conflict: configuration changed on disk; reload before saving"
@@ -1341,30 +1413,31 @@ mod tests {
     }
 
     #[test]
-    fn stale_configuration_writer_preserves_saved_projects_and_rolls_back() {
+    fn stale_writer_adopts_saved_projects_then_writes_its_change() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         let mut owner = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
         let mut stale = Store::load(&file, None).unwrap();
         let saved = owner.create("retained", temp.0.clone(), json!({})).unwrap();
         owner.configure_global(json!({"prefix":"C-a"})).unwrap();
-        let original = fs::read(&file).unwrap();
-        let error = stale.configure_global(json!({"prefix":"C-z"})).unwrap_err();
-        assert!(error.to_string().contains("config-conflict"));
-        assert_eq!(stale.config.prefix, Config::default().prefix);
-        assert_eq!(fs::read(&file).unwrap(), original);
-
-        // A partial project reload is not a fresh configuration generation.
-        assert_eq!(stale.open(&saved.id).unwrap().id, saved.id);
+        stale.configure_global(json!({"prefix":"C-z"})).unwrap();
+        assert_eq!(stale.config.prefix, "C-z");
+        assert!(stale.projects[&saved.id].saved);
+        let adopted: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+        assert_eq!(adopted["config"]["prefix"], "C-z");
         assert!(
-            stale
-                .configure(&saved.id, json!({"recipes":{"lost":"true"}}))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
+            adopted["projects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|project| project["id"] == saved.id)
         );
-        assert!(stale.projects[&saved.id].recipes.is_empty());
-        assert_eq!(fs::read(&file).unwrap(), original);
+
+        assert_eq!(stale.open(&saved.id).unwrap().id, saved.id);
+        stale
+            .configure(&saved.id, json!({"recipes":{"kept":"true"}}))
+            .unwrap();
+        assert_eq!(stale.projects[&saved.id].recipes["kept"], "true");
 
         let mut fresh = Store::load(&file, None).unwrap();
         fresh
@@ -1375,14 +1448,11 @@ mod tests {
         assert_eq!(reloaded.config.prefix, "C-x");
         assert_eq!(reloaded.projects[&saved.id].recipes["check"], "true");
         assert_eq!(reloaded.projects[&saved.id].main_terminal, None);
-        assert!(
-            owner
-                .configure_global(json!({"prefix":"C-b"}))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
-        assert_eq!(owner.config.prefix, "C-a");
+        owner.configure_global(json!({"prefix":"C-b"})).unwrap();
+        let finished = Store::load(&file, None).unwrap();
+        assert_eq!(finished.config.prefix, "C-b");
+        assert_eq!(finished.projects[&saved.id].recipes["check"], "true");
+        assert_eq!(owner.config.prefix, "C-b");
     }
 
     #[test]
@@ -1435,7 +1505,7 @@ mod tests {
     }
 
     #[test]
-    fn stale_project_removal_preserves_saved_flag_and_newer_disk_configuration() {
+    fn stale_project_removal_adopts_the_newer_limit_and_forgets_the_project() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         let mut owner = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
@@ -1444,23 +1514,16 @@ mod tests {
         owner
             .configure_global(json!({"terminal_limit":32}))
             .unwrap();
-        let newer = fs::read(&file).unwrap();
-        assert!(
-            stale
-                .remove_saved(&project.id)
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
-        assert!(stale.projects[&project.id].saved);
-        assert_eq!(fs::read(&file).unwrap(), newer);
+        let removed = stale.remove_saved(&project.id).unwrap();
+        assert!(!removed.saved);
+        assert_eq!(removed.id, project.id);
         let reloaded = Store::load(&file, None).unwrap();
-        assert!(reloaded.projects[&project.id].saved);
+        assert!(!reloaded.projects.contains_key(&project.id));
         assert_eq!(reloaded.config.terminal_limit, 32);
     }
 
     #[test]
-    fn stale_project_save_does_not_replace_an_existing_configuration() {
+    fn stale_project_save_adopts_the_newer_recipes() {
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         let mut first = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
@@ -1469,28 +1532,84 @@ mod tests {
         first
             .configure(&retained.id, json!({"recipes":{"new":"printf newer"}}))
             .unwrap();
-        let original = fs::read(&file).unwrap();
         let unsaved = second.unsaved_id();
-        let previous_context = second.projects[&unsaved].context.clone();
-        assert!(
-            second
-                .save(&unsaved, "conflicting", Some(temp.0.clone()))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
-        assert!(!second.projects[&unsaved].saved);
-        assert_eq!(second.projects[&unsaved].name, "unsaved");
-        assert_eq!(second.projects[&unsaved].context, previous_context);
-        assert_eq!(fs::read(&file).unwrap(), original);
+        let saved = second
+            .save(&unsaved, "conflicting", Some(temp.0.clone()))
+            .unwrap();
+        assert_eq!(saved.id, unsaved);
+        assert!(saved.saved);
+        assert_eq!(saved.name, "conflicting");
+        let reloaded = Store::load(&file, None).unwrap();
         assert_eq!(
-            Store::load(&file, None).unwrap().projects[&retained.id].recipes["new"],
+            reloaded.projects[&retained.id].recipes["new"],
             "printf newer"
         );
+        assert_eq!(reloaded.projects[&saved.id].name, "conflicting");
     }
 
     #[test]
-    fn configuration_aliases_share_conflict_detection_and_private_files() {
+    fn replaced_configuration_is_adopted_on_the_next_write() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut live = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let kept = live.create("kept", temp.0.clone(), json!({})).unwrap();
+        let mut other = Store::load(&file, None).unwrap();
+        let extra = other.create("extra", temp.0.clone(), json!({})).unwrap();
+        live.configure_global(json!({"prefix":"C-z"})).unwrap();
+        let adopted = Store::load(&file, None).unwrap();
+        assert!(adopted.projects[&kept.id].saved);
+        assert!(adopted.projects[&extra.id].saved);
+        assert_eq!(adopted.config.prefix, "C-z");
+
+        let mut disk: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+        disk["projects"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|project| project["id"] != extra.id);
+        fs::write(&file, serde_json::to_vec(&disk).unwrap()).unwrap();
+        live.open(&kept.id).unwrap();
+        assert!(
+            live.projects
+                .get(&extra.id)
+                .is_none_or(|project| !project.saved)
+        );
+        assert!(live.projects[&kept.id].saved);
+    }
+
+    #[test]
+    fn configuration_load_requires_owner_and_mode_0600() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o660)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-a");
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o770)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o700)).unwrap();
+    }
+
+    #[test]
+    fn resolve_unsaved_name_skips_the_ephemeral_project() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let saved = store
+            .save(&store.unsaved_id(), "unsaved", Some(temp.0.clone()))
+            .unwrap();
+        let reloaded = Store::load(&file, None).unwrap();
+        assert_eq!(reloaded.resolve("unsaved").unwrap(), saved.id);
+        assert_ne!(reloaded.unsaved_id(), saved.id);
+    }
+
+    #[test]
+    fn configuration_aliases_share_adoption_and_private_files() {
         use std::os::unix::fs::{PermissionsExt, symlink};
 
         let temp = TempDir::new();
@@ -1502,24 +1621,14 @@ mod tests {
         let mut owner = Store::load(&file, None).unwrap();
         let mut stale = Store::load(&alias.join("config.json"), None).unwrap();
         owner.configure_global(json!({"prefix":"C-a"})).unwrap();
-        assert!(
-            stale
-                .configure_global(json!({"prefix":"C-z"}))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
+        stale.configure_global(json!({"prefix":"C-z"})).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-z");
         let link = temp.0.join("linked-config.json");
         symlink(&file, &link).unwrap();
         let mut linked = Store::load(&link, None).unwrap();
         owner.configure_global(json!({"prefix":"C-x"})).unwrap();
-        assert!(
-            linked
-                .configure_global(json!({"prefix":"C-z"}))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
+        linked.configure_global(json!({"prefix":"C-z"})).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-z");
         let mut linked = Store::load(&link, None).unwrap();
         linked.configure_global(json!({"prefix":"C-c"})).unwrap();
         assert!(
@@ -1612,19 +1721,17 @@ mod tests {
             .lock()
             .configure_global(json!({"prefix":"C-a"}))
             .unwrap();
-        assert!(
-            stores[1]
-                .lock()
-                .configure_global(json!({"prefix":"C-z"}))
-                .unwrap_err()
-                .to_string()
-                .contains("config-conflict")
-        );
-        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-a");
+        stores[1]
+            .lock()
+            .configure_global(json!({"prefix":"C-z"}))
+            .unwrap();
+        assert_eq!(stores[1].lock().config.prefix, "C-z");
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-z");
     }
 
     #[test]
     fn configuration_deletion_conflicts_without_advancing_expected_generation() {
+        use std::os::unix::fs::PermissionsExt;
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         let mut store = Store::load(&file, None).unwrap();
@@ -1636,6 +1743,7 @@ mod tests {
         assert_eq!(store.config.prefix, "C-a");
         assert!(!file.exists());
         fs::write(&file, original).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
         store.configure_global(json!({"prefix":"C-x"})).unwrap();
         assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-x");
     }
@@ -1691,6 +1799,8 @@ mod tests {
 
     #[test]
     fn legacy_configuration_defaults_terminal_limit_and_validates_patches() {
+        use std::os::unix::fs::PermissionsExt;
+
         let temp = TempDir::new();
         let file = temp.0.join("config.json");
         fs::write(
@@ -1703,6 +1813,7 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
         let mut store = Store::load(&file, None).unwrap();
         assert_eq!(store.config.terminal_limit, 64);
         store.configure_global(json!({"prefix":"C-z"})).unwrap();
@@ -1735,6 +1846,7 @@ mod tests {
         let mut invalid: Value = serde_json::from_slice(&original).unwrap();
         invalid["config"]["terminal_limit"] = json!(0);
         fs::write(&file, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
         assert!(Store::load(&file, None).is_err());
     }
 
