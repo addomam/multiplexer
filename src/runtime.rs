@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -50,44 +50,262 @@ impl Input {
     /// Returns false only when the transport itself failed. Revoked queued
     /// application input is discarded without disabling protocol progress.
     fn write_to(self, writer: &mut dyn Write) -> bool {
-        let admitted = self.authority.as_ref().map_or(Ok(()), |authority| {
-            if self.native && !self.bytes.is_empty() {
-                authority.forward_native()
-            } else {
-                authority.check()
-            }
-        });
-        if let Err(error) = admitted {
-            if let Some(ack) = self.ack {
-                let _ = ack.send(Err(error));
-            }
-            return true;
-        }
-        // Registration precedes revocation; no ownership lock spans I/O.
-        // Write acknowledgement is delivery, never application settlement.
-        let result = writer.write_all(&self.bytes);
-        let alive = result.is_ok();
-        if let Some(ack) = self.ack {
-            let _ = ack.send(result.map_err(anyhow::Error::from));
-        }
-        alive
+        write_bytes(
+            &self.bytes,
+            self.ack,
+            self.authority.as_ref(),
+            self.native,
+            writer,
+        )
     }
+}
+
+fn write_bytes(
+    bytes: &[u8],
+    ack: Option<mpsc::Sender<Result<()>>>,
+    authority: Option<&Arc<crate::control::Authority>>,
+    native: bool,
+    writer: &mut dyn Write,
+) -> bool {
+    let admitted = authority.map_or(Ok(()), |authority| {
+        if native && !bytes.is_empty() {
+            authority.forward_native()
+        } else {
+            authority.check()
+        }
+    });
+    if let Err(error) = admitted {
+        if let Some(ack) = ack {
+            let _ = ack.send(Err(error));
+        }
+        return true;
+    }
+    let result = writer.write_all(bytes);
+    let alive = result.is_ok();
+    if let Some(ack) = ack {
+        let _ = ack.send(result.map_err(anyhow::Error::from));
+    }
+    alive
+}
+
+struct Payload {
+    bytes: Vec<u8>,
+    authority: Option<Arc<crate::control::Authority>>,
+    native: bool,
+}
+
+enum ConfirmState {
+    Pending(Payload),
+    Claimed,
+    Cancelled,
+}
+
+struct ConfirmSlot {
+    state: Mutex<ConfirmState>,
+}
+
+impl ConfirmSlot {
+    fn pending(
+        bytes: Vec<u8>,
+        authority: Option<Arc<crate::control::Authority>>,
+        native: bool,
+    ) -> Self {
+        Self {
+            state: Mutex::new(ConfirmState::Pending(Payload {
+                bytes,
+                authority,
+                native,
+            })),
+        }
+    }
+
+    fn cancel(&self) -> bool {
+        let mut state = self.state.lock();
+        if matches!(*state, ConfirmState::Pending(_)) {
+            *state = ConfirmState::Cancelled;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn claim(&self) -> Option<Payload> {
+        let mut state = self.state.lock();
+        match std::mem::replace(&mut *state, ConfirmState::Claimed) {
+            ConfirmState::Pending(payload) => Some(payload),
+            other => {
+                *state = other;
+                None
+            }
+        }
+    }
+
+    fn deliver(&self, writer: &mut dyn Write, ack: mpsc::Sender<Result<()>>) -> bool {
+        let Some(payload) = self.claim() else {
+            let _ = ack.send(Err(anyhow::anyhow!("input-timeout: timed out")));
+            return true;
+        };
+        write_bytes(
+            &payload.bytes,
+            Some(ack),
+            payload.authority.as_ref(),
+            payload.native,
+            writer,
+        )
+    }
+}
+
+fn wait_confirm(
+    slot: &ConfirmSlot,
+    response: mpsc::Receiver<Result<()>>,
+    timeout: Duration,
+) -> Result<()> {
+    match response.recv_timeout(timeout) {
+        Ok(result) => result?,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            if slot.cancel() {
+                bail!("input-timeout: timed out");
+            }
+            response
+                .recv()
+                .map_err(|error| anyhow::anyhow!("input-timeout: {error}"))??;
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            bail!("input-timeout: disconnected");
+        }
+    }
+    Ok(())
+}
+
+struct Wake {
+    thread: Mutex<Option<thread::Thread>>,
+    stopped: AtomicBool,
+}
+
+impl Wake {
+    fn arm(&self) {
+        *self.thread.lock() = Some(thread::current());
+    }
+
+    fn poke(&self) {
+        if let Some(thread) = self.thread.lock().clone() {
+            thread.unpark();
+        }
+    }
+
+    fn stop(&self) {
+        self.stopped.store(true, Ordering::Release);
+        self.poke();
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum ReplyKey {
+    Color(usize),
+    Cursor(u64),
+}
+
+struct ReplyMap {
+    next_cursor: u64,
+    order: Vec<ReplyKey>,
+    values: BTreeMap<ReplyKey, Vec<u8>>,
+}
+
+impl ReplyMap {
+    fn color(&mut self, index: usize, bytes: Vec<u8>) {
+        let key = ReplyKey::Color(index);
+        if self.values.insert(key, bytes).is_none() {
+            self.order.push(key);
+        }
+    }
+
+    fn cursor(&mut self, bytes: Vec<u8>) {
+        let key = ReplyKey::Cursor(self.next_cursor);
+        self.next_cursor += 1;
+        self.values.insert(key, bytes);
+        self.order.push(key);
+    }
+
+    fn take(&mut self) -> Vec<u8> {
+        let mut out = Vec::new();
+        for key in std::mem::take(&mut self.order) {
+            if let Some(bytes) = self.values.remove(&key) {
+                out.extend(bytes);
+            }
+        }
+        out
+    }
+}
+
+fn cursor_report(text: &str) -> bool {
+    let Some(body) = text
+        .as_bytes()
+        .strip_prefix(b"\x1b[")
+        .and_then(|rest| rest.strip_suffix(b"R"))
+    else {
+        return false;
+    };
+    let mut semicolon = false;
+    if body.is_empty() || body.starts_with(b";") || body.ends_with(b";") {
+        return false;
+    }
+    for byte in body {
+        if *byte == b';' {
+            if semicolon {
+                return false;
+            }
+            semicolon = true;
+        } else if !byte.is_ascii_digit() {
+            return false;
+        }
+    }
+    semicolon
+}
+
+fn write_replies(replies: &Mutex<ReplyMap>, writer: &mut dyn Write) -> bool {
+    let bytes = replies.lock().take();
+    bytes.is_empty() || writer.write_all(&bytes).is_ok()
+}
+
+fn dispatch_input(
+    input: Input,
+    confirms: &Mutex<VecDeque<Arc<ConfirmSlot>>>,
+    writer: &mut dyn Write,
+) -> bool {
+    let Some(ack) = input.ack else {
+        return input.write_to(writer);
+    };
+    let Some(slot) = confirms.lock().pop_front() else {
+        let _ = ack.send(Err(anyhow::anyhow!("input-timeout: timed out")));
+        return true;
+    };
+    slot.deliver(writer, ack)
 }
 
 #[derive(Clone)]
 struct Listener {
     input: mpsc::SyncSender<Input>,
     size: Arc<Mutex<Size>>,
-    color_requests: mpsc::SyncSender<Event>,
+    colors: Arc<Mutex<Vec<Event>>>,
+    replies: Arc<Mutex<ReplyMap>>,
+    wake: Arc<Wake>,
 }
 impl EventListener for Listener {
     fn send_event(&self, event: Event) {
         let response = match event {
-            Event::PtyWrite(text) => Some(text),
+            Event::PtyWrite(text) => {
+                if cursor_report(&text) {
+                    self.replies.lock().cursor(text.into_bytes());
+                    self.wake.poke();
+                    None
+                } else {
+                    Some(text)
+                }
+            }
             request @ Event::ColorRequest(..) => {
                 // Processing already holds the emulator lock. Resolve against the
                 // updated palette after this batch, without blocking PTY output.
-                let _ = self.color_requests.try_send(request);
+                self.colors.lock().push(request);
                 None
             }
             Event::TextAreaSizeRequest(format) => {
@@ -110,6 +328,7 @@ impl EventListener for Listener {
                 authority: None,
                 native: false,
             });
+            self.wake.poke();
         }
     }
 }
@@ -118,8 +337,11 @@ struct Emulator {
     term: Term<Listener>,
     processor: Processor,
     compatibility: Compatibility,
-    color_requests: mpsc::Receiver<Event>,
-    input: mpsc::SyncSender<Input>,
+    colors: Arc<Mutex<Vec<Event>>>,
+    cursor_tx: mpsc::SyncSender<Input>,
+    cursor_replies: mpsc::Receiver<Input>,
+    replies: Arc<Mutex<ReplyMap>>,
+    wake: Arc<Wake>,
     generation: u64,
     full_damage_generation: u64,
     row_generations: [u64; 300],
@@ -127,8 +349,11 @@ struct Emulator {
 impl Emulator {
     fn new(
         mut term: Term<Listener>,
-        color_requests: mpsc::Receiver<Event>,
-        input: mpsc::SyncSender<Input>,
+        colors: Arc<Mutex<Vec<Event>>>,
+        cursor_tx: mpsc::SyncSender<Input>,
+        cursor_replies: mpsc::Receiver<Input>,
+        replies: Arc<Mutex<ReplyMap>>,
+        wake: Arc<Wake>,
         history_limit: usize,
     ) -> Self {
         term.reset_damage();
@@ -136,8 +361,11 @@ impl Emulator {
             term,
             processor: Processor::new(),
             compatibility: Compatibility::new(history_limit),
-            color_requests,
-            input,
+            colors,
+            cursor_tx,
+            cursor_replies,
+            replies,
+            wake,
             generation: 1,
             full_damage_generation: 1,
             row_generations: [1; 300],
@@ -145,10 +373,10 @@ impl Emulator {
     }
     fn advance(&mut self, bytes: &[u8]) {
         self.processor.advance(
-            &mut TerminalHandler::new(&mut self.term, &mut self.compatibility, &self.input),
+            &mut TerminalHandler::new(&mut self.term, &mut self.compatibility, &self.cursor_tx),
             bytes,
         );
-        self.reply_colors();
+        self.finish_replies();
         self.publish_damage();
     }
     fn flush_sync(&mut self) {
@@ -161,9 +389,9 @@ impl Emulator {
             self.processor.stop_sync(&mut TerminalHandler::new(
                 &mut self.term,
                 &mut self.compatibility,
-                &self.input,
+                &self.cursor_tx,
             ));
-            self.reply_colors();
+            self.finish_replies();
             self.publish_damage();
         }
     }
@@ -235,15 +463,25 @@ impl Emulator {
         update["row_indices"] = json!(indices);
         update
     }
-    fn reply_colors(&self) {
-        while let Ok(Event::ColorRequest(index, format)) = self.color_requests.try_recv() {
-            let [r, g, b] = indexed_color(&self.term, index).unwrap_or([229, 229, 229]);
-            let _ = self.input.try_send(Input {
-                bytes: format(Rgb { r, g, b }).into_bytes(),
-                ack: None,
-                authority: None,
-                native: false,
-            });
+    fn finish_replies(&mut self) {
+        let mut added = false;
+        while let Ok(input) = self.cursor_replies.try_recv() {
+            self.replies.lock().cursor(input.bytes);
+            added = true;
+        }
+        let pending: Vec<Event> = self.colors.lock().drain(..).collect();
+        if !pending.is_empty() {
+            let mut replies = self.replies.lock();
+            for event in pending {
+                if let Event::ColorRequest(index, format) = event {
+                    let [r, g, b] = indexed_color(&self.term, index).unwrap_or([229, 229, 229]);
+                    replies.color(index, format(Rgb { r, g, b }).into_bytes());
+                    added = true;
+                }
+            }
+        }
+        if added {
+            self.wake.poke();
         }
     }
 }
@@ -255,6 +493,8 @@ pub struct Terminal {
     emulator: Mutex<Emulator>,
     master: Mutex<Box<dyn MasterPty + Send>>,
     input: mpsc::SyncSender<Input>,
+    confirms: Arc<Mutex<VecDeque<Arc<ConfirmSlot>>>>,
+    wake: Arc<Wake>,
     pub input_gate: Mutex<()>,
     pub(crate) input_epoch: AtomicU64,
     size: Arc<Mutex<Size>>,
@@ -321,12 +561,25 @@ impl Terminal {
         let mut reader = pair.master.try_clone_reader()?;
         let mut writer = pair.master.take_writer()?;
         let (input, pending) = mpsc::sync_channel::<Input>(INPUT_QUEUE);
-        let (color_requests, pending_colors) = mpsc::sync_channel(INPUT_QUEUE);
+        let (cursor_tx, cursor_replies) = mpsc::sync_channel(8192);
+        let colors = Arc::new(Mutex::new(Vec::new()));
+        let replies = Arc::new(Mutex::new(ReplyMap {
+            next_cursor: 0,
+            order: Vec::new(),
+            values: BTreeMap::new(),
+        }));
+        let wake = Arc::new(Wake {
+            thread: Mutex::new(None),
+            stopped: AtomicBool::new(false),
+        });
+        let confirms = Arc::new(Mutex::new(VecDeque::new()));
         let size = Arc::new(Mutex::new(Size { cols: 80, rows: 24 }));
         let listener = Listener {
             input: input.clone(),
             size: size.clone(),
-            color_requests,
+            colors: colors.clone(),
+            replies: replies.clone(),
+            wake: wake.clone(),
         };
         let config = Config {
             scrolling_history: 50000,
@@ -340,12 +593,17 @@ impl Terminal {
             processes: Mutex::new(ProcessTree::new(root)),
             emulator: Mutex::new(Emulator::new(
                 term,
-                pending_colors,
-                input.clone(),
+                colors,
+                cursor_tx,
+                cursor_replies,
+                replies.clone(),
+                wake.clone(),
                 history_limit,
             )),
             master: Mutex::new(pair.master),
             input,
+            confirms: confirms.clone(),
+            wake: wake.clone(),
             input_gate: Mutex::new(()),
             input_epoch: AtomicU64::new(0),
             size,
@@ -355,9 +613,29 @@ impl Terminal {
         });
         let weak = Arc::downgrade(&terminal);
         thread::spawn(move || {
-            while let Ok(input) = pending.recv() {
-                if !input.write_to(&mut writer) || weak.upgrade().is_none() {
+            wake.arm();
+            loop {
+                if wake.stopped.load(Ordering::Acquire)
+                    || !write_replies(&replies, &mut writer)
+                    || weak.upgrade().is_none()
+                {
                     break;
+                }
+                match pending.try_recv() {
+                    Ok(input) => {
+                        if !dispatch_input(input, &confirms, &mut writer)
+                            || weak.upgrade().is_none()
+                        {
+                            break;
+                        }
+                    }
+                    Err(mpsc::TryRecvError::Empty) => {
+                        if wake.stopped.load(Ordering::Acquire) || weak.upgrade().is_none() {
+                            break;
+                        }
+                        thread::park();
+                    }
+                    Err(mpsc::TryRecvError::Disconnected) => break,
                 }
             }
         });
@@ -478,26 +756,38 @@ impl Terminal {
         if bytes.len() > MAX_INPUT {
             bail!("invalid-input: input exceeds 64 KiB");
         }
-        let (ack, received) = if confirmed {
-            let (ack, received) = mpsc::channel();
-            (Some(ack), Some(received))
-        } else {
-            (None, None)
-        };
-        self.input
-            .try_send(Input {
-                bytes,
-                ack,
-                authority,
-                native,
-            })
-            .map_err(|_| anyhow::anyhow!("backpressure: input queue unavailable"))?;
-        if let Some(received) = received {
-            received
-                .recv_timeout(Duration::from_secs(2))
-                .map_err(|error| anyhow::anyhow!("input-timeout: {error}"))??;
+        if !confirmed {
+            self.input
+                .try_send(Input {
+                    bytes,
+                    ack: None,
+                    authority,
+                    native,
+                })
+                .map_err(|_| anyhow::anyhow!("backpressure: input queue unavailable"))?;
+            self.wake.poke();
+            return Ok(());
         }
-        Ok(())
+        let slot = Arc::new(ConfirmSlot::pending(bytes, authority, native));
+        let (ack, received) = mpsc::channel();
+        self.confirms.lock().push_back(slot.clone());
+        if self
+            .input
+            .try_send(Input {
+                bytes: Vec::new(),
+                ack: Some(ack),
+                authority: None,
+                native: false,
+            })
+            .is_err()
+        {
+            self.confirms
+                .lock()
+                .retain(|queued| !Arc::ptr_eq(queued, &slot));
+            bail!("backpressure: input queue unavailable");
+        }
+        self.wake.poke();
+        wait_confirm(&slot, received, Duration::from_secs(2))
     }
     pub fn paste(&self, text: &str) -> Result<()> {
         self.enqueue_paste(text, None)
@@ -583,6 +873,7 @@ impl Terminal {
 impl Drop for Terminal {
     fn drop(&mut self) {
         self.close();
+        self.wake.stop();
     }
 }
 
@@ -1000,11 +1291,74 @@ mod screen_update_tests {
         assert_eq!(registry.snapshot("terminal")["unsettled"], json!([]));
     }
 
+    #[test]
+    fn full_user_queue_still_delivers_latest_color_reply() {
+        let (mut emulator, sender, incoming) = emulator_with_replies(8, 4);
+        for _ in 0..INPUT_QUEUE {
+            sender
+                .try_send(Input {
+                    bytes: b"x".to_vec(),
+                    ack: None,
+                    authority: None,
+                    native: true,
+                })
+                .unwrap();
+        }
+        assert!(
+            sender
+                .try_send(Input {
+                    bytes: b"y".to_vec(),
+                    ack: None,
+                    authority: None,
+                    native: true,
+                })
+                .is_err(),
+            "user queue must be full before the reply"
+        );
+        emulator.advance(b"\x1b]4;7;rgb:ab/cd/ef\x1b\\\x1b]4;7;?\x1b\\");
+        emulator.advance(b"\x1b]4;7;rgb:11/22/33\x1b\\\x1b]4;7;?\x1b\\");
+        emulator.advance(b"\x1b[1;1H\x1b[6n");
+        emulator.advance(b"\x1b[2;1H\x1b[6n");
+        let mut written = emulator.replies.lock().take();
+        while let Ok(input) = incoming.try_recv() {
+            if !input.native {
+                written.extend(input.bytes);
+            }
+        }
+        let expected = b"\x1b]4;7;rgb:1111/2222/3333\x1b\\\x1b[1;1R\x1b[2;1R";
+        assert_eq!(
+            written, expected,
+            "full user queue dropped or reordered the latest replies"
+        );
+    }
+
+    #[test]
+    fn confirm_timeout_does_not_leave_bytes_for_a_later_write() {
+        let slot = Arc::new(ConfirmSlot::pending(
+            b"CONFIRM_MARKER_UNIQUE".to_vec(),
+            None,
+            false,
+        ));
+        let (ack, response) = mpsc::channel();
+        let error = wait_confirm(&slot, response, Duration::from_millis(40)).unwrap_err();
+        assert!(error.to_string().starts_with("input-timeout:"), "{error}");
+        let mut written = Vec::new();
+        assert!(slot.deliver(&mut written, ack));
+        assert!(
+            written.is_empty(),
+            "failed confirm still wrote {}",
+            String::from_utf8_lossy(&written)
+        );
+    }
+
     fn emulator(cols: usize, rows: usize) -> Emulator {
         emulator_with_replies(cols, rows).0
     }
 
-    fn emulator_with_replies(cols: usize, rows: usize) -> (Emulator, mpsc::Receiver<Input>) {
+    fn emulator_with_replies(
+        cols: usize,
+        rows: usize,
+    ) -> (Emulator, mpsc::SyncSender<Input>, mpsc::Receiver<Input>) {
         emulator_with_history(cols, rows, Config::default().scrolling_history)
     }
 
@@ -1012,14 +1366,26 @@ mod screen_update_tests {
         cols: usize,
         rows: usize,
         history_limit: usize,
-    ) -> (Emulator, mpsc::Receiver<Input>) {
+    ) -> (Emulator, mpsc::SyncSender<Input>, mpsc::Receiver<Input>) {
         let (input, replies) = mpsc::sync_channel(INPUT_QUEUE);
-        let (color_requests, pending_colors) = mpsc::sync_channel(INPUT_QUEUE);
+        let (cursor_tx, cursor_replies) = mpsc::sync_channel(8192);
+        let colors = Arc::new(Mutex::new(Vec::new()));
+        let reply_map = Arc::new(Mutex::new(ReplyMap {
+            next_cursor: 0,
+            order: Vec::new(),
+            values: BTreeMap::new(),
+        }));
+        let wake = Arc::new(Wake {
+            thread: Mutex::new(None),
+            stopped: AtomicBool::new(false),
+        });
         let size = Arc::new(Mutex::new(Size { cols, rows }));
         let listener = Listener {
             input: input.clone(),
             size: size.clone(),
-            color_requests,
+            colors: colors.clone(),
+            replies: reply_map.clone(),
+            wake: wake.clone(),
         };
         let config = Config {
             scrolling_history: history_limit,
@@ -1027,14 +1393,32 @@ mod screen_update_tests {
         };
         let term = Term::new(config, &*size.lock(), listener);
         (
-            Emulator::new(term, pending_colors, input, history_limit),
+            Emulator::new(
+                term,
+                colors,
+                cursor_tx,
+                cursor_replies,
+                reply_map,
+                wake,
+                history_limit,
+            ),
+            input,
             replies,
         )
     }
 
+    fn read_reply(emulator: &Emulator, replies: &mpsc::Receiver<Input>) -> Vec<u8> {
+        let queued = emulator.replies.lock().take();
+        if !queued.is_empty() {
+            queued
+        } else {
+            replies.try_recv().unwrap().bytes
+        }
+    }
+
     #[test]
     fn cpr_tracks_origin_margins_modes_reset_resize_and_alternate_screen() {
-        let (mut emulator, replies) = emulator_with_replies(12, 24);
+        let (mut emulator, _input, replies) = emulator_with_replies(12, 24);
         for (bytes, expected) in [
             ("\x1b[4;4H\x1b[6n", "\x1b[4;4R"),
             ("\x1b[3;20r\x1b[?6h\x1b[2;4H\x1b[6n", "\x1b[2;4R"),
@@ -1046,19 +1430,19 @@ mod screen_update_tests {
             ("\x1b[?6h\x1b[2;4H\x1b[5n", "\x1b[0n"),
         ] {
             emulator.advance(bytes.as_bytes());
-            assert_eq!(replies.try_recv().unwrap().bytes, expected.as_bytes());
+            assert_eq!(read_reply(&emulator, &replies), expected.as_bytes());
         }
         // A no-op resize must not discard margins; a real resize does.
         emulator.resize(Size { cols: 12, rows: 24 });
         emulator.advance(b"\x1b[6n");
-        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        assert_eq!(read_reply(&emulator, &replies), b"\x1b[2;4R");
         emulator.resize(Size { cols: 13, rows: 25 });
         emulator.advance(b"\x1b[2;4H\x1b[6n");
-        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        assert_eq!(read_reply(&emulator, &replies), b"\x1b[2;4R");
         emulator.advance(b"\x1b[3;20r\x1b[?3h\x1b[2;4H\x1b[6n");
-        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[2;4R");
+        assert_eq!(read_reply(&emulator, &replies), b"\x1b[2;4R");
         emulator.advance(b"\x1bc\x1b[6n");
-        assert_eq!(replies.try_recv().unwrap().bytes, b"\x1b[1;1R");
+        assert_eq!(read_reply(&emulator, &replies), b"\x1b[1;1R");
     }
 
     #[test]
@@ -1167,7 +1551,7 @@ mod screen_update_tests {
     #[test]
     fn variation_shrink_preserves_capped_history_and_alternate_screen() {
         for (history_limit, alternate) in [(1, false), (2, false), (2, true)] {
-            let (mut emulator, _) = emulator_with_history(5, 3, history_limit);
+            let (mut emulator, _, _) = emulator_with_history(5, 3, history_limit);
             if alternate {
                 emulator.advance(b"\x1b[?1049h");
             }
