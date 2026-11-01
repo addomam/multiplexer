@@ -62,7 +62,7 @@ enum Work {
     Rpc {
         target: Arc<str>,
         op: Op,
-        request: Value,
+        request: crate::command::Command,
     },
     Refresh {
         controller: Value,
@@ -176,7 +176,7 @@ pub(super) struct NativeControl {
 impl NativeControl {
     pub(super) fn register(path: &Path, daemon: &Value, observation: UnixStream) -> Result<Self> {
         let mut connection = crate::client::Connection::connect(path)?;
-        let observed = rpc(&mut connection, &mut json!({"op":"snapshot"}))?;
+        let observed = rpc(&mut connection, &crate::command::Command::snapshot())?;
         if !daemon.is_string() || observed["daemon_id"] != *daemon {
             return Err(crate::client::connection_lost(
                 "daemon changed before native registration",
@@ -190,7 +190,9 @@ impl NativeControl {
         let stream = connection.shutdown_handle()?;
         let created = rpc(
             &mut connection,
-            &mut json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
+            &crate::command::Command::ControllerCreate(crate::command::object(
+                json!({"role":"attachment", "label":"native TUI"}),
+            )),
         )?;
         let stop = Arc::new(AtomicBool::new(false));
         let worker_stop = stop.clone();
@@ -220,21 +222,21 @@ impl NativeControl {
                             op,
                             mut request,
                         } => {
-                            let serial = request["view"]["serial"].as_u64();
-                            let mut result = rpc(&mut connection, &mut request);
+                            let serial = request
+                                .get("view")
+                                .and_then(|view| view.get("serial"))
+                                .and_then(Value::as_u64);
+                            let mut result = rpc(&mut connection, &request);
                             if op == Op::Acp
-                                && matches!(
-                                    request["op"].as_str(),
-                                    Some("acp-answer" | "acp-permission")
-                                )
+                                && matches!(request.op(), "acp-answer" | "acp-permission")
                                 && result.as_ref().err().is_some_and(|error| {
                                     error.downcast_ref::<crate::client::DaemonError>().is_some()
                                 })
                             {
                                 // Daemon errors precede admission; transport failures
                                 // remain ambiguous. Return identity, never answer text.
-                                request.as_object_mut().unwrap().remove("values");
-                                rejected_action = Some(request);
+                                request.body_mut().remove("values");
+                                rejected_action = Some(request.to_value());
                             }
                             if let (Op::View, Some(serial), Ok(value)) = (op, serial, &mut result) {
                                 value["native_view_serial"] = json!(serial);
@@ -256,12 +258,14 @@ impl NativeControl {
                         } => {
                             // One deliberate claim, not replayed application input.
                             let state = if acp {
-                                rpc(&mut connection, &mut json!({"op":"snapshot"}))
+                                rpc(&mut connection, &crate::command::Command::snapshot())
                                     .and_then(|snapshot| agent_state(&snapshot, &target))
                             } else {
                                 rpc(
                                     &mut connection,
-                                    &mut json!({"op":"state","terminal":target.as_ref()}),
+                                    &crate::command::Command::State(crate::command::object(
+                                        json!({"terminal":target.as_ref()}),
+                                    )),
                                 )
                             };
                             let result = state.and_then(|state| {
@@ -280,10 +284,12 @@ impl NativeControl {
                                 }
                                 rpc(
                                     &mut connection,
-                                    &mut addressed(
-                                        json!({"op":"ownership-claim","controller":controller,
+                                    &address_command(
+                                        crate::command::Command::OwnershipClaim(
+                                            crate::command::object(json!({"controller":controller,
                                     "observed":state["ownership"]["observed"],
-                                    "mode":"cooperative","when":{"kind":"now"}}),
+                                    "mode":"cooperative","when":{"kind":"now"}})),
+                                        ),
                                         &target,
                                         acp,
                                     ),
@@ -294,26 +300,25 @@ impl NativeControl {
                         Work::Input { grant, input } => {
                             let result = match input {
                                 Input::Bytes(bytes) => connection.request(
-                                    &ByteInput {
-                                        version: 1,
-                                        persistent: true,
-                                        op: "input",
-                                        terminal: &grant.terminal,
-                                        control: &grant.handle,
-                                        bytes: &bytes,
-                                    },
+                                    &crate::client::wire(
+                                        &crate::command::Command::input_bytes(
+                                            &grant.terminal,
+                                            &grant.handle,
+                                            &bytes,
+                                        ),
+                                        Some(&json!(true)),
+                                    ),
                                     RPC_TIMEOUT,
                                 ),
                                 Input::Paste(text) => connection.request(
-                                    &PasteInput {
-                                        version: 1,
-                                        persistent: true,
-                                        op: "input",
-                                        terminal: &grant.terminal,
-                                        control: &grant.handle,
-                                        text: &text,
-                                        paste: true,
-                                    },
+                                    &crate::client::wire(
+                                        &crate::command::Command::input_paste(
+                                            &grant.terminal,
+                                            &grant.handle,
+                                            &text,
+                                        ),
+                                        Some(&json!(true)),
+                                    ),
                                     RPC_TIMEOUT,
                                 ),
                             };
@@ -422,7 +427,9 @@ impl NativeControl {
                 // unavailable daemon leaves the registration retained.
                 let _ = rpc(
                     &mut connection,
-                    &mut json!({"op":"control-handle","handle":self.controller,"method":"close"}),
+                    &crate::command::Command::ControlHandle(crate::command::object(
+                        json!({"handle":self.controller,"method":"close"}),
+                    )),
                 );
             }
         }
@@ -432,10 +439,11 @@ impl NativeControl {
         self.panel = None;
     }
 
-    pub(super) fn launch(&mut self, mut request: Value, status: &mut String) {
+    pub(super) fn launch(&mut self, request: crate::command::Command, status: &mut String) {
         self.launch_rejection = None;
-        request["op"] = json!("acp-open");
-        request["controller"] = self.controller.clone();
+        let mut fields = request.into_fields();
+        fields.insert("controller".into(), self.controller.clone());
+        let request = crate::command::Command::AcpOpen(fields);
         if self.submit("", Op::Launch, request, status).is_ok() {
             *status = "Launching ACP agent once on this original native connection".into();
         }
@@ -489,9 +497,9 @@ impl NativeControl {
         &mut self,
         terminal: &str,
         op: Op,
-        request: Value,
+        request: crate::command::Command,
         status: &mut String,
-    ) -> Result<(), Value> {
+    ) -> Result<(), crate::command::Command> {
         let busy = !matches!(op, Op::View | Op::Consent | Op::Keep | Op::Activity);
         if busy && self.busy.contains(terminal) {
             if matches!(op, Op::Acp) {
@@ -546,8 +554,16 @@ impl NativeControl {
             .flatten()
     }
 
-    pub(super) fn acp_action(&mut self, request: Value, status: &mut String) -> Result<(), Value> {
-        let Some(id) = request["target"]["id"].as_str() else {
+    pub(super) fn acp_action(
+        &mut self,
+        request: crate::command::Command,
+        status: &mut String,
+    ) -> Result<(), crate::command::Command> {
+        let Some(id) = request
+            .get("target")
+            .and_then(|target| target.get("id"))
+            .and_then(Value::as_str)
+        else {
             *status = "invalid-request: captured ACP target required".into();
             return Err(request);
         };
@@ -579,8 +595,9 @@ impl NativeControl {
             terminal,
             self.agent_targets.contains(terminal),
         );
-        let request =
-            json!({"op":"control-handle","handle":self.controller,"method":"view","view":view});
+        let request = crate::command::Command::ControlHandle(crate::command::object(
+            json!({"handle":self.controller,"method":"view","view":view}),
+        ));
         if self.submit(terminal, Op::View, request, status).is_ok() {
             self.serial = serial;
             self.view = Some((terminal.to_owned(), focus));
@@ -796,8 +813,9 @@ impl NativeControl {
                     // not adopt a newly arrived owner and ask them to yield.
                     let _ = self.submit(&selected,
                     Op::Claim,
-                    addressed(json!({"op":"ownership-claim","controller":self.controller,
-                        "observed":ownership["observed"],"mode":"cooperative","when":{"kind":"now"}}),
+                    address_command(
+                        crate::command::Command::OwnershipClaim(crate::command::object(json!({"controller":self.controller,
+                        "observed":ownership["observed"],"mode":"cooperative","when":{"kind":"now"}}))),
                         &selected, ownership["target"]["kind"] == "acp"),
                     status,);
                 }
@@ -918,7 +936,9 @@ impl NativeControl {
                 .submit(
                     &terminal,
                     Op::Accept,
-                    json!({"op":"control-handle","handle":offer,"method":"accept"}),
+                    crate::command::Command::ControlHandle(crate::command::object(
+                        json!({"handle":offer,"method":"accept"}),
+                    )),
                     status,
                 )
                 .is_ok()
@@ -969,7 +989,9 @@ impl NativeControl {
         let _ = self.submit(
             terminal,
             Op::Activity,
-            json!({"op":"control-handle","handle":grant.handle,"method":"activity"}),
+            crate::command::Command::ControlHandle(crate::command::object(
+                json!({"handle":grant.handle,"method":"activity"}),
+            )),
             status,
         );
     }
@@ -1251,7 +1273,9 @@ impl NativeControl {
                         let _ = self.submit(
                             &target,
                             Op::Cancel,
-                            json!({"op":"control-handle","handle":claim,"method":"cancel"}),
+                            crate::command::Command::ControlHandle(crate::command::object(
+                                json!({"handle":claim,"method":"cancel"}),
+                            )),
                             status,
                         );
                     }
@@ -1276,9 +1300,13 @@ impl NativeControl {
                             let _ = self.submit(
                                 &target,
                                 Op::Force,
-                                addressed(
-                                    json!({"op":"ownership-claim","controller":self.controller,
+                                address_command(
+                                    crate::command::Command::OwnershipClaim(
+                                        crate::command::object(
+                                            json!({"controller":self.controller,
                             "mode":"force","observed":observed}),
+                                        ),
+                                    ),
                                     &target,
                                     self.ownership[&target]["target"]["kind"] == "acp",
                                 ),
@@ -1303,9 +1331,16 @@ impl NativeControl {
                             } else if !matches!(presentation, Presentation::Armed) {
                                 *status = "Owner action blocked: wait for the complete current choices and input to settle".into();
                             } else if key.code == KeyCode::Char('y') && action.claim.is_some() {
-                                let _ = self.submit(&target, Op::Yield, json!({"op":"control-handle","handle":action.grant.handle,"method":"yield-to","claim_id":action.claim}), status);
+                                let _ = self.submit(&target, Op::Yield, crate::command::Command::ControlHandle(crate::command::object(json!({"handle":action.grant.handle,"method":"yield-to","claim_id":action.claim}))), status);
                             } else if key.code == KeyCode::Char('r') && action.claim.is_none() {
-                                let _ = self.submit(&target, Op::Release, json!({"op":"control-handle","handle":action.grant.handle,"method":"release"}), status);
+                                let _ = self.submit(
+                                    &target,
+                                    Op::Release,
+                                    crate::command::Command::ControlHandle(crate::command::object(
+                                        json!({"handle":action.grant.handle,"method":"release"}),
+                                    )),
+                                    status,
+                                );
                             }
                         }
                     }
@@ -1413,7 +1448,17 @@ impl NativeControl {
             let Some(grant) = self.controls.get(&terminal) else {
                 continue;
             };
-            if self.submit(&terminal, Op::Keep, json!({"op":"control-handle","handle":grant.handle,"method":"keep","claim_id":claim}), status).is_err() {
+            if self
+                .submit(
+                    &terminal,
+                    Op::Keep,
+                    crate::command::Command::ControlHandle(crate::command::object(
+                        json!({"handle":grant.handle,"method":"keep","claim_id":claim}),
+                    )),
+                    status,
+                )
+                .is_err()
+            {
                 // Never forward past an unsent keep in the acknowledgement
                 // window, including queue backpressure.
                 return (true, true);
@@ -1470,8 +1515,10 @@ impl NativeControl {
                 .submit(
                     &terminal,
                     Op::Consent,
-                    json!({"op":"control-handle","handle":grant.handle,"method":"consent-to",
+                    crate::command::Command::ControlHandle(crate::command::object(
+                        json!({"handle":grant.handle,"method":"consent-to",
                         "claim_id":claim,"view_serial":serial,"activity_revision":activity}),
+                    )),
                     status,
                 )
                 .is_err()
@@ -2129,6 +2176,28 @@ fn addressed(mut value: Value, id: &str, acp: bool) -> Value {
     value
 }
 
+fn address_command(
+    mut command: crate::command::Command,
+    id: &str,
+    acp: bool,
+) -> crate::command::Command {
+    if acp {
+        command
+            .body_mut()
+            .insert("target".into(), json!({"kind":"acp","id":id}));
+    } else {
+        command.body_mut().insert(
+            "terminal".into(),
+            if id.is_empty() {
+                Value::Null
+            } else {
+                json!(id)
+            },
+        );
+    }
+    command
+}
+
 fn agent_state(snapshot: &Value, id: &str) -> Result<Value> {
     let view = snapshot["agent_views"]
         .as_array()
@@ -2173,10 +2242,14 @@ fn safe(text: &str, max: usize) -> String {
         .collect()
 }
 
-fn rpc(connection: &mut crate::client::Connection, request: &mut Value) -> Result<Value> {
-    request["version"] = json!(1);
-    request["persistent"] = json!(true);
-    connection.request(request, RPC_TIMEOUT)
+fn rpc(
+    connection: &mut crate::client::Connection,
+    command: &crate::command::Command,
+) -> Result<Value> {
+    connection.request(
+        &crate::client::wire(command, Some(&json!(true))),
+        RPC_TIMEOUT,
+    )
 }
 
 fn refresh(
@@ -2186,7 +2259,9 @@ fn refresh(
 ) -> Result<Value> {
     let private = rpc(
         connection,
-        &mut json!({"op":"control-handle","handle":controller,"method":"read"}),
+        &crate::command::Command::ControlHandle(crate::command::object(
+            json!({"handle":controller,"method":"read"}),
+        )),
     )?;
     let mut targets: std::collections::BTreeMap<_, _> = targets.into_iter().collect();
     let mut claims = Vec::new();
@@ -2204,7 +2279,9 @@ fn refresh(
             }
             let state = rpc(
                 connection,
-                &mut json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
+                &crate::command::Command::ControlHandle(crate::command::object(
+                    json!({"handle":summary["claim"],"method":"read"}),
+                )),
             )?;
             claims.push(state);
         }
@@ -2221,7 +2298,7 @@ fn refresh(
         }
     }
     let agents = if targets.values().any(|acp| *acp) {
-        Some(rpc(connection, &mut json!({"op":"snapshot"}))?)
+        Some(rpc(connection, &crate::command::Command::snapshot())?)
     } else {
         None
     };
@@ -2233,7 +2310,10 @@ fn refresh(
                 &target,
             )
         } else {
-            rpc(connection, &mut json!({"op":"state","terminal":target}))
+            rpc(
+                connection,
+                &crate::command::Command::State(crate::command::object(json!({"terminal":target}))),
+            )
         };
         match result {
             Ok(state) => states.push(state),
@@ -2250,26 +2330,6 @@ fn refresh(
         }
     }
     Ok(json!({"private":private,"states":states,"claims":claims}))
-}
-
-#[derive(serde::Serialize)]
-struct ByteInput<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    control: &'a Value,
-    bytes: &'a [u8],
-}
-#[derive(serde::Serialize)]
-struct PasteInput<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    control: &'a Value,
-    text: &'a str,
-    paste: bool,
 }
 
 #[cfg(test)]
@@ -2428,7 +2488,7 @@ mod tests {
                         op: Op::Yield | Op::Release,
                         request,
                         ..
-                    } => Some(request),
+                    } => Some(request.to_value()),
                     _ => None,
                 })
                 .collect()
@@ -2692,7 +2752,9 @@ mod tests {
         native.poll("", &mut status, |_, _| {});
         observed.recv_timeout(RPC_TIMEOUT).unwrap();
         native.launch(
-            json!({"op":"acp-open","project":"selected-project","agent":"selected-profile"}),
+            crate::command::Command::AcpOpen(crate::command::object(
+                json!({"project":"selected-project","agent":"selected-profile"}),
+            )),
             &mut status,
         );
         assert!(

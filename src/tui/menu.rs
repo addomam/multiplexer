@@ -99,7 +99,7 @@ pub(super) enum Action {
         source: String,
         action: SessionAction,
     },
-    Submit(Value),
+    Submit(crate::command::Command),
 }
 enum Kind {
     Actions,
@@ -108,7 +108,7 @@ enum Kind {
         independent: bool,
     },
     Close {
-        request: Value,
+        request: crate::command::Command,
     },
     Rename {
         value: String,
@@ -178,8 +178,10 @@ impl Dialog {
     pub fn close(snapshot: &Value, source: &str, grant: Option<&Value>) -> Result<Self> {
         let request = if let Some(agent) = agent_view(snapshot, source) {
             let grant = grant.context("Viewing only: request control before closing this agent")?;
-            json!({"op":"acp-close","target":agent_target(agent),"control":grant["control"],
-                "owner_generation":grant["owner_generation"],"call_id":uuid::Uuid::new_v4().to_string()})
+            crate::command::Command::AcpClose(crate::command::object(
+                json!({"target":agent_target(agent),"control":grant["control"],
+                "owner_generation":grant["owner_generation"],"call_id":uuid::Uuid::new_v4().to_string()}),
+            ))
         } else {
             ensure!(
                 snapshot["terminals"]
@@ -187,7 +189,7 @@ impl Dialog {
                     .is_some_and(|ts| ts.iter().any(|t| t["id"] == source)),
                 "Session is no longer available"
             );
-            json!({"op":"close","terminal":source})
+            crate::command::Command::Close(crate::command::object(json!({"terminal":source})))
         };
         let mut dialog = Self::base(snapshot, source, Kind::Close { request });
         dialog.focus = 1; // Keep working is the safe default, not destructive Enter.
@@ -251,7 +253,9 @@ impl Dialog {
                     self.error = "Enter a valid name; rejected input was not saved.".into();
                     Action::None
                 } else {
-                    Action::Submit(json!({"op":"name","terminal":self.source,"name":value}))
+                    Action::Submit(crate::command::Command::Name(crate::command::object(
+                        json!({"terminal":self.source,"name":value}),
+                    )))
                 }
             }
         }

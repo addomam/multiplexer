@@ -1,5 +1,6 @@
 use crate::{
     client,
+    command::Command,
     integration::Integration,
     projects::{self, GitCache, Store},
     runtime::Terminal,
@@ -1654,50 +1655,65 @@ impl Daemon {
         }
         self.changed.notify_all();
     }
-    fn dispatch(self: &Arc<Self>, request: Value, connection: u64) -> Result<Value> {
-        if request["version"] != 1 {
-            bail!("unsupported-version: API version 1 required");
+    fn dispatch(
+        self: &Arc<Self>,
+        command: Command,
+        persistent: Option<Value>,
+        connection: u64,
+    ) -> Result<Value> {
+        let op = command.op();
+        let mut request = command.to_value();
+        request["version"] = json!(1);
+        if let Some(persistent) = &persistent {
+            request["persistent"] = persistent.clone();
         }
-        let op = request["op"]
-            .as_str()
-            .context("invalid-request: op required")?;
         if request["target"]["kind"] == "acp"
             && !matches!(
-                op,
-                "ownership-claim"
-                    | "acp-inspect"
-                    | "acp-prompt"
-                    | "acp-authenticate"
-                    | "acp-answer"
-                    | "acp-permission"
-                    | "acp-interrupt"
-                    | "acp-close"
+                &command,
+                Command::OwnershipClaim(_)
+                    | Command::AcpInspect(_)
+                    | Command::AcpPrompt(_)
+                    | Command::AcpAuthenticate(_)
+                    | Command::AcpAnswer(_)
+                    | Command::AcpPermission(_)
+                    | Command::AcpInterrupt(_)
+                    | Command::AcpClose(_)
             )
         {
             bail!("wrong-target-kind: native operation cannot address ACP");
         }
-        if !matches!(op, "name" | "project-save" | "project-save-preview")
-            && let Some(id) = request["terminal"].as_str()
+        if !matches!(
+            &command,
+            Command::Name(_) | Command::ProjectSave(_) | Command::ProjectSavePreview(_)
+        ) && let Some(id) = request["terminal"].as_str()
             && self.state.lock().agent_views.contains_key(id)
         {
             bail!("wrong-target-kind: ACP views are not terminals");
         }
-        match op {
-            "acp-profiles" => {
+        match &command {
+            Command::AcpProfiles(_) => {
                 validate_mutation_fields(&request, &["version", "op", "persistent"])?;
                 let profiles = self.state.lock().store.config.acp_profiles.clone();
                 Ok(crate::acp_profiles::list(profiles))
             }
-            "acp-open" => self.acp_open(&request, None),
-            "acp-inspect" => self.acp.inspect(&request),
-            "acp-prompt" | "acp-authenticate" | "acp-answer" | "acp-permission"
-            | "acp-interrupt" | "acp-close" => self.acp_action(op, &request, connection),
-            "controller-create" | "ownership-claim" | "control-handle" => {
+            Command::AcpOpen(_) => self.acp_open(&request, None),
+            Command::AcpInspect(_) => self.acp.inspect(&request),
+            Command::AcpPrompt(_)
+            | Command::AcpAuthenticate(_)
+            | Command::AcpAnswer(_)
+            | Command::AcpPermission(_)
+            | Command::AcpInterrupt(_)
+            | Command::AcpClose(_) => self.acp_action(op, &request, connection),
+            Command::ControllerCreate(_)
+            | Command::OwnershipClaim(_)
+            | Command::ControlHandle(_) => {
                 let mut result = {
                     let mut controls = self.controls.lock();
                     // Only a validated original attachment view may produce
                     // terminal focus reports. These are not human activity.
-                    let focus = if op == "control-handle" && request["method"] == "view" {
+                    let focus = if matches!(&command, Command::ControlHandle(_))
+                        && request["method"] == "view"
+                    {
                         request["view"]["terminal"].as_str().and_then(|terminal| {
                             let read = controls
                                 .handle(
@@ -1728,9 +1744,9 @@ impl Daemon {
                     } else {
                         None
                     };
-                    let result = match op {
-                        "controller-create" => controls.create(&request, connection),
-                        "ownership-claim" => controls.claim(&request),
+                    let result = match &command {
+                        Command::ControllerCreate(_) => controls.create(&request, connection),
+                        Command::OwnershipClaim(_) => controls.claim(&request),
                         _ => controls.handle(&request, connection),
                     };
                     drop(controls);
@@ -1767,15 +1783,18 @@ impl Daemon {
                 }
                 Ok(result)
             }
-            "snapshot" | "list" => self.snapshot(),
-            "open" => self.open(&request),
-            "agent-open" => self.agent_open(&request, connection, None),
-            "agent-inspect" => {
+            Command::Snapshot(_) | Command::List(_) => self.snapshot(),
+            Command::Open(_) => self.open(&request),
+            Command::AgentOpen(_) => self.agent_open(&request, connection, None),
+            Command::AgentInspect(_) => {
                 let mut result = self.codex.inspect(&request)?;
                 result["seq"] = self.state.lock().seq.into();
                 Ok(result)
             }
-            "agent-prompt" | "agent-answer" | "agent-permission" | "agent-interrupt" => {
+            Command::AgentPrompt(_)
+            | Command::AgentAnswer(_)
+            | Command::AgentPermission(_)
+            | Command::AgentInterrupt(_) => {
                 let terminal = request["target"]["terminal"]
                     .as_str()
                     .context("invalid-request: exact agent target terminal required")?;
@@ -1788,8 +1807,8 @@ impl Daemon {
                 result["seq"] = self.state.lock().seq.into();
                 Ok(result)
             }
-            "state" => self.terminal_snapshot(&self.entry(&request)?),
-            "screen" => {
+            Command::State(_) => self.terminal_snapshot(&self.entry(&request)?),
+            Command::Screen(_) => {
                 let entry = self.entry(&request)?;
                 Ok(entry.terminal.screen_update(
                     request["offset"].as_u64().unwrap_or(0) as usize,
@@ -1798,7 +1817,7 @@ impl Daemon {
                     request["row_updates"].as_bool().unwrap_or(false),
                 ))
             }
-            "resize" => {
+            Command::Resize(_) => {
                 let entry = self.entry(&request)?;
                 entry.terminal.resize(
                     request["cols"]
@@ -1810,7 +1829,7 @@ impl Daemon {
                 )?;
                 Ok(entry.terminal.status())
             }
-            "input" => {
+            Command::Input(_) => {
                 validate_mutation_fields(
                     &request,
                     &[
@@ -1885,7 +1904,7 @@ impl Daemon {
                 }
                 Ok(json!({"accepted":true}))
             }
-            "execute" => {
+            Command::Execute(_) => {
                 validate_mutation_fields(
                     &request,
                     &[
@@ -1915,7 +1934,7 @@ impl Daemon {
                     authority,
                 )
             }
-            "report" => {
+            Command::Report(_) => {
                 if matches!(
                     request["event"]["kind"].as_str(),
                     Some("shell-epoch" | "shell-wake")
@@ -1962,7 +1981,7 @@ impl Daemon {
                 self.changed.notify_all();
                 Ok(result)
             }
-            "name" => {
+            Command::Name(_) => {
                 let selector = request["terminal"]
                     .as_str()
                     .context("invalid-request: exact terminal or ACP view ID required")?;
@@ -2003,11 +2022,11 @@ impl Daemon {
                 self.checkpoint_recovery(selector);
                 Ok(json!({"id":selector,"name":name}))
             }
-            "reparent" | "demote" => {
+            Command::Reparent(_) | Command::Demote(_) => {
                 let entry = self.entry(&request)?;
                 self.reparent(&entry, reparent_parent(&request))
             }
-            "promote" => {
+            Command::Promote(_) => {
                 let entry = self.entry(&request)?;
                 let parent = entry.parent_id.as_ref().and_then(|parent| {
                     self.state
@@ -2018,7 +2037,7 @@ impl Daemon {
                 });
                 self.reparent(&entry, parent.as_deref())
             }
-            "close" => {
+            Command::Close(_) => {
                 let entry = self.entry(&request)?;
                 self.controls.lock().end_target(&entry.terminal.id);
                 self.retire_settled_launch(&entry.terminal.id);
@@ -2026,7 +2045,7 @@ impl Daemon {
                 self.retire_recovery_target(&entry.terminal.id)?;
                 Ok(entry.terminal.status())
             }
-            "remove" => {
+            Command::Remove(_) => {
                 let entry = self.entry(&request)?;
                 if entry.terminal.alive() {
                     bail!("alive: close terminal before removing it");
@@ -2072,12 +2091,12 @@ impl Daemon {
                 self.integration.remove(&entry.terminal.id);
                 Ok(json!({"removed":entry.terminal.id}))
             }
-            "events" => self.events(
+            Command::Events(_) => self.events(
                 request["after"].as_u64().unwrap_or(0),
                 Duration::from_millis(request["timeout_ms"].as_u64().unwrap_or(30000).min(300000)),
             ),
-            "wait" => self.wait_state(&request),
-            "project-list" => {
+            Command::Wait(_) => self.wait_state(&request),
+            Command::ProjectList(_) => {
                 let state = self.state.lock();
                 Ok(Value::Array(
                     state
@@ -2089,7 +2108,7 @@ impl Daemon {
                         .collect(),
                 ))
             }
-            "project-remove" => {
+            Command::ProjectRemove(_) => {
                 let mut state = self.state.lock();
                 let selector = request["project"]
                     .as_str()
@@ -2099,8 +2118,8 @@ impl Daemon {
                 self.changed.notify_all();
                 Ok(project)
             }
-            "project-save" | "project-save-preview" => {
-                let preview = op == "project-save-preview";
+            Command::ProjectSave(_) | Command::ProjectSavePreview(_) => {
+                let preview = matches!(&command, Command::ProjectSavePreview(_));
                 validate_mutation_fields(
                     &request,
                     if preview {
@@ -2159,7 +2178,7 @@ impl Daemon {
                 }
                 Ok(json!(project))
             }
-            "project-new" => {
+            Command::ProjectNew(_) => {
                 let project = {
                     let mut state = self.state.lock();
                     let project = state.store.create(
@@ -2190,7 +2209,7 @@ impl Daemon {
                 drop(opening);
                 Ok(json!({"project":project,"terminal":terminal}))
             }
-            "project-open" => {
+            Command::ProjectOpen(_) => {
                 let (project, already_open, agent_views) = loop {
                     let mut state = self.state.lock();
                     if self.stopping.load(Ordering::Acquire) {
@@ -2254,7 +2273,7 @@ impl Daemon {
                 drop(opening);
                 Ok(json!({"project":project,"terminal":terminal}))
             }
-            "project-config" => {
+            Command::ProjectConfig(_) => {
                 let mut state = self.state.lock();
                 let selector = request["project"]
                     .as_str()
@@ -2285,14 +2304,14 @@ impl Daemon {
                 }
                 Ok(json!(project))
             }
-            "config" => {
+            Command::Config(_) => {
                 let mut state = self.state.lock();
                 let config = state.store.configure_global(request["config"].clone())?;
                 Self::emit(&mut state, "config", None, json!(config));
                 self.changed.notify_all();
                 Ok(json!(config))
             }
-            "detach" => {
+            Command::Detach(_) => {
                 let mut state = self.state.lock();
                 state.detach_generation += 1;
                 let generation = state.detach_generation;
@@ -2305,8 +2324,7 @@ impl Daemon {
                 self.changed.notify_all();
                 Ok(json!({"detach_requested":true,"generation":generation}))
             }
-            "shutdown" => Ok(json!({"shutting_down":true})),
-            _ => bail!("unknown-operation: {op}"),
+            Command::Shutdown(_) => Ok(json!({"shutting_down":true})),
         }
     }
 }
@@ -2468,8 +2486,12 @@ fn serve(daemon: Arc<Daemon>, stream: UnixStream, connection: u64) -> Result<()>
             serde_json::from_str::<Value>(&line)
                 .map_err(anyhow::Error::from)
                 .and_then(|request| {
-                    persistent = request["persistent"] == true;
-                    let result = daemon.dispatch(request, connection);
+                    let decoded = client::decode(request)?;
+                    persistent = decoded
+                        .persistent
+                        .as_ref()
+                        .is_some_and(|value| value == &json!(true));
+                    let result = daemon.dispatch(decoded.command, decoded.persistent, connection);
                     daemon.flush_runtime_events();
                     result
                 })
@@ -2815,6 +2837,12 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
 }
 
 #[cfg(test)]
+fn dispatch_value(daemon: &Arc<Daemon>, request: Value, connection: u64) -> Result<Value> {
+    let decoded = client::decode(request)?;
+    daemon.dispatch(decoded.command, decoded.persistent, connection)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::BTreeSet;
@@ -2935,14 +2963,13 @@ mod tests {
     #[test]
     fn mixed_input_is_rejected_before_any_bytes_are_written() {
         let fixture = OpenFixture::new();
-        let single = fixture
-            .daemon
-            .dispatch(
-                json!({"version":1,"op":"input","terminal":"missing","text":"hello"}),
-                0,
-            )
-            .unwrap_err()
-            .to_string();
+        let single = dispatch_value(
+            &fixture.daemon,
+            json!({"version":1,"op":"input","terminal":"missing","text":"hello"}),
+            0,
+        )
+        .unwrap_err()
+        .to_string();
         assert!(
             single.starts_with("invalid-request:"),
             "one input field must still reach the input handler, got {single}"
@@ -2955,9 +2982,7 @@ mod tests {
             json!({"version":1,"op":"input","terminal":"missing","text":"hello","key":"enter","bytes":[104]}),
             json!({"version":1,"op":"input","terminal":"missing","text":"","key":"enter"}),
         ] {
-            let error = fixture
-                .daemon
-                .dispatch(request.clone(), 0)
+            let error = dispatch_value(&fixture.daemon, request.clone(), 0)
                 .unwrap_err()
                 .to_string();
             assert!(

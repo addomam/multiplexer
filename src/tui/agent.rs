@@ -108,15 +108,16 @@ struct Binding {
 }
 
 impl Binding {
-    fn action(&self, op: &str) -> Value {
-        json!({
-            "version": 1,
-            "op": op,
-            "target": self.target,
-            "control": self.control,
-            "owner_generation": self.generation,
-            "call_id": uuid::Uuid::new_v4().to_string(),
-        })
+    fn action(&self, mut command: crate::command::Command) -> crate::command::Command {
+        let fields = command.body_mut();
+        fields.insert("target".into(), self.target.clone());
+        fields.insert("control".into(), self.control.clone());
+        fields.insert("owner_generation".into(), Value::from(self.generation));
+        fields.insert(
+            "call_id".into(),
+            Value::String(uuid::Uuid::new_v4().to_string()),
+        );
+        command
     }
 }
 
@@ -857,7 +858,7 @@ impl AgentView {
             .any(|hit| hit.fence_eligible && !self.settled_actions.contains(&hit.action))
     }
 
-    fn activate_painted(&mut self, action: Action) -> Option<Value> {
+    fn activate_painted(&mut self, action: Action) -> Option<crate::command::Command> {
         let Some(hit) = self.hits.iter().find(|hit| hit.action == action) else {
             self.notice = "Action is not painted; nothing submitted. Review the current screen.";
             return None;
@@ -970,7 +971,12 @@ impl AgentView {
         self.focus_action(actions[next].clone());
     }
 
-    fn activate(&mut self, action: Action, painted: &Painted, armed: bool) -> Option<Value> {
+    fn activate(
+        &mut self,
+        action: Action,
+        painted: &Painted,
+        armed: bool,
+    ) -> Option<crate::command::Command> {
         if *painted != self.painted() || !self.actions().contains(&action) {
             self.notice = "Rendered target, revision or action changed; nothing submitted. Review the current screen.";
             return None;
@@ -1094,7 +1100,7 @@ impl AgentView {
     }
 
     /// None always means consumed/local, never permission for native forwarding.
-    pub(super) fn event(&mut self, event: &Event) -> Option<Value> {
+    pub(super) fn event(&mut self, event: &Event) -> Option<crate::command::Command> {
         if let Some(help) = &mut self.help {
             if help.event(event) {
                 self.invalidate_presentation();
@@ -1462,7 +1468,7 @@ impl AgentView {
         self.notice = "Local draft only; Enter submits deliberately. Paste never submits.";
     }
 
-    fn submit(&mut self) -> Option<Value> {
+    fn submit(&mut self) -> Option<crate::command::Command> {
         if self.draft.is_empty() {
             self.notice = "No prompt draft to submit. Authentication requires explicit F8.";
             return None;
@@ -1479,8 +1485,14 @@ impl AgentView {
             self.notice = "Foreground prompt is busy; draft retained, not queued or submitted.";
             return None;
         }
-        let mut action = self.draft_binding.as_ref()?.action("acp-prompt");
-        action["text"] = Value::String(std::mem::take(&mut self.draft));
+        let mut action = self
+            .draft_binding
+            .as_ref()?
+            .action(crate::command::Command::AcpPrompt(Default::default()));
+        action.body_mut().insert(
+            "text".into(),
+            Value::String(std::mem::take(&mut self.draft)),
+        );
         self.clear_draft();
         self.notice = "Prompt captured; canonical work records admission and outcome.";
         Some(action)
@@ -1530,7 +1542,7 @@ impl AgentView {
         self.notice = "Prompt not queued; draft retained. Enter submits deliberately.";
     }
 
-    fn authenticate(&mut self) -> Option<Value> {
+    fn authenticate(&mut self) -> Option<crate::command::Command> {
         if self.lifecycle != "auth-required" {
             self.notice = "Authentication is not currently required; no action sent.";
             return None;
@@ -1547,14 +1559,17 @@ impl AgentView {
             self.notice = "Only advertised agent-type authentication is supported; no URL, terminal or credentials opened.";
             return None;
         }
-        let mut action = binding.action("acp-authenticate");
-        action["method_id"] = Value::String(method.id.clone());
+        let mut action =
+            binding.action(crate::command::Command::AcpAuthenticate(Default::default()));
+        action
+            .body_mut()
+            .insert("method_id".into(), Value::String(method.id.clone()));
         self.notice = "Explicit authentication choice captured; canonical result is pending.";
         self.invalidate_presentation();
         Some(action)
     }
 
-    fn interrupt(&mut self) -> Option<Value> {
+    fn interrupt(&mut self) -> Option<crate::command::Command> {
         if self.lifecycle != "ready" {
             self.notice = "Session is not ready; no foreground interrupt action sent.";
             return None;
@@ -1567,8 +1582,10 @@ impl AgentView {
             self.notice = "No exact foreground prompt to interrupt; no action sent.";
             return None;
         };
-        let mut action = binding.action("acp-interrupt");
-        action["prompt_id"] = Value::String(prompt.clone());
+        let mut action = binding.action(crate::command::Command::AcpInterrupt(Default::default()));
+        action
+            .body_mut()
+            .insert("prompt_id".into(), Value::String(prompt.clone()));
         self.notice = "Exact foreground interrupt requested; not confirmation of cancellation or tool termination.";
         self.invalidate_presentation();
         Some(action)
@@ -2623,7 +2640,7 @@ impl Interaction {
         event: &Event,
         binding: Option<&Binding>,
         notice: &mut &'static str,
-    ) -> Option<Value> {
+    ) -> Option<crate::command::Command> {
         match event {
             Event::Mouse(mouse) => {
                 match mouse.kind {
@@ -2944,7 +2961,7 @@ impl Interaction {
         choice: &str,
         binding: Option<&Binding>,
         notice: &mut &'static str,
-    ) -> Option<Value> {
+    ) -> Option<crate::command::Command> {
         if self.detail["kind"] != "form" || !self.form_action_offered(choice) {
             *notice = "This exact question does not offer that action; nothing submitted.";
             return None;
@@ -2978,12 +2995,21 @@ impl Interaction {
         } else {
             None
         };
-        let mut action = self.binding.as_ref()?.action("acp-answer");
-        action["interaction_id"] = Value::String(self.id.clone());
-        action["revision"] = Value::from(self.revision);
-        action["action"] = Value::String(choice.to_owned());
+        let mut action = self
+            .binding
+            .as_ref()?
+            .action(crate::command::Command::AcpAnswer(Default::default()));
+        action
+            .body_mut()
+            .insert("interaction_id".into(), Value::String(self.id.clone()));
+        action
+            .body_mut()
+            .insert("revision".into(), Value::from(self.revision));
+        action
+            .body_mut()
+            .insert("action".into(), Value::String(choice.to_owned()));
         if let Some(values) = values {
-            action["values"] = values;
+            action.body_mut().insert("values".into(), values);
         }
         self.capture(&action, notice);
         Some(action)
@@ -2993,7 +3019,7 @@ impl Interaction {
         &mut self,
         binding: Option<&Binding>,
         notice: &mut &'static str,
-    ) -> Option<Value> {
+    ) -> Option<crate::command::Command> {
         if !self.visible_options.contains(&self.option) {
             self.focus = true;
             self.dirty = true;
@@ -3004,16 +3030,28 @@ impl Interaction {
             return None;
         }
         let option = self.detail["options"].as_array()?.get(self.option)?;
-        let mut action = self.binding.as_ref()?.action("acp-permission");
-        action["interaction_id"] = Value::String(self.id.clone());
-        action["revision"] = Value::from(self.revision);
-        action["option_id"] = option["option_id"].clone();
+        let mut action = self
+            .binding
+            .as_ref()?
+            .action(crate::command::Command::AcpPermission(Default::default()));
+        action
+            .body_mut()
+            .insert("interaction_id".into(), Value::String(self.id.clone()));
+        action
+            .body_mut()
+            .insert("revision".into(), Value::from(self.revision));
+        action
+            .body_mut()
+            .insert("option_id".into(), option["option_id"].clone());
         self.capture(&action, notice);
         Some(action)
     }
 
-    fn capture(&mut self, action: &Value, notice: &mut &'static str) {
-        self.captured = action["call_id"].as_str().map(str::to_owned);
+    fn capture(&mut self, action: &crate::command::Command, notice: &mut &'static str) {
+        self.captured = action
+            .get("call_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
         self.status = "Local action captured. Only canonical disposition records admission, delivery and application.".to_owned();
         self.dirty = true;
         *notice =
@@ -3910,7 +3948,7 @@ mod tests {
         }
     }
 
-    fn click(view: &mut AgentView, action: Action) -> Option<Value> {
+    fn click(view: &mut AgentView, action: Action) -> Option<crate::command::Command> {
         let rect = view
             .hits
             .iter()
@@ -3920,7 +3958,7 @@ mod tests {
         click_rect(view, rect)
     }
 
-    fn click_rect(view: &mut AgentView, rect: Rect) -> Option<Value> {
+    fn click_rect(view: &mut AgentView, rect: Rect) -> Option<crate::command::Command> {
         view.event(&Event::Mouse(MouseEvent {
             kind: MouseEventKind::Down(MouseButton::Left),
             column: rect.x,
@@ -4622,7 +4660,7 @@ mod tests {
                     &accelerator,
                 );
                 let request = click(&mut view, action).unwrap();
-                assert_eq!(request["op"], operation);
+                assert_eq!(request.op(), operation);
                 assert_eq!(request["target"], view.binding.as_ref().unwrap().target);
                 assert_eq!(request["control"], view.binding.as_ref().unwrap().control);
                 assert_eq!(request["owner_generation"], 11);

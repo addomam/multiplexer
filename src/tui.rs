@@ -74,22 +74,10 @@ impl Drop for Restore {
 
 type Session = RefCell<crate::client::Connection>;
 
-fn call(socket: &Session, mut request: Value) -> Result<Value> {
-    request["version"] = json!(1);
-    request["persistent"] = json!(true);
-    socket.borrow_mut().request_until_answer_or_dead(&request)
-}
-
-#[derive(serde::Serialize)]
-struct ScreenRequest<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    offset: usize,
-    limit: u16,
-    since: Option<u64>,
-    row_updates: bool,
+fn call(socket: &Session, command: crate::command::Command) -> Result<Value> {
+    socket
+        .borrow_mut()
+        .request_until_answer_or_dead(&crate::client::wire(&command, Some(&json!(true))))
 }
 
 #[derive(Default)]
@@ -117,16 +105,10 @@ fn refresh_screen(
             None
         };
     let update = socket.borrow_mut().request(
-        &ScreenRequest {
-            version: 1,
-            persistent: true,
-            op: "screen",
-            terminal,
-            offset,
-            limit,
-            since,
-            row_updates: true,
-        },
+        &crate::client::wire(
+            &crate::command::Command::screen(terminal, offset, limit, since, true),
+            Some(&json!(true)),
+        ),
         Duration::from_secs(3),
     )?;
     if update["unchanged"] == true {
@@ -779,16 +761,17 @@ fn resize_native(socket: &Session, snapshot: &Value, id: &str, size: (u16, u16))
     if agent_view(snapshot, id).is_none() && !id.is_empty() {
         call(
             socket,
-            json!({"op":"resize","terminal":id,"cols":size.0.clamp(2,500),
-            "rows":size.1.saturating_sub(HEADER).clamp(2,300)}),
+            crate::command::Command::Resize(crate::command::object(json!({"terminal":id,
+                "cols":size.0.clamp(2,500),
+                "rows":size.1.saturating_sub(HEADER).clamp(2,300)}))),
         )?;
     }
     Ok(())
 }
 
-fn open_from_view(snapshot: &Value, id: &str, omp: bool) -> Value {
+fn open_from_view(snapshot: &Value, id: &str, omp: bool) -> crate::command::Command {
     if let Some(view) = agent_view(snapshot, id) {
-        json!({"op":"open","project":view["project_id"],"omp":omp})
+        open_command(Some(view["project_id"].clone()), None, omp)
     } else {
         open_window(id, omp)
     }
@@ -801,7 +784,9 @@ fn save_project_dialog(
 ) -> Result<project::Dialog> {
     let preview = call(
         socket,
-        json!({"op":"project-save-preview","terminal":source}),
+        crate::command::Command::ProjectSavePreview(crate::command::object(
+            json!({"terminal":source}),
+        )),
     )?;
     project::Dialog::save(snapshot, source, preview)
 }
@@ -812,26 +797,48 @@ fn window_exited(snapshot: &Value, id: &str) -> bool {
             .any(|t| text(t, "id") == id && t["alive"] == false)
     })
 }
-fn open_window(source: &str, omp: bool) -> Value {
-    let mut request = json!({"op":"open","omp":omp});
-    if !source.is_empty() {
-        request["source"] = json!(source);
+fn open_command(
+    project: Option<Value>,
+    source: Option<&str>,
+    omp: bool,
+) -> crate::command::Command {
+    let mut fields = serde_json::Map::new();
+    if let Some(project) = project
+        && !project.is_null()
+    {
+        fields.insert("project".into(), project);
     }
-    request
+    if let Some(source) = source.filter(|source| !source.is_empty()) {
+        fields.insert("source".into(), json!(source));
+    }
+    let launch = if omp {
+        crate::command::Launch::Omp
+    } else {
+        crate::command::Launch::Shell
+    };
+    crate::command::Command::open(launch, fields)
 }
-fn close_window(snapshot: &Value, id: &str) -> Value {
-    json!({"op":if window_exited(snapshot,id) {"remove"} else {"close"},"terminal":id})
+fn open_window(source: &str, omp: bool) -> crate::command::Command {
+    open_command(None, Some(source), omp)
+}
+fn close_window(snapshot: &Value, id: &str) -> crate::command::Command {
+    let fields = crate::command::object(json!({"terminal":id}));
+    if window_exited(snapshot, id) {
+        crate::command::Command::Remove(fields)
+    } else {
+        crate::command::Command::Close(fields)
+    }
 }
 fn apply_window(
     socket: &Session,
-    request: Value,
+    request: crate::command::Command,
     active: &mut String,
     snapshot: &mut Value,
     resume: &mut Option<Resume>,
 ) -> Result<()> {
-    let opens = request["op"] == "open";
+    let opens = matches!(request, crate::command::Command::Open(_));
     let result = call(socket, request)?;
-    *snapshot = call(socket, json!({"op":"snapshot"}))?;
+    *snapshot = call(socket, crate::command::Command::snapshot())?;
     if opens {
         *active = text(&result, "id").to_owned();
     } else if !contains_view(snapshot, active) {
@@ -940,7 +947,7 @@ impl Resume {
 }
 
 /// Start one ACP instance with the real original native controller, then attach.
-pub fn start(socket: &Path, launch: Value) -> Result<()> {
+pub fn start(socket: &Path, launch: crate::command::Command) -> Result<()> {
     supervise(socket, None, Some(launch))
 }
 
@@ -948,7 +955,11 @@ pub fn run(socket: &Path, terminal: Option<String>) -> Result<()> {
     supervise(socket, terminal, None)
 }
 
-fn supervise(path: &Path, mut terminal: Option<String>, mut launch: Option<Value>) -> Result<()> {
+fn supervise(
+    path: &Path,
+    mut terminal: Option<String>,
+    mut launch: Option<crate::command::Command>,
+) -> Result<()> {
     let _restore = Restore::enter()?;
     let mut resume = None;
     loop {
@@ -1070,7 +1081,7 @@ fn startup_wait(socket: &Session, snapshot: &mut Value) -> Result<bool> {
         if snapshot["startup_pending"] == true
             && snapshot_at.elapsed() >= Duration::from_millis(250)
         {
-            *snapshot = call(socket, json!({"op":"snapshot"}))?;
+            *snapshot = call(socket, crate::command::Command::snapshot())?;
             snapshot_at = Instant::now();
         }
     }
@@ -1079,12 +1090,12 @@ fn startup_wait(socket: &Session, snapshot: &mut Value) -> Result<bool> {
 fn attached(
     path: &Path,
     terminal: Option<String>,
-    launch_request: Option<Value>,
+    launch_request: Option<crate::command::Command>,
     resume: &mut Option<Resume>,
 ) -> Result<()> {
     let recovered = resume.is_some();
     let socket = &Session::new(crate::client::Connection::connect(path)?);
-    let mut snapshot = call(socket, json!({"op":"snapshot"}))?;
+    let mut snapshot = call(socket, crate::command::Command::snapshot())?;
     if let Some(original) = resume.as_mut() {
         original.validate(&snapshot)?;
         if snapshot["detach_generation"].as_u64().unwrap_or(0) != original.detach_generation {
@@ -1113,7 +1124,12 @@ fn attached(
         if agent_view(&snapshot, &selector).is_some() {
             selector
         } else {
-            let state = call(socket, json!({"op":"state","terminal":selector}))?;
+            let state = call(
+                socket,
+                crate::command::Command::State(crate::command::object(
+                    json!({"terminal":selector}),
+                )),
+            )?;
             state["id"]
                 .as_str()
                 .map(str::to_owned)
@@ -1137,7 +1153,7 @@ fn attached(
     {
         text(first, "id").to_owned()
     } else {
-        text(&call(socket, json!({"op":"open"}))?, "id").to_owned()
+        text(&call(socket, open_command(None, None, false))?, "id").to_owned()
     };
     *resume = Some(Resume::capture(&snapshot, &active));
     let mut display =
@@ -1241,7 +1257,7 @@ fn attached(
             }
             if launched.is_some() {
                 launch_dialog = None;
-                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                snapshot = call(socket, crate::command::Command::snapshot())?;
                 authority.sync_agent_targets(&snapshot);
                 resume
                     .as_mut()
@@ -1289,8 +1305,10 @@ fn attached(
                     }
                     match call(
                         socket,
-                        json!({"op":"acp-inspect","target":target,
+                        crate::command::Command::AcpInspect(crate::command::object(
+                            json!({"target":target,
                     "include_content":true,"after":agent_after,"limit":128}),
+                        )),
                     ) {
                         Ok(projection) => {
                             agent_error.clear();
@@ -1311,7 +1329,7 @@ fn attached(
                                 // and this read. Reconcile the exact attachment
                                 // before classifying it as ended; only reads
                                 // are refreshed, never a captured mutation.
-                                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                snapshot = call(socket, crate::command::Command::snapshot())?;
                                 resume
                                     .as_mut()
                                     .context("ACP observation has no continuity target")?
@@ -1357,7 +1375,7 @@ fn attached(
                     || !event::poll(Duration::ZERO).context("checking queued client input")?)
             {
                 if snapshot_at.elapsed() >= Duration::from_millis(500) {
-                    snapshot = call(socket, json!({"op":"snapshot"}))?;
+                    snapshot = call(socket, crate::command::Command::snapshot())?;
                     if snapshot["detach_generation"].as_u64().unwrap_or(0) != detach_generation {
                         break;
                     }
@@ -1764,10 +1782,10 @@ fn attached(
                     project::Action::None => {}
                     project::Action::Cancel => project_dialog = None,
                     project::Action::Submit(request) => {
-                        let op = text(&request, "op").to_owned();
+                        let op = request.op();
                         match call(socket, request) {
                             Ok(result) => {
-                                snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                snapshot = call(socket, crate::command::Command::snapshot())?;
                                 if op == "project-open" {
                                     let project_id = &result["project"]["id"];
                                     let target = preferred_view(&snapshot, Some(project_id));
@@ -1885,7 +1903,11 @@ fn attached(
                                     .into(),
                             );
                         } else if acp {
-                            match call(socket, json!({"op":"acp-profiles"})).and_then(|catalog| {
+                            match call(
+                                socket,
+                                crate::command::Command::AcpProfiles(Default::default()),
+                            )
+                            .and_then(|catalog| {
                                 launch::Dialog::new(&snapshot, &source, catalog, independent)
                             }) {
                                 Ok(next) => {
@@ -1901,7 +1923,9 @@ fn attached(
                             }
                         } else {
                             let mut request = open_from_view(&snapshot, &source, false);
-                            request["new_project"] = json!(independent);
+                            request
+                                .body_mut()
+                                .insert("new_project".into(), json!(independent));
                             match apply_window(socket, request, &mut active, &mut snapshot, resume)
                             {
                                 Ok(()) => {
@@ -1923,7 +1947,7 @@ fn attached(
                         }
                     }
                     menu::Action::Submit(request) => {
-                        if request["op"] == "acp-close" {
+                        if matches!(&request, crate::command::Command::AcpClose(_)) {
                             if authority.acp_action(request, &mut status).is_ok() {
                                 menu_dialog = None;
                             } else {
@@ -2146,7 +2170,9 @@ fn attached(
                         }
                         menu::SessionAction::Promote => {
                             if agent_view(&snapshot, source).is_none() {
-                                mutation = Some(json!({"op":"promote","terminal":source}));
+                                mutation = Some(crate::command::Command::Promote(
+                                    crate::command::object(json!({"terminal":source})),
+                                ));
                             } else {
                                 status = "ACP sessions are not native terminal tree nodes".into();
                             }
@@ -2194,8 +2220,11 @@ fn attached(
                     .get(selected)
                     .map(|row| row.id.as_str())
                     .unwrap_or(&active);
-                match call(socket, json!({"op":"acp-profiles"}))
-                    .and_then(|catalog| launch::Dialog::new(&snapshot, source, catalog, false))
+                match call(
+                    socket,
+                    crate::command::Command::AcpProfiles(Default::default()),
+                )
+                .and_then(|catalog| launch::Dialog::new(&snapshot, source, catalog, false))
                 {
                     Ok(dialog) => launch_dialog = Some(dialog),
                     Err(error) => {
@@ -2258,7 +2287,7 @@ fn attached(
                             && let Err(rejected) = authority.acp_action(request, &mut status)
                         {
                             agent.sync(&agent_projection, authority.acp_grant(&active));
-                            agent.restore_unadmitted(rejected);
+                            agent.restore_unadmitted(rejected.to_value());
                         }
                     }
                 }
@@ -2365,10 +2394,16 @@ fn attached(
                                             status = "ACP views are not PTY parents".into();
                                             None
                                         } else {
-                                            Some(
-                                                json!({"op":if demote {"demote"} else {"reparent"},
-                                            "terminal":child,"parent":id}),
-                                            )
+                                            Some({
+                                                let fields = crate::command::object(
+                                                    json!({"terminal":child,"parent":id}),
+                                                );
+                                                if demote {
+                                                    crate::command::Command::Demote(fields)
+                                                } else {
+                                                    crate::command::Command::Reparent(fields)
+                                                }
+                                            })
                                         }
                                     } else {
                                         active = id;
@@ -2397,7 +2432,11 @@ fn attached(
                             )),
                             KeyCode::Char('p') if control => chosen
                                 .filter(|id| agent_view(&snapshot, id).is_none())
-                                .map(|id| json!({"op":"promote","terminal":id})),
+                                .map(|id| {
+                                    crate::command::Command::Promote(crate::command::object(
+                                        json!({"terminal":id}),
+                                    ))
+                                }),
                             KeyCode::Char('r' | 'd') if control => {
                                 if let Some(id) = chosen {
                                     if agent_view(&snapshot, &id).is_some() {
@@ -2427,7 +2466,7 @@ fn attached(
                             _ => None,
                         };
                         if let Some(request) = action {
-                            let opens = request["op"] == "open";
+                            let opens = matches!(&request, crate::command::Command::Open(_));
                             match apply_window(socket, request, &mut active, &mut snapshot, resume)
                             {
                                 Ok(()) => {
@@ -2592,12 +2631,19 @@ fn attached(
                                         status = "ACP views are not PTY parents".into();
                                         continue;
                                     }
-                                    match call(
-                                        socket,
-                                        json!({"op":if demote {"demote"} else {"reparent"},"terminal":child,"parent":row.id}),
-                                    ) {
+                                    match call(socket, {
+                                        let fields = crate::command::object(
+                                            json!({"terminal":child,"parent":row.id}),
+                                        );
+                                        if demote {
+                                            crate::command::Command::Demote(fields)
+                                        } else {
+                                            crate::command::Command::Reparent(fields)
+                                        }
+                                    }) {
                                         Ok(_) => {
-                                            snapshot = call(socket, json!({"op":"snapshot"}))?;
+                                            snapshot =
+                                                call(socket, crate::command::Command::snapshot())?;
                                         }
                                         Err(error) => {
                                             if crate::client::is_connection_error(&error) {
@@ -3097,7 +3143,7 @@ mod tests {
                 }
             });
             let socket = Session::new(crate::client::Connection::connect(&path).unwrap());
-            let result = call(&socket, json!({"op": "snapshot"}));
+            let result = call(&socket, crate::command::Command::snapshot());
             if let Err(error) = &result {
                 assert!(
                     !crate::client::is_connection_error(error),
