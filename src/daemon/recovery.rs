@@ -2084,4 +2084,90 @@ mod tests {
         assert_same_shell(&fixture, shell);
         assert_eq!(fixture.rows()[0].phase, Phase::Dead);
     }
+
+    fn plant_other_project(fixture: &CheckpointFixture) {
+        let id = Uuid::new_v4().to_string();
+        fixture.daemon.state.lock().store.projects.insert(
+            id.clone(),
+            crate::projects::Project {
+                id,
+                name: "other".into(),
+                context: fixture.root.clone(),
+                saved: true,
+                main_terminal: None,
+                hooks: Vec::new(),
+                recipes: BTreeMap::new(),
+            },
+        );
+    }
+
+    fn stale_named_row(fixture: &CheckpointFixture, script: &Path, phase: Phase) -> Record {
+        let mut saved = dead_acp(fixture, script);
+        saved.project.name = "other".into();
+        saved.phase = phase;
+        saved
+    }
+
+    #[test]
+    fn a_stale_project_name_does_not_claim_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = stale_named_row(&fixture, &script, Phase::Dead);
+        let project_id = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        plant_other_project(&fixture);
+        let _ = open_retry(&fixture, "other");
+        let row = fixture
+            .rows()
+            .into_iter()
+            .find(|row| row.project.id == project_id)
+            .unwrap();
+        assert_eq!(row.phase, Phase::Dead);
+    }
+
+    #[test]
+    fn a_stale_project_name_does_not_refuse_another_project() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = stale_named_row(&fixture, &script, Phase::Pending);
+        let project_id = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        plant_other_project(&fixture);
+        let result = open_retry(&fixture, "other");
+        if let Err(error) = &result {
+            assert_ne!(error.to_string(), refuse_message(), "{error:#}");
+        }
+        let row = fixture
+            .rows()
+            .into_iter()
+            .find(|row| row.project.id == project_id)
+            .unwrap();
+        assert_eq!(row.phase, Phase::Pending);
+    }
+
+    #[test]
+    fn a_new_project_does_not_retry_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = dead_acp(&fixture, &script);
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let _ = fixture.daemon.dispatch(
+            json!({
+                "version": 1,
+                "op": "acp-open",
+                "controller": client_controller(&fixture),
+                "project": project,
+                "agent": "retry",
+                "name": "Dead retry",
+                "cwd": fixture.root,
+                "new_project": true,
+            }),
+            1,
+        );
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
 }

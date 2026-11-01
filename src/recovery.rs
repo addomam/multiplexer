@@ -1158,6 +1158,49 @@ mod tests {
     }
 
     #[test]
+    fn old_launch_pending_loads_without_dropping_a_pending_phase() {
+        let root = Root::new();
+        let mut journal = root.open();
+        let idle = root.record("bit-false");
+        let pending = root.record("bit-true");
+        let mut phased = root.record("phase-pending");
+        phased.phase = Phase::Pending;
+        journal.replace(vec![idle, pending, phased]).unwrap();
+        let path = journal.path.clone();
+        drop(journal);
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        for record in value["records"].as_array_mut().unwrap() {
+            match record["id"].as_str() {
+                Some("bit-false") => {
+                    record.as_object_mut().unwrap().remove("phase");
+                    record["launch_pending"] = json!(false);
+                }
+                Some("bit-true") => {
+                    record.as_object_mut().unwrap().remove("phase");
+                    record["launch_pending"] = json!(true);
+                }
+                _ => {}
+            }
+        }
+        fs::remove_file(&path).unwrap();
+        root.write(&path, &serde_json::to_vec(&value).unwrap());
+        let loaded = Journal::open(&root.0.join("config.json"), &root.0.join("daemon.sock"))
+            .expect("a version-1 journal with launch_pending still opens");
+        let phase = |id: &str| {
+            loaded
+                .records()
+                .into_iter()
+                .find(|row| row.id == id)
+                .unwrap()
+                .phase
+        };
+        assert_eq!(phase("bit-false"), Phase::Idle);
+        assert_eq!(phase("bit-true"), Phase::Pending);
+        assert_eq!(phase("phase-pending"), Phase::Pending);
+    }
+
+    #[test]
     fn corrupt_and_unknown_schema_records_are_preserved() {
         let cases = [
             b"".as_slice(),
