@@ -843,19 +843,21 @@ fn buffered_native(live: &mut Live, matrix: &mut Matrix, ended_turn: &str) {
         assert_eq!(unsafe { libc::kill(pid, libc::SIGSTOP) }, 0);
     }
     native(live, 0, b"\r");
-    let retained = until(
-        "actual native bytes forwarded while the frontend is stopped",
-        DAEMON,
-        || {
-            live.drain();
-            let calls = ownership(live)["unsettled"].clone();
+    let quiet = Instant::now() + Duration::from_millis(400);
+    while Instant::now() < quiet {
+        live.drain();
+        let calls = ownership(live)["unsettled"].clone();
+        assert!(
             calls
-                .as_array()?
+                .as_array()
+                .unwrap()
                 .iter()
-                .any(|row| row["kind"] == "native-input")
-                .then_some(calls)
-        },
-    );
+                .all(|row| row["kind"] != "native-input"),
+            "a keystroke fabricated a native-input call: {calls}"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let retained = ownership(live)["unsettled"].clone();
     let release = live.root.join("release-slow-hook");
     let started = live.root.join("slow-hook-started");
     call(

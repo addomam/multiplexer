@@ -173,7 +173,6 @@ struct Target {
     // Only current-generation dispatch IDs need tombstones. Once revoked, the
     // authority cannot dispatch again, so settled IDs can be reclaimed together.
     dispatched: HashSet<String>,
-    native_batch: Option<String>,
     activity_revision: u64,
     last_activity: Option<Instant>,
     clock_sample: Option<Instant>,
@@ -366,7 +365,6 @@ impl Registry {
                 claims: BTreeMap::new(),
                 calls: BTreeMap::new(),
                 dispatched: HashSet::new(),
-                native_batch: None,
                 activity_revision: 0,
                 last_activity: None,
                 clock_sample: None,
@@ -1269,36 +1267,12 @@ impl Authority {
     }
 
     pub(crate) fn forward_native(&self) -> Result<()> {
-        self.forward_native_at(Instant::now())
-    }
-
-    fn forward_native_at(&self, now: Instant) -> Result<()> {
-        let mut target = self.target.lock();
+        let target = self.target.lock();
         self.check_locked(&target)?;
         ensure!(
             target.kind == TargetKind::Pty,
             "wrong-target-kind: PTY input required"
         );
-        if target.native_batch.is_some() {
-            return Ok(());
-        }
-        ensure!(
-            target.calls.len() < UNSETTLED_LIMIT,
-            "settlement-unavailable: retained unsettled call limit reached"
-        );
-        let id = mint();
-        target.calls.insert(
-            (self.generation, id.clone()),
-            Call {
-                kind: "native-input",
-                controller_id: self.controller_id.clone(),
-                generation: self.generation,
-                outcome: "unknown",
-                started: now,
-            },
-        );
-        target.native_batch = Some(id);
-        target.refresh(now);
         Ok(())
     }
 
@@ -1360,11 +1334,6 @@ impl Authority {
             return;
         };
         if call.controller_id != self.controller_id {
-            return;
-        }
-        // There is no native application acknowledgement seam yet. Neither a
-        // write receipt nor a generic settlement report proves native drain.
-        if call.kind == "native-input" && outcome != "unknown" {
             return;
         }
         if outcome == "unknown" {
@@ -1494,7 +1463,6 @@ impl Target {
                 .expect("ownership generation exhausted");
         }
         self.dispatched.clear();
-        self.native_batch = None;
     }
 
     fn grant(
@@ -2683,7 +2651,7 @@ mod tests {
     }
 
     #[test]
-    fn borrowed_input_never_keeps_human_control_and_unknown_native_input_never_settles() {
+    fn borrowed_connection_does_not_record_activity_and_admitted_input_leaves_calls_empty() {
         let now = Instant::now();
         let (mut registry, _, human, external) = native_fixture(now);
         let authority = registry.authorize("pty", &human["control"], 9).unwrap();
@@ -2700,17 +2668,16 @@ mod tests {
             registry.snapshot_at("pty", now)["activity_revision"],
             revision
         );
-        authority.forward_native_at(now).unwrap();
+        authority.forward_native().unwrap();
         let later = now + Duration::from_secs(60);
-        let waiting = method(&mut registry, &claim["claim"], "read", later);
-        assert_eq!(waiting["phase"], "waiting-settlement");
-        let call = &waiting["ownership"]["unsettled"][0];
-        assert_eq!(call["kind"], "native-input");
-        authority.settle_at(call["id"].as_str().unwrap(), "applied", later);
-        authority.settle_at(call["id"].as_str().unwrap(), "rejected", later);
-        assert_eq!(
-            method(&mut registry, &claim["claim"], "read", later)["phase"],
-            "waiting-settlement"
+        let offered = method(&mut registry, &claim["claim"], "read", later);
+        assert_eq!(offered["phase"], "offered");
+        assert!(offered.get("offer").is_some());
+        assert!(
+            offered["ownership"]["unsettled"]
+                .as_array()
+                .unwrap()
+                .is_empty()
         );
         authority.activity_at(1, later).unwrap();
         assert_eq!(
@@ -2718,9 +2685,11 @@ mod tests {
             "aborted-by-owner"
         );
         authority.check().unwrap();
-        assert_eq!(
-            registry.snapshot_at("pty", later)["unsettled"][0]["outcome"],
-            "unknown"
+        assert!(
+            registry.snapshot_at("pty", later)["unsettled"]
+                .as_array()
+                .unwrap()
+                .is_empty()
         );
     }
 
@@ -3485,7 +3454,30 @@ mod tests {
     }
 
     #[test]
-    fn native_stream_is_one_unknown_batch_and_never_a_timer_fence() {
+    fn admitted_input_leaves_calls_empty_and_cooperative_refresh_offers() {
+        let now = Instant::now();
+        let mut registry = Registry::new();
+        registry.add_target("pty");
+        let owner = register(&mut registry, "attachment", 1, now);
+        let requester = register(&mut registry, "external", 2, now);
+        let grant = acquire(&mut registry, &owner["controller"], "pty", now);
+        let authority = registry.authorize("pty", &grant["control"], 1).unwrap();
+        authority.forward_native().unwrap();
+        assert!(
+            registry.snapshot_at("pty", now)["unsettled"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        let claim = acquire(&mut registry, &requester["controller"], "pty", now);
+        yielded(&mut registry, &grant["control"], &claim, now);
+        let offered = method(&mut registry, &claim["claim"], "read", now);
+        assert_eq!(offered["phase"], "offered");
+        assert!(offered.get("offer").is_some());
+    }
+
+    #[test]
+    fn admitted_native_input_stays_empty_and_a_long_tick_still_offers() {
         let now = Instant::now();
         let mut registry = Registry::new();
         registry.add_target("pty");
@@ -3493,10 +3485,8 @@ mod tests {
         let b = register(&mut registry, "external", 2, now);
         let grant = acquire(&mut registry, &a["controller"], "pty", now);
         let authority = registry.authorize("pty", &grant["control"], 1).unwrap();
-        for index in 0..1000 {
-            authority
-                .forward_native_at(now + Duration::from_millis(index))
-                .unwrap();
+        for _ in 0..1000 {
+            authority.forward_native().unwrap();
         }
         let claim = acquire(&mut registry, &b["controller"], "pty", now);
         yielded(&mut registry, &grant["control"], &claim, now);
@@ -3507,11 +3497,14 @@ mod tests {
             "read",
             now + Duration::from_secs(300),
         );
-        assert_eq!(state["phase"], "waiting-settlement");
-        let calls = state["ownership"]["unsettled"].as_array().unwrap();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0]["kind"], "native-input");
-        assert_eq!(calls[0]["outcome"], "unknown");
+        assert_eq!(state["phase"], "offered");
+        assert!(state.get("offer").is_some());
+        assert!(
+            state["ownership"]["unsettled"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

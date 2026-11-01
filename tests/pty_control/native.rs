@@ -771,7 +771,11 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
     observer.wait("Waiting");
     assert_eq!(reservation(&h, &terminal)["claim_id"], claim["claim_id"]);
     std::thread::sleep(Duration::from_millis(3150));
-    observer.wait("native-input");
+    let progress = observer.wait("Awaiting owner");
+    assert!(
+        !progress.contains("native-input"),
+        "a keystroke rendered a native-input call: {progress}"
+    );
     observer.capture("three-second-blockers");
     assert_owner(&h, &terminal, &identity);
     owner.action(12);
@@ -785,14 +789,12 @@ fn two_controlling_ptys_share_process_three_header_rows_and_nonmodal_owner_notic
             .any(|line| line.contains(identity["controller_id"].as_str().unwrap())))
         .then_some(())
     });
-    assert!(
-        h.ownership(&terminal)["owner"].is_null(),
-        "yield must revoke, not fabricate settlement"
-    );
-    observer.action(6);
-    observer.wait("Enter Force control");
-    observer.capture("force-risk");
-    observer.send(b"\r");
+    let handed = h.until("yield offers and the requester accepts", || {
+        let owner = h.ownership(&terminal)["owner"].clone();
+        (owner["role"] == "attachment" && owner["controller_id"] != identity["controller_id"])
+            .then_some(owner)
+    });
+    assert_ne!(handed["controller_id"], identity["controller_id"]);
     observer.wait_controlled(&h, &terminal);
     observer.send(b"FRESH");
     wait_bytes(&h, b"y\rFRESH");
@@ -1251,8 +1253,7 @@ fn conditional_idle_consent_uses_original_connection_exact_revisions_requested_c
 }
 
 #[test]
-fn conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_and_withdraw_keeps_token()
- {
+fn conditional_zero_warning_offers_after_a_keystroke_and_withdraw_keeps_the_token() {
     let h = Host::new();
     let terminal = h.main();
     let mut native = NativeWire::new(&h, &terminal);
@@ -1261,7 +1262,7 @@ fn conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_an
         .connection
         .persistent(json!({"op":"input","terminal":terminal,
         "control":native.control,"text":"\u{c}"}));
-    let calls = h.native_calls(&terminal);
+    assert_eq!(h.native_calls(&terminal), json!([]));
     let requester = h.controller("zero clock requester");
     let claim = conditional_claim(
         &h,
@@ -1275,25 +1276,18 @@ fn conditional_zero_warning_remains_blocked_by_real_native_unknown_settlement_an
         let value = condition(&h, &terminal);
         (value["clock"] == json!({"kind":"warning","remaining_ms":0})).then_some(())
     });
-    let blocked = h.handle(&claim["claim"], "read");
+    let offered = h.handle(&claim["claim"], "read");
+    assert_eq!(offered["phase"], "offered", "{offered}");
+    assert!(offered.get("offer").is_some(), "{offered}");
     assert!(
-        blocked.get("offer").is_none(),
-        "unknown native settlement fabricated an offer: {blocked}"
-    );
-    assert!(
-        blocked["blockers"]
+        offered["blockers"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|blocker| blocker["kind"] == "settlement"
-                && blocker["call"]["kind"] == "native-input"
-                && blocker["call"]["outcome"] == "unknown"),
-        "{blocked}"
+            .all(|blocker| blocker["kind"] != "settlement"),
+        "{offered}"
     );
-    assert_eq!(
-        stable_calls(&h.ownership(&terminal)["unsettled"]),
-        stable_calls(&calls)
-    );
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
     native.assert_same_control(&h);
     h.handle(&claim["claim"], "withdraw");
     assert_eq!(h.handle(&claim["claim"], "read")["phase"], "withdrawn");
