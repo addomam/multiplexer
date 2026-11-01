@@ -1046,6 +1046,12 @@ impl Daemon {
     }
 
     fn open(self: &Arc<Self>, request: &Value) -> Result<Value> {
+        let modes = usize::from(request["command"].as_str().is_some())
+            + usize::from(request["omp"] == true)
+            + usize::from(request["recipe"].as_str().is_some());
+        if modes > 1 {
+            bail!("mixed-open: command, omp, and recipe are mutually exclusive");
+        }
         let mut context = self.open_context(request)?;
         if request["new_project"] == true {
             context.project_id = Uuid::new_v4().to_string();
@@ -1797,6 +1803,12 @@ impl Daemon {
                         "key",
                     ],
                 )?;
+                let fields = usize::from(request["text"].as_str().is_some())
+                    + usize::from(request["bytes"].as_array().is_some())
+                    + usize::from(request["key"].as_str().is_some());
+                if fields > 1 {
+                    bail!("mixed-input: text, bytes, and key are mutually exclusive");
+                }
                 let terminal = request["terminal"]
                     .as_str()
                     .context("invalid-request: exact terminal lifetime ID required")?;
@@ -1971,7 +1983,7 @@ impl Daemon {
             }
             "reparent" | "demote" => {
                 let entry = self.entry(&request)?;
-                self.reparent(&entry, request["parent"].as_str())
+                self.reparent(&entry, reparent_parent(&request))
             }
             "promote" => {
                 let entry = self.entry(&request)?;
@@ -2303,6 +2315,10 @@ fn managed_frontend_source(prepared: &crate::codex::Prepared) -> String {
     source.push(' ');
     source.push_str(&prepared.command);
     source
+}
+
+fn reparent_parent(request: &Value) -> Option<&str> {
+    request["parent"].as_str()
 }
 
 fn validate_mutation_fields(request: &Value, allowed: &[&str]) -> Result<()> {
@@ -2928,5 +2944,24 @@ mod tests {
             );
             assert_eq!(fixture.counts(), (0, 0), "{request}");
         }
+    }
+
+    #[test]
+    fn reparent_clears_parent_when_json_null_or_omitted() {
+        for request in [
+            json!({"version":1,"op":"reparent","terminal":"child","parent":null}),
+            json!({"version":1,"op":"reparent","terminal":"child"}),
+        ] {
+            assert!(
+                reparent_parent(&request).is_none(),
+                "null or an omitted parent selects no parent for {request}"
+            );
+        }
+        assert_eq!(
+            reparent_parent(
+                &json!({"version":1,"op":"reparent","terminal":"child","parent":"root"})
+            ),
+            Some("root")
+        );
     }
 }
