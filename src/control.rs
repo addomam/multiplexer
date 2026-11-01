@@ -1893,7 +1893,7 @@ impl Target {
             self.refresh_conditional(&id, now);
             return;
         }
-        if self.owner.is_some() {
+        if self.owner.is_some() || !self.calls.is_empty() {
             return;
         }
         let claim = self.claims.get_mut(&id).expect("reserved claim exists");
@@ -3404,7 +3404,7 @@ mod tests {
     }
 
     #[test]
-    fn cooperative_offer_precedes_dispatch_settlement() {
+    fn dispatch_winning_yield_blocks_offer_until_authoritative_settlement() {
         let now = Instant::now();
         let mut registry = Registry::new();
         registry.add_target("pty");
@@ -3421,30 +3421,25 @@ mod tests {
         );
         let claim = acquire(&mut registry, &b["controller"], "pty", now);
         yielded(&mut registry, &grant["control"], &claim, now);
-        let offered = method(&mut registry, &claim["claim"], "read", now);
-        assert_eq!(offered["phase"], "offered");
-        assert!(offered.get("offer").is_some());
-        assert_eq!(offered["ownership"]["unsettled"][0]["id"], "source");
+        let waiting = method(&mut registry, &claim["claim"], "read", now);
+        assert_eq!(waiting["phase"], "waiting-settlement");
+        assert_eq!(waiting["blockers"][0]["call"]["id"], "source");
         authority.settle_at("source", "unknown", now + Duration::from_secs(1));
         registry.tick(now + Duration::from_secs(30));
-        let held = method(
-            &mut registry,
-            &claim["claim"],
-            "read",
-            now + Duration::from_secs(30),
+        assert_eq!(
+            method(&mut registry, &claim["claim"], "read", now)["phase"],
+            "waiting-settlement"
         );
-        assert_eq!(held["phase"], "offered");
-        assert_eq!(held["ownership"]["unsettled"][0]["outcome"], "unknown");
         authority.settle_at("source", "applied", now + Duration::from_secs(31));
-        let settled = method(
+        let offered = method(
             &mut registry,
             &claim["claim"],
             "read",
             now + Duration::from_secs(31),
         );
-        assert_eq!(settled["phase"], "offered");
+        assert_eq!(offered["phase"], "offered");
         assert!(
-            settled["ownership"]["unsettled"]
+            offered["ownership"]["unsettled"]
                 .as_array()
                 .unwrap()
                 .is_empty()
