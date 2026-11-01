@@ -3485,6 +3485,29 @@ mod tests {
     }
 
     #[test]
+    fn admitted_input_leaves_calls_empty_and_cooperative_refresh_offers() {
+        let now = Instant::now();
+        let mut registry = Registry::new();
+        registry.add_target("pty");
+        let owner = register(&mut registry, "attachment", 1, now);
+        let requester = register(&mut registry, "external", 2, now);
+        let grant = acquire(&mut registry, &owner["controller"], "pty", now);
+        let authority = registry.authorize("pty", &grant["control"], 1).unwrap();
+        authority.forward_native_at(now).unwrap();
+        assert!(
+            registry.snapshot_at("pty", now)["unsettled"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        let claim = acquire(&mut registry, &requester["controller"], "pty", now);
+        yielded(&mut registry, &grant["control"], &claim, now);
+        let offered = method(&mut registry, &claim["claim"], "read", now);
+        assert_eq!(offered["phase"], "offered");
+        assert!(offered.get("offer").is_some());
+    }
+
+    #[test]
     fn native_stream_is_one_unknown_batch_and_never_a_timer_fence() {
         let now = Instant::now();
         let mut registry = Registry::new();
