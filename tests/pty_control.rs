@@ -271,14 +271,7 @@ impl Host {
     }
 
     fn native_calls(&self, terminal: &str) -> Value {
-        self.until("retained actual native forwarding", || {
-            let calls = self.ownership(terminal)["unsettled"].clone();
-            calls
-                .as_array()?
-                .iter()
-                .any(|call| call["kind"] == "native-input")
-                .then_some(calls)
-        })
+        self.ownership(terminal)["unsettled"].clone()
     }
 
     fn assert_denied_marker(
@@ -623,10 +616,7 @@ fn request_preserves_owner_input_but_native_delivery_never_becomes_safe_settleme
     );
     h.marker("OWNER_AFTER_REQUEST");
     h.ready(&terminal);
-    let calls = h.native_calls(&terminal);
-    assert_eq!(calls.as_array().unwrap().len(), 1);
-    assert_eq!(calls[0]["controller_id"], a["controller_id"]);
-    assert_eq!(calls[0]["generation"], grant["generation"]);
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
     h.input(
         &terminal,
         &grant["control"],
@@ -635,11 +625,11 @@ fn request_preserves_owner_input_but_native_delivery_never_becomes_safe_settleme
     h.marker("SAME_NATIVE_BATCH");
     h.ready(&terminal);
     assert_eq!(
-        stable_calls(&h.ownership(&terminal)["unsettled"]),
-        stable_calls(&calls),
-        "multiple native writes must retain the one real unknown batch, not invent settlement"
+        h.ownership(&terminal)["unsettled"],
+        json!([]),
+        "multiple native writes must not invent a native-input call"
     );
-    // A genuine separately accepted/completed shell source is not a native fence.
+    // A completed shell source is not a native fence, and neither is a keystroke.
     h.execute(
         &terminal,
         &grant["control"],
@@ -647,52 +637,41 @@ fn request_preserves_owner_input_but_native_delivery_never_becomes_safe_settleme
     );
     h.marker("SEPARATE_SOURCE");
     h.ready(&terminal);
-    assert_eq!(
-        stable_calls(&h.ownership(&terminal)["unsettled"]),
-        stable_calls(&calls)
-    );
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
     h.yield_to(&grant["control"], &claim);
     let pending = h.handle(&claim["claim"], "read");
-    assert_eq!(pending["phase"], "waiting-settlement", "{pending}");
-    assert!(pending.get("offer").is_none());
+    assert_eq!(pending["phase"], "offered", "{pending}");
+    assert!(pending.get("offer").is_some());
     assert!(
         pending["blockers"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|blocker| blocker["kind"] == "settlement"
-                && blocker["call"]["id"] == calls[0]["id"])
+            .all(|blocker| blocker["kind"] != "settlement"),
+        "{pending}"
     );
     assert!(h.ownership(&terminal)["owner"].is_null());
-    assert_eq!(
-        stable_calls(&pending["ownership"]["unsettled"]),
-        stable_calls(&calls)
-    );
+    assert_eq!(pending["ownership"]["unsettled"], json!([]));
     h.assert_denied_marker(
         &terminal,
         Some(&grant["control"]),
         "AFTER_YIELD_DENIED",
         &["stale-handle"],
     );
-    let forced = h.call(
-        json!({"op":"control-handle","handle":claim["claim"],"method":"force",
-        "observed":h.ownership(&terminal)["observed"]}),
-    );
-    assert_eq!(forced["mode"], "forced");
-    assert_eq!(forced["warning"]["code"], "prior-calls-may-apply");
-    assert_eq!(forced["warning"]["calls"], forced["unsettled"]);
-    assert_eq!(stable_calls(&forced["unsettled"]), stable_calls(&calls));
+    let accepted = h.handle(&pending["offer"], "accept");
+    assert_eq!(accepted["mode"], "safe", "{accepted}");
+    assert_eq!(accepted["unsettled"], json!([]));
     h.execute(
         &terminal,
-        &forced["control"],
-        &h.marker_source("AFTER_FORCE_VALID"),
+        &accepted["control"],
+        &h.marker_source("AFTER_YIELD_VALID"),
     );
-    h.marker("AFTER_FORCE_VALID");
+    h.marker("AFTER_YIELD_VALID");
     assert!(!h.root.join("AFTER_YIELD_DENIED").exists());
 }
 
 #[test]
-fn cancel_revokes_before_yield_grants_nobody_and_prior_owner_freshly_resumes_unknown_work() {
+fn cancel_revokes_before_yield_grants_nobody_and_a_keystroke_does_not_block_the_next_grant() {
     let h = Host::new();
     let terminal = h.main();
     let a = h.controller("prior");
@@ -706,14 +685,14 @@ fn cancel_revokes_before_yield_grants_nobody_and_prior_owner_freshly_resumes_unk
     );
     h.marker("BEFORE_CANCEL");
     h.ready(&terminal);
-    let calls = h.native_calls(&terminal);
+    assert_eq!(h.native_calls(&terminal), json!([]));
     let claim = h.claim(&terminal, &b["controller"]);
     let cancelled = h.handle(&claim["claim"], "cancel");
     assert_eq!(cancelled["outcome"], "cancelled");
     let public = h.ownership(&terminal);
     assert!(public["owner"].is_null());
     assert!(public["reservation"].is_null());
-    assert_eq!(stable_calls(&public["unsettled"]), stable_calls(&calls));
+    assert_eq!(public["unsettled"], json!([]));
     assert_eq!(h.handle(&claim["claim"], "read")["phase"], "cancelled");
     assert_eq!(h.handle(&a["controller"], "read")["controls"], json!([]));
     assert_eq!(h.handle(&b["controller"], "read")["controls"], json!([]));
@@ -730,35 +709,16 @@ fn cancel_revokes_before_yield_grants_nobody_and_prior_owner_freshly_resumes_unk
         &["wrong-handle-kind"],
     );
     let unrelated = h.claim(&terminal, &c["controller"]);
-    assert_eq!(unrelated["phase"], "waiting-settlement");
-    assert!(unrelated["ownership"]["owner"].is_null());
-    assert_eq!(
-        stable_calls(&unrelated["ownership"]["unsettled"]),
-        stable_calls(&calls)
-    );
-    h.assert_denied_marker(
-        &terminal,
-        Some(&unrelated["claim"]),
-        "UNSETTLED_REQUESTER",
-        &["wrong-handle-kind"],
-    );
-    h.handle(&unrelated["claim"], "cancel");
-    let resumed = h.acquire(&terminal, &a["controller"]);
-    assert_eq!(resumed["mode"], "resumed");
-    assert_ne!(resumed["control"], old["control"]);
-    assert!(resumed["generation"].as_u64().unwrap() > old["generation"].as_u64().unwrap());
-    assert_eq!(stable_calls(&resumed["unsettled"]), stable_calls(&calls));
+    assert_eq!(unrelated["kind"], "control", "{unrelated}");
+    assert_eq!(unrelated["unsettled"], json!([]));
     h.execute(
         &terminal,
-        &resumed["control"],
-        &h.marker_source("FRESH_RESUMED_INPUT"),
+        &unrelated["control"],
+        &h.marker_source("FRESH_NEXT_GRANT"),
     );
-    h.marker("FRESH_RESUMED_INPUT");
+    h.marker("FRESH_NEXT_GRANT");
     h.ready(&terminal);
-    assert_eq!(
-        stable_calls(&h.ownership(&terminal)["unsettled"]),
-        stable_calls(&calls)
-    );
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
     assert!(!h.root.join("CANCELLED_OLD_TOKEN").exists());
     assert!(!h.root.join("CANCELLED_REQUESTER").exists());
     denied(
@@ -769,8 +729,8 @@ fn cancel_revokes_before_yield_grants_nobody_and_prior_owner_freshly_resumes_unk
         &["claim-completed"],
     );
     assert_eq!(
-        h.handle(&resumed["control"], "read")["control"],
-        resumed["control"]
+        h.handle(&unrelated["control"], "read")["control"],
+        unrelated["control"]
     );
 }
 
@@ -1147,8 +1107,8 @@ fn attachments_keep_original_connection_identity_view_serials_and_departure_with
     );
     assert_eq!(
         h.native_calls(&terminal).as_array().unwrap().len(),
-        1,
-        "borrowed input, native paste and Enter share one retained generation batch"
+        0,
+        "borrowed input, native paste and Enter do not create a native-input call"
     );
     denied(
         h.response(json!({"op":"control-handle","handle":grant["control"],"method":"activity"})),
@@ -1211,7 +1171,7 @@ fn attachments_keep_original_connection_identity_view_serials_and_departure_with
 }
 
 #[test]
-fn three_second_progress_identifies_owner_and_native_settlement_without_timer_grant() {
+fn three_second_progress_identifies_the_owner_without_a_native_call_or_timer_grant() {
     let h = Host::new();
     let terminal = h.main();
     let a = h.controller("blocking-owner");
@@ -1224,7 +1184,7 @@ fn three_second_progress_identifies_owner_and_native_settlement_without_timer_gr
     );
     h.marker("PROGRESS_NATIVE_BATCH");
     h.ready(&terminal);
-    let calls = h.native_calls(&terminal);
+    assert_eq!(h.native_calls(&terminal), json!([]));
     let cursor = h.seq();
     let started = Instant::now();
     let claim = h.claim(&terminal, &b["controller"]);
@@ -1265,12 +1225,10 @@ fn three_second_progress_identifies_owner_and_native_settlement_without_timer_gr
         "{event}"
     );
     assert!(
-        blockers
-            .iter()
-            .any(|blocker| blocker["kind"] == "settlement"
-                && blocker["call"]["id"] == calls[0]["id"]),
+        blockers.iter().all(|blocker| blocker["kind"] != "settlement"),
         "{event}"
     );
+    assert_eq!(event["data"]["ownership"]["unsettled"], json!([]));
     assert_eq!(
         event["data"]["ownership"]["owner"]["controller_id"],
         a["controller_id"]
@@ -1281,16 +1239,10 @@ fn three_second_progress_identifies_owner_and_native_settlement_without_timer_gr
     );
     assert_eq!(h.handle(&claim["claim"], "read")["phase"], "waiting-owner");
     h.yield_to(&grant["control"], &claim);
-    assert_eq!(
-        h.handle(&claim["claim"], "read")["phase"],
-        "waiting-settlement"
-    );
+    assert_eq!(h.handle(&claim["claim"], "read")["phase"], "offered");
     h.handle(&claim["claim"], "cancel");
     assert!(h.ownership(&terminal)["owner"].is_null());
-    assert_eq!(
-        stable_calls(&h.ownership(&terminal)["unsettled"]),
-        stable_calls(&calls)
-    );
+    assert_eq!(h.ownership(&terminal)["unsettled"], json!([]));
 }
 
 #[test]
@@ -1621,7 +1573,7 @@ fn event_gap_snapshot_recovers_public_reservation_but_only_private_read_recovers
 }
 
 #[test]
-fn forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity() {
+fn forwarded_focus_does_not_create_a_call_or_count_as_human_activity() {
     let mut h = Host::new();
     let terminal = h.main();
     let mut native = Connection::connect(&h.socket, DEADLINE).unwrap();
@@ -1663,16 +1615,15 @@ fn forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity() {
         json!({"op":"control-handle","handle":registration["controller"],
         "method":"view","view":{"serial":2,"terminal":terminal,"focused":true}}),
     );
-    let calls = h.native_calls(&terminal);
-    assert_eq!(calls[0]["outcome"], "unknown");
+    assert_eq!(h.native_calls(&terminal), json!([]));
     assert_eq!(h.ownership(&terminal)["activity_revision"], before);
 
     let requester = h.controller("focus handoff requester");
     let claim = h.claim(&terminal, &requester["controller"]);
     h.yield_to(&grant["control"], &claim);
     let progress = h.handle(&claim["claim"], "read");
-    assert_eq!(progress["phase"], "waiting-settlement");
-    assert!(progress.get("offer").is_none());
+    assert_eq!(progress["phase"], "offered", "{progress}");
+    assert!(progress.get("offer").is_some());
     assert!(h.ownership(&terminal)["owner"].is_null());
     assert!(!h.root.join("focus-consumed").exists());
 
@@ -1682,11 +1633,8 @@ fn forwarded_focus_blocks_safe_handoff_without_counting_as_human_activity() {
             .ok()
             .filter(|bytes| bytes == b"\x1b[I")
     });
-    assert_eq!(
-        h.handle(&claim["claim"], "read")["phase"],
-        "waiting-settlement"
-    );
-    assert_eq!(h.native_calls(&terminal)[0]["id"], calls[0]["id"]);
+    assert_eq!(h.handle(&claim["claim"], "read")["phase"], "offered");
+    assert_eq!(h.native_calls(&terminal), json!([]));
 
     h.call(json!({"op":"shutdown"}));
     let deadline = Instant::now() + Duration::from_secs(3);
