@@ -1490,6 +1490,67 @@ mod tests {
     }
 
     #[test]
+    fn replaced_configuration_is_adopted_on_the_next_write() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut live = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let kept = live.create("kept", temp.0.clone(), json!({})).unwrap();
+        let mut other = Store::load(&file, None).unwrap();
+        let extra = other.create("extra", temp.0.clone(), json!({})).unwrap();
+        live.configure_global(json!({"prefix":"C-z"})).unwrap();
+        let adopted = Store::load(&file, None).unwrap();
+        assert!(adopted.projects[&kept.id].saved);
+        assert!(adopted.projects[&extra.id].saved);
+        assert_eq!(adopted.config.prefix, "C-z");
+
+        let mut disk: Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+        disk["projects"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|project| project["id"] != extra.id);
+        fs::write(&file, serde_json::to_vec(&disk).unwrap()).unwrap();
+        live.open(&kept.id).unwrap();
+        assert!(
+            live.projects
+                .get(&extra.id)
+                .is_none_or(|project| !project.saved)
+        );
+        assert!(live.projects[&kept.id].saved);
+    }
+
+    #[test]
+    fn configuration_load_requires_owner_and_mode_0600() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        store.configure_global(json!({"prefix":"C-a"})).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o660)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(Store::load(&file, None).unwrap().config.prefix, "C-a");
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o770)).unwrap();
+        assert!(Store::load(&file, None).is_err());
+        fs::set_permissions(&temp.0, fs::Permissions::from_mode(0o700)).unwrap();
+    }
+
+    #[test]
+    fn resolve_unsaved_name_skips_the_ephemeral_project() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, Some(temp.0.join("projects"))).unwrap();
+        let saved = store
+            .save(&store.unsaved_id(), "unsaved", Some(temp.0.clone()))
+            .unwrap();
+        let reloaded = Store::load(&file, None).unwrap();
+        assert_eq!(reloaded.resolve("unsaved").unwrap(), saved.id);
+        assert_ne!(reloaded.unsaved_id(), saved.id);
+    }
+
+    #[test]
     fn configuration_aliases_share_conflict_detection_and_private_files() {
         use std::os::unix::fs::{PermissionsExt, symlink};
 
