@@ -3046,4 +3046,50 @@ mod tests {
             prefix_key("Ctrl-a")
         ));
     }
+    #[test]
+    fn timed_out_read_does_not_take_the_disconnect_path() {
+        use std::io::{BufRead, Write};
+        let dir = std::env::temp_dir().join(format!("amux-obs-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("s");
+        let listener = std::os::unix::net::UnixListener::bind(&path).unwrap();
+        let answer = b"{\"version\":1,\"ok\":true,\"result\":{\"generation\":7}}\n";
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let (stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut peer = std::io::BufReader::new(stream);
+                let mut line = String::new();
+                peer.read_line(&mut line).unwrap();
+                assert!(line.ends_with('\n'));
+                std::thread::sleep(Duration::from_millis(3500));
+                if peer.get_mut().write_all(answer).is_ok() {
+                    peer.get_mut()
+                        .set_read_timeout(Some(Duration::from_millis(300)))
+                        .unwrap();
+                    let mut extra = String::new();
+                    let second = peer.read_line(&mut extra);
+                    assert!(
+                        extra.is_empty(),
+                        "slow snapshot resent the request: {extra}"
+                    );
+                    assert!(second.is_err());
+                }
+            });
+            let socket = Session::new(crate::client::Connection::connect(&path).unwrap());
+            let result = call(&socket, json!({"op": "snapshot"}));
+            if let Err(error) = &result {
+                assert!(
+                    !crate::client::is_connection_error(error),
+                    "timed-out read took the disconnect path: {error:#}"
+                );
+            }
+            assert_eq!(result.expect("slow snapshot")["generation"], 7);
+            assert!(socket.borrow().connected());
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
