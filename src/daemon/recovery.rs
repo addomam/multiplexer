@@ -1007,7 +1007,7 @@ impl Daemon {
             matches(record)
                 && (startup
                     || record.blocked.is_some()
-                    || matches!(record.phase, Phase::Pending | Phase::Live | Phase::Blocked))
+                    || matches!(record.phase, Phase::Pending | Phase::Blocked))
         });
         ensure!(
             !blocked,
@@ -1148,9 +1148,7 @@ impl Daemon {
         match record.peer.as_ref() {
             None => {
                 self.assign_phase(&record, Phase::Pending)?;
-                bail!(
-                    "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
-                );
+                bail!("recovery-unavailable: previous agent process identity was not verified");
             }
             Some(peer) => match peer.status() {
                 Err(status) => {
