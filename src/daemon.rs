@@ -731,9 +731,8 @@ impl Daemon {
             self.acp.commit(prepared, generation)
         })?;
         if op == "acp-close" {
-            let forgotten = self.retire_recovery_target(id);
             self.acp.cleanup(id);
-            forgotten?;
+            self.retire_recovery_target(id)?;
         }
         self.flush_runtime_events();
         Ok(result)
@@ -1989,9 +1988,8 @@ impl Daemon {
                 let entry = self.entry(&request)?;
                 self.controls.lock().end_target(&entry.terminal.id);
                 self.retire_settled_launch(&entry.terminal.id);
-                let forgotten = self.retire_recovery_target(&entry.terminal.id);
                 entry.terminal.close();
-                forgotten?;
+                self.retire_recovery_target(&entry.terminal.id)?;
                 Ok(entry.terminal.status())
             }
             "remove" => {

@@ -864,10 +864,11 @@ impl Terminal {
             .screen_update(offset, limit, since, row_updates)
     }
     pub fn close(&self) {
+        let mut processes = self.processes.lock();
         if self.closing.swap(true, Ordering::AcqRel) {
             return;
         }
-        self.processes.lock().terminate();
+        processes.terminate();
     }
 }
 impl Drop for Terminal {
@@ -1118,6 +1119,9 @@ impl ProcessTree {
         self.freeze();
         for &identity in &self.members {
             identity.signal(libc::SIGKILL);
+        }
+        while !self.terminated() {
+            thread::sleep(Duration::from_millis(1));
         }
     }
 }
@@ -1902,5 +1906,45 @@ mod process_cleanup_tests {
                 "stale PID was used as a cleanup anchor"
             );
         }
+    }
+
+    #[test]
+    fn terminate_checks_signaled_identity_before_erase() {
+        use std::os::unix::process::CommandExt;
+
+        let mut command = Command::new("/bin/sleep");
+        command.arg("120");
+        unsafe {
+            command.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                libc::signal(libc::SIGTERM, libc::SIG_IGN);
+                Ok(())
+            });
+        }
+        let child = command.spawn().expect("sleep");
+        struct Reap(Child);
+        impl Drop for Reap {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let child = Reap(child);
+        let info = process_info(child.0.id() as i32).expect("sleep identity");
+        let identity = info.identity;
+        let mut tree = ProcessTree::new(info);
+        let mut journal = vec![identity];
+        tree.terminate();
+        let live = process_info(identity.pid)
+            .is_some_and(|current| current.identity == identity && !current.exited);
+        if !live {
+            journal.clear();
+        }
+        assert!(
+            journal.is_empty(),
+            "signaled pid and start time still match a live process"
+        );
     }
 }
