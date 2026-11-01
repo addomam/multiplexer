@@ -998,8 +998,9 @@ fn completed_hooks_and_launch_failures_share_bounded_ordered_diagnostics() {
         let hooks: Vec<_> = (0..25).map(|index| {
             json!({"source":format!("printf '%20000s' x; : hook-{index:02} {}", "界".repeat(9000)),"timeout_ms":2000})
         }).collect();
+        let config_path = path.join("config.json");
         fs::write(
-            path.join("config.json"),
+            &config_path,
             serde_json::to_vec(&json!({
                 "version":1,"config":{"projects_dir":directory.join("projects"),"prefix":"Ctrl-a",
                     "terminal_limit":2,"daemon_start_hooks":hooks},"projects":[]
@@ -1007,6 +1008,7 @@ fn completed_hooks_and_launch_failures_share_bounded_ordered_diagnostics() {
             .unwrap(),
         )
         .unwrap();
+        fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600)).unwrap();
     });
     let hooks = h.until(
         || {
@@ -1084,10 +1086,12 @@ fn hook_enqueue_failures_retain_only_twenty_bounded_command_diagnostics() {
     let h = Harness::with_daemon_command(|directory, _| {
         let path = directory.join("config/amux");
         fs::create_dir_all(&path).unwrap();
-        fs::write(path.join("config.json"), serde_json::to_vec(&json!({
+        let config_path = path.join("config.json");
+        fs::write(&config_path, serde_json::to_vec(&json!({
             "version":1,"config":{"projects_dir":directory.join("projects"),"prefix":"Ctrl-a",
                 "terminal_limit":2,"daemon_start_hooks":[{"source":"touch hook-running; sleep 300","timeout_ms":300000}]},"projects":[]
         })).unwrap()).unwrap();
+        fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600)).unwrap();
     });
     h.until(
         || h.directory.join("hook-running").exists().then_some(()),

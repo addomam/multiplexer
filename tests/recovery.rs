@@ -58,11 +58,9 @@ impl Host {
             {"id":projects[0],"name":"First project","context":root.join("first")},
             {"id":projects[1],"name":"Second project","context":root.join("second")}
         ]});
-        fs::write(
-            root.join("config/amux/config.json"),
-            serde_json::to_vec(&config).unwrap(),
-        )
-        .unwrap();
+        let config_path = root.join("config/amux/config.json");
+        fs::write(&config_path, serde_json::to_vec(&config).unwrap()).unwrap();
+        fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600)).unwrap();
         let mut host = Self {
             socket: root.join("control.sock"),
             root,
@@ -82,7 +80,7 @@ impl Host {
         self.start_with_path_at(path, &cwd);
     }
 
-    fn start_with_path_at(&mut self, path: &str, cwd: &Path) {
+    fn spawn_at(&mut self, path: &str, cwd: &Path) {
         assert!(self.daemon.is_none());
         let log = OpenOptions::new()
             .create(true)
@@ -115,6 +113,10 @@ impl Host {
                 .spawn()
                 .unwrap(),
         );
+    }
+
+    fn start_with_path_at(&mut self, path: &str, cwd: &Path) {
+        self.spawn_at(path, cwd);
         self.until("daemon ready", || {
             self.request(json!({"op":"snapshot"}))
                 .ok()
@@ -466,35 +468,38 @@ fn unsupported_reopen_capability_never_falls_back_to_new_or_automatic_work() {
 }
 
 #[test]
-fn corrupt_journal_is_visible_not_overwritten_and_does_not_prevent_a_fresh_shell() {
+fn corrupt_journal_refuses_startup_and_keeps_the_bytes() {
     let mut host = Host::new();
     host.seed();
     host.stop();
     let path = host.journal_path();
     fs::write(&path, b"not a valid recovery journal").unwrap();
-    host.start();
-    let snapshot = host.snapshot();
-    assert!(snapshot["agent_views"].as_array().unwrap().is_empty());
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+    let cwd = host.root.clone();
+    host.spawn_at("/usr/bin:/bin:/usr/sbin:/sbin", &cwd);
+    let mut child = host.daemon.take().unwrap();
+    let deadline = Instant::now() + DEADLINE;
+    let status = loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "corrupt journal left the daemon running; {}",
+            fs::read_to_string(host.root.join("daemon.log")).unwrap_or_default()
+        );
+        std::thread::sleep(Duration::from_millis(15));
+    };
     assert!(
-        snapshot["terminals"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|terminal| terminal["alive"] == true)
+        !status.success(),
+        "corrupt journal still started the daemon"
     );
+    let log = fs::read_to_string(host.root.join("daemon.log")).unwrap_or_default();
     assert!(
-        snapshot["diagnostics"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|diagnostic| {
-                diagnostic["message"]
-                    .as_str()
-                    .is_some_and(|message| message.contains("conversation recovery disabled"))
-            })
+        log.contains("conversation recovery disabled"),
+        "{log}"
     );
     assert_eq!(fs::read(path).unwrap(), b"not a valid recovery journal");
-    host.stop();
 }
 
 #[test]

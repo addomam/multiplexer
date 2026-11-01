@@ -47,7 +47,7 @@ fn e06s02_cli_profile_overrides_defaults_and_resolves_project_name_on_one_instan
             "start",
             "fixture",
             "--project",
-            project["name"].as_str().unwrap(),
+            project["id"].as_str().unwrap(),
             "--model",
             "fixture/cheap",
             "--mode",
