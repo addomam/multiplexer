@@ -2052,6 +2052,21 @@ mod tests {
     }
 
     #[test]
+    fn a_live_row_does_not_refuse_a_second_open() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let mut saved = dead_acp(&fixture, &script);
+        saved.phase = Phase::Live;
+        let id = saved.id.clone();
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        open_retry(&fixture, &project).expect("a live row does not refuse a second open");
+        let row = fixture.rows().into_iter().find(|row| row.id == id).unwrap();
+        assert_eq!(row.phase, Phase::Live);
+    }
+
+    #[test]
     fn acp_worker_start_failure_persists_dead_and_boot_does_not_launch() {
         let fixture = CheckpointFixture::new();
         let session = Uuid::new_v4().to_string();
