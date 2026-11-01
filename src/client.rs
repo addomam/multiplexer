@@ -457,10 +457,15 @@ pub fn ensure_daemon(socket: &Path) -> Result<()> {
             Err(error) => last_error = format!("{error:#}"),
         }
         if let Some(status) = child.try_wait()? {
+            let diagnostic = startup_diagnostic(&log_path, log_start);
+            if diagnostic.contains("already-running:") && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(25));
+                continue;
+            }
             bail!(
                 "daemon-start: exited {status}; inspect {}; {}",
                 log_path.display(),
-                startup_diagnostic(&log_path, log_start)
+                diagnostic
             );
         }
         if Instant::now() >= deadline {
