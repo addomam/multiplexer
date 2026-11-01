@@ -1496,4 +1496,160 @@ mod tests {
             "the new saved pin must exclude automatic duplication of this live process"
         );
     }
+
+    fn descendant_pids() -> Vec<i32> {
+        let output = std::process::Command::new("/bin/ps")
+            .args(["-ax", "-o", "pid=,ppid="])
+            .output()
+            .unwrap();
+        let text = String::from_utf8(output.stdout).unwrap();
+        let rows: Vec<(i32, i32)> = text
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.split_whitespace();
+                let pid = parts.next()?.parse().ok()?;
+                let parent = parts.next()?.parse().ok()?;
+                Some((pid, parent))
+            })
+            .collect();
+        let mut alive = Vec::new();
+        let mut queue = vec![std::process::id() as i32];
+        while let Some(parent) = queue.pop() {
+            for (pid, candidate) in &rows {
+                if *candidate == parent {
+                    alive.push(*pid);
+                    queue.push(*pid);
+                }
+            }
+        }
+        alive.sort_unstable();
+        alive
+    }
+
+    fn client_controller(fixture: &CheckpointFixture) -> Value {
+        fixture
+            .daemon
+            .controls
+            .lock()
+            .create(
+                &json!({
+                    "version": 1,
+                    "op": "controller-create",
+                    "role": "external",
+                    "label": "client resume"
+                }),
+                1,
+            )
+            .unwrap()["controller"]
+            .clone()
+    }
+
+    fn refuse_message() -> &'static str {
+        "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+    }
+
+    #[test]
+    fn client_agent_open_during_startup_does_not_create_a_process() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        saved.agent = Agent::Codex {
+            model: "fixture-model".into(),
+        };
+        saved.session_file = None;
+        let mut peer =
+            Peer::capture(std::process::id() as i32).expect("capture the live test process");
+        peer.start[0] -= 1;
+        assert!(
+            !peer.status().unwrap(),
+            "the saved peer must already be gone"
+        );
+        saved.peer = Some(peer);
+        let mut acp = saved.clone();
+        acp.id = Uuid::new_v4().to_string();
+        acp.agent = Agent::Acp {
+            profile: "saved-profile".into(),
+        };
+        acp.session_id = "saved-acp-session".into();
+        acp.launch_hash = Some("a".repeat(64));
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(vec![saved.clone(), acp.clone()])
+            .unwrap();
+        fixture
+            .daemon
+            .startup_pending
+            .store(true, Ordering::Release);
+        let controller = client_controller(&fixture);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let children = descendant_pids();
+        let request = json!({
+            "version": 1,
+            "op": "agent-open",
+            "controller": controller,
+            "project": saved.project.id,
+            "cwd": fixture.root,
+            "name": saved.name,
+            "model": "fixture-model",
+            "resume_thread": session,
+        });
+        let error = fixture.daemon.dispatch(request.clone(), 1).unwrap_err();
+        assert_eq!(error.to_string(), refuse_message(), "{error:#}");
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_eq!(descendant_pids(), children);
+        assert!(!fixture.rows().iter().any(|row| row.launch_pending));
+        saved.launch_pending = true;
+        acp.launch_pending = false;
+        fixture
+            .daemon
+            .startup_pending
+            .store(false, Ordering::Release);
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(vec![saved.clone(), acp.clone()])
+            .unwrap();
+        let pending = fixture.daemon.dispatch(request, 1).unwrap_err();
+        assert_eq!(pending.to_string(), refuse_message(), "{pending:#}");
+        assert!(
+            fixture
+                .rows()
+                .iter()
+                .any(|row| { row.session_id == session && row.launch_pending })
+        );
+        assert_eq!(descendant_pids(), children);
+        fixture
+            .daemon
+            .startup_pending
+            .store(true, Ordering::Release);
+        let acp_error = fixture
+            .daemon
+            .dispatch(
+                json!({
+                    "version": 1,
+                    "op": "acp-open",
+                    "controller": client_controller(&fixture),
+                    "project": acp.project.id,
+                    "agent": "saved-profile",
+                    "name": acp.name,
+                    "cwd": fixture.root,
+                }),
+                1,
+            )
+            .unwrap_err();
+        assert_eq!(acp_error.to_string(), refuse_message(), "{acp_error:#}");
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_eq!(descendant_pids(), children);
+        assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
+    }
 }
