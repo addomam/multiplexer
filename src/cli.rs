@@ -383,7 +383,7 @@ struct AcpStart {
 }
 
 impl AcpStart {
-    fn request(self) -> Result<Value> {
+    fn request(self) -> Result<crate::command::Command> {
         let mut settings = serde_json::Map::new();
         for (key, value) in [
             ("model", self.model),
@@ -419,10 +419,22 @@ impl AcpStart {
             .map(|text| serde_json::from_str::<Value>(&text))
             .transpose()
             .context("invalid controller JSON")?;
-        Ok(
-            json!({"op":"acp-open","agent":self.profile,"project":self.project,
-            "name":self.name,"cwd":self.cwd,"settings":settings,"controller":controller}),
-        )
+        let mut fields = serde_json::Map::new();
+        fields.insert("agent".into(), json!(self.profile));
+        fields.insert("project".into(), json!(self.project));
+        if let Some(name) = self.name {
+            fields.insert("name".into(), json!(name));
+        }
+        if let Some(cwd) = self.cwd {
+            fields.insert("cwd".into(), json!(cwd));
+        }
+        if !settings.is_empty() {
+            fields.insert("settings".into(), Value::Object(settings));
+        }
+        if let Some(controller) = controller {
+            fields.insert("controller".into(), controller);
+        }
+        Ok(crate::command::Command::AcpOpen(fields))
     }
 }
 
@@ -480,17 +492,24 @@ enum AcpCommand {
     },
 }
 
-fn request_for(command: Command) -> Result<Value> {
-    let mut value = match command {
+fn request_for(command: Command) -> Result<crate::command::Command> {
+    use crate::command::Command as Wire;
+    let wire = match command {
         Command::Api { request } => {
-            serde_json::from_str::<Value>(&request).context("invalid API JSON")?
+            let mut value = serde_json::from_str::<Value>(&request).context("invalid API JSON")?;
+            value
+                .as_object_mut()
+                .context("API request must be a JSON object")?
+                .entry("version")
+                .or_insert(json!(1));
+            return Ok(crate::client::decode(value)?.command);
         }
         Command::Acp {
             command: AcpCommand::Start(start),
         } => start.request()?,
         Command::Acp {
             command: AcpCommand::Profiles,
-        } => json!({"op":"acp-profiles"}),
+        } => Wire::AcpProfiles(Default::default()),
         Command::Acp {
             command:
                 AcpCommand::Open {
@@ -503,8 +522,8 @@ fn request_for(command: Command) -> Result<Value> {
         } => {
             let controller = serde_json::from_str::<Value>(&controller)
                 .context("invalid controller handle JSON")?;
-            json!({"op":"acp-open","project":project,"controller":controller,
-                "name":name,"cwd":cwd,"command":command})
+            Wire::AcpOpen(crate::command::object(json!({"project":project,
+                "controller":controller,"name":name,"cwd":cwd,"command":command})))
         }
         Command::Acp {
             command:
@@ -516,9 +535,11 @@ fn request_for(command: Command) -> Result<Value> {
         } => {
             let target =
                 serde_json::from_str::<Value>(&target).context("invalid ACP target JSON")?;
-            json!({"op":"acp-inspect","target":target,"include_content":content,"after":after})
+            Wire::AcpInspect(crate::command::object(
+                json!({"target":target,"include_content":content,"after":after}),
+            ))
         }
-        Command::Snapshot => json!({"op":"snapshot"}),
+        Command::Snapshot => Wire::snapshot(),
         Command::Open {
             source,
             project,
@@ -528,18 +549,43 @@ fn request_for(command: Command) -> Result<Value> {
             omp,
             recipe,
         } => {
-            json!({"op":"open","source":source,"project":project,"name":name,"cwd":cwd,"command":command,"omp":omp,"recipe":recipe})
+            let modes = u8::from(command.is_some()) + u8::from(omp) + u8::from(recipe.is_some());
+            if modes > 1 {
+                anyhow::bail!("mixed-open: command, omp, and recipe are mutually exclusive");
+            }
+            let launch = if let Some(command) = command {
+                crate::command::Launch::Command(command)
+            } else if omp {
+                crate::command::Launch::Omp
+            } else if let Some(recipe) = recipe {
+                crate::command::Launch::Recipe(recipe)
+            } else {
+                crate::command::Launch::Shell
+            };
+            let mut fields = crate::command::object(
+                json!({"source":source,"project":project,"name":name,"cwd":cwd}),
+            );
+            fields.retain(|_, value| !value.is_null());
+            Wire::open(launch, fields)
         }
-        Command::Name { terminal, name } => json!({"op":"name","terminal":terminal,"name":name}),
-        Command::Close { terminal } => json!({"op":"close","terminal":terminal}),
-        Command::Remove { terminal } => json!({"op":"remove","terminal":terminal}),
-        Command::Reparent { terminal, parent } => {
-            json!({"op":"reparent","terminal":terminal,"parent":parent})
+        Command::Name { terminal, name } => Wire::Name(crate::command::object(
+            json!({"terminal":terminal,"name":name}),
+        )),
+        Command::Close { terminal } => {
+            Wire::Close(crate::command::object(json!({"terminal":terminal})))
         }
-        Command::Promote { terminal } => json!({"op":"promote","terminal":terminal}),
-        Command::Demote { terminal, parent } => {
-            json!({"op":"demote","terminal":terminal,"parent":parent})
+        Command::Remove { terminal } => {
+            Wire::Remove(crate::command::object(json!({"terminal":terminal})))
         }
+        Command::Reparent { terminal, parent } => Wire::Reparent(crate::command::object(
+            json!({"terminal":terminal,"parent":parent}),
+        )),
+        Command::Promote { terminal } => {
+            Wire::Promote(crate::command::object(json!({"terminal":terminal})))
+        }
+        Command::Demote { terminal, parent } => Wire::Demote(crate::command::object(
+            json!({"terminal":terminal,"parent":parent}),
+        )),
         Command::Input {
             terminal,
             control,
@@ -557,7 +603,10 @@ fn request_for(command: Command) -> Result<Value> {
                 .transpose()
                 .context("bytes must be comma-separated values in 0..255")?;
             let control: Value = serde_json::from_str(&control).context("invalid control JSON")?;
-            json!({"op":"input","terminal":terminal,"control":control,"text":text,"key":key,"paste":paste,"bytes":bytes})
+            Wire::Input(crate::command::object(
+                json!({"terminal":terminal,"control":control,
+                "text":text,"key":key,"paste":paste,"bytes":bytes}),
+            ))
         }
         Command::Execute {
             terminal,
@@ -566,32 +615,39 @@ fn request_for(command: Command) -> Result<Value> {
             queue,
         } => {
             let control: Value = serde_json::from_str(&control).context("invalid control JSON")?;
-            json!({"op":"execute","terminal":terminal,"control":control,"source":source,"queue":queue})
+            Wire::Execute(crate::command::object(
+                json!({"terminal":terminal,"control":control,"source":source,"queue":queue}),
+            ))
         }
         Command::Screen {
             terminal,
             offset,
             limit,
-        } => json!({"op":"screen","terminal":terminal,"offset":offset,"limit":limit}),
+        } => Wire::Screen(crate::command::object(
+            json!({"terminal":terminal,"offset":offset,"limit":limit}),
+        )),
         Command::Resize {
             terminal,
             cols,
             rows,
-        } => json!({"op":"resize","terminal":terminal,"cols":cols,"rows":rows}),
-        Command::State { terminal } => json!({"op":"state","terminal":terminal}),
-        Command::Events { after, timeout_ms } => {
-            json!({"op":"events","after":after,"timeout_ms":timeout_ms})
+        } => Wire::Resize(crate::command::object(
+            json!({"terminal":terminal,"cols":cols,"rows":rows}),
+        )),
+        Command::State { terminal } => {
+            Wire::State(crate::command::object(json!({"terminal":terminal})))
         }
+        Command::Events { after, timeout_ms } => Wire::Events(crate::command::object(
+            json!({"after":after,"timeout_ms":timeout_ms}),
+        )),
         Command::Wait {
             terminal,
             condition,
             after,
             timeout_ms,
-        } => {
-            json!({"op":"wait","terminal":terminal,"condition":condition,"after":after,"timeout_ms":timeout_ms})
-        }
+        } => Wire::Wait(crate::command::object(json!({"terminal":terminal,
+            "condition":condition,"after":after,"timeout_ms":timeout_ms}))),
         Command::Projects { command } => match command {
-            ProjectCommand::List => json!({"op":"project-list"}),
+            ProjectCommand::List => Wire::ProjectList(Default::default()),
             ProjectCommand::Add {
                 name,
                 directory,
@@ -600,36 +656,48 @@ fn request_for(command: Command) -> Result<Value> {
                 let directory = std::fs::canonicalize(directory.unwrap_or_else(|| ".".into()))
                     .context("project directory must already exist")?;
                 anyhow::ensure!(directory.is_dir(), "project context is not a directory");
-                json!({"op":"project-new","name":name,"directory":directory,"config":config.map(|config|serde_json::from_str::<Value>(&config)).transpose().context("invalid initial project configuration JSON")?.unwrap_or_else(||json!({}))})
+                let config = config
+                    .map(|config| serde_json::from_str::<Value>(&config))
+                    .transpose()
+                    .context("invalid initial project configuration JSON")?
+                    .unwrap_or_else(|| json!({}));
+                Wire::ProjectNew(crate::command::object(
+                    json!({"name":name,"directory":directory,"config":config}),
+                ))
             }
-            ProjectCommand::Save { name } => json!({"op":"project-save","name":name}),
-            ProjectCommand::Open { project } => json!({"op":"project-open","project":project}),
+            ProjectCommand::Save { name } => {
+                Wire::ProjectSave(crate::command::object(json!({"name":name})))
+            }
+            ProjectCommand::Open { project } => {
+                Wire::ProjectOpen(crate::command::object(json!({"project":project})))
+            }
             ProjectCommand::Config { project, config } => {
-                json!({"op":"project-config","project":project,"config":serde_json::from_str::<Value>(&config).context("invalid project configuration JSON")?})
+                let config = serde_json::from_str::<Value>(&config)
+                    .context("invalid project configuration JSON")?;
+                Wire::ProjectConfig(crate::command::object(
+                    json!({"project":project,"config":config}),
+                ))
             }
-            ProjectCommand::Remove { project } => json!({"op":"project-remove","project":project}),
+            ProjectCommand::Remove { project } => {
+                Wire::ProjectRemove(crate::command::object(json!({"project":project})))
+            }
         },
         Command::Config { config } => {
-            json!({"op":"config","config":serde_json::from_str::<Value>(&config).context("invalid configuration JSON")?})
+            let config =
+                serde_json::from_str::<Value>(&config).context("invalid configuration JSON")?;
+            Wire::Config(crate::command::object(json!({"config":config})))
         }
         Command::Report { terminal, event } => {
-            json!({"op":"report","terminal":terminal,"event":serde_json::from_str::<Value>(&event).context("invalid event JSON")?})
+            let event = serde_json::from_str::<Value>(&event).context("invalid event JSON")?;
+            Wire::Report(crate::command::object(
+                json!({"terminal":terminal,"event":event}),
+            ))
         }
-        Command::Shutdown => json!({"op":"shutdown"}),
-        Command::Detach => json!({"op":"detach"}),
+        Command::Shutdown => Wire::Shutdown(Default::default()),
+        Command::Detach => Wire::Detach(Default::default()),
         _ => anyhow::bail!("command is not an API operation"),
     };
-    let object = value
-        .as_object_mut()
-        .context("API request must be a JSON object")?;
-    object.entry("version").or_insert(json!(1));
-    let decoded = crate::client::decode(value)?;
-    let mut value = crate::client::wire(&decoded.command, decoded.persistent.as_ref());
-    value
-        .as_object_mut()
-        .context("API request must be a JSON object")?
-        .retain(|key, value| !value.is_null() || key == "parent");
-    Ok(value)
+    Ok(wire)
 }
 
 pub fn run() -> Result<()> {
@@ -657,8 +725,7 @@ pub fn run() -> Result<()> {
             command: AcpCommand::Attach { view },
         }) => {
             crate::client::ensure_daemon(&socket)?;
-            let snapshot =
-                crate::client::request(&socket, crate::command::Command::snapshot().to_value())?;
+            let snapshot = crate::client::request(&socket, &crate::command::Command::snapshot())?;
             anyhow::ensure!(
                 snapshot["agent_views"]
                     .as_array()
@@ -674,7 +741,7 @@ pub fn run() -> Result<()> {
         }
         Some(command) => {
             let result =
-                request_for(command).and_then(|request| crate::client::request(&socket, request));
+                request_for(command).and_then(|request| crate::client::request(&socket, &request));
             match result {
                 Ok(result) => {
                     println!("{}", json!({"version":1,"ok":true,"result":result}));
@@ -707,17 +774,20 @@ pub fn run() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn sent(command: Command) -> Result<Value> {
+        Ok(crate::client::frame(&request_for(command)?))
+    }
     #[test]
     fn reparent_preserves_explicit_root_and_open_omits_missing_fields() {
         assert_eq!(
-            request_for(Command::Reparent {
+            sent(Command::Reparent {
                 terminal: "t1".into(),
                 parent: None
             })
             .unwrap()["parent"],
             Value::Null
         );
-        let open = request_for(Command::Open {
+        let open = sent(Command::Open {
             source: None,
             project: None,
             name: None,
@@ -740,9 +810,9 @@ mod tests {
             paste: false,
             bytes: Some("27,91,65".into()),
         };
-        assert_eq!(request_for(command).unwrap()["bytes"], json!([27, 91, 65]));
+        assert_eq!(sent(command).unwrap()["bytes"], json!([27, 91, 65]));
         assert!(
-            request_for(Command::Input {
+            sent(Command::Input {
                 terminal: "t1".into(),
                 control: r#"{"kind":"control","ref":"fixture"}"#.into(),
                 text: None,
@@ -768,13 +838,13 @@ mod tests {
             vec!["amux", "execute", "t1", "--control", control, "print hello"],
         ] {
             let parsed = Args::try_parse_from(args).unwrap();
-            let request = request_for(parsed.command.unwrap()).unwrap();
+            let request = sent(parsed.command.unwrap()).unwrap();
             assert_eq!(
                 request["control"],
                 json!({"kind":"control","ref":"private-fixture"})
             );
         }
-        let view = request_for(Command::Api {
+        let view = sent(Command::Api {
             request: r#"{"op":"control-handle","handle":{"kind":"controller","ref":"view"},"method":"view","view":{"serial":1,"terminal":null,"focused":null}}"#.into(),
         }).unwrap();
         assert!(view["view"]["terminal"].is_null());
@@ -792,7 +862,7 @@ mod tests {
             vec!["amux", "open", "--command", "printf one"],
         ] {
             let parsed = Args::try_parse_from(args).unwrap();
-            let request = request_for(parsed.command.unwrap()).unwrap();
+            let request = sent(parsed.command.unwrap()).unwrap();
             assert_eq!(request["op"], "open");
         }
         for args in [
@@ -817,7 +887,7 @@ mod tests {
             ],
         ] {
             let parsed = Args::try_parse_from(args).unwrap();
-            let error = request_for(parsed.command.unwrap())
+            let error = sent(parsed.command.unwrap())
                 .expect_err("mixed open must be rejected before the daemon is asked")
                 .to_string();
             assert!(

@@ -30,7 +30,7 @@ On short screens the form scrolls to the focused field or action. Page Up/Down o
 pub(super) enum Action {
     None,
     Cancel,
-    Submit(Value),
+    Submit(crate::command::Command),
 }
 
 pub(super) struct Dialog {
@@ -144,7 +144,7 @@ impl Dialog {
         format!("{} {}", &label[..end], self.discriminator)
     }
 
-    fn request(&self) -> Result<Value> {
+    fn request(&self) -> Result<crate::command::Command> {
         ensure!(
             !self.rejected.contains(&true),
             "Correct rejected launch input before launching"
@@ -168,13 +168,13 @@ impl Dialog {
             settings["options"] =
                 Value::Object(crate::acp_profiles::parse_options_json(&self.fields[4])?);
         }
-        let mut request = json!({"op":"acp-open","project":self.projects[self.project].0,
+        let mut fields = crate::command::object(json!({"project":self.projects[self.project].0,
             "agent":profile["id"],"settings":settings,
-            "name":if self.fields[0].is_empty() { self.default_name() } else { self.fields[0].clone() }});
+            "name":if self.fields[0].is_empty() { self.default_name() } else { self.fields[0].clone() }}));
         if self.independent {
-            request["new_project"] = json!(true);
+            fields.insert("new_project".into(), json!(true));
         }
-        Ok(request)
+        Ok(crate::command::Command::AcpOpen(fields))
     }
 
     fn is_text(&self) -> bool {

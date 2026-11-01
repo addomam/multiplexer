@@ -781,7 +781,9 @@ pub fn helper(args: &[String]) -> Result<()> {
     let wake = event["kind"] == "shell-wake";
     let result = crate::client::request(
         &crate::client::socket_path(),
-        json!({"version":1,"op":"report","terminal":terminal,"event":event}),
+        &crate::command::Command::Report(crate::command::object(
+            json!({"terminal":terminal,"event":event}),
+        )),
     )?;
     if (epoch || wake) && result["revoked"] == true {
         println!("revoked");

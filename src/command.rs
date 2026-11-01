@@ -50,6 +50,10 @@ impl Open {
         &self.fields
     }
 
+    fn fields_mut(&mut self) -> &mut Map<String, Value> {
+        &mut self.fields
+    }
+
     fn to_fields(&self) -> Map<String, Value> {
         let mut fields = self.fields.clone();
         match &self.launch {
@@ -104,6 +108,24 @@ macro_rules! command_ops {
 
             pub fn get(&self, key: &str) -> Option<&Value> {
                 self.body().get(key)
+            }
+
+            pub fn body_mut(&mut self) -> &mut Map<String, Value> {
+                match self {
+                    Self::Open(open) => open.fields_mut(),
+                    $(Self::$name(fields) => fields,)*
+                }
+            }
+
+            pub fn into_fields(self) -> Map<String, Value> {
+                match self {
+                    Self::Open(open) => open.to_fields(),
+                    $(Self::$name(fields) => fields,)*
+                }
+            }
+
+            pub fn open(launch: Launch, fields: Map<String, Value>) -> Self {
+                Self::Open(Open { launch, fields })
             }
 
             pub fn to_value(&self) -> Value {
@@ -181,6 +203,13 @@ macro_rules! command_ops {
     };
 }
 
+pub fn object(value: Value) -> Map<String, Value> {
+    match value {
+        Value::Object(map) => map,
+        _ => Map::new(),
+    }
+}
+
 fn json_option(since: Option<u64>) -> Value {
     match since {
         Some(since) => Value::from(since),
@@ -233,6 +262,15 @@ command_ops! {
     Config => "config",
     Detach => "detach",
     Shutdown => "shutdown",
+}
+
+impl std::ops::Index<&str> for Command {
+    type Output = Value;
+
+    fn index(&self, index: &str) -> &Value {
+        self.get(index)
+            .unwrap_or_else(|| panic!("command {} has no {index}", self.op()))
+    }
 }
 
 impl Serialize for Command {

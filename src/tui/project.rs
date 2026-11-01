@@ -14,7 +14,7 @@ use unicode_width::UnicodeWidthChar;
 pub(super) enum Action {
     None,
     Cancel,
-    Submit(Value),
+    Submit(crate::command::Command),
 }
 
 #[derive(Default)]
@@ -373,7 +373,7 @@ impl Dialog {
     }
 
     fn submit(&mut self) -> Action {
-        let request = (|| -> Result<Option<Value>> {
+        let request = (|| -> Result<Option<crate::command::Command>> {
             ensure!(
                 !self.fields.iter().any(|field| field.rejected),
                 "Correct rejected input before saving"
@@ -388,10 +388,10 @@ impl Dialog {
                         !self.fields[0].value.trim().is_empty(),
                         "Enter a project name"
                     );
-                    Ok(Some(
-                        json!({"op":"project-save","project":project,"terminal":terminal,
-                        "name":self.fields[0].value,"expected_context":context}),
-                    ))
+                    Ok(Some(crate::command::Command::ProjectSave(
+                        crate::command::object(json!({"project":project,"terminal":terminal,
+                        "name":self.fields[0].value,"expected_context":context})),
+                    )))
                 }
                 Mode::Config => {
                     let draft = self
@@ -402,8 +402,10 @@ impl Dialog {
                         !self.fields[0].value.trim().is_empty(),
                         "Enter a project name"
                     );
-                    Ok(Some(json!({"op":"project-config","project":draft.project,
-                        "config":{"name":self.fields[0].value,"hooks":draft.hooks,"recipes":draft.recipes}})))
+                    Ok(Some(crate::command::Command::ProjectConfig(
+                        crate::command::object(json!({"project":draft.project,
+                        "config":{"name":self.fields[0].value,"hooks":draft.hooks,"recipes":draft.recipes}})),
+                    )))
                 }
                 Mode::Hook(index) => {
                     ensure!(!self.fields[0].value.trim().is_empty(), "Enter hook source");
@@ -450,15 +452,17 @@ impl Dialog {
                         .insert(name.clone(), json!(self.fields[1].value));
                     Ok(None)
                 }
-                Mode::Remove { project, .. } => {
-                    Ok(Some(json!({"op":"project-remove","project":project})))
-                }
+                Mode::Remove { project, .. } => Ok(Some(crate::command::Command::ProjectRemove(
+                    crate::command::object(json!({"project":project})),
+                ))),
                 Mode::List => {
                     let project = self
                         .projects
                         .get(self.selected)
                         .context("No saved projects")?;
-                    Ok(Some(json!({"op":"project-open","project":project["id"]})))
+                    Ok(Some(crate::command::Command::ProjectOpen(
+                        crate::command::object(json!({"project":project["id"]})),
+                    )))
                 }
             }
         })();
@@ -1124,7 +1128,7 @@ mod tests {
         let Action::Submit(open) = dialog.event(&key(KeyCode::Enter)) else {
             panic!("cancelled removal captured the next list action");
         };
-        assert_eq!(open["op"], "project-open");
+        assert_eq!(open.op(), "project-open");
         dialog.event(&key(KeyCode::Char('r')));
         // Confirmation starts on Cancel, not the destructive action.
         assert!(matches!(dialog.event(&key(KeyCode::Enter)), Action::None));
@@ -1132,7 +1136,7 @@ mod tests {
         let Action::Submit(remove) = dialog.activate(Target::Button(Command::Submit)) else {
             panic!("explicit removal confirmation was not admitted");
         };
-        assert_eq!(remove["op"], "project-remove");
+        assert_eq!(remove.op(), "project-remove");
         dialog.failure("write conflict".into());
         assert!(matches!(dialog.event(&key(KeyCode::Esc)), Action::None));
         assert!(matches!(dialog.mode, Mode::List));
@@ -1161,7 +1165,7 @@ mod tests {
         let Action::Submit(request) = dialog.submit() else {
             panic!("complete patch unavailable");
         };
-        assert_eq!(request["op"], "project-config");
+        assert_eq!(request.op(), "project-config");
         assert_eq!(request["config"]["name"], "renamed");
         assert_eq!(
             request["config"]["hooks"],

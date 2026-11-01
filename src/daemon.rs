@@ -1661,27 +1661,31 @@ impl Daemon {
         persistent: Option<Value>,
         connection: u64,
     ) -> Result<Value> {
-        let request = client::wire(&command, persistent.as_ref());
-        let op = request["op"]
-            .as_str()
-            .context("invalid-request: op required")?;
+        let op = command.op();
+        let mut request = command.to_value();
+        request["version"] = json!(1);
+        if let Some(persistent) = &persistent {
+            request["persistent"] = persistent.clone();
+        }
         if request["target"]["kind"] == "acp"
             && !matches!(
-                op,
-                "ownership-claim"
-                    | "acp-inspect"
-                    | "acp-prompt"
-                    | "acp-authenticate"
-                    | "acp-answer"
-                    | "acp-permission"
-                    | "acp-interrupt"
-                    | "acp-close"
+                &command,
+                Command::OwnershipClaim(_)
+                    | Command::AcpInspect(_)
+                    | Command::AcpPrompt(_)
+                    | Command::AcpAuthenticate(_)
+                    | Command::AcpAnswer(_)
+                    | Command::AcpPermission(_)
+                    | Command::AcpInterrupt(_)
+                    | Command::AcpClose(_)
             )
         {
             bail!("wrong-target-kind: native operation cannot address ACP");
         }
-        if !matches!(op, "name" | "project-save" | "project-save-preview")
-            && let Some(id) = request["terminal"].as_str()
+        if !matches!(
+            &command,
+            Command::Name(_) | Command::ProjectSave(_) | Command::ProjectSavePreview(_)
+        ) && let Some(id) = request["terminal"].as_str()
             && self.state.lock().agent_views.contains_key(id)
         {
             bail!("wrong-target-kind: ACP views are not terminals");
@@ -1707,7 +1711,9 @@ impl Daemon {
                     let mut controls = self.controls.lock();
                     // Only a validated original attachment view may produce
                     // terminal focus reports. These are not human activity.
-                    let focus = if op == "control-handle" && request["method"] == "view" {
+                    let focus = if matches!(&command, Command::ControlHandle(_))
+                        && request["method"] == "view"
+                    {
                         request["view"]["terminal"].as_str().and_then(|terminal| {
                             let read = controls
                                 .handle(
@@ -1738,9 +1744,9 @@ impl Daemon {
                     } else {
                         None
                     };
-                    let result = match op {
-                        "controller-create" => controls.create(&request, connection),
-                        "ownership-claim" => controls.claim(&request),
+                    let result = match &command {
+                        Command::ControllerCreate(_) => controls.create(&request, connection),
+                        Command::OwnershipClaim(_) => controls.claim(&request),
                         _ => controls.handle(&request, connection),
                     };
                     drop(controls);
@@ -2113,7 +2119,7 @@ impl Daemon {
                 Ok(project)
             }
             Command::ProjectSave(_) | Command::ProjectSavePreview(_) => {
-                let preview = op == "project-save-preview";
+                let preview = matches!(&command, Command::ProjectSavePreview(_));
                 validate_mutation_fields(
                     &request,
                     if preview {
