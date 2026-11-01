@@ -6,12 +6,22 @@ permissions:
   contents: read
 jobs:
   rust:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy
+      - name: skip Ubuntu compinit
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+          echo 'skip_global_compinit=1' | sudo tee -a /etc/zsh/zshenv
       - uses: actions/cache@v6
         with:
           path: |
