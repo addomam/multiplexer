@@ -944,6 +944,84 @@ impl Daemon {
             .unwrap_or_default()
     }
 
+    fn refuse_when_unsettled(&self, matches: impl Fn(&Record) -> bool) -> Result<()> {
+        let startup = self.startup_pending.load(Ordering::Acquire);
+        let blocked = self
+            .recovery_records()
+            .iter()
+            .any(|record| matches(record) && (startup || record.launch_pending));
+        ensure!(
+            !blocked,
+            "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+        );
+        Ok(())
+    }
+
+    pub(super) fn refuse_settling_codex_client(&self, request: &Value) -> Result<()> {
+        let Some(session) = request.get("resume_thread").and_then(Value::as_str) else {
+            return Ok(());
+        };
+        self.refuse_when_unsettled(|record| {
+            matches!(record.agent, Agent::Codex { .. }) && record.session_id == session
+        })
+    }
+
+    pub(super) fn refuse_settling_acp_client(&self, request: &Value) -> Result<()> {
+        if request.get("new_project").and_then(Value::as_bool) == Some(true) {
+            return Ok(());
+        }
+        let Some(project) = request.get("project").and_then(Value::as_str) else {
+            return Ok(());
+        };
+        let profile = request.get("agent").and_then(Value::as_str);
+        self.refuse_when_unsettled(|record| {
+            let Agent::Acp { profile: saved } = &record.agent else {
+                return false;
+            };
+            let same_project = record.project.id == project || record.project.name == project;
+            let same_profile = profile.is_some_and(|profile| profile == saved);
+            same_project && same_profile
+        })
+    }
+
+    pub(super) fn refuse_settling_acp_command(
+        &self,
+        project: &str,
+        launch_hash: Option<&str>,
+    ) -> Result<()> {
+        let Some(launch_hash) = launch_hash else {
+            return Ok(());
+        };
+        self.refuse_when_unsettled(|record| {
+            matches!(record.agent, Agent::Acp { .. })
+                && record.project.id == project
+                && record.launch_hash.as_deref() == Some(launch_hash)
+        })
+    }
+
+    fn reopen_after_failed_open(&self, record: &Record, error: anyhow::Error) -> Result<()> {
+        let saved = self
+            .recovery_records()
+            .into_iter()
+            .find(|saved| saved.id == record.id);
+        let peer = saved
+            .as_ref()
+            .and_then(|saved| saved.peer.as_ref())
+            .or(record.peer.as_ref());
+        let Some(peer) = peer else {
+            return Err(error);
+        };
+        match peer.status() {
+            Ok(false) => Err(error),
+            Ok(true) => bail!(
+                "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+            ),
+            Err(status) => Err(status.context(
+                "recovery-unavailable: cannot determine whether previous agent still exists",
+            )),
+        }
+    }
+
     pub(super) fn reopen_conversations(self: &Arc<Self>, records: Vec<Record>) {
         for record in records {
             if self.stopping.load(Ordering::Acquire) || SIGNAL_STOP.load(Ordering::Relaxed) {
@@ -1001,7 +1079,9 @@ impl Daemon {
             Agent::Acp { profile } => {
                 request["op"] = json!("acp-open");
                 request["agent"] = json!(profile);
-                self.acp_open(&request, Some(record))?;
+                if let Err(error) = self.acp_open(&request, Some(record)) {
+                    return self.reopen_after_failed_open(record, error);
+                }
             }
             Agent::Omp => {
                 let file = record
@@ -1038,7 +1118,9 @@ impl Daemon {
                     }),
                     0,
                 );
-                result?;
+                if let Err(error) = result {
+                    return self.reopen_after_failed_open(record, error);
+                }
             }
         }
         Ok(())
@@ -1495,5 +1577,151 @@ mod tests {
             record.peer.as_ref().unwrap().status().unwrap(),
             "the new saved pin must exclude automatic duplication of this live process"
         );
+    }
+
+    fn shell_pid(fixture: &CheckpointFixture) -> i64 {
+        let state = fixture.daemon.state.lock();
+        assert_eq!(state.terminals.len(), 1);
+        state
+            .terminals
+            .values()
+            .next()
+            .unwrap()
+            .terminal
+            .status()["pid"]
+            .as_i64()
+            .unwrap()
+    }
+
+    fn assert_same_shell(fixture: &CheckpointFixture, pid: i64) {
+        assert_eq!(shell_pid(fixture), pid);
+        assert_eq!(unsafe { libc::kill(pid as i32, 0) }, 0, "startup shell died");
+    }
+
+    fn client_controller(fixture: &CheckpointFixture) -> Value {
+        fixture
+            .daemon
+            .controls
+            .lock()
+            .create(
+                &json!({
+                    "version": 1,
+                    "op": "controller-create",
+                    "role": "external",
+                    "label": "client resume"
+                }),
+                1,
+            )
+            .unwrap()["controller"]
+            .clone()
+    }
+
+    fn refuse_message() -> &'static str {
+        "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+    }
+
+    #[test]
+    fn client_agent_open_during_startup_does_not_create_a_process() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        saved.agent = Agent::Codex {
+            model: "fixture-model".into(),
+        };
+        saved.session_file = None;
+        let mut peer =
+            Peer::capture(std::process::id() as i32).expect("capture the live test process");
+        peer.start[0] -= 1;
+        assert!(
+            !peer.status().unwrap(),
+            "the saved peer must already be gone"
+        );
+        saved.peer = Some(peer);
+        let mut acp = saved.clone();
+        acp.id = Uuid::new_v4().to_string();
+        acp.agent = Agent::Acp {
+            profile: "saved-profile".into(),
+        };
+        acp.session_id = "saved-acp-session".into();
+        acp.launch_hash = Some("a".repeat(64));
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(vec![saved.clone(), acp.clone()])
+            .unwrap();
+        fixture
+            .daemon
+            .startup_pending
+            .store(true, Ordering::Release);
+        let controller = client_controller(&fixture);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let shell = shell_pid(&fixture);
+        let request = json!({
+            "version": 1,
+            "op": "agent-open",
+            "controller": controller,
+            "project": saved.project.id,
+            "cwd": fixture.root,
+            "name": saved.name,
+            "model": "fixture-model",
+            "resume_thread": session,
+        });
+        let error = fixture.daemon.dispatch(request.clone(), 1).unwrap_err();
+        assert_eq!(error.to_string(), refuse_message(), "{error:#}");
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert!(!fixture.rows().iter().any(|row| row.launch_pending));
+        saved.launch_pending = true;
+        acp.launch_pending = false;
+        fixture
+            .daemon
+            .startup_pending
+            .store(false, Ordering::Release);
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(vec![saved.clone(), acp.clone()])
+            .unwrap();
+        let pending = fixture.daemon.dispatch(request, 1).unwrap_err();
+        assert_eq!(pending.to_string(), refuse_message(), "{pending:#}");
+        assert!(
+            fixture
+                .rows()
+                .iter()
+                .any(|row| { row.session_id == session && row.launch_pending })
+        );
+        assert_same_shell(&fixture, shell);
+        fixture
+            .daemon
+            .startup_pending
+            .store(true, Ordering::Release);
+        let acp_error = fixture
+            .daemon
+            .dispatch(
+                json!({
+                    "version": 1,
+                    "op": "acp-open",
+                    "controller": client_controller(&fixture),
+                    "project": acp.project.id,
+                    "agent": "saved-profile",
+                    "name": acp.name,
+                    "cwd": fixture.root,
+                }),
+                1,
+            )
+            .unwrap_err();
+        assert_eq!(acp_error.to_string(), refuse_message(), "{acp_error:#}");
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
     }
 }
