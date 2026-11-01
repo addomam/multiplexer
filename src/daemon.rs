@@ -780,8 +780,10 @@ impl Daemon {
         for view in views {
             if let Some(id) = view["id"].as_str() {
                 let _ = self.controls.lock().end_acp(id, || self.acp.end(id));
+                self.acp.cleanup(id);
             }
         }
+        self.checkpoint_recovery_before_shutdown();
         self.changed.notify_all();
     }
 

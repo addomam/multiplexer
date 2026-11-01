@@ -676,15 +676,11 @@ impl Daemon {
     }
 
     fn reopen_failure_phase(failure: Option<&str>, peer_present: bool) -> Option<Phase> {
-        let child_existed =
-            peer_present || matches!(failure, Some("process-identity" | "cleanup"));
-        if !child_existed {
-            Some(match failure {
-                Some("stdio" | "spawn" | "worker-start") => Phase::Dead,
-                _ => Phase::Idle,
-            })
-        } else {
-            None
+        match failure {
+            Some("process-identity" | "cleanup") => None,
+            Some("stdio" | "spawn" | "worker-start") if !peer_present => Some(Phase::Dead),
+            Some("stdio" | "spawn" | "worker-start") => None,
+            _ => Some(Phase::Idle),
         }
     }
 
@@ -695,8 +691,8 @@ impl Daemon {
         // Observe only after acquiring this target's scope. A competing newer
         // checkpoint must not lose its already-drained dirty notification.
         let _checkpoint = checkpoint.lock();
-        if self.stopping.load(Ordering::Acquire)
-            || (!final_checkpoint && SIGNAL_STOP.load(Ordering::Relaxed))
+        if !final_checkpoint
+            && (self.stopping.load(Ordering::Acquire) || SIGNAL_STOP.load(Ordering::Relaxed))
         {
             return;
         }
@@ -783,24 +779,24 @@ impl Daemon {
                 let failure = self.acp.metadata(id).ok().and_then(|metadata| {
                     metadata["resource"]["failure"].as_str().map(str::to_owned)
                 });
-                if self
+                let settled = self
                     .acp
                     .recovery(id)
                     .is_ok_and(|state| state["cleanup_complete"] == true)
-                    && let Some(candidate) = candidate
-                        .as_ref()
-                        .filter(|candidate| candidate.record.phase == Phase::Pending)
+                    || final_checkpoint;
+                if settled
+                    && let Some(candidate) = candidate.as_ref().filter(|candidate| {
+                        matches!(candidate.record.phase, Phase::Pending | Phase::Live)
+                    })
+                    && let Some(phase) = Self::reopen_failure_phase(
+                        failure.as_deref(),
+                        observed["peer_pid"].as_i64().is_some(),
+                    )
+                    && candidate.record.phase != phase
                 {
-                    let child_existed = observed["peer_pid"].as_i64().is_some()
-                        || matches!(failure.as_deref(), Some("process-identity" | "cleanup"));
-                    if !child_existed {
-                        let mut record = candidate.record.clone();
-                        record.phase = match failure.as_deref() {
-                            Some("stdio" | "spawn" | "worker-start") => Phase::Dead,
-                            _ => Phase::Idle,
-                        };
-                        self.persist_recovery(id, Some(candidate), record, true, revision, None);
-                    }
+                    let mut record = candidate.record.clone();
+                    record.phase = phase;
+                    self.persist_recovery(id, Some(candidate), record, true, revision, None);
                 }
                 let reason =
                     failure.unwrap_or_else(|| "saved conversation could not be loaded".into());
@@ -2239,12 +2235,18 @@ mod tests {
             Daemon::reopen_failure_phase(Some("stdio"), false),
             Some(Phase::Dead)
         );
-        assert_eq!(Daemon::reopen_failure_phase(Some("spawn"), false), Some(Phase::Dead));
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("spawn"), false),
+            Some(Phase::Dead)
+        );
         assert_eq!(
             Daemon::reopen_failure_phase(Some("worker-start"), false),
             Some(Phase::Dead)
         );
-        assert_eq!(Daemon::reopen_failure_phase(Some("process-identity"), true), None);
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("process-identity"), true),
+            None
+        );
         assert_eq!(Daemon::reopen_failure_phase(Some("cleanup"), true), None);
     }
 }
