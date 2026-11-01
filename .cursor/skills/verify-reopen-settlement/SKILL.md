@@ -39,12 +39,12 @@ Exit 0 means the covered source still contains those steps in that order, the so
 
 ## Coverage
 
-Confirmed at commit `5d6f89202aac47191365b83c03b169b1a673ddce`.
+Confirmed at commit `8a955abeb118d1cd736a649d147d26fbf7c56dfe`.
 
 - `src/daemon/recovery.rs`: `reopen_conversation`, `mark_reopen`, `refresh_observed_peer`, `checkpoint_recovery_inner`
 - `src/daemon.rs`: `acp_open`, `agent_open`
 
-If `git diff 5d6f89202aac47191365b83c03b169b1a673ddce -- src/daemon/recovery.rs src/daemon.rs` is not empty, the check exits 2. Read the diff. Move the sync commit in `bin/check` and in this section only after you confirm the table still describes the code at the new commit. Do not move it to make a failing run pass.
+If `git diff 8a955abeb118d1cd736a649d147d26fbf7c56dfe -- src/daemon/recovery.rs src/daemon.rs` is not empty, the check exits 2. Read the diff. Move the sync commit in `bin/check` and in this section only after you confirm the table still describes the code at the new commit. Do not move it to make a failing run pass.
 
 A missing `record.phase == Phase::Idle` refusal, a spawn before `ReopenMark::Grant`, or a settle before `peer_pid` is a failed check, not a prompt to weaken the model.
 
