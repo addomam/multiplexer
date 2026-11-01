@@ -141,7 +141,7 @@ impl Attachment {
                     &mut slave,
                     std::ptr::null_mut(),
                     std::ptr::null_mut::<libc::termios>(),
-                    &mut size,
+                    std::ptr::addr_of_mut!(size),
                 )
             },
             0,
