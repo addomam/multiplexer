@@ -496,7 +496,9 @@ pub fn ensure_daemon(socket: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[cfg(target_os = "macos")]
     use std::sync::Arc;
+    #[cfg(target_os = "macos")]
     use std::sync::atomic::{AtomicBool, Ordering};
 
     #[cfg(target_os = "macos")]
