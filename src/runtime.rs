@@ -1000,6 +1000,73 @@ mod screen_update_tests {
         assert_eq!(registry.snapshot("terminal")["unsettled"], json!([]));
     }
 
+    #[test]
+    fn full_user_queue_still_delivers_latest_color_reply() {
+        let (mut emulator, incoming) = emulator_with_replies(8, 4);
+        let sender = emulator.input.clone();
+        for _ in 0..INPUT_QUEUE {
+            sender
+                .try_send(Input {
+                    bytes: b"x".to_vec(),
+                    ack: None,
+                    authority: None,
+                    native: true,
+                })
+                .unwrap();
+        }
+        assert!(
+            sender
+                .try_send(Input {
+                    bytes: b"y".to_vec(),
+                    ack: None,
+                    authority: None,
+                    native: true,
+                })
+                .is_err(),
+            "user queue must be full before the reply"
+        );
+        emulator.advance(b"\x1b]4;7;rgb:ab/cd/ef\x1b\\\x1b]4;7;?\x1b\\");
+        emulator.advance(b"\x1b]4;7;rgb:11/22/33\x1b\\\x1b]4;7;?\x1b\\");
+        emulator.advance(b"\x1b[1;1H\x1b[6n");
+        emulator.advance(b"\x1b[2;1H\x1b[6n");
+        let mut written = Vec::new();
+        while let Ok(input) = incoming.try_recv() {
+            if !input.native {
+                written.extend(input.bytes);
+            }
+        }
+        let expected = b"\x1b]4;7;rgb:1111/2222/3333\x1b\\\x1b[1;1R\x1b[2;1R";
+        assert_eq!(
+            written, expected,
+            "full user queue dropped or reordered the latest replies"
+        );
+    }
+
+    #[test]
+    fn confirm_timeout_does_not_leave_bytes_for_a_later_write() {
+        let (queue, pending) = mpsc::sync_channel(1);
+        let (ack, response) = mpsc::channel();
+        queue
+            .send(Input {
+                bytes: b"CONFIRM_MARKER_UNIQUE".to_vec(),
+                ack: Some(ack),
+                authority: None,
+                native: false,
+            })
+            .unwrap();
+        assert!(
+            response.recv_timeout(Duration::from_millis(40)).is_err(),
+            "confirm ack arrived without a writer"
+        );
+        let mut written = Vec::new();
+        assert!(pending.recv().unwrap().write_to(&mut written));
+        assert!(
+            written.is_empty(),
+            "failed confirm still wrote {}",
+            String::from_utf8_lossy(&written)
+        );
+    }
+
     fn emulator(cols: usize, rows: usize) -> Emulator {
         emulator_with_replies(cols, rows).0
     }
