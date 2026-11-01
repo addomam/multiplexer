@@ -122,6 +122,21 @@ impl Connection {
         request: &impl serde::Serialize,
         timeout: Duration,
     ) -> Result<Value> {
+        self.exchange(request, Some(timeout))
+    }
+
+    pub(crate) fn request_until_answer_or_dead(
+        &mut self,
+        request: &impl serde::Serialize,
+    ) -> Result<Value> {
+        self.exchange(request, None)
+    }
+
+    fn exchange(
+        &mut self,
+        request: &impl serde::Serialize,
+        timeout: Option<Duration>,
+    ) -> Result<Value> {
         self.request_inner(request, timeout).map_err(|error| {
             if error.downcast_ref::<DaemonError>().is_some() {
                 error
@@ -134,11 +149,11 @@ impl Connection {
     fn request_inner(
         &mut self,
         request: &impl serde::Serialize,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Value> {
         self.reader
             .get_ref()
-            .set_read_timeout(Some(timeout))
+            .set_read_timeout(timeout)
             .context("setting control response timeout")?;
         serde_json::to_writer(&mut self.writer, request).context("encoding control request")?;
         self.writer

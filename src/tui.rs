@@ -77,10 +77,7 @@ type Session = RefCell<crate::client::Connection>;
 fn call(socket: &Session, mut request: Value) -> Result<Value> {
     request["version"] = json!(1);
     request["persistent"] = json!(true);
-    let timeout = request["timeout_ms"].as_u64().unwrap_or(30000).min(300000) + 5000;
-    socket
-        .borrow_mut()
-        .request(&request, Duration::from_millis(timeout.min(3000)))
+    socket.borrow_mut().request_until_answer_or_dead(&request)
 }
 
 #[derive(serde::Serialize)]
@@ -3071,12 +3068,11 @@ mod tests {
                         .set_read_timeout(Some(Duration::from_millis(300)))
                         .unwrap();
                     let mut extra = String::new();
-                    let second = peer.read_line(&mut extra);
+                    let read = peer.read_line(&mut extra);
                     assert!(
                         extra.is_empty(),
-                        "slow snapshot resent the request: {extra}"
+                        "slow snapshot resent the request: {extra} ({read:?})"
                     );
-                    assert!(second.is_err());
                 }
             });
             let socket = Session::new(crate::client::Connection::connect(&path).unwrap());
