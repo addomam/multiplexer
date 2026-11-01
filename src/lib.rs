@@ -2,6 +2,7 @@ mod acp;
 mod acp_profiles;
 pub mod cli;
 pub mod client;
+pub mod command;
 mod codex;
 mod control;
 pub mod daemon;
