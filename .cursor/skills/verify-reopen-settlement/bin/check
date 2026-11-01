@@ -13,7 +13,7 @@ from pathlib import Path
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_DIR.parents[2]
-SYNC_COMMIT = "2033f4a588d835d4011ce70d2790b6eaa261aa5d"
+SYNC_COMMIT = "a53a20a6a5155544e84652a53f0f635e9d7ec546"
 COVERED = ("src/daemon/recovery.rs", "src/daemon.rs")
 JAR_URL = "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar"
 JAR = SKILL_DIR / "tla2tools.jar"
