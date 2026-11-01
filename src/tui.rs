@@ -369,6 +369,19 @@ enum MenuAction {
     Actions,
     Session(menu::SessionAction),
 }
+
+fn pending_parent_after_menu(
+    pending: Option<(String, bool)>,
+    action: &MenuAction,
+) -> Option<(String, bool)> {
+    match action {
+        MenuAction::Save
+        | MenuAction::Projects
+        | MenuAction::NewSession
+        | MenuAction::Actions
+        | MenuAction::Session(_) => pending,
+    }
+}
 fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
     let terminals = snapshot["terminals"]
         .as_array()
@@ -717,6 +730,17 @@ fn contains_view(snapshot: &Value, id: &str) -> bool {
         || snapshot["terminals"]
             .as_array()
             .is_some_and(|terminals| terminals.iter().any(|terminal| terminal["id"] == id))
+}
+
+fn selection_for_missing_active(snapshot: &Value, active: &str) -> String {
+    if contains_view(snapshot, active) {
+        return active.to_owned();
+    }
+    snapshot["terminals"]
+        .as_array()
+        .and_then(|terminals| terminals.first())
+        .map(|terminal| text(terminal, "id").to_owned())
+        .unwrap_or_default()
 }
 
 fn has_views(snapshot: &Value) -> bool {
@@ -1347,11 +1371,7 @@ fn attached(
                     }
                     snapshot_at = Instant::now();
                     if !contains_view(&snapshot, &active) {
-                        active = snapshot["terminals"]
-                            .as_array()
-                            .and_then(|ts| ts.first())
-                            .map(|t| text(t, "id").to_owned())
-                            .unwrap_or_default();
+                        active = selection_for_missing_active(&snapshot, &active);
                         Resume::select(resume, &snapshot, &active);
                         picker = true;
                         offset = 0;
@@ -2049,6 +2069,7 @@ fn attached(
                 None
             };
             if let Some(action) = menu_action {
+                pending_parent = pending_parent_after_menu(pending_parent.take(), &action);
                 authority.activity(&active, &mut status);
                 if let Event::Mouse(mouse) = &event {
                     authority.suppress_mouse(mouse.kind);
@@ -3087,5 +3108,68 @@ mod tests {
             assert!(socket.borrow().connected());
         });
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn missing_active_id_sets_selection_to_none() {
+        let snapshot = json!({
+            "daemon_id": "daemon-1",
+            "detach_generation": 4,
+            "terminals": [
+                {"id": "first", "alive": true},
+                {"id": "second", "alive": false}
+            ],
+            "agent_views": []
+        });
+        let selection = selection_for_missing_active(&snapshot, "vanished");
+        let mut resume = Some(Resume::capture(&snapshot, "vanished"));
+        Resume::select(&mut resume, &snapshot, &selection);
+        assert!(
+            selection.is_empty(),
+            "a missing active id sets the selection to none, got {selection}"
+        );
+        assert_ne!(
+            resume.as_ref().map(|record| record.active.as_str()),
+            Some("first"),
+            "Resume::select is not called with the first terminal"
+        );
+    }
+
+    #[test]
+    fn menu_actions_clear_pending_parent() {
+        let armed = || Some(("child".to_owned(), false));
+        let demoted = || Some(("child".to_owned(), true));
+        assert!(pending_parent_after_menu(armed(), &MenuAction::Save).is_none());
+        assert!(
+            pending_parent_after_menu(demoted(), &MenuAction::Session(menu::SessionAction::Close))
+                .is_none()
+        );
+        for action in [
+            MenuAction::Projects,
+            MenuAction::NewSession,
+            MenuAction::Actions,
+            MenuAction::Session(menu::SessionAction::Rename),
+            MenuAction::Session(menu::SessionAction::Control),
+            MenuAction::Session(menu::SessionAction::Force),
+            MenuAction::Session(menu::SessionAction::SendKey),
+            MenuAction::Session(menu::SessionAction::Promote),
+        ] {
+            assert!(
+                pending_parent_after_menu(armed(), &action).is_none(),
+                "menu action left an armed move"
+            );
+        }
+        assert_eq!(
+            pending_parent_after_menu(armed(), &MenuAction::Session(menu::SessionAction::Reparent))
+                .as_ref()
+                .map(|(child, demote)| (child.as_str(), *demote)),
+            Some(("child", false))
+        );
+        assert_eq!(
+            pending_parent_after_menu(demoted(), &MenuAction::Session(menu::SessionAction::Demote))
+                .as_ref()
+                .map(|(child, demote)| (child.as_str(), *demote)),
+            Some(("child", true))
+        );
     }
 }
