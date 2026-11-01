@@ -944,6 +944,84 @@ impl Daemon {
             .unwrap_or_default()
     }
 
+    fn refuse_when_unsettled(&self, matches: impl Fn(&Record) -> bool) -> Result<()> {
+        let startup = self.startup_pending.load(Ordering::Acquire);
+        let blocked = self
+            .recovery_records()
+            .iter()
+            .any(|record| matches(record) && (startup || record.launch_pending));
+        ensure!(
+            !blocked,
+            "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+        );
+        Ok(())
+    }
+
+    pub(super) fn refuse_settling_codex_client(&self, request: &Value) -> Result<()> {
+        let Some(session) = request.get("resume_thread").and_then(Value::as_str) else {
+            return Ok(());
+        };
+        self.refuse_when_unsettled(|record| {
+            matches!(record.agent, Agent::Codex { .. }) && record.session_id == session
+        })
+    }
+
+    pub(super) fn refuse_settling_acp_client(&self, request: &Value) -> Result<()> {
+        if request.get("new_project").and_then(Value::as_bool) == Some(true) {
+            return Ok(());
+        }
+        let Some(project) = request.get("project").and_then(Value::as_str) else {
+            return Ok(());
+        };
+        let profile = request.get("agent").and_then(Value::as_str);
+        self.refuse_when_unsettled(|record| {
+            let Agent::Acp { profile: saved } = &record.agent else {
+                return false;
+            };
+            let same_project = record.project.id == project || record.project.name == project;
+            let same_profile = profile.is_some_and(|profile| profile == saved);
+            same_project && same_profile
+        })
+    }
+
+    pub(super) fn refuse_settling_acp_command(
+        &self,
+        project: &str,
+        launch_hash: Option<&str>,
+    ) -> Result<()> {
+        let Some(launch_hash) = launch_hash else {
+            return Ok(());
+        };
+        self.refuse_when_unsettled(|record| {
+            matches!(record.agent, Agent::Acp { .. })
+                && record.project.id == project
+                && record.launch_hash.as_deref() == Some(launch_hash)
+        })
+    }
+
+    fn reopen_after_failed_open(&self, record: &Record, error: anyhow::Error) -> Result<()> {
+        let saved = self
+            .recovery_records()
+            .into_iter()
+            .find(|saved| saved.id == record.id);
+        let peer = saved
+            .as_ref()
+            .and_then(|saved| saved.peer.as_ref())
+            .or(record.peer.as_ref());
+        let Some(peer) = peer else {
+            return Err(error);
+        };
+        match peer.status() {
+            Ok(false) => Err(error),
+            Ok(true) => bail!(
+                "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+            ),
+            Err(status) => Err(status.context(
+                "recovery-unavailable: cannot determine whether previous agent still exists",
+            )),
+        }
+    }
+
     pub(super) fn reopen_conversations(self: &Arc<Self>, records: Vec<Record>) {
         for record in records {
             if self.stopping.load(Ordering::Acquire) || SIGNAL_STOP.load(Ordering::Relaxed) {
@@ -1001,7 +1079,9 @@ impl Daemon {
             Agent::Acp { profile } => {
                 request["op"] = json!("acp-open");
                 request["agent"] = json!(profile);
-                self.acp_open(&request, Some(record))?;
+                if let Err(error) = self.acp_open(&request, Some(record)) {
+                    return self.reopen_after_failed_open(record, error);
+                }
             }
             Agent::Omp => {
                 let file = record
@@ -1038,7 +1118,9 @@ impl Daemon {
                     }),
                     0,
                 );
-                result?;
+                if let Err(error) = result {
+                    return self.reopen_after_failed_open(record, error);
+                }
             }
         }
         Ok(())
@@ -1498,10 +1580,15 @@ mod tests {
     }
 
     fn descendant_pids() -> Vec<i32> {
-        let output = std::process::Command::new("/bin/ps")
+        let mut command = std::process::Command::new("/bin/ps");
+        command
             .args(["-ax", "-o", "pid=,ppid="])
-            .output()
-            .unwrap();
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null());
+        let child = command.spawn().unwrap();
+        let ps = child.id() as i32;
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success(), "ps failed to list processes");
         let text = String::from_utf8(output.stdout).unwrap();
         let rows: Vec<(i32, i32)> = text
             .lines()
@@ -1516,13 +1603,14 @@ mod tests {
         let mut queue = vec![std::process::id() as i32];
         while let Some(parent) = queue.pop() {
             for (pid, candidate) in &rows {
-                if *candidate == parent {
+                if *pid != ps && *candidate == parent {
                     alive.push(*pid);
                     queue.push(*pid);
                 }
             }
         }
         alive.sort_unstable();
+        alive.dedup();
         alive
     }
 
@@ -1589,6 +1677,10 @@ mod tests {
         let controller = client_controller(&fixture);
         let terminals = fixture.daemon.state.lock().terminals.len();
         let children = descendant_pids();
+        assert!(
+            !children.is_empty(),
+            "the startup shell must be visible before the client open"
+        );
         let request = json!({
             "version": 1,
             "op": "agent-open",

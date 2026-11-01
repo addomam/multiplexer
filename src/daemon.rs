@@ -401,6 +401,9 @@ impl Daemon {
         request: &Value,
         restored: Option<&crate::recovery::Record>,
     ) -> Result<Value> {
+        if restored.is_none() {
+            self.refuse_settling_acp_client(request)?;
+        }
         validate_mutation_fields(
             request,
             &[
@@ -553,6 +556,9 @@ impl Daemon {
             )
         };
         let launch_hash = agent.map(|_| recovery::launch_hash(&command));
+        if restored.is_none() && agent.is_none() {
+            self.refuse_settling_acp_command(&project, launch_hash.as_deref())?;
+        }
         if let Some(record) = restored {
             ensure!(
                 record.launch_hash == launch_hash,
@@ -971,6 +977,9 @@ impl Daemon {
         connection: u64,
         restored: Option<&crate::recovery::Record>,
     ) -> Result<Value> {
+        if restored.is_none() {
+            self.refuse_settling_codex_client(request)?;
+        }
         let controller = &request["controller"];
         let recovered = self.controls.lock().handle(
             &json!({
