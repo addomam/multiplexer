@@ -505,12 +505,22 @@ fn canonical_location(path: &Path) -> Result<PathBuf> {
     }
 }
 
+pub(crate) fn private_owner_file(metadata: &Metadata) -> bool {
+    metadata.is_file()
+        && metadata.nlink() == 1
+        && metadata.uid() == unsafe { libc::geteuid() }
+        && metadata.mode() & 0o7777 == 0o600
+}
+
+pub(crate) fn private_owner_directory(metadata: &Metadata) -> bool {
+    metadata.is_dir()
+        && metadata.uid() == unsafe { libc::geteuid() }
+        && metadata.mode() & 0o022 == 0
+}
+
 fn private_file(metadata: &Metadata) -> Result<()> {
     ensure!(
-        metadata.is_file()
-            && metadata.nlink() == 1
-            && metadata.uid() == unsafe { libc::geteuid() }
-            && metadata.mode() & 0o7777 == 0o600,
+        private_owner_file(metadata),
         "recovery-invalid: expected a 0600 regular file owned by this user without hard-link aliases"
     );
     Ok(())
@@ -624,9 +634,7 @@ impl Journal {
         let directory = unsafe { File::from_raw_fd(fd) };
         let metadata = directory.metadata()?;
         ensure!(
-            metadata.is_dir()
-                && metadata.uid() == unsafe { libc::geteuid() }
-                && metadata.mode() & 0o022 == 0,
+            private_owner_directory(&metadata),
             "recovery-invalid: configuration parent must be owned by this user and not writable by others"
         );
         let lock_name = CString::new(format!("{name}.lock"))?;
@@ -708,11 +716,9 @@ impl Journal {
         let named = fs::symlink_metadata(parent)?;
         let held = self.directory.metadata()?;
         ensure!(
-            named.is_dir()
+            private_owner_directory(&named)
                 && named.dev() == held.dev()
-                && named.ino() == held.ino()
-                && named.uid() == unsafe { libc::geteuid() }
-                && named.mode() & 0o022 == 0,
+                && named.ino() == held.ino(),
             "recovery-conflict: configuration directory changed"
         );
         private_file(&self.lock.0.metadata()?)?;

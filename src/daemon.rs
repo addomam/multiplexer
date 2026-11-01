@@ -453,7 +453,7 @@ impl Daemon {
                     .store
                     .projects
                     .values()
-                    .filter(|project| project.name == requested_project);
+                    .filter(|project| state.store.matches_selector(project, requested_project));
                 let project = matches
                     .next()
                     .context("project-not-found: project ID or name not found")?;
@@ -1074,7 +1074,7 @@ impl Daemon {
                     .store
                     .projects
                     .values()
-                    .filter(|p| p.id == selector || p.name == selector)
+                    .filter(|project| state.store.matches_selector(project, selector))
                     .collect();
                 match matches.as_slice() {
                     [project] => project.id.clone(),
@@ -2229,7 +2229,7 @@ impl Daemon {
                     .store
                     .projects
                     .values()
-                    .filter(|project| project.id == selector || project.name == selector)
+                    .filter(|project| state.store.matches_selector(project, selector))
                     .map(|project| project.id.clone())
                     .collect();
                 let id = match ids.as_slice() {
@@ -2493,6 +2493,9 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     let integration = Integration::new(runtime, socket, &std::env::current_exe()?)?;
     let store = Store::load(&client::config_path(), projects_dir)?;
     let (recovery, recovery_error) = recovery::RecoveryState::open(&client::config_path(), socket);
+    if let Some(error) = recovery_error {
+        return Err(error);
+    }
     let native_store = recovery.agent_store();
     let startup = store.config.daemon_start_hooks.clone();
     let cwd = std::env::current_dir()?;
@@ -2524,9 +2527,6 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         hook_jobs,
         recovery: Mutex::new(recovery),
     });
-    if let Some(error) = recovery_error {
-        daemon.recovery_diagnostic(None, &error);
-    }
     let weak = Arc::downgrade(&daemon);
     let hook_worker = thread::spawn(move || {
         while let Ok(Some(job)) = hook_receiver.recv() {
