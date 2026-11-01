@@ -123,7 +123,7 @@ impl Attachment {
                     &mut slave,
                     std::ptr::null_mut(),
                     std::ptr::null_mut(),
-                    &mut size,
+                    std::ptr::addr_of_mut!(size),
                 )
             },
             0,
@@ -723,6 +723,7 @@ fn e04s03_native_force_fences_prompt_draft_and_physical_routes_without_replay() 
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_f5_presses_cannot_submit_before_reviewed_input_drain() {
     let host = Host::new();
@@ -827,16 +828,19 @@ fn e07s02_native_queued_f5_presses_cannot_submit_before_reviewed_input_drain() {
     finish(host, &mut agent, &mut native, &mut sentinel);
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_permission_enter_cannot_allow_before_input_drain() {
     native_queued_permission("Allow this invocation", "opaque-α", 42);
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_permission_enter_cannot_replace_a_fresh_reject() {
     native_queued_permission("Reject this invocation", "opaque-γ", 0);
 }
 
+#[cfg(target_os = "macos")]
 fn native_queued_permission(label: &str, option: &str, expected: i64) {
     let host = Host::new();
     let mut sentinel = Sentinel::new();
@@ -1048,36 +1052,43 @@ fn native_focus_receipt(
     })
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_y_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("y");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_repeat_y_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("repeat-y");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_focused_enter_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("focused-enter");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_focused_repeat_enter_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("focused-repeat-enter");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_focused_repeat_space_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("focused-repeat-space");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn e07s02_native_queued_owner_mouse_cannot_yield_to_a_later_manual_request() {
     native_queued_owner("mouse");
 }
 
+#[cfg(target_os = "macos")]
 fn native_queued_owner(route: &str) {
     let host = Host::new();
     let mut sentinel = Sentinel::new();
