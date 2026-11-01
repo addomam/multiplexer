@@ -77,8 +77,7 @@ pub(crate) enum Phase {
     Blocked,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub(crate) struct Record {
     pub id: String,
     pub project: Project,
@@ -93,6 +92,52 @@ pub(crate) struct Record {
     pub peer: Option<Peer>,
     pub phase: Phase,
     pub blocked: Option<RecoveryBlock>,
+}
+
+impl<'de> Deserialize<'de> for Record {
+    fn deserialize<D: serde::Deserializer<'de>>(input: D) -> std::result::Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Saved {
+            id: String,
+            project: Project,
+            name: String,
+            cwd: PathBuf,
+            agent: Agent,
+            session_id: String,
+            session_file: Option<PathBuf>,
+            launch_hash: Option<String>,
+            #[serde(deserialize_with = "deserialize_settings")]
+            settings: Value,
+            peer: Option<Peer>,
+            #[serde(default)]
+            phase: Option<Phase>,
+            #[serde(default)]
+            launch_pending: Option<bool>,
+            blocked: Option<RecoveryBlock>,
+        }
+        let saved = Saved::deserialize(input)?;
+        let phase = match (saved.phase, saved.launch_pending) {
+            (Some(phase), _) => phase,
+            (None, Some(true)) => Phase::Pending,
+            (None, Some(false)) => Phase::Idle,
+            (None, None) => return Err(serde::de::Error::custom("missing phase")),
+        };
+        Ok(Self {
+            id: saved.id,
+            project: saved.project,
+            name: saved.name,
+            cwd: saved.cwd,
+            agent: saved.agent,
+            session_id: saved.session_id,
+            session_file: saved.session_file,
+            launch_hash: saved.launch_hash,
+            settings: saved.settings,
+            peer: saved.peer,
+            phase,
+            blocked: saved.blocked,
+        })
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -1179,6 +1224,9 @@ mod tests {
                 Some("bit-true") => {
                     record.as_object_mut().unwrap().remove("phase");
                     record["launch_pending"] = json!(true);
+                }
+                Some("phase-pending") => {
+                    record["launch_pending"] = json!(false);
                 }
                 _ => {}
             }

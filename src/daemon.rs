@@ -401,9 +401,6 @@ impl Daemon {
         request: &Value,
         restored: Option<&crate::recovery::Record>,
     ) -> Result<Value> {
-        if restored.is_none() {
-            self.refuse_settling_acp_client(request)?;
-        }
         validate_mutation_fields(
             request,
             &[
@@ -441,14 +438,11 @@ impl Daemon {
         let requested_project = request["project"]
             .as_str()
             .context("invalid-request: project ID required")?;
-        let (project, default_cwd, profile) = {
+        let (project, default_cwd) = {
             let state = self.state.lock();
-            let profile = agent
-                .map(|id| crate::acp_profiles::select(&state.store.config.acp_profiles, id))
-                .transpose()?;
             let chosen = if let Some(project) = state.store.projects.get(requested_project) {
                 project
-            } else if profile.is_some() {
+            } else if agent.is_some() {
                 let mut matches = state
                     .store
                     .projects
@@ -470,7 +464,16 @@ impl Daemon {
             } else {
                 chosen.id.clone()
             };
-            (project, chosen.context.clone(), profile)
+            (project, chosen.context.clone())
+        };
+        if restored.is_none() && !new_project {
+            self.refuse_settling_acp_client(&project, agent)?;
+        }
+        let profile = {
+            let state = self.state.lock();
+            agent
+                .map(|id| crate::acp_profiles::select(&state.store.config.acp_profiles, id))
+                .transpose()?
         };
         // Renamed/generated labels already accepted by the broker remain valid
         // on internal reopening; keep the ordinary explicit launch bound.
@@ -511,8 +514,8 @@ impl Daemon {
             )
         });
         let name = requested_name.unwrap_or_else(|| default_name.as_deref().expect("default name"));
-        let mut claimed = if restored.is_none() {
-            self.take_dead_acp_retry(requested_project, &project, agent, None)?
+        let mut claimed = if restored.is_none() && !new_project {
+            self.take_dead_acp_retry(&project, agent, None)?
         } else {
             None
         };
@@ -560,15 +563,10 @@ impl Daemon {
             )
         };
         let launch_hash = agent.map(|_| recovery::launch_hash(&command));
-        if restored.is_none() && agent.is_none() {
+        if restored.is_none() && agent.is_none() && !new_project {
             self.refuse_settling_acp_command(&project, launch_hash.as_deref())?;
             if claimed.is_none() {
-                claimed = self.take_dead_acp_retry(
-                    requested_project,
-                    &project,
-                    None,
-                    launch_hash.as_deref(),
-                )?;
+                claimed = self.take_dead_acp_retry(&project, None, launch_hash.as_deref())?;
             }
         }
         let launching = restored.or(claimed.as_ref());

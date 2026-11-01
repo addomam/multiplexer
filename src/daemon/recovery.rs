@@ -1025,21 +1025,16 @@ impl Daemon {
         })
     }
 
-    pub(super) fn refuse_settling_acp_client(&self, request: &Value) -> Result<()> {
-        if request.get("new_project").and_then(Value::as_bool) == Some(true) {
-            return Ok(());
-        }
-        let Some(project) = request.get("project").and_then(Value::as_str) else {
-            return Ok(());
-        };
-        let profile = request.get("agent").and_then(Value::as_str);
+    pub(super) fn refuse_settling_acp_client(
+        &self,
+        project_id: &str,
+        profile: Option<&str>,
+    ) -> Result<()> {
         self.refuse_when_unsettled(|record| {
             let Agent::Acp { profile: saved } = &record.agent else {
                 return false;
             };
-            let same_project = record.project.id == project || record.project.name == project;
-            let same_profile = profile.is_some_and(|profile| profile == saved);
-            same_project && same_profile
+            record.project.id == project_id && profile.is_some_and(|profile| profile == saved)
         })
     }
 
@@ -1109,7 +1104,6 @@ impl Daemon {
 
     pub(super) fn take_dead_acp_retry(
         &self,
-        requested_project: &str,
         project_id: &str,
         profile: Option<&str>,
         launch_hash: Option<&str>,
@@ -1118,15 +1112,13 @@ impl Daemon {
             let Agent::Acp { profile: saved } = &record.agent else {
                 return false;
             };
-            if let Some(profile) = profile {
-                let same_project = record.project.id == requested_project
-                    || record.project.name == requested_project
-                    || record.project.id == project_id;
-                return same_project && saved == profile;
+            if record.project.id != project_id {
+                return false;
             }
-            launch_hash.is_some_and(|hash| {
-                record.project.id == project_id && record.launch_hash.as_deref() == Some(hash)
-            })
+            match profile {
+                Some(profile) => saved == profile,
+                None => launch_hash.is_some_and(|hash| record.launch_hash.as_deref() == Some(hash)),
+            }
         })
     }
 
@@ -2169,5 +2161,45 @@ mod tests {
             1,
         );
         assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
+
+    #[test]
+    fn a_renamed_project_still_retries_the_same_id() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let id = Uuid::new_v4().to_string();
+        fixture.daemon.state.lock().store.projects.insert(
+            id.clone(),
+            crate::projects::Project {
+                id: id.clone(),
+                name: "before".into(),
+                context: fixture.root.clone(),
+                saved: true,
+                main_terminal: None,
+                hooks: Vec::new(),
+                recipes: BTreeMap::new(),
+            },
+        );
+        let mut saved = dead_acp(&fixture, &script);
+        saved.project.id = id;
+        saved.project.name = "before".into();
+        save(&fixture, vec![saved]);
+        fixture
+            .daemon
+            .state
+            .lock()
+            .store
+            .projects
+            .get_mut(&fixture.rows()[0].project.id)
+            .unwrap()
+            .name = "after".into();
+        open_retry(&fixture, "after").expect("a rename still matches the project id");
+        let phase = fixture.rows()[0].phase;
+        assert!(
+            phase == Phase::Pending || phase == Phase::Live,
+            "retry left the row {phase:?}"
+        );
+        assert_eq!(wait_for_one_child(&marker), 1);
     }
 }
