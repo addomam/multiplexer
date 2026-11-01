@@ -864,10 +864,13 @@ impl Terminal {
             .screen_update(offset, limit, since, row_updates)
     }
     pub fn close(&self) {
+        let mut processes = self.processes.lock();
+        // A second close blocks on this lock until terminate returns. The daemon
+        // erases the journal row only after close returns.
         if self.closing.swap(true, Ordering::AcqRel) {
             return;
         }
-        self.processes.lock().terminate();
+        processes.terminate();
     }
 }
 impl Drop for Terminal {
@@ -1118,6 +1121,11 @@ impl ProcessTree {
         self.freeze();
         for &identity in &self.members {
             identity.signal(libc::SIGKILL);
+        }
+        // kill queues the signal. A changed identity is not signaled, and a
+        // zombie no longer matches a live process. Either one lets us return.
+        while !self.terminated() {
+            thread::sleep(Duration::from_millis(1));
         }
     }
 }
