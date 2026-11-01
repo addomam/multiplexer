@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -528,6 +528,10 @@ fn request_for(command: Command) -> Result<Value> {
             omp,
             recipe,
         } => {
+            if usize::from(command.is_some()) + usize::from(omp) + usize::from(recipe.is_some()) > 1
+            {
+                bail!("mixed-open: command, omp, and recipe are mutually exclusive");
+            }
             json!({"op":"open","source":source,"project":project,"name":name,"cwd":cwd,"command":command,"omp":omp,"recipe":recipe})
         }
         Command::Name { terminal, name } => json!({"op":"name","terminal":terminal,"name":name}),
@@ -677,10 +681,17 @@ pub fn run() -> Result<()> {
                 }
                 Err(error) => {
                     let message = format!("{error:#}");
-                    let (code, detail) = error
-                        .downcast_ref::<crate::client::DaemonError>()
-                        .map(|error| (error.code.as_str(), error.message.as_str()))
-                        .unwrap_or(("request-failed", message.as_str()));
+                    let daemon_error = error.downcast_ref::<crate::client::DaemonError>();
+                    let coded = message.split_once(':').and_then(|(code, _)| {
+                        (!code.is_empty() && code.len() < 64 && !code.contains(' ')).then_some(code)
+                    });
+                    let code = daemon_error
+                        .map(|error| error.code.as_str())
+                        .or(coded)
+                        .unwrap_or("request-failed");
+                    let detail = daemon_error
+                        .map(|error| error.message.as_str())
+                        .unwrap_or(message.as_str());
                     println!(
                         "{}",
                         json!({"version":1,"ok":false,"error":{"code":code,"message":detail}})
@@ -769,5 +780,49 @@ mod tests {
         assert!(view["view"]["focused"].is_null());
         assert!(view["view"].get("terminal").is_some());
         assert!(view["view"].get("focused").is_some());
+    }
+
+    #[test]
+    fn open_rejects_mixed_launch_before_the_daemon_is_asked() {
+        for args in [
+            vec!["amux", "open"],
+            vec!["amux", "open", "--omp"],
+            vec!["amux", "open", "--recipe", "check"],
+            vec!["amux", "open", "--command", "printf one"],
+        ] {
+            let parsed = Args::try_parse_from(args).unwrap();
+            let request = request_for(parsed.command.unwrap()).unwrap();
+            assert_eq!(request["op"], "open");
+        }
+        for args in [
+            vec!["amux", "open", "--omp", "--recipe", "check"],
+            vec!["amux", "open", "--omp", "--command", "printf one"],
+            vec![
+                "amux",
+                "open",
+                "--recipe",
+                "check",
+                "--command",
+                "printf one",
+            ],
+            vec![
+                "amux",
+                "open",
+                "--omp",
+                "--recipe",
+                "check",
+                "--command",
+                "printf one",
+            ],
+        ] {
+            let parsed = Args::try_parse_from(args).unwrap();
+            let error = request_for(parsed.command.unwrap())
+                .expect_err("mixed open must be rejected before the daemon is asked")
+                .to_string();
+            assert!(
+                error.contains("mixed-open:"),
+                "mixed open rejection was {error}"
+            );
+        }
     }
 }
