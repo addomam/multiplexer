@@ -491,6 +491,82 @@ pub fn ensure_daemon(socket: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[cfg(target_os = "macos")]
+    unsafe extern "C" {
+        fn _NSGetArgc() -> *mut i32;
+        fn _NSGetArgv() -> *mut *mut *mut libc::c_char;
+    }
+
+    #[cfg(target_os = "macos")]
+    unsafe fn arg_is(arg: *const libc::c_char, expected: &[u8]) -> bool {
+        if arg.is_null() {
+            return false;
+        }
+        let mut index = 0;
+        while index < expected.len() {
+            let byte = unsafe { *arg.add(index) };
+            if byte == 0 || byte != expected[index] as libc::c_char {
+                return false;
+            }
+            index += 1;
+        }
+        unsafe { *arg.add(expected.len()) == 0 }
+    }
+
+    #[cfg(target_os = "macos")]
+    unsafe extern "C" fn lose_spawned_daemon() {
+        let key = b"AMUX_TEST_LOSE_AUTOSTART\0";
+        if unsafe { libc::getenv(key.as_ptr().cast()) }.is_null() {
+            return;
+        }
+        let argc_ptr = unsafe { _NSGetArgc() };
+        let argv_ptr = unsafe { _NSGetArgv() };
+        if argc_ptr.is_null() || argv_ptr.is_null() {
+            return;
+        }
+        let argc = unsafe { *argc_ptr };
+        let argv = unsafe { *argv_ptr };
+        let Ok(count) = usize::try_from(argc) else {
+            return;
+        };
+        if argv.is_null() || count == 0 {
+            return;
+        }
+        let mut saw_socket = false;
+        let mut index = 0;
+        while index < count {
+            if unsafe { arg_is(*argv.add(index), b"--socket") } {
+                saw_socket = true;
+            }
+            index += 1;
+        }
+        let last_is_daemon = unsafe { arg_is(*argv.add(count - 1), b"daemon") };
+        if !saw_socket || !last_is_daemon {
+            return;
+        }
+        let message = b"already-running: daemon runtime is locked\n";
+        unsafe {
+            let _ = libc::write(2, message.as_ptr().cast(), message.len());
+            libc::_exit(1);
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[used]
+    #[unsafe(link_section = "__DATA,__mod_init_func")]
+    static LOSE_SPAWNED_DAEMON: unsafe extern "C" fn() = lose_spawned_daemon;
+
+    #[cfg(target_os = "macos")]
+    struct ClearLoseAutostart;
+    #[cfg(target_os = "macos")]
+    impl Drop for ClearLoseAutostart {
+        fn drop(&mut self) {
+            unsafe { std::env::remove_var("AMUX_TEST_LOSE_AUTOSTART") };
+        }
+    }
 
     fn connection_pair() -> (Connection, UnixStream) {
         let (stream, peer) = UnixStream::pair().unwrap();
@@ -575,5 +651,85 @@ mod tests {
                 .unwrap_err();
             assert_eq!(error.to_string(), expected);
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn already_running_child_then_ready_probe_returns_ok() {
+        use std::io::{BufRead, BufReader, Write};
+        use std::os::unix::fs::PermissionsExt;
+        use std::os::unix::net::UnixListener;
+
+        let directory =
+            std::path::PathBuf::from(format!("/tmp/amux-autostart-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&directory).unwrap();
+        fs::set_permissions(&directory, fs::Permissions::from_mode(0o700)).unwrap();
+        let socket = directory.join("control.sock");
+        let log_path = directory.join("daemon.log");
+        let _clear = ClearLoseAutostart;
+        unsafe { std::env::set_var("AMUX_TEST_LOSE_AUTOSTART", "1") };
+        let served = Arc::new(AtomicBool::new(false));
+        let served_flag = Arc::clone(&served);
+        let server_socket = socket.clone();
+        let server_log = log_path.clone();
+        let server = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                if server_log.is_file()
+                    && fs::read_to_string(&server_log)
+                        .unwrap_or_default()
+                        .contains("already-running:")
+                {
+                    break;
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "losing child did not record already-running"
+                );
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            std::thread::sleep(Duration::from_millis(300));
+            let listener = UnixListener::bind(&server_socket).unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let accept_deadline = Instant::now() + Duration::from_secs(2);
+            let mut stream = loop {
+                match listener.accept() {
+                    Ok((stream, _)) => break stream,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        if Instant::now() >= accept_deadline {
+                            return;
+                        }
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("accept readiness probe: {error}"),
+                }
+            };
+            stream.set_nonblocking(false).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut line = String::new();
+            BufReader::new(stream.try_clone().unwrap())
+                .read_line(&mut line)
+                .unwrap();
+            let request: serde_json::Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(request["op"], "snapshot");
+            stream
+                .write_all(b"{\"version\":1,\"ok\":true,\"result\":{\"seq\":1,\"config\":{},\"projects\":[],\"terminals\":[]}}\n")
+                .unwrap();
+            served_flag.store(true, Ordering::SeqCst);
+        });
+        let result = ensure_daemon(&socket);
+        server.join().unwrap();
+        let log = fs::read_to_string(&log_path).unwrap_or_default();
+        let _ = fs::remove_dir_all(&directory);
+        if let Err(error) = result {
+            panic!("{error:#}");
+        }
+        assert!(served.load(Ordering::SeqCst), "ready probe was not served");
+        assert!(
+            log.contains("already-running:"),
+            "child exit was not already-running: {log}"
+        );
     }
 }
