@@ -375,11 +375,12 @@ fn pending_parent_after_menu(
     action: &MenuAction,
 ) -> Option<(String, bool)> {
     match action {
+        MenuAction::Session(menu::SessionAction::Reparent | menu::SessionAction::Demote) => pending,
         MenuAction::Save
         | MenuAction::Projects
         | MenuAction::NewSession
         | MenuAction::Actions
-        | MenuAction::Session(_) => pending,
+        | MenuAction::Session(_) => None,
     }
 }
 fn tree_rows(snapshot: &Value, query: &str) -> Vec<Row> {
@@ -734,13 +735,10 @@ fn contains_view(snapshot: &Value, id: &str) -> bool {
 
 fn selection_for_missing_active(snapshot: &Value, active: &str) -> String {
     if contains_view(snapshot, active) {
-        return active.to_owned();
+        active.to_owned()
+    } else {
+        String::new()
     }
-    snapshot["terminals"]
-        .as_array()
-        .and_then(|terminals| terminals.first())
-        .map(|terminal| text(terminal, "id").to_owned())
-        .unwrap_or_default()
 }
 
 fn has_views(snapshot: &Value) -> bool {
@@ -837,11 +835,11 @@ fn apply_window(
     if opens {
         *active = text(&result, "id").to_owned();
     } else if !contains_view(snapshot, active) {
-        *active = preferred_view(snapshot, None)
-            .map(|view| text(view, "id").to_owned())
-            .unwrap_or_default();
+        *active = selection_for_missing_active(snapshot, active);
     }
-    Resume::select(resume, snapshot, active);
+    if !active.is_empty() {
+        Resume::select(resume, snapshot, active);
+    }
     Ok(())
 }
 
@@ -1371,12 +1369,14 @@ fn attached(
                     }
                     snapshot_at = Instant::now();
                     if !contains_view(&snapshot, &active) {
-                        active = selection_for_missing_active(&snapshot, &active);
-                        Resume::select(resume, &snapshot, &active);
-                        picker = true;
-                        offset = 0;
-                        screen = Value::Null;
-                        selection = None;
+                        let next = selection_for_missing_active(&snapshot, &active);
+                        if next != active {
+                            active = next;
+                            picker = true;
+                            offset = 0;
+                            screen = Value::Null;
+                            selection = None;
+                        }
                     }
                     dirty = true;
                 }
