@@ -675,6 +675,19 @@ impl Daemon {
         }
     }
 
+    fn reopen_failure_phase(failure: Option<&str>, peer_present: bool) -> Option<Phase> {
+        let child_existed =
+            peer_present || matches!(failure, Some("process-identity" | "cleanup"));
+        if !child_existed {
+            Some(match failure {
+                Some("stdio" | "spawn" | "worker-start") => Phase::Dead,
+                _ => Phase::Idle,
+            })
+        } else {
+            None
+        }
+    }
+
     fn checkpoint_recovery_inner(&self, id: &str, final_checkpoint: bool) {
         let Some(checkpoint) = self.recovery_checkpoint_scope(id) else {
             return;
@@ -2214,5 +2227,24 @@ mod tests {
             "retry left the row {phase:?}"
         );
         assert_eq!(wait_for_one_child(&marker), 1);
+    }
+
+    #[test]
+    fn session_reopen_failed_with_a_peer_is_idle() {
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("session-reopen-failed"), true),
+            Some(Phase::Idle)
+        );
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("stdio"), false),
+            Some(Phase::Dead)
+        );
+        assert_eq!(Daemon::reopen_failure_phase(Some("spawn"), false), Some(Phase::Dead));
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("worker-start"), false),
+            Some(Phase::Dead)
+        );
+        assert_eq!(Daemon::reopen_failure_phase(Some("process-identity"), true), None);
+        assert_eq!(Daemon::reopen_failure_phase(Some("cleanup"), true), None);
     }
 }
