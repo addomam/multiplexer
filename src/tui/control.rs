@@ -176,7 +176,7 @@ pub(super) struct NativeControl {
 impl NativeControl {
     pub(super) fn register(path: &Path, daemon: &Value, observation: UnixStream) -> Result<Self> {
         let mut connection = crate::client::Connection::connect(path)?;
-        let observed = rpc(&mut connection, &mut json!({"op":"snapshot"}))?;
+        let observed = rpc(&mut connection, &json!({"op":"snapshot"}))?;
         if !daemon.is_string() || observed["daemon_id"] != *daemon {
             return Err(crate::client::connection_lost(
                 "daemon changed before native registration",
@@ -190,7 +190,7 @@ impl NativeControl {
         let stream = connection.shutdown_handle()?;
         let created = rpc(
             &mut connection,
-            &mut json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
+            &json!({"op":"controller-create", "role":"attachment", "label":"native TUI"}),
         )?;
         let stop = Arc::new(AtomicBool::new(false));
         let worker_stop = stop.clone();
@@ -221,7 +221,7 @@ impl NativeControl {
                             mut request,
                         } => {
                             let serial = request["view"]["serial"].as_u64();
-                            let mut result = rpc(&mut connection, &mut request);
+                            let mut result = rpc(&mut connection, &request);
                             if op == Op::Acp
                                 && matches!(
                                     request["op"].as_str(),
@@ -256,12 +256,12 @@ impl NativeControl {
                         } => {
                             // One deliberate claim, not replayed application input.
                             let state = if acp {
-                                rpc(&mut connection, &mut json!({"op":"snapshot"}))
+                                rpc(&mut connection, &json!({"op":"snapshot"}))
                                     .and_then(|snapshot| agent_state(&snapshot, &target))
                             } else {
                                 rpc(
                                     &mut connection,
-                                    &mut json!({"op":"state","terminal":target.as_ref()}),
+                                    &json!({"op":"state","terminal":target.as_ref()}),
                                 )
                             };
                             let result = state.and_then(|state| {
@@ -280,7 +280,7 @@ impl NativeControl {
                                 }
                                 rpc(
                                     &mut connection,
-                                    &mut addressed(
+                                    &addressed(
                                         json!({"op":"ownership-claim","controller":controller,
                                     "observed":state["ownership"]["observed"],
                                     "mode":"cooperative","when":{"kind":"now"}}),
@@ -294,26 +294,25 @@ impl NativeControl {
                         Work::Input { grant, input } => {
                             let result = match input {
                                 Input::Bytes(bytes) => connection.request(
-                                    &ByteInput {
-                                        version: 1,
-                                        persistent: true,
-                                        op: "input",
-                                        terminal: &grant.terminal,
-                                        control: &grant.handle,
-                                        bytes: &bytes,
-                                    },
+                                    &crate::client::wire(
+                                        &crate::command::Command::input_bytes(
+                                            &grant.terminal,
+                                            &grant.handle,
+                                            &bytes,
+                                        ),
+                                        Some(&json!(true)),
+                                    ),
                                     RPC_TIMEOUT,
                                 ),
                                 Input::Paste(text) => connection.request(
-                                    &PasteInput {
-                                        version: 1,
-                                        persistent: true,
-                                        op: "input",
-                                        terminal: &grant.terminal,
-                                        control: &grant.handle,
-                                        text: &text,
-                                        paste: true,
-                                    },
+                                    &crate::client::wire(
+                                        &crate::command::Command::input_paste(
+                                            &grant.terminal,
+                                            &grant.handle,
+                                            &text,
+                                        ),
+                                        Some(&json!(true)),
+                                    ),
                                     RPC_TIMEOUT,
                                 ),
                             };
@@ -422,7 +421,7 @@ impl NativeControl {
                 // unavailable daemon leaves the registration retained.
                 let _ = rpc(
                     &mut connection,
-                    &mut json!({"op":"control-handle","handle":self.controller,"method":"close"}),
+                    &json!({"op":"control-handle","handle":self.controller,"method":"close"}),
                 );
             }
         }
@@ -2173,10 +2172,12 @@ fn safe(text: &str, max: usize) -> String {
         .collect()
 }
 
-fn rpc(connection: &mut crate::client::Connection, request: &mut Value) -> Result<Value> {
-    request["version"] = json!(1);
-    request["persistent"] = json!(true);
-    connection.request(request, RPC_TIMEOUT)
+fn rpc(connection: &mut crate::client::Connection, request: &Value) -> Result<Value> {
+    let command = crate::command::Command::new(request.clone())?;
+    connection.request(
+        &crate::client::wire(&command, Some(&json!(true))),
+        RPC_TIMEOUT,
+    )
 }
 
 fn refresh(
@@ -2186,7 +2187,7 @@ fn refresh(
 ) -> Result<Value> {
     let private = rpc(
         connection,
-        &mut json!({"op":"control-handle","handle":controller,"method":"read"}),
+        &json!({"op":"control-handle","handle":controller,"method":"read"}),
     )?;
     let mut targets: std::collections::BTreeMap<_, _> = targets.into_iter().collect();
     let mut claims = Vec::new();
@@ -2204,7 +2205,7 @@ fn refresh(
             }
             let state = rpc(
                 connection,
-                &mut json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
+                &json!({"op":"control-handle","handle":summary["claim"],"method":"read"}),
             )?;
             claims.push(state);
         }
@@ -2221,7 +2222,7 @@ fn refresh(
         }
     }
     let agents = if targets.values().any(|acp| *acp) {
-        Some(rpc(connection, &mut json!({"op":"snapshot"}))?)
+        Some(rpc(connection, &json!({"op":"snapshot"}))?)
     } else {
         None
     };
@@ -2233,7 +2234,7 @@ fn refresh(
                 &target,
             )
         } else {
-            rpc(connection, &mut json!({"op":"state","terminal":target}))
+            rpc(connection, &json!({"op":"state","terminal":target}))
         };
         match result {
             Ok(state) => states.push(state),
@@ -2250,26 +2251,6 @@ fn refresh(
         }
     }
     Ok(json!({"private":private,"states":states,"claims":claims}))
-}
-
-#[derive(serde::Serialize)]
-struct ByteInput<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    control: &'a Value,
-    bytes: &'a [u8],
-}
-#[derive(serde::Serialize)]
-struct PasteInput<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    control: &'a Value,
-    text: &'a str,
-    paste: bool,
 }
 
 #[cfg(test)]

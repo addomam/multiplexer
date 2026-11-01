@@ -74,22 +74,11 @@ impl Drop for Restore {
 
 type Session = RefCell<crate::client::Connection>;
 
-fn call(socket: &Session, mut request: Value) -> Result<Value> {
-    request["version"] = json!(1);
-    request["persistent"] = json!(true);
-    socket.borrow_mut().request_until_answer_or_dead(&request)
-}
-
-#[derive(serde::Serialize)]
-struct ScreenRequest<'a> {
-    version: u8,
-    persistent: bool,
-    op: &'static str,
-    terminal: &'a str,
-    offset: usize,
-    limit: u16,
-    since: Option<u64>,
-    row_updates: bool,
+fn call(socket: &Session, request: Value) -> Result<Value> {
+    let command = crate::command::Command::new(request)?;
+    socket
+        .borrow_mut()
+        .request_until_answer_or_dead(&crate::client::wire(&command, Some(&json!(true))))
 }
 
 #[derive(Default)]
@@ -117,16 +106,10 @@ fn refresh_screen(
             None
         };
     let update = socket.borrow_mut().request(
-        &ScreenRequest {
-            version: 1,
-            persistent: true,
-            op: "screen",
-            terminal,
-            offset,
-            limit,
-            since,
-            row_updates: true,
-        },
+        &crate::client::wire(
+            &crate::command::Command::screen(terminal, offset, limit, since, true),
+            Some(&json!(true)),
+        ),
         Duration::from_secs(3),
     )?;
     if update["unchanged"] == true {

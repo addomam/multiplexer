@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -528,10 +528,6 @@ fn request_for(command: Command) -> Result<Value> {
             omp,
             recipe,
         } => {
-            if usize::from(command.is_some()) + usize::from(omp) + usize::from(recipe.is_some()) > 1
-            {
-                bail!("mixed-open: command, omp, and recipe are mutually exclusive");
-            }
             json!({"op":"open","source":source,"project":project,"name":name,"cwd":cwd,"command":command,"omp":omp,"recipe":recipe})
         }
         Command::Name { terminal, name } => json!({"op":"name","terminal":terminal,"name":name}),
@@ -627,8 +623,12 @@ fn request_for(command: Command) -> Result<Value> {
         .as_object_mut()
         .context("API request must be a JSON object")?;
     object.entry("version").or_insert(json!(1));
-    // Absent optional flags are omitted, while reparent's null explicitly means root.
-    object.retain(|key, value| !value.is_null() || key == "parent");
+    let decoded = crate::client::decode(value)?;
+    let mut value = crate::client::wire(&decoded.command, decoded.persistent.as_ref());
+    value
+        .as_object_mut()
+        .context("API request must be a JSON object")?
+        .retain(|key, value| !value.is_null() || key == "parent");
     Ok(value)
 }
 
@@ -657,7 +657,8 @@ pub fn run() -> Result<()> {
             command: AcpCommand::Attach { view },
         }) => {
             crate::client::ensure_daemon(&socket)?;
-            let snapshot = crate::client::request(&socket, json!({"version":1,"op":"snapshot"}))?;
+            let snapshot =
+                crate::client::request(&socket, crate::command::Command::snapshot().to_value())?;
             anyhow::ensure!(
                 snapshot["agent_views"]
                     .as_array()

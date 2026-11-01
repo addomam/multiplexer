@@ -231,17 +231,52 @@ pub fn private_dir(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+pub struct Decoded {
+    pub command: crate::command::Command,
+    pub persistent: Option<Value>,
+}
+
+pub fn decode(value: Value) -> Result<Decoded> {
+    if value["version"] != 1 {
+        bail!("unsupported-version: API version 1 required");
+    }
+    let Value::Object(mut object) = value else {
+        bail!("invalid-request: object required");
+    };
+    object.remove("version");
+    let persistent = object.remove("persistent");
+    let command = crate::command::Command::new(Value::Object(object))?;
+    Ok(Decoded {
+        command,
+        persistent,
+    })
+}
+
+pub fn wire(command: &crate::command::Command, persistent: Option<&Value>) -> Value {
+    let mut value = command.to_value();
+    value["version"] = 1.into();
+    if let Some(persistent) = persistent {
+        value["persistent"] = persistent.clone();
+    }
+    value
+}
+
 pub fn request(socket: &Path, mut request: Value) -> Result<Value> {
     if request.get("version").is_none() {
         request["version"] = 1.into();
     }
-    let timeout = request
+    let decoded = decode(request)?;
+    let timeout = decoded
+        .command
         .get("timeout_ms")
         .and_then(Value::as_u64)
         .unwrap_or(30000)
         .min(300000)
         + 5000;
-    Connection::connect(socket)?.request(&request, Duration::from_millis(timeout))
+    Connection::connect(socket)?.request(
+        &wire(&decoded.command, decoded.persistent.as_ref()),
+        Duration::from_millis(timeout),
+    )
 }
 fn readiness_wait(
     stream: &UnixStream,

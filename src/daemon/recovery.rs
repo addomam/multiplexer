@@ -1828,7 +1828,7 @@ mod tests {
             "model": "fixture-model",
             "resume_thread": session,
         });
-        let error = fixture.daemon.dispatch(request.clone(), 1).unwrap_err();
+        let error = dispatch_value(&fixture.daemon, request.clone(), 1).unwrap_err();
         assert_eq!(error.to_string(), refuse_message(), "{error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
@@ -1847,7 +1847,7 @@ mod tests {
             .unwrap()
             .replace(vec![saved.clone(), acp.clone()])
             .unwrap();
-        let pending = fixture.daemon.dispatch(request, 1).unwrap_err();
+        let pending = dispatch_value(&fixture.daemon, request, 1).unwrap_err();
         assert_eq!(pending.to_string(), refuse_message(), "{pending:#}");
         assert!(
             fixture
@@ -1860,21 +1860,20 @@ mod tests {
             .daemon
             .startup_pending
             .store(true, Ordering::Release);
-        let acp_error = fixture
-            .daemon
-            .dispatch(
-                json!({
-                    "version": 1,
-                    "op": "acp-open",
-                    "controller": client_controller(&fixture),
-                    "project": acp.project.id,
-                    "agent": "saved-profile",
-                    "name": acp.name,
-                    "cwd": fixture.root,
-                }),
-                1,
-            )
-            .unwrap_err();
+        let acp_error = dispatch_value(
+            &fixture.daemon,
+            json!({
+                "version": 1,
+                "op": "acp-open",
+                "controller": client_controller(&fixture),
+                "project": acp.project.id,
+                "agent": "saved-profile",
+                "name": acp.name,
+                "cwd": fixture.root,
+            }),
+            1,
+        )
+        .unwrap_err();
         assert_eq!(acp_error.to_string(), refuse_message(), "{acp_error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
@@ -1963,7 +1962,8 @@ mod tests {
     }
 
     fn open_retry(fixture: &CheckpointFixture, project: &str) -> Result<Value> {
-        fixture.daemon.dispatch(
+        dispatch_value(
+            &fixture.daemon,
             json!({
                 "version": 1,
                 "op": "acp-open",
@@ -2169,7 +2169,8 @@ mod tests {
         let saved = dead_acp(&fixture, &script);
         let project = saved.project.id.clone();
         save(&fixture, vec![saved]);
-        let _ = fixture.daemon.dispatch(
+        let _ = dispatch_value(
+            &fixture.daemon,
             json!({
                 "version": 1,
                 "op": "acp-open",
