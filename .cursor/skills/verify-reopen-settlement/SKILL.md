@@ -9,21 +9,21 @@ A saved conversation must not gain a second live process because a daemon crashe
 
 ## What is checked
 
-The property: while `launch_pending` is set, a later daemon start does not spawn another process for that record. A crash, or an unsettled failure, leaves `launch_pending` set. A failure that is known not to have started a process clears it and may be retried. After the new process id is recorded, `launch_pending` is clear and the recorded peer is alive, so the next start also refuses.
+The property: while a saved row's phase is not `idle`, a later daemon start does not spawn another process for that record. `pending` is an unsettled grant. A missing peer or an unknown peer probe is also `pending`, not `idle` and not `dead`. `dead` is a conclusive failure that never had a child, and boot does not launch it. `live` is a pinned peer. `blocked` is an explicit recovery block. A failure that is known not to have started a process, and that is still eligible for another boot, returns to `idle`. After a new process id is recorded, the phase is `live`, so the next start also refuses.
 
-The model is `.cursor/skills/verify-reopen-settlement/ReopenSettlement.tla`. Its steps are the code steps:
+The model is `.cursor/skills/verify-reopen-settlement/ReopenSettlement.tla`. `CheckPending` is the refusal to launch any phase other than `idle`. Its steps are the code steps:
 
 | Model step | Code |
 |---|---|
-| `RefusePending` | `reopen_conversation` rejects `record.launch_pending` |
+| `RefusePending` | `reopen_conversation` launches only `record.phase == Phase::Idle` |
 | `RefuseAlivePeer` | `reopen_conversation` rejects a recorded peer that is still alive |
-| `MarkPending` | `mark_reopen(record, true)` after `same_reopen_intent` |
+| `MarkPending` | `mark_reopen(record, ReopenMark::Grant)` after `same_reopen_intent`, which sets `Phase::Pending` |
 | `Spawn` | `open_inner`, `acp.start`, or the Codex open that follows the mark |
-| `Rollback` | `mark_reopen(record, false)` when that launch is known not to have started a process |
-| `Settle` | `refresh_observed_peer` after `checkpoint_recovery_inner` has a `peer_pid` |
-| `Crash` | the daemon stops, or Codex leaves the mark in place because the failure is not settled |
+| `Rollback` | `mark_reopen(record, ReopenMark::Release)` when that launch is known not to have started a process and boot may retry it |
+| `Settle` | `refresh_observed_peer` sets `Phase::Live` after `checkpoint_recovery_inner` has a `peer_pid` |
+| `Crash` | the daemon stops, or Codex leaves the phase `pending` because the failure is not settled |
 
-`CheckPending` is true in `ReopenSettlement.cfg`. `ReopenSettlementBroken.cfg` sets it false, which is the code with the `launch_pending` refusal removed. That run must report `Invariant NoDuplicate` violated: mark, spawn, crash before settle, then mark and spawn again.
+`CheckPending` is true in `ReopenSettlement.cfg`. `ReopenSettlementBroken.cfg` sets it false, which is the code with the idle-phase refusal removed. That run must report `Invariant NoDuplicate` violated: mark, spawn, crash before settle, then mark and spawn again.
 
 Tool: TLC from TLA+ tools 1.7.4. This is an ordering question over a small model of the reopen steps, which is what TLC decides. It needs a JDK 17 or newer (`brew install openjdk`). The checker downloads `tla2tools.jar` on first run.
 
@@ -39,14 +39,14 @@ Exit 0 means the covered source still contains those steps in that order, the so
 
 ## Coverage
 
-Confirmed at commit `2033f4a588d835d4011ce70d2790b6eaa261aa5d`.
+Confirmed at commit `7e182eb1ab34ef76e2675595bd711a029abf7b21`.
 
 - `src/daemon/recovery.rs`: `reopen_conversation`, `mark_reopen`, `refresh_observed_peer`, `checkpoint_recovery_inner`
 - `src/daemon.rs`: `acp_open`, `agent_open`
 
-If `git diff 2033f4a588d835d4011ce70d2790b6eaa261aa5d -- src/daemon/recovery.rs src/daemon.rs` is not empty, the check exits 2. Read the diff. Move the sync commit in `bin/check` and in this section only after you confirm the table still describes the code at the new commit. Do not move it to make a failing run pass.
+If `git diff 7e182eb1ab34ef76e2675595bd711a029abf7b21 -- src/daemon/recovery.rs src/daemon.rs` is not empty, the check exits 2. Read the diff. Move the sync commit in `bin/check` and in this section only after you confirm the table still describes the code at the new commit. Do not move it to make a failing run pass.
 
-A missing `!record.launch_pending` refusal, a spawn before `mark_reopen`, or a settle before `peer_pid` is a failed check, not a prompt to weaken the model.
+A missing `record.phase == Phase::Idle` refusal, a spawn before `ReopenMark::Grant`, or a settle before `peer_pid` is a failed check, not a prompt to weaken the model.
 
 ## Scope
 

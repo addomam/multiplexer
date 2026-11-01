@@ -495,10 +495,7 @@ fn corrupt_journal_refuses_startup_and_keeps_the_bytes() {
         "corrupt journal still started the daemon"
     );
     let log = fs::read_to_string(host.root.join("daemon.log")).unwrap_or_default();
-    assert!(
-        log.contains("conversation recovery disabled"),
-        "{log}"
-    );
+    assert!(log.contains("conversation recovery disabled"), "{log}");
     assert_eq!(fs::read(path).unwrap(), b"not a valid recovery journal");
 }
 
@@ -634,7 +631,8 @@ fn crash_during_reopening_does_not_treat_the_old_gone_peer_as_a_new_launch_grant
     let mut journal = host.journal();
     for record in journal["records"].as_array_mut().unwrap() {
         if record["session_id"] == b["session_id"] {
-            record["launch_pending"] = json!(true);
+            record["phase"] = json!("pending");
+            record.as_object_mut().unwrap().remove("launch_pending");
         }
     }
     fs::write(path, serde_json::to_vec(&journal).unwrap()).unwrap();
@@ -662,7 +660,7 @@ fn crash_during_reopening_does_not_treat_the_old_gone_peer_as_a_new_launch_grant
             .unwrap()
             .iter()
             .any(|record| {
-                record["session_id"] == b["session_id"] && record["launch_pending"] == true
+                record["session_id"] == b["session_id"] && record["phase"] == "pending"
             })
     );
     host.stop();
@@ -686,7 +684,8 @@ fn replace_with_native(host: &Host, original: &Value, agent: Value, session: &st
     record["session_file"] = json!(file);
     record["launch_hash"] = Value::Null;
     record["settings"] = json!({});
-    record["launch_pending"] = json!(false);
+    record["phase"] = json!("idle");
+    record.as_object_mut().unwrap().remove("launch_pending");
     record["blocked"] = Value::Null;
     fs::write(host.journal_path(), serde_json::to_vec(&journal).unwrap()).unwrap();
 }
@@ -1725,7 +1724,7 @@ fn native_codex_prebackend_rejections_can_be_retried_after_the_executable_change
             .as_array()?
             .iter()
             .find(|record| record["session_id"] == session)
-            .filter(|record| record["launch_pending"] == false)
+            .filter(|record| record["phase"] == "idle")
             .map(|_| ())
     });
     host.stop();
@@ -1753,7 +1752,7 @@ fn native_codex_prebackend_rejections_can_be_retried_after_the_executable_change
                 .as_array()?
                 .iter()
                 .find(|record| record["session_id"] == session)
-                .filter(|record| record["launch_pending"] == false)
+                .filter(|record| record["phase"] == "idle")
                 .map(|_| ())
         },
     );
@@ -1994,8 +1993,8 @@ fn native_omp_quota_reduction_retains_retryable_excess_intent_without_relaxing_t
             .unwrap()
             .iter()
             .find(|record| record["session_id"] == second_session)
-            .unwrap()["launch_pending"],
-        false
+            .unwrap()["phase"],
+        "idle"
     );
     host.stop();
     config["config"]["terminal_limit"] = json!(2);

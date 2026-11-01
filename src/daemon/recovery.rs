@@ -1,6 +1,6 @@
 //! Durable conversation intent, never durable runtime authority or input.
 use super::*;
-use crate::recovery::{Agent, Journal, Peer, Project, Record, RecoveryBlock};
+use crate::recovery::{Agent, Journal, Peer, Phase, Project, Record, RecoveryBlock};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::os::unix::fs::MetadataExt;
@@ -24,6 +24,13 @@ pub(super) fn launch_hash(command: &[String]) -> String {
     text
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum ReopenMark {
+    Grant,
+    Release,
+    Dead,
+}
+
 #[derive(Clone, PartialEq)]
 struct Candidate {
     record: Record,
@@ -38,13 +45,18 @@ fn refresh_observed_peer(
     previous_root: Option<&str>,
     root: Option<&str>,
 ) {
-    if record.launch_pending
+    if record.phase == Phase::Pending
         || record.blocked.is_some()
         || previous_root != root
         || record.peer.as_ref().is_none_or(|peer| peer.pid != pid)
     {
-        record.peer = Peer::capture(pid);
-        record.launch_pending = false;
+        match Peer::capture(pid) {
+            Some(peer) => {
+                record.peer = Some(peer);
+                record.phase = Phase::Live;
+            }
+            None => record.peer = None,
+        }
     }
 }
 
@@ -68,7 +80,7 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         launch_hash,
         settings,
         peer,
-        launch_pending,
+        phase,
         blocked,
     } = expected;
     current.id == *id
@@ -81,7 +93,7 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         && current.launch_hash == *launch_hash
         && current.settings == *settings
         && current.peer == *peer
-        && current.launch_pending == *launch_pending
+        && current.phase == *phase
         && current.blocked == *blocked
 }
 
@@ -312,7 +324,14 @@ impl Daemon {
         ))
     }
 
-    pub(super) fn mark_reopen(&self, record: &Record, pending: bool) -> Result<()> {
+    pub(super) fn settle_acp_worker_start(&self, record: &Record) -> Result<()> {
+        self.mark_reopen(record, ReopenMark::Dead)
+    }
+
+    fn assign_phase(&self, record: &Record, next: Phase) -> Result<Record> {
+        if record.phase == next {
+            return Ok(record.clone());
+        }
         let mut recovery = self.recovery.lock();
         let journal = recovery
             .journal
@@ -320,20 +339,53 @@ impl Daemon {
             .context("recovery-unavailable: journal disabled")?;
         let mut records = journal.records();
         let Some(current) = records.iter_mut().find(|saved| saved.id == record.id) else {
-            if !pending {
+            anyhow::bail!("recovery-unavailable: saved intent changed before launch");
+        };
+        ensure!(
+            same_reopen_intent(current, record),
+            "recovery-unavailable: saved intent changed before launch"
+        );
+        current.phase = next;
+        let updated = current.clone();
+        journal.replace(records)?;
+        Ok(updated)
+    }
+
+    pub(super) fn mark_reopen(&self, record: &Record, mark: ReopenMark) -> Result<()> {
+        let mut recovery = self.recovery.lock();
+        let journal = recovery
+            .journal
+            .as_mut()
+            .context("recovery-unavailable: journal disabled")?;
+        let mut records = journal.records();
+        let Some(current) = records.iter_mut().find(|saved| saved.id == record.id) else {
+            if !matches!(mark, ReopenMark::Grant) {
                 return Ok(());
             }
             anyhow::bail!("recovery-unavailable: saved intent changed before launch");
         };
-        if pending {
-            ensure!(
-                same_reopen_intent(current, record),
-                "recovery-unavailable: saved intent changed before launch"
-            );
-        } else if current.peer != record.peer || !current.launch_pending {
-            return Ok(());
+        match mark {
+            ReopenMark::Grant => {
+                ensure!(
+                    same_reopen_intent(current, record),
+                    "recovery-unavailable: saved intent changed before launch"
+                );
+                ensure!(
+                    matches!(current.phase, Phase::Idle | Phase::Dead),
+                    "recovery-unavailable: saved intent changed before launch"
+                );
+                current.phase = Phase::Pending;
+            }
+            ReopenMark::Release | ReopenMark::Dead => {
+                if current.peer != record.peer || current.phase != Phase::Pending {
+                    return Ok(());
+                }
+                current.phase = match (mark, record.phase) {
+                    (ReopenMark::Dead, _) | (ReopenMark::Release, Phase::Dead) => Phase::Dead,
+                    _ => Phase::Idle,
+                };
+            }
         }
-        current.launch_pending = pending;
         journal.replace(records)?;
         Ok(())
     }
@@ -365,7 +417,9 @@ impl Daemon {
             {
                 record.project = current.clone();
             }
-            record.launch_pending = reopening;
+            if reopening {
+                record.phase = Phase::Pending;
+            }
             recovery.targets.insert(
                 id.into(),
                 Candidate {
@@ -415,7 +469,7 @@ impl Daemon {
                 launch_hash: Some(launch_hash),
                 settings: json!({}),
                 peer: None,
-                launch_pending: false,
+                phase: Phase::Idle,
                 blocked: None,
             })
         });
@@ -446,7 +500,7 @@ impl Daemon {
                 launch_hash: None,
                 settings: json!({}),
                 peer: None,
-                launch_pending: false,
+                phase: Phase::Idle,
                 blocked: None,
             })
         });
@@ -583,6 +637,7 @@ impl Daemon {
             } else {
                 let mut record = candidate.record.clone();
                 record.blocked = Some(reason);
+                record.phase = Phase::Blocked;
                 self.persist_recovery(
                     id,
                     Some(candidate),
@@ -620,6 +675,15 @@ impl Daemon {
         }
     }
 
+    fn reopen_failure_phase(failure: Option<&str>, peer_present: bool) -> Option<Phase> {
+        match failure {
+            Some("process-identity" | "cleanup") => None,
+            Some("stdio" | "spawn" | "worker-start") if !peer_present => Some(Phase::Dead),
+            Some("stdio" | "spawn" | "worker-start") => None,
+            _ => Some(Phase::Idle),
+        }
+    }
+
     fn checkpoint_recovery_inner(&self, id: &str, final_checkpoint: bool) {
         let Some(checkpoint) = self.recovery_checkpoint_scope(id) else {
             return;
@@ -627,8 +691,8 @@ impl Daemon {
         // Observe only after acquiring this target's scope. A competing newer
         // checkpoint must not lose its already-drained dirty notification.
         let _checkpoint = checkpoint.lock();
-        if self.stopping.load(Ordering::Acquire)
-            || (!final_checkpoint && SIGNAL_STOP.load(Ordering::Relaxed))
+        if !final_checkpoint
+            && (self.stopping.load(Ordering::Acquire) || SIGNAL_STOP.load(Ordering::Relaxed))
         {
             return;
         }
@@ -712,28 +776,30 @@ impl Daemon {
                 .is_some_and(|candidate| candidate.reopening);
             if reopening && matches!(observed["lifecycle"].as_str(), Some("failed" | "ended")) {
                 self.acp.cleanup(id);
-                if self
+                let failure = self.acp.metadata(id).ok().and_then(|metadata| {
+                    metadata["resource"]["failure"].as_str().map(str::to_owned)
+                });
+                let settled = self
                     .acp
                     .recovery(id)
                     .is_ok_and(|state| state["cleanup_complete"] == true)
-                    && let Some(candidate) = candidate
-                        .as_ref()
-                        .filter(|candidate| candidate.record.launch_pending)
+                    || final_checkpoint;
+                if settled
+                    && let Some(candidate) = candidate.as_ref().filter(|candidate| {
+                        matches!(candidate.record.phase, Phase::Pending | Phase::Live)
+                    })
+                    && let Some(phase) = Self::reopen_failure_phase(
+                        failure.as_deref(),
+                        observed["peer_pid"].as_i64().is_some(),
+                    )
+                    && candidate.record.phase != phase
                 {
-                    // No process from this failed launch remains. The prior
-                    // definitely-gone pin is safe to retain for a future attempt.
                     let mut record = candidate.record.clone();
-                    record.launch_pending = false;
+                    record.phase = phase;
                     self.persist_recovery(id, Some(candidate), record, true, revision, None);
                 }
-                let reason = self
-                    .acp
-                    .metadata(id)
-                    .ok()
-                    .and_then(|metadata| {
-                        metadata["resource"]["failure"].as_str().map(str::to_owned)
-                    })
-                    .unwrap_or_else(|| "saved conversation could not be loaded".into());
+                let reason =
+                    failure.unwrap_or_else(|| "saved conversation could not be loaded".into());
                 self.recovery_error_once(id, anyhow::anyhow!("recovery-unavailable: {reason}; saved conversation retained, no replacement started"));
                 return;
             }
@@ -784,7 +850,7 @@ impl Daemon {
                     launch_hash: None,
                     settings: json!({}),
                     peer: None,
-                    launch_pending: false,
+                    phase: Phase::Idle,
                     blocked: None,
                 },
                 false,
@@ -946,10 +1012,12 @@ impl Daemon {
 
     fn refuse_when_unsettled(&self, matches: impl Fn(&Record) -> bool) -> Result<()> {
         let startup = self.startup_pending.load(Ordering::Acquire);
-        let blocked = self
-            .recovery_records()
-            .iter()
-            .any(|record| matches(record) && (startup || record.launch_pending));
+        let blocked = self.recovery_records().iter().any(|record| {
+            matches(record)
+                && (startup
+                    || record.blocked.is_some()
+                    || matches!(record.phase, Phase::Pending | Phase::Blocked))
+        });
         ensure!(
             !blocked,
             "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
@@ -966,21 +1034,16 @@ impl Daemon {
         })
     }
 
-    pub(super) fn refuse_settling_acp_client(&self, request: &Value) -> Result<()> {
-        if request.get("new_project").and_then(Value::as_bool) == Some(true) {
-            return Ok(());
-        }
-        let Some(project) = request.get("project").and_then(Value::as_str) else {
-            return Ok(());
-        };
-        let profile = request.get("agent").and_then(Value::as_str);
+    pub(super) fn refuse_settling_acp_client(
+        &self,
+        project_id: &str,
+        profile: Option<&str>,
+    ) -> Result<()> {
         self.refuse_when_unsettled(|record| {
             let Agent::Acp { profile: saved } = &record.agent else {
                 return false;
             };
-            let same_project = record.project.id == project || record.project.name == project;
-            let same_profile = profile.is_some_and(|profile| profile == saved);
-            same_project && same_profile
+            record.project.id == project_id && profile.is_some_and(|profile| profile == saved)
         })
     }
 
@@ -1033,24 +1096,94 @@ impl Daemon {
         }
     }
 
-    fn reopen_conversation(self: &Arc<Self>, record: &Record) -> Result<()> {
+    fn take_dead_retry(&self, matches: impl Fn(&Record) -> bool) -> Result<Option<Record>> {
+        let mut found = self
+            .recovery_records()
+            .into_iter()
+            .filter(|record| record.phase == Phase::Dead && matches(record));
+        let Some(record) = found.next() else {
+            return Ok(None);
+        };
         ensure!(
-            record.blocked.is_none(),
+            found.next().is_none(),
+            "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+        );
+        Ok(Some(record))
+    }
+
+    pub(super) fn take_dead_acp_retry(
+        &self,
+        project_id: &str,
+        profile: Option<&str>,
+        launch_hash: Option<&str>,
+    ) -> Result<Option<Record>> {
+        self.take_dead_retry(|record| {
+            let Agent::Acp { profile: saved } = &record.agent else {
+                return false;
+            };
+            if record.project.id != project_id {
+                return false;
+            }
+            match profile {
+                Some(profile) => saved == profile,
+                None => launch_hash.is_some_and(|hash| record.launch_hash.as_deref() == Some(hash)),
+            }
+        })
+    }
+
+    pub(super) fn take_dead_codex_retry(&self, session: &str) -> Result<Option<Record>> {
+        self.take_dead_retry(|record| {
+            matches!(record.agent, Agent::Codex { .. }) && record.session_id == session
+        })
+    }
+
+    fn reopen_conversation(self: &Arc<Self>, record: &Record) -> Result<()> {
+        if record.blocked.is_some() && record.phase != Phase::Blocked {
+            self.assign_phase(record, Phase::Blocked)?;
+        }
+        ensure!(
+            record.blocked.is_none() && record.phase != Phase::Blocked,
             "recovery-unavailable: current native context or process identity was not verified; previous intent is blocked, not reopened"
         );
         ensure!(
-            !record.launch_pending,
+            record.phase != Phase::Dead,
+            "recovery-unavailable: saved conversation is dead; refusing an automatic relaunch"
+        );
+        ensure!(
+            record.phase != Phase::Pending,
             "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
         );
-        let peer = record
-            .peer
-            .as_ref()
-            .context("recovery-unavailable: previous agent process identity was not verified")?;
+        let mut record = record.clone();
+        match record.peer.as_ref() {
+            None => {
+                self.assign_phase(&record, Phase::Pending)?;
+                bail!("recovery-unavailable: previous agent process identity was not verified");
+            }
+            Some(peer) => match peer.status() {
+                Err(status) => {
+                    self.assign_phase(&record, Phase::Pending)?;
+                    return Err(status.context(
+                        "recovery-unavailable: cannot determine whether previous agent still exists",
+                    ));
+                }
+                Ok(true) => {
+                    if record.phase != Phase::Live {
+                        self.assign_phase(&record, Phase::Live)?;
+                    }
+                    bail!(
+                        "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+                    );
+                }
+                Ok(false) if record.phase == Phase::Live => {
+                    record = self.assign_phase(&record, Phase::Idle)?;
+                }
+                Ok(false) => {}
+            },
+        }
+        let record = &record;
         ensure!(
-            !peer.status().context(
-                "recovery-unavailable: cannot determine whether previous agent still exists"
-            )?,
-            "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+            record.phase == Phase::Idle,
+            "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
         );
         ensure!(
             record.cwd.is_dir(),
@@ -1091,11 +1224,9 @@ impl Daemon {
                 omp_backing_file(file, &record.session_id, &record.cwd)?;
                 request["command"] = json!(omp_resume_source(file)?);
                 let context = self.open_context(&request)?;
-                self.mark_reopen(record, true)?;
+                self.mark_reopen(record, ReopenMark::Grant)?;
                 if let Err(error) = self.open_inner(&request, context, None, Some(record)) {
-                    // Every fallible native-open step precedes publication and
-                    // application command admission; no requested OMP started.
-                    if let Err(rollback) = self.mark_reopen(record, false) {
+                    if let Err(rollback) = self.mark_reopen(record, ReopenMark::Release) {
                         self.recovery_diagnostic(Some(&record.id), &rollback);
                     }
                     return Err(error);
@@ -1281,7 +1412,7 @@ mod tests {
                 launch_hash: None,
                 settings: json!({}),
                 peer: Peer::capture(std::process::id() as i32),
-                launch_pending: false,
+                phase: Phase::Idle,
                 blocked: None,
             }
         }
@@ -1332,11 +1463,17 @@ mod tests {
         };
         fixture.daemon.sync_recovery_project(&project).unwrap();
         let current_project = fixture.daemon.recovery_project(&project).unwrap().1;
-        fixture.daemon.mark_reopen(&record, true).unwrap();
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Grant)
+            .unwrap();
         assert_eq!(fixture.rows()[0].project, current_project);
-        assert!(fixture.rows()[0].launch_pending);
+        assert_eq!(fixture.rows()[0].phase, Phase::Pending);
         assert!(
-            fixture.daemon.mark_reopen(&record, true).is_err(),
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err(),
             "the same snapshot must not admit a second pending launch"
         );
         fixture.daemon.stage_native_recovery(
@@ -1347,12 +1484,15 @@ mod tests {
             None,
             Some(&record),
         );
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert_eq!(fixture.rows()[0].project, current_project);
-        assert!(!fixture.rows()[0].launch_pending);
+        assert_eq!(fixture.rows()[0].phase, Phase::Idle);
         let mut replaced_peer = fixture.rows().pop().unwrap();
         replaced_peer.peer.as_mut().unwrap().start[0] += 1;
-        replaced_peer.launch_pending = true;
+        replaced_peer.phase = Phase::Pending;
         fixture
             .daemon
             .recovery
@@ -1362,8 +1502,16 @@ mod tests {
             .unwrap()
             .replace(vec![replaced_peer.clone()])
             .unwrap();
-        assert!(fixture.daemon.mark_reopen(&record, true).is_err());
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        assert!(
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err()
+        );
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert_eq!(
             fixture.rows(),
             [replaced_peer],
@@ -1373,8 +1521,16 @@ mod tests {
             .daemon
             .retire_recovery_target(&fixture.terminal)
             .unwrap();
-        assert!(fixture.daemon.mark_reopen(&record, true).is_err());
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        assert!(
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err()
+        );
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert!(
             fixture.rows().is_empty(),
             "neither a stale launch nor its rollback may revive retired intent"
@@ -1423,7 +1579,7 @@ mod tests {
             ("peer boot", |saved| {
                 saved.peer.as_mut().unwrap().boot.push_str("-changed");
             }),
-            ("pending launch", |saved| saved.launch_pending = true),
+            ("phase", |saved| saved.phase = Phase::Dead),
             ("native block", |saved| {
                 saved.blocked = Some(RecoveryBlock::NativeContext);
             }),
@@ -1435,7 +1591,10 @@ mod tests {
             let mut stale = record.clone();
             change(&mut stale);
             assert!(
-                fixture.daemon.mark_reopen(&stale, true).is_err(),
+                fixture
+                    .daemon
+                    .mark_reopen(&stale, ReopenMark::Grant)
+                    .is_err(),
                 "changed {field} was treated as a metadata-only update"
             );
             assert_eq!(
@@ -1569,7 +1728,7 @@ mod tests {
             launch_hash: None,
             settings: json!({}),
             peer: Some(stale),
-            launch_pending: false,
+            phase: Phase::Idle,
             blocked: None,
         };
         refresh_observed_peer(&mut record, pid, Some("old-root"), Some("new-root"));
@@ -1582,20 +1741,18 @@ mod tests {
     fn shell_pid(fixture: &CheckpointFixture) -> i64 {
         let state = fixture.daemon.state.lock();
         assert_eq!(state.terminals.len(), 1);
-        state
-            .terminals
-            .values()
-            .next()
-            .unwrap()
-            .terminal
-            .status()["pid"]
+        state.terminals.values().next().unwrap().terminal.status()["pid"]
             .as_i64()
             .unwrap()
     }
 
     fn assert_same_shell(fixture: &CheckpointFixture, pid: i64) {
         assert_eq!(shell_pid(fixture), pid);
-        assert_eq!(unsafe { libc::kill(pid as i32, 0) }, 0, "startup shell died");
+        assert_eq!(
+            unsafe { libc::kill(pid as i32, 0) },
+            0,
+            "startup shell died"
+        );
     }
 
     fn client_controller(fixture: &CheckpointFixture) -> Value {
@@ -1675,9 +1832,8 @@ mod tests {
         assert_eq!(error.to_string(), refuse_message(), "{error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
-        assert!(!fixture.rows().iter().any(|row| row.launch_pending));
-        saved.launch_pending = true;
-        acp.launch_pending = false;
+        assert!(!fixture.rows().iter().any(|row| row.phase == Phase::Pending));
+        saved.phase = Phase::Pending;
         fixture
             .daemon
             .startup_pending
@@ -1697,7 +1853,7 @@ mod tests {
             fixture
                 .rows()
                 .iter()
-                .any(|row| { row.session_id == session && row.launch_pending })
+                .any(|row| row.session_id == session && row.phase == Phase::Pending)
         );
         assert_same_shell(&fixture, shell);
         fixture
@@ -1723,5 +1879,374 @@ mod tests {
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
         assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
+    }
+
+    fn gone_peer() -> Peer {
+        let mut peer =
+            Peer::capture(std::process::id() as i32).expect("capture the live test process");
+        peer.start[0] = peer.start[0].wrapping_sub(1);
+        assert!(
+            matches!(peer.status(), Ok(false)),
+            "the saved peer must already be gone"
+        );
+        peer
+    }
+
+    fn save(fixture: &CheckpointFixture, records: Vec<Record>) {
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(records)
+            .unwrap();
+    }
+
+    fn retry_script(fixture: &CheckpointFixture) -> (PathBuf, PathBuf) {
+        let marker = fixture.root.join("retry-children");
+        let script = fixture.root.join("retry-agent");
+        fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' $$ >> '{}'\nsleep 120\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
+        (script, marker)
+    }
+
+    fn install_retry_profile(fixture: &CheckpointFixture, script: &Path) {
+        fixture
+            .daemon
+            .state
+            .lock()
+            .store
+            .config
+            .acp_profiles
+            .insert(
+                "retry".into(),
+                crate::projects::AcpProfile {
+                    label: "Retry".into(),
+                    command: vec![script.display().to_string()],
+                    defaults: json!({}),
+                },
+            );
+    }
+
+    fn dead_acp(fixture: &CheckpointFixture, script: &Path) -> Record {
+        let entry = fixture.daemon.state.lock().terminals[&fixture.terminal].clone();
+        let command = vec![script.display().to_string()];
+        Record {
+            id: Uuid::new_v4().to_string(),
+            project: fixture
+                .daemon
+                .recovery_project(&entry.project_id)
+                .unwrap()
+                .1,
+            name: "Dead retry".into(),
+            cwd: fixture.root.clone(),
+            agent: Agent::Acp {
+                profile: "retry".into(),
+            },
+            session_id: "dead-session".into(),
+            session_file: None,
+            launch_hash: Some(launch_hash(&command)),
+            settings: json!({}),
+            peer: Some(gone_peer()),
+            phase: Phase::Dead,
+            blocked: None,
+        }
+    }
+
+    fn open_retry(fixture: &CheckpointFixture, project: &str) -> Result<Value> {
+        fixture.daemon.dispatch(
+            json!({
+                "version": 1,
+                "op": "acp-open",
+                "controller": client_controller(fixture),
+                "project": project,
+                "agent": "retry",
+                "name": "Dead retry",
+                "cwd": fixture.root,
+            }),
+            1,
+        )
+    }
+
+    fn child_lines(marker: &Path) -> usize {
+        fs::read_to_string(marker)
+            .ok()
+            .map(|text| text.lines().filter(|line| !line.is_empty()).count())
+            .unwrap_or(0)
+    }
+
+    fn wait_for_one_child(marker: &Path) -> usize {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let lines = child_lines(marker);
+            if lines > 0 {
+                return lines;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the retry did not start a child"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    #[test]
+    fn boot_does_not_launch_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        saved.peer = Some(gone_peer());
+        saved.phase = Phase::Dead;
+        save(&fixture, vec![saved]);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let shell = shell_pid(&fixture);
+        let error = fixture
+            .daemon
+            .reopen_conversation(&fixture.rows()[0])
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("automatic relaunch") || error.to_string().contains("dead"),
+            "{error:#}"
+        );
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
+
+    #[test]
+    fn one_retry_from_dead_starts_one_child() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = dead_acp(&fixture, &script);
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        open_retry(&fixture, &project).expect("one retry from dead is admitted");
+        let phase = fixture.rows()[0].phase;
+        assert!(
+            phase == Phase::Pending || phase == Phase::Live,
+            "retry left the row {phase:?}"
+        );
+        assert_eq!(wait_for_one_child(&marker), 1);
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+    }
+
+    #[test]
+    fn a_second_retry_while_pending_is_refused() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let mut saved = dead_acp(&fixture, &script);
+        saved.phase = Phase::Pending;
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let error = open_retry(&fixture, &project).unwrap_err();
+        assert_eq!(error.to_string(), refuse_message(), "{error:#}");
+        assert_eq!(child_lines(&marker), 0);
+        assert_eq!(fixture.rows()[0].phase, Phase::Pending);
+        assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
+    }
+
+    #[test]
+    fn a_live_row_does_not_refuse_a_second_open() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let mut saved = dead_acp(&fixture, &script);
+        saved.phase = Phase::Live;
+        let id = saved.id.clone();
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        open_retry(&fixture, &project).expect("a live row does not refuse a second open");
+        let row = fixture.rows().into_iter().find(|row| row.id == id).unwrap();
+        assert_eq!(row.phase, Phase::Live);
+    }
+
+    #[test]
+    fn acp_worker_start_failure_persists_dead_and_boot_does_not_launch() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        let peer = gone_peer();
+        saved.peer = Some(peer.clone());
+        saved.phase = Phase::Idle;
+        save(&fixture, vec![saved.clone()]);
+        fixture
+            .daemon
+            .mark_reopen(&saved, ReopenMark::Grant)
+            .unwrap();
+        fixture.daemon.settle_acp_worker_start(&saved).unwrap();
+        let row = fixture.rows().pop().unwrap();
+        assert_eq!(row.phase, Phase::Dead);
+        assert_eq!(row.peer, Some(peer));
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let shell = shell_pid(&fixture);
+        assert!(fixture.daemon.reopen_conversation(&row).is_err());
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
+
+    fn plant_other_project(fixture: &CheckpointFixture) {
+        let id = Uuid::new_v4().to_string();
+        fixture.daemon.state.lock().store.projects.insert(
+            id.clone(),
+            crate::projects::Project {
+                id,
+                name: "other".into(),
+                context: fixture.root.clone(),
+                saved: true,
+                main_terminal: None,
+                hooks: Vec::new(),
+                recipes: BTreeMap::new(),
+            },
+        );
+    }
+
+    fn stale_named_row(fixture: &CheckpointFixture, script: &Path, phase: Phase) -> Record {
+        let mut saved = dead_acp(fixture, script);
+        saved.project.name = "other".into();
+        saved.phase = phase;
+        saved
+    }
+
+    #[test]
+    fn a_stale_project_name_does_not_claim_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = stale_named_row(&fixture, &script, Phase::Dead);
+        let project_id = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        plant_other_project(&fixture);
+        let _ = open_retry(&fixture, "other");
+        let row = fixture
+            .rows()
+            .into_iter()
+            .find(|row| row.project.id == project_id)
+            .unwrap();
+        assert_eq!(row.phase, Phase::Dead);
+    }
+
+    #[test]
+    fn a_stale_project_name_does_not_refuse_another_project() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = stale_named_row(&fixture, &script, Phase::Pending);
+        let project_id = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        plant_other_project(&fixture);
+        let result = open_retry(&fixture, "other");
+        if let Err(error) = &result {
+            assert_ne!(error.to_string(), refuse_message(), "{error:#}");
+        }
+        let row = fixture
+            .rows()
+            .into_iter()
+            .find(|row| row.project.id == project_id)
+            .unwrap();
+        assert_eq!(row.phase, Phase::Pending);
+    }
+
+    #[test]
+    fn a_new_project_does_not_retry_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let (script, _) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = dead_acp(&fixture, &script);
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let _ = fixture.daemon.dispatch(
+            json!({
+                "version": 1,
+                "op": "acp-open",
+                "controller": client_controller(&fixture),
+                "project": project,
+                "agent": "retry",
+                "name": "Dead retry",
+                "cwd": fixture.root,
+                "new_project": true,
+            }),
+            1,
+        );
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
+
+    #[test]
+    fn a_renamed_project_still_retries_the_same_id() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let id = Uuid::new_v4().to_string();
+        fixture.daemon.state.lock().store.projects.insert(
+            id.clone(),
+            crate::projects::Project {
+                id: id.clone(),
+                name: "before".into(),
+                context: fixture.root.clone(),
+                saved: true,
+                main_terminal: None,
+                hooks: Vec::new(),
+                recipes: BTreeMap::new(),
+            },
+        );
+        let mut saved = dead_acp(&fixture, &script);
+        saved.project.id = id;
+        saved.project.name = "before".into();
+        save(&fixture, vec![saved]);
+        fixture
+            .daemon
+            .state
+            .lock()
+            .store
+            .projects
+            .get_mut(&fixture.rows()[0].project.id)
+            .unwrap()
+            .name = "after".into();
+        open_retry(&fixture, "after").expect("a rename still matches the project id");
+        let phase = fixture.rows()[0].phase;
+        assert!(
+            phase == Phase::Pending || phase == Phase::Live,
+            "retry left the row {phase:?}"
+        );
+        assert_eq!(wait_for_one_child(&marker), 1);
+    }
+
+    #[test]
+    fn session_reopen_failed_with_a_peer_is_idle() {
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("session-reopen-failed"), true),
+            Some(Phase::Idle)
+        );
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("stdio"), false),
+            Some(Phase::Dead)
+        );
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("spawn"), false),
+            Some(Phase::Dead)
+        );
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("worker-start"), false),
+            Some(Phase::Dead)
+        );
+        assert_eq!(
+            Daemon::reopen_failure_phase(Some("process-identity"), true),
+            None
+        );
+        assert_eq!(Daemon::reopen_failure_phase(Some("cleanup"), true), None);
     }
 }

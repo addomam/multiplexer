@@ -67,8 +67,17 @@ pub(crate) enum RecoveryBlock {
     ProcessIdentity,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum Phase {
+    Idle,
+    Pending,
+    Live,
+    Dead,
+    Blocked,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub(crate) struct Record {
     pub id: String,
     pub project: Project,
@@ -81,8 +90,54 @@ pub(crate) struct Record {
     #[serde(deserialize_with = "deserialize_settings")]
     pub settings: Value,
     pub peer: Option<Peer>,
-    pub launch_pending: bool,
+    pub phase: Phase,
     pub blocked: Option<RecoveryBlock>,
+}
+
+impl<'de> Deserialize<'de> for Record {
+    fn deserialize<D: serde::Deserializer<'de>>(input: D) -> std::result::Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Saved {
+            id: String,
+            project: Project,
+            name: String,
+            cwd: PathBuf,
+            agent: Agent,
+            session_id: String,
+            session_file: Option<PathBuf>,
+            launch_hash: Option<String>,
+            #[serde(deserialize_with = "deserialize_settings")]
+            settings: Value,
+            peer: Option<Peer>,
+            #[serde(default)]
+            phase: Option<Phase>,
+            #[serde(default)]
+            launch_pending: Option<bool>,
+            blocked: Option<RecoveryBlock>,
+        }
+        let saved = Saved::deserialize(input)?;
+        let phase = match (saved.phase, saved.launch_pending) {
+            (Some(phase), _) => phase,
+            (None, Some(true)) => Phase::Pending,
+            (None, Some(false)) => Phase::Idle,
+            (None, None) => return Err(serde::de::Error::custom("missing phase")),
+        };
+        Ok(Self {
+            id: saved.id,
+            project: saved.project,
+            name: saved.name,
+            cwd: saved.cwd,
+            agent: saved.agent,
+            session_id: saved.session_id,
+            session_file: saved.session_file,
+            launch_hash: saved.launch_hash,
+            settings: saved.settings,
+            peer: saved.peer,
+            phase,
+            blocked: saved.blocked,
+        })
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -888,7 +943,7 @@ mod tests {
                 launch_hash: Some("0".repeat(64)),
                 settings: json!({}),
                 peer: None,
-                launch_pending: false,
+                phase: Phase::Idle,
                 blocked: None,
             }
         }
@@ -1145,6 +1200,52 @@ mod tests {
                 Journal::open(&root.0.join("config.json"), &root.0.join("daemon.sock")).is_err()
             );
         }
+    }
+
+    #[test]
+    fn old_launch_pending_loads_without_dropping_a_pending_phase() {
+        let root = Root::new();
+        let mut journal = root.open();
+        let idle = root.record("bit-false");
+        let pending = root.record("bit-true");
+        let mut phased = root.record("phase-pending");
+        phased.phase = Phase::Pending;
+        journal.replace(vec![idle, pending, phased]).unwrap();
+        let path = journal.path.clone();
+        drop(journal);
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        for record in value["records"].as_array_mut().unwrap() {
+            match record["id"].as_str() {
+                Some("bit-false") => {
+                    record.as_object_mut().unwrap().remove("phase");
+                    record["launch_pending"] = json!(false);
+                }
+                Some("bit-true") => {
+                    record.as_object_mut().unwrap().remove("phase");
+                    record["launch_pending"] = json!(true);
+                }
+                Some("phase-pending") => {
+                    record["launch_pending"] = json!(false);
+                }
+                _ => {}
+            }
+        }
+        fs::remove_file(&path).unwrap();
+        root.write(&path, &serde_json::to_vec(&value).unwrap());
+        let loaded = Journal::open(&root.0.join("config.json"), &root.0.join("daemon.sock"))
+            .expect("a version-1 journal with launch_pending still opens");
+        let phase = |id: &str| {
+            loaded
+                .records()
+                .into_iter()
+                .find(|row| row.id == id)
+                .unwrap()
+                .phase
+        };
+        assert_eq!(phase("bit-false"), Phase::Idle);
+        assert_eq!(phase("bit-true"), Phase::Pending);
+        assert_eq!(phase("phase-pending"), Phase::Pending);
     }
 
     #[test]
