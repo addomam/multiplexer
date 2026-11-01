@@ -1579,39 +1579,23 @@ mod tests {
         );
     }
 
-    fn descendant_pids() -> Vec<i32> {
-        let mut command = std::process::Command::new("/bin/ps");
-        command
-            .args(["-ax", "-o", "pid=,ppid="])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null());
-        let child = command.spawn().unwrap();
-        let ps = child.id() as i32;
-        let output = child.wait_with_output().unwrap();
-        assert!(output.status.success(), "ps failed to list processes");
-        let text = String::from_utf8(output.stdout).unwrap();
-        let rows: Vec<(i32, i32)> = text
-            .lines()
-            .filter_map(|line| {
-                let mut parts = line.split_whitespace();
-                let pid = parts.next()?.parse().ok()?;
-                let parent = parts.next()?.parse().ok()?;
-                Some((pid, parent))
-            })
-            .collect();
-        let mut alive = Vec::new();
-        let mut queue = vec![std::process::id() as i32];
-        while let Some(parent) = queue.pop() {
-            for (pid, candidate) in &rows {
-                if *pid != ps && *candidate == parent {
-                    alive.push(*pid);
-                    queue.push(*pid);
-                }
-            }
-        }
-        alive.sort_unstable();
-        alive.dedup();
-        alive
+    fn shell_pid(fixture: &CheckpointFixture) -> i64 {
+        let state = fixture.daemon.state.lock();
+        assert_eq!(state.terminals.len(), 1);
+        state
+            .terminals
+            .values()
+            .next()
+            .unwrap()
+            .terminal
+            .status()["pid"]
+            .as_i64()
+            .unwrap()
+    }
+
+    fn assert_same_shell(fixture: &CheckpointFixture, pid: i64) {
+        assert_eq!(shell_pid(fixture), pid);
+        assert_eq!(unsafe { libc::kill(pid as i32, 0) }, 0, "startup shell died");
     }
 
     fn client_controller(fixture: &CheckpointFixture) -> Value {
@@ -1676,11 +1660,7 @@ mod tests {
             .store(true, Ordering::Release);
         let controller = client_controller(&fixture);
         let terminals = fixture.daemon.state.lock().terminals.len();
-        let children = descendant_pids();
-        assert!(
-            !children.is_empty(),
-            "the startup shell must be visible before the client open"
-        );
+        let shell = shell_pid(&fixture);
         let request = json!({
             "version": 1,
             "op": "agent-open",
@@ -1694,7 +1674,7 @@ mod tests {
         let error = fixture.daemon.dispatch(request.clone(), 1).unwrap_err();
         assert_eq!(error.to_string(), refuse_message(), "{error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
-        assert_eq!(descendant_pids(), children);
+        assert_same_shell(&fixture, shell);
         assert!(!fixture.rows().iter().any(|row| row.launch_pending));
         saved.launch_pending = true;
         acp.launch_pending = false;
@@ -1719,7 +1699,7 @@ mod tests {
                 .iter()
                 .any(|row| { row.session_id == session && row.launch_pending })
         );
-        assert_eq!(descendant_pids(), children);
+        assert_same_shell(&fixture, shell);
         fixture
             .daemon
             .startup_pending
@@ -1741,7 +1721,7 @@ mod tests {
             .unwrap_err();
         assert_eq!(acp_error.to_string(), refuse_message(), "{acp_error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
-        assert_eq!(descendant_pids(), children);
+        assert_same_shell(&fixture, shell);
         assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
     }
 }
