@@ -67,6 +67,21 @@ pub(crate) enum RecoveryBlock {
     ProcessIdentity,
 }
 
+/// Durable launch state for one saved conversation.
+///
+/// `Pending` is also the phase for a missing peer or an unknown peer probe.
+/// Neither of those is idle, and neither is dead, so boot does not grant a
+/// fresh process.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum Phase {
+    Idle,
+    Pending,
+    Live,
+    Dead,
+    Blocked,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Record {
@@ -81,6 +96,7 @@ pub(crate) struct Record {
     #[serde(deserialize_with = "deserialize_settings")]
     pub settings: Value,
     pub peer: Option<Peer>,
+    pub phase: Phase,
     pub launch_pending: bool,
     pub blocked: Option<RecoveryBlock>,
 }
@@ -888,6 +904,7 @@ mod tests {
                 launch_hash: Some("0".repeat(64)),
                 settings: json!({}),
                 peer: None,
+                phase: Phase::Idle,
                 launch_pending: false,
                 blocked: None,
             }

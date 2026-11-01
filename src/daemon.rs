@@ -696,7 +696,7 @@ impl Daemon {
                 }
             }
             if let Some(record) = restored
-                && let Err(rollback) = self.mark_reopen(record, false)
+                && let Err(rollback) = self.settle_acp_worker_start(record)
             {
                 self.recovery_diagnostic(Some(&record.id), &rollback);
             }

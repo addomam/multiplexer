@@ -1,6 +1,6 @@
 //! Durable conversation intent, never durable runtime authority or input.
 use super::*;
-use crate::recovery::{Agent, Journal, Peer, Project, Record, RecoveryBlock};
+use crate::recovery::{Agent, Journal, Peer, Phase, Project, Record, RecoveryBlock};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::os::unix::fs::MetadataExt;
@@ -68,6 +68,7 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         launch_hash,
         settings,
         peer,
+        phase,
         launch_pending,
         blocked,
     } = expected;
@@ -81,6 +82,7 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         && current.launch_hash == *launch_hash
         && current.settings == *settings
         && current.peer == *peer
+        && current.phase == *phase
         && current.launch_pending == *launch_pending
         && current.blocked == *blocked
 }
@@ -312,6 +314,10 @@ impl Daemon {
         ))
     }
 
+    pub(super) fn settle_acp_worker_start(&self, record: &Record) -> Result<()> {
+        self.mark_reopen(record, false)
+    }
+
     pub(super) fn mark_reopen(&self, record: &Record, pending: bool) -> Result<()> {
         let mut recovery = self.recovery.lock();
         let journal = recovery
@@ -415,6 +421,7 @@ impl Daemon {
                 launch_hash: Some(launch_hash),
                 settings: json!({}),
                 peer: None,
+                phase: Phase::Idle,
                 launch_pending: false,
                 blocked: None,
             })
@@ -446,6 +453,7 @@ impl Daemon {
                 launch_hash: None,
                 settings: json!({}),
                 peer: None,
+                phase: Phase::Idle,
                 launch_pending: false,
                 blocked: None,
             })
@@ -784,6 +792,7 @@ impl Daemon {
                     launch_hash: None,
                     settings: json!({}),
                     peer: None,
+                    phase: Phase::Idle,
                     launch_pending: false,
                     blocked: None,
                 },
@@ -1281,6 +1290,7 @@ mod tests {
                 launch_hash: None,
                 settings: json!({}),
                 peer: Peer::capture(std::process::id() as i32),
+                phase: Phase::Idle,
                 launch_pending: false,
                 blocked: None,
             }
@@ -1423,6 +1433,7 @@ mod tests {
             ("peer boot", |saved| {
                 saved.peer.as_mut().unwrap().boot.push_str("-changed");
             }),
+            ("phase", |saved| saved.phase = Phase::Dead),
             ("pending launch", |saved| saved.launch_pending = true),
             ("native block", |saved| {
                 saved.blocked = Some(RecoveryBlock::NativeContext);
@@ -1569,6 +1580,7 @@ mod tests {
             launch_hash: None,
             settings: json!({}),
             peer: Some(stale),
+            phase: Phase::Idle,
             launch_pending: false,
             blocked: None,
         };
@@ -1582,20 +1594,18 @@ mod tests {
     fn shell_pid(fixture: &CheckpointFixture) -> i64 {
         let state = fixture.daemon.state.lock();
         assert_eq!(state.terminals.len(), 1);
-        state
-            .terminals
-            .values()
-            .next()
-            .unwrap()
-            .terminal
-            .status()["pid"]
+        state.terminals.values().next().unwrap().terminal.status()["pid"]
             .as_i64()
             .unwrap()
     }
 
     fn assert_same_shell(fixture: &CheckpointFixture, pid: i64) {
         assert_eq!(shell_pid(fixture), pid);
-        assert_eq!(unsafe { libc::kill(pid as i32, 0) }, 0, "startup shell died");
+        assert_eq!(
+            unsafe { libc::kill(pid as i32, 0) },
+            0,
+            "startup shell died"
+        );
     }
 
     fn client_controller(fixture: &CheckpointFixture) -> Value {
@@ -1723,5 +1733,209 @@ mod tests {
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
         assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
+    }
+
+    fn gone_peer() -> Peer {
+        let mut peer =
+            Peer::capture(std::process::id() as i32).expect("capture the live test process");
+        peer.start[0] = peer.start[0].wrapping_sub(1);
+        assert!(
+            matches!(peer.status(), Ok(false)),
+            "the saved peer must already be gone"
+        );
+        peer
+    }
+
+    fn save(fixture: &CheckpointFixture, records: Vec<Record>) {
+        fixture
+            .daemon
+            .recovery
+            .lock()
+            .journal
+            .as_mut()
+            .unwrap()
+            .replace(records)
+            .unwrap();
+    }
+
+    fn retry_script(fixture: &CheckpointFixture) -> (PathBuf, PathBuf) {
+        let marker = fixture.root.join("retry-children");
+        let script = fixture.root.join("retry-agent");
+        fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' $$ >> '{}'\nsleep 120\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
+        (script, marker)
+    }
+
+    fn install_retry_profile(fixture: &CheckpointFixture, script: &Path) {
+        fixture
+            .daemon
+            .state
+            .lock()
+            .store
+            .config
+            .acp_profiles
+            .insert(
+                "retry".into(),
+                crate::projects::AcpProfile {
+                    label: "Retry".into(),
+                    command: vec![script.display().to_string()],
+                    defaults: json!({}),
+                },
+            );
+    }
+
+    fn dead_acp(fixture: &CheckpointFixture, script: &Path) -> Record {
+        let entry = fixture.daemon.state.lock().terminals[&fixture.terminal].clone();
+        let command = vec![script.display().to_string()];
+        Record {
+            id: Uuid::new_v4().to_string(),
+            project: fixture
+                .daemon
+                .recovery_project(&entry.project_id)
+                .unwrap()
+                .1,
+            name: "Dead retry".into(),
+            cwd: fixture.root.clone(),
+            agent: Agent::Acp {
+                profile: "retry".into(),
+            },
+            session_id: "dead-session".into(),
+            session_file: None,
+            launch_hash: Some(launch_hash(&command)),
+            settings: json!({}),
+            peer: Some(gone_peer()),
+            phase: Phase::Dead,
+            launch_pending: false,
+            blocked: None,
+        }
+    }
+
+    fn open_retry(fixture: &CheckpointFixture, project: &str) -> Result<Value> {
+        fixture.daemon.dispatch(
+            json!({
+                "version": 1,
+                "op": "acp-open",
+                "controller": client_controller(fixture),
+                "project": project,
+                "agent": "retry",
+                "name": "Dead retry",
+                "cwd": fixture.root,
+            }),
+            1,
+        )
+    }
+
+    fn child_lines(marker: &Path) -> usize {
+        fs::read_to_string(marker)
+            .ok()
+            .map(|text| text.lines().filter(|line| !line.is_empty()).count())
+            .unwrap_or(0)
+    }
+
+    fn wait_for_one_child(marker: &Path) -> usize {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let lines = child_lines(marker);
+            if lines > 0 {
+                return lines;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the retry did not start a child"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    #[test]
+    fn boot_does_not_launch_a_dead_row() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        saved.peer = Some(gone_peer());
+        saved.phase = Phase::Dead;
+        saved.launch_pending = false;
+        save(&fixture, vec![saved]);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let shell = shell_pid(&fixture);
+        let error = fixture
+            .daemon
+            .reopen_conversation(&fixture.rows()[0])
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("automatic relaunch") || error.to_string().contains("dead"),
+            "{error:#}"
+        );
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
+    }
+
+    #[test]
+    fn one_retry_from_dead_starts_one_child() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let saved = dead_acp(&fixture, &script);
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        open_retry(&fixture, &project).expect("one retry from dead is admitted");
+        let phase = fixture.rows()[0].phase;
+        assert!(
+            phase == Phase::Pending || phase == Phase::Live,
+            "retry left the row {phase:?}"
+        );
+        assert_eq!(wait_for_one_child(&marker), 1);
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+    }
+
+    #[test]
+    fn a_second_retry_while_pending_is_refused() {
+        let fixture = CheckpointFixture::new();
+        let (script, marker) = retry_script(&fixture);
+        install_retry_profile(&fixture, &script);
+        let mut saved = dead_acp(&fixture, &script);
+        saved.phase = Phase::Pending;
+        saved.launch_pending = false;
+        let project = saved.project.id.clone();
+        save(&fixture, vec![saved]);
+        let error = open_retry(&fixture, &project).unwrap_err();
+        assert_eq!(error.to_string(), refuse_message(), "{error:#}");
+        assert_eq!(child_lines(&marker), 0);
+        assert_eq!(fixture.rows()[0].phase, Phase::Pending);
+        assert_eq!(fixture.daemon.state.lock().agent_views.len(), 0);
+    }
+
+    #[test]
+    fn acp_worker_start_failure_persists_dead_and_boot_does_not_launch() {
+        let fixture = CheckpointFixture::new();
+        let session = Uuid::new_v4().to_string();
+        let file = fixture.header(&session);
+        let mut saved = fixture.record(&session, file);
+        let peer = gone_peer();
+        saved.peer = Some(peer.clone());
+        saved.phase = Phase::Pending;
+        saved.launch_pending = false;
+        save(&fixture, vec![saved.clone()]);
+        fixture.daemon.mark_reopen(&saved, true).unwrap();
+        fixture.daemon.settle_acp_worker_start(&saved).unwrap();
+        let row = fixture.rows().pop().unwrap();
+        assert_eq!(row.phase, Phase::Dead);
+        assert_eq!(row.peer, Some(peer));
+        let terminals = fixture.daemon.state.lock().terminals.len();
+        let shell = shell_pid(&fixture);
+        assert!(fixture.daemon.reopen_conversation(&row).is_err());
+        assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
+        assert_same_shell(&fixture, shell);
+        assert_eq!(fixture.rows()[0].phase, Phase::Dead);
     }
 }
