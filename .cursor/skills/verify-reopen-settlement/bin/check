@@ -58,10 +58,10 @@ def check_source() -> None:
     reopen = extract_fn(recovery, "reopen_conversation")
     require_before(
         reopen,
-        "!record.launch_pending",
-        "mark_reopen",
-        "reopen_conversation no longer refuses a launch while launch_pending is set, "
-        "so a crash between mark_reopen and peer settlement can start a second process.",
+        "record.phase == Phase::Idle",
+        "ReopenMark::Grant",
+        "reopen_conversation no longer launches only an idle phase, "
+        "so a crash between the pending grant and peer settlement can start a second process.",
     )
     if "refusing a duplicate conversation process" not in reopen:
         fail(
@@ -73,26 +73,26 @@ def check_source() -> None:
     omp_arm = omp[1].split("Agent::Codex =>", 1)[0]
     require_before(
         omp_arm,
-        "mark_reopen(record, true)",
+        "ReopenMark::Grant",
         "open_inner",
         "OMP reopen now starts the shell before mark_reopen records the attempt.",
     )
     require_before(
         omp_arm,
         "open_inner",
-        "mark_reopen(record, false)",
-        "OMP reopen no longer rolls back launch_pending when the shell was not started.",
+        "ReopenMark::Release",
+        "OMP reopen no longer releases the pending phase when the shell was not started.",
     )
     mark = extract_fn(recovery, "mark_reopen")
     require_before(
         mark,
         "same_reopen_intent",
-        "current.launch_pending = pending",
-        "mark_reopen writes launch_pending without checking that the saved intent still matches.",
+        "current.phase = Phase::Pending",
+        "mark_reopen writes the pending phase without checking that the saved intent still matches.",
     )
     refresh = extract_fn(recovery, "refresh_observed_peer")
-    if "Peer::capture" not in refresh or "launch_pending = false" not in refresh:
-        fail("refresh_observed_peer no longer records the peer and clears launch_pending together.")
+    if "Peer::capture" not in refresh or "Phase::Live" not in refresh:
+        fail("refresh_observed_peer no longer records the peer and sets phase live together.")
     checkpoint = extract_fn(recovery, "checkpoint_recovery_inner")
     require_before(
         checkpoint,
@@ -103,20 +103,20 @@ def check_source() -> None:
     acp = extract_fn(daemon, "acp_open")
     require_before(
         acp,
-        "mark_reopen(record, true)",
+        "ReopenMark::Grant",
         "self.acp.start",
         "ACP reopen starts the adapter before mark_reopen records the attempt.",
     )
     agent = extract_fn(daemon, "agent_open")
     require_before(
         agent,
-        "mark_reopen(record, true)",
+        "ReopenMark::Grant",
         "self.codex.prepare",
         "Codex reopen prepares the process before mark_reopen records the attempt.",
     )
     require_before(
         agent,
-        "mark_reopen(record, true)",
+        "ReopenMark::Grant",
         "open_inner",
         "Codex reopen opens the terminal before mark_reopen records the attempt.",
     )
@@ -209,13 +209,13 @@ def main() -> None:
     broken = run_tlc(java, SKILL_DIR / "ReopenSettlementBroken.cfg")
     if "Invariant NoDuplicate is violated" not in broken.stdout + broken.stderr:
         fail(
-            "removing the launch_pending check did not produce a second process in the model\n"
+            "removing the idle-phase refusal did not produce a second process in the model\n"
             + broken.stdout
             + broken.stderr
         )
     print(
         "reopen settlement holds for one saved conversation: "
-        "a pending launch is not started again, and a model without that refusal starts a second process."
+        "a phase other than idle is not started again, and a model without that refusal starts a second process."
     )
     print(f"sync commit {SYNC_COMMIT}")
     print("TLC " + [line for line in good.stdout.splitlines() if "states generated" in line][-1])

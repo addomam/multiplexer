@@ -511,10 +511,14 @@ impl Daemon {
             )
         });
         let name = requested_name.unwrap_or_else(|| default_name.as_deref().expect("default name"));
+        let mut claimed = if restored.is_none() {
+            self.take_dead_acp_retry(requested_project, &project, agent, None)?
+        } else {
+            None
+        };
+        let saved = restored.or(claimed.as_ref());
         let (command, settings) = if let Some(mut profile) = profile {
-            if let Some(record) = restored {
-                // Saved acknowledged choices, not launch defaults, govern the
-                // exact conversation being reopened. Reuse normal validation.
+            if let Some(record) = saved {
                 profile.defaults = record.settings.clone();
                 crate::acp_profiles::prepare(profile, None)?
             } else {
@@ -558,8 +562,17 @@ impl Daemon {
         let launch_hash = agent.map(|_| recovery::launch_hash(&command));
         if restored.is_none() && agent.is_none() {
             self.refuse_settling_acp_command(&project, launch_hash.as_deref())?;
+            if claimed.is_none() {
+                claimed = self.take_dead_acp_retry(
+                    requested_project,
+                    &project,
+                    None,
+                    launch_hash.as_deref(),
+                )?;
+            }
         }
-        if let Some(record) = restored {
+        let launching = restored.or(claimed.as_ref());
+        if let Some(record) = launching {
             ensure!(
                 record.launch_hash == launch_hash,
                 "recovery-unavailable: agent profile launch command changed; saved conversation retained"
@@ -575,15 +588,13 @@ impl Daemon {
             &cwd,
             command,
             settings,
-            restored.map(|record| record.session_id.clone()),
+            launching.map(|record| record.session_id.clone()),
         )?);
         let id = descriptor["id"]
             .as_str()
             .context("acp-internal: missing reserved target")?;
-        // Establish durable launch exclusion and the saved-record association
-        // before another connection can observe and close this reservation.
-        if let Some(record) = restored
-            && let Err(error) = self.mark_reopen(record, true)
+        if let Some(record) = launching
+            && let Err(error) = self.mark_reopen(record, recovery::ReopenMark::Grant)
         {
             self.acp.end(id);
             self.acp.cleanup(id);
@@ -592,7 +603,7 @@ impl Daemon {
             }
             return Err(error);
         }
-        self.stage_acp_recovery(id, &project, name, &cwd, agent.zip(launch_hash), restored);
+        self.stage_acp_recovery(id, &project, name, &cwd, agent.zip(launch_hash), launching);
         let admitted = (|| {
             let mut state = self.state.lock();
             ensure!(
@@ -656,8 +667,8 @@ impl Daemon {
                 self.acp.end(id);
                 self.acp.cleanup(id);
                 self.abandon_recovery_target(id);
-                if let Some(record) = restored
-                    && let Err(rollback) = self.mark_reopen(record, false)
+                if let Some(record) = launching
+                    && let Err(rollback) = self.mark_reopen(record, recovery::ReopenMark::Release)
                 {
                     self.recovery_diagnostic(Some(&record.id), &rollback);
                 }
@@ -695,7 +706,7 @@ impl Daemon {
                     state.store.projects.remove(&project);
                 }
             }
-            if let Some(record) = restored
+            if let Some(record) = launching
                 && let Err(rollback) = self.settle_acp_worker_start(record)
             {
                 self.recovery_diagnostic(Some(&record.id), &rollback);
@@ -979,6 +990,17 @@ impl Daemon {
         if restored.is_none() {
             self.refuse_settling_codex_client(request)?;
         }
+        let claimed = if restored.is_none() {
+            request
+                .get("resume_thread")
+                .and_then(Value::as_str)
+                .map(|session| self.take_dead_codex_retry(session))
+                .transpose()?
+                .flatten()
+        } else {
+            None
+        };
+        let launching = restored.or(claimed.as_ref());
         let controller = &request["controller"];
         let recovered = self.controls.lock().handle(
             &json!({
@@ -992,15 +1014,15 @@ impl Daemon {
         let context = self.open_context(request)?;
         let mut launch_request = request.clone();
         launch_request["cwd"] = json!(&context.cwd);
-        if let Some(record) = restored {
-            self.mark_reopen(record, true)?;
+        if let Some(record) = launching {
+            self.mark_reopen(record, recovery::ReopenMark::Grant)?;
         }
         let prepared = match self.codex.prepare(&launch_request) {
             Ok(prepared) => prepared,
             Err(error) => {
-                if let Some(record) = restored
+                if let Some(record) = launching
                     && crate::codex::prepare_failure_settled(&error)
-                    && let Err(rollback) = self.mark_reopen(record, false)
+                    && let Err(rollback) = self.mark_reopen(record, recovery::ReopenMark::Release)
                 {
                     self.recovery_diagnostic(Some(&record.id), &rollback);
                 }
@@ -1011,14 +1033,14 @@ impl Daemon {
             request,
             context,
             Some((restored.is_none().then_some(controller), &prepared)),
-            restored,
+            launching,
         ) {
             Ok(opened) => opened,
             Err(error) => {
                 let settled = prepared.cleanup_failed_launch();
-                if let Some(record) = restored
+                if let Some(record) = launching
                     && settled
-                    && let Err(rollback) = self.mark_reopen(record, false)
+                    && let Err(rollback) = self.mark_reopen(record, recovery::ReopenMark::Release)
                 {
                     self.recovery_diagnostic(Some(&record.id), &rollback);
                 }

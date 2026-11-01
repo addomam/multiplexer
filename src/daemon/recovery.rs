@@ -24,6 +24,13 @@ pub(super) fn launch_hash(command: &[String]) -> String {
     text
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum ReopenMark {
+    Grant,
+    Release,
+    Dead,
+}
+
 #[derive(Clone, PartialEq)]
 struct Candidate {
     record: Record,
@@ -38,13 +45,18 @@ fn refresh_observed_peer(
     previous_root: Option<&str>,
     root: Option<&str>,
 ) {
-    if record.launch_pending
+    if record.phase == Phase::Pending
         || record.blocked.is_some()
         || previous_root != root
         || record.peer.as_ref().is_none_or(|peer| peer.pid != pid)
     {
-        record.peer = Peer::capture(pid);
-        record.launch_pending = false;
+        match Peer::capture(pid) {
+            Some(peer) => {
+                record.peer = Some(peer);
+                record.phase = Phase::Live;
+            }
+            None => record.peer = None,
+        }
     }
 }
 
@@ -69,7 +81,6 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         settings,
         peer,
         phase,
-        launch_pending,
         blocked,
     } = expected;
     current.id == *id
@@ -83,7 +94,6 @@ fn same_reopen_intent(current: &Record, expected: &Record) -> bool {
         && current.settings == *settings
         && current.peer == *peer
         && current.phase == *phase
-        && current.launch_pending == *launch_pending
         && current.blocked == *blocked
 }
 
@@ -315,10 +325,13 @@ impl Daemon {
     }
 
     pub(super) fn settle_acp_worker_start(&self, record: &Record) -> Result<()> {
-        self.mark_reopen(record, false)
+        self.mark_reopen(record, ReopenMark::Dead)
     }
 
-    pub(super) fn mark_reopen(&self, record: &Record, pending: bool) -> Result<()> {
+    fn assign_phase(&self, record: &Record, next: Phase) -> Result<Record> {
+        if record.phase == next {
+            return Ok(record.clone());
+        }
         let mut recovery = self.recovery.lock();
         let journal = recovery
             .journal
@@ -326,20 +339,53 @@ impl Daemon {
             .context("recovery-unavailable: journal disabled")?;
         let mut records = journal.records();
         let Some(current) = records.iter_mut().find(|saved| saved.id == record.id) else {
-            if !pending {
+            anyhow::bail!("recovery-unavailable: saved intent changed before launch");
+        };
+        ensure!(
+            same_reopen_intent(current, record),
+            "recovery-unavailable: saved intent changed before launch"
+        );
+        current.phase = next;
+        let updated = current.clone();
+        journal.replace(records)?;
+        Ok(updated)
+    }
+
+    pub(super) fn mark_reopen(&self, record: &Record, mark: ReopenMark) -> Result<()> {
+        let mut recovery = self.recovery.lock();
+        let journal = recovery
+            .journal
+            .as_mut()
+            .context("recovery-unavailable: journal disabled")?;
+        let mut records = journal.records();
+        let Some(current) = records.iter_mut().find(|saved| saved.id == record.id) else {
+            if !matches!(mark, ReopenMark::Grant) {
                 return Ok(());
             }
             anyhow::bail!("recovery-unavailable: saved intent changed before launch");
         };
-        if pending {
-            ensure!(
-                same_reopen_intent(current, record),
-                "recovery-unavailable: saved intent changed before launch"
-            );
-        } else if current.peer != record.peer || !current.launch_pending {
-            return Ok(());
+        match mark {
+            ReopenMark::Grant => {
+                ensure!(
+                    same_reopen_intent(current, record),
+                    "recovery-unavailable: saved intent changed before launch"
+                );
+                ensure!(
+                    matches!(current.phase, Phase::Idle | Phase::Dead),
+                    "recovery-unavailable: saved intent changed before launch"
+                );
+                current.phase = Phase::Pending;
+            }
+            ReopenMark::Release | ReopenMark::Dead => {
+                if current.peer != record.peer || current.phase != Phase::Pending {
+                    return Ok(());
+                }
+                current.phase = match (mark, record.phase) {
+                    (ReopenMark::Dead, _) | (ReopenMark::Release, Phase::Dead) => Phase::Dead,
+                    _ => Phase::Idle,
+                };
+            }
         }
-        current.launch_pending = pending;
         journal.replace(records)?;
         Ok(())
     }
@@ -371,7 +417,9 @@ impl Daemon {
             {
                 record.project = current.clone();
             }
-            record.launch_pending = reopening;
+            if reopening {
+                record.phase = Phase::Pending;
+            }
             recovery.targets.insert(
                 id.into(),
                 Candidate {
@@ -422,7 +470,6 @@ impl Daemon {
                 settings: json!({}),
                 peer: None,
                 phase: Phase::Idle,
-                launch_pending: false,
                 blocked: None,
             })
         });
@@ -454,7 +501,6 @@ impl Daemon {
                 settings: json!({}),
                 peer: None,
                 phase: Phase::Idle,
-                launch_pending: false,
                 blocked: None,
             })
         });
@@ -591,6 +637,7 @@ impl Daemon {
             } else {
                 let mut record = candidate.record.clone();
                 record.blocked = Some(reason);
+                record.phase = Phase::Blocked;
                 self.persist_recovery(
                     id,
                     Some(candidate),
@@ -720,28 +767,30 @@ impl Daemon {
                 .is_some_and(|candidate| candidate.reopening);
             if reopening && matches!(observed["lifecycle"].as_str(), Some("failed" | "ended")) {
                 self.acp.cleanup(id);
+                let failure = self.acp.metadata(id).ok().and_then(|metadata| {
+                    metadata["resource"]["failure"].as_str().map(str::to_owned)
+                });
                 if self
                     .acp
                     .recovery(id)
                     .is_ok_and(|state| state["cleanup_complete"] == true)
                     && let Some(candidate) = candidate
                         .as_ref()
-                        .filter(|candidate| candidate.record.launch_pending)
+                        .filter(|candidate| candidate.record.phase == Phase::Pending)
                 {
-                    // No process from this failed launch remains. The prior
-                    // definitely-gone pin is safe to retain for a future attempt.
-                    let mut record = candidate.record.clone();
-                    record.launch_pending = false;
-                    self.persist_recovery(id, Some(candidate), record, true, revision, None);
+                    let child_existed = observed["peer_pid"].as_i64().is_some()
+                        || matches!(failure.as_deref(), Some("process-identity" | "cleanup"));
+                    if !child_existed {
+                        let mut record = candidate.record.clone();
+                        record.phase = match failure.as_deref() {
+                            Some("stdio" | "spawn" | "worker-start") => Phase::Dead,
+                            _ => Phase::Idle,
+                        };
+                        self.persist_recovery(id, Some(candidate), record, true, revision, None);
+                    }
                 }
-                let reason = self
-                    .acp
-                    .metadata(id)
-                    .ok()
-                    .and_then(|metadata| {
-                        metadata["resource"]["failure"].as_str().map(str::to_owned)
-                    })
-                    .unwrap_or_else(|| "saved conversation could not be loaded".into());
+                let reason =
+                    failure.unwrap_or_else(|| "saved conversation could not be loaded".into());
                 self.recovery_error_once(id, anyhow::anyhow!("recovery-unavailable: {reason}; saved conversation retained, no replacement started"));
                 return;
             }
@@ -793,7 +842,6 @@ impl Daemon {
                     settings: json!({}),
                     peer: None,
                     phase: Phase::Idle,
-                    launch_pending: false,
                     blocked: None,
                 },
                 false,
@@ -955,10 +1003,12 @@ impl Daemon {
 
     fn refuse_when_unsettled(&self, matches: impl Fn(&Record) -> bool) -> Result<()> {
         let startup = self.startup_pending.load(Ordering::Acquire);
-        let blocked = self
-            .recovery_records()
-            .iter()
-            .any(|record| matches(record) && (startup || record.launch_pending));
+        let blocked = self.recovery_records().iter().any(|record| {
+            matches(record)
+                && (startup
+                    || record.blocked.is_some()
+                    || matches!(record.phase, Phase::Pending | Phase::Live | Phase::Blocked))
+        });
         ensure!(
             !blocked,
             "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
@@ -1042,24 +1092,99 @@ impl Daemon {
         }
     }
 
-    fn reopen_conversation(self: &Arc<Self>, record: &Record) -> Result<()> {
+    fn take_dead_retry(&self, matches: impl Fn(&Record) -> bool) -> Result<Option<Record>> {
+        let mut found = self
+            .recovery_records()
+            .into_iter()
+            .filter(|record| record.phase == Phase::Dead && matches(record));
+        let Some(record) = found.next() else {
+            return Ok(None);
+        };
         ensure!(
-            record.blocked.is_none(),
+            found.next().is_none(),
+            "recovery-unavailable: saved conversation is opening; refusing a duplicate conversation process"
+        );
+        Ok(Some(record))
+    }
+
+    pub(super) fn take_dead_acp_retry(
+        &self,
+        requested_project: &str,
+        project_id: &str,
+        profile: Option<&str>,
+        launch_hash: Option<&str>,
+    ) -> Result<Option<Record>> {
+        self.take_dead_retry(|record| {
+            let Agent::Acp { profile: saved } = &record.agent else {
+                return false;
+            };
+            if let Some(profile) = profile {
+                let same_project = record.project.id == requested_project
+                    || record.project.name == requested_project
+                    || record.project.id == project_id;
+                return same_project && saved == profile;
+            }
+            launch_hash.is_some_and(|hash| {
+                record.project.id == project_id && record.launch_hash.as_deref() == Some(hash)
+            })
+        })
+    }
+
+    pub(super) fn take_dead_codex_retry(&self, session: &str) -> Result<Option<Record>> {
+        self.take_dead_retry(|record| {
+            matches!(record.agent, Agent::Codex { .. }) && record.session_id == session
+        })
+    }
+
+    fn reopen_conversation(self: &Arc<Self>, record: &Record) -> Result<()> {
+        if record.blocked.is_some() && record.phase != Phase::Blocked {
+            self.assign_phase(record, Phase::Blocked)?;
+        }
+        ensure!(
+            record.blocked.is_none() && record.phase != Phase::Blocked,
             "recovery-unavailable: current native context or process identity was not verified; previous intent is blocked, not reopened"
         );
         ensure!(
-            !record.launch_pending,
+            record.phase != Phase::Dead,
+            "recovery-unavailable: saved conversation is dead; refusing an automatic relaunch"
+        );
+        ensure!(
+            record.phase != Phase::Pending,
             "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
         );
-        let peer = record
-            .peer
-            .as_ref()
-            .context("recovery-unavailable: previous agent process identity was not verified")?;
+        let mut record = record.clone();
+        match record.peer.as_ref() {
+            None => {
+                self.assign_phase(&record, Phase::Pending)?;
+                bail!(
+                    "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
+                );
+            }
+            Some(peer) => match peer.status() {
+                Err(status) => {
+                    self.assign_phase(&record, Phase::Pending)?;
+                    return Err(status.context(
+                        "recovery-unavailable: cannot determine whether previous agent still exists",
+                    ));
+                }
+                Ok(true) => {
+                    if record.phase != Phase::Live {
+                        self.assign_phase(&record, Phase::Live)?;
+                    }
+                    bail!(
+                        "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+                    );
+                }
+                Ok(false) if record.phase == Phase::Live => {
+                    record = self.assign_phase(&record, Phase::Idle)?;
+                }
+                Ok(false) => {}
+            },
+        }
+        let record = &record;
         ensure!(
-            !peer.status().context(
-                "recovery-unavailable: cannot determine whether previous agent still exists"
-            )?,
-            "recovery-unavailable: previous agent still exists; refusing a duplicate conversation process"
+            record.phase == Phase::Idle,
+            "recovery-unavailable: previous reopening process settlement is unknown; refusing a duplicate conversation process"
         );
         ensure!(
             record.cwd.is_dir(),
@@ -1100,11 +1225,9 @@ impl Daemon {
                 omp_backing_file(file, &record.session_id, &record.cwd)?;
                 request["command"] = json!(omp_resume_source(file)?);
                 let context = self.open_context(&request)?;
-                self.mark_reopen(record, true)?;
+                self.mark_reopen(record, ReopenMark::Grant)?;
                 if let Err(error) = self.open_inner(&request, context, None, Some(record)) {
-                    // Every fallible native-open step precedes publication and
-                    // application command admission; no requested OMP started.
-                    if let Err(rollback) = self.mark_reopen(record, false) {
+                    if let Err(rollback) = self.mark_reopen(record, ReopenMark::Release) {
                         self.recovery_diagnostic(Some(&record.id), &rollback);
                     }
                     return Err(error);
@@ -1291,7 +1414,6 @@ mod tests {
                 settings: json!({}),
                 peer: Peer::capture(std::process::id() as i32),
                 phase: Phase::Idle,
-                launch_pending: false,
                 blocked: None,
             }
         }
@@ -1342,11 +1464,17 @@ mod tests {
         };
         fixture.daemon.sync_recovery_project(&project).unwrap();
         let current_project = fixture.daemon.recovery_project(&project).unwrap().1;
-        fixture.daemon.mark_reopen(&record, true).unwrap();
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Grant)
+            .unwrap();
         assert_eq!(fixture.rows()[0].project, current_project);
-        assert!(fixture.rows()[0].launch_pending);
+        assert_eq!(fixture.rows()[0].phase, Phase::Pending);
         assert!(
-            fixture.daemon.mark_reopen(&record, true).is_err(),
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err(),
             "the same snapshot must not admit a second pending launch"
         );
         fixture.daemon.stage_native_recovery(
@@ -1357,12 +1485,15 @@ mod tests {
             None,
             Some(&record),
         );
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert_eq!(fixture.rows()[0].project, current_project);
-        assert!(!fixture.rows()[0].launch_pending);
+        assert_eq!(fixture.rows()[0].phase, Phase::Idle);
         let mut replaced_peer = fixture.rows().pop().unwrap();
         replaced_peer.peer.as_mut().unwrap().start[0] += 1;
-        replaced_peer.launch_pending = true;
+        replaced_peer.phase = Phase::Pending;
         fixture
             .daemon
             .recovery
@@ -1372,8 +1503,16 @@ mod tests {
             .unwrap()
             .replace(vec![replaced_peer.clone()])
             .unwrap();
-        assert!(fixture.daemon.mark_reopen(&record, true).is_err());
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        assert!(
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err()
+        );
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert_eq!(
             fixture.rows(),
             [replaced_peer],
@@ -1383,8 +1522,16 @@ mod tests {
             .daemon
             .retire_recovery_target(&fixture.terminal)
             .unwrap();
-        assert!(fixture.daemon.mark_reopen(&record, true).is_err());
-        fixture.daemon.mark_reopen(&record, false).unwrap();
+        assert!(
+            fixture
+                .daemon
+                .mark_reopen(&record, ReopenMark::Grant)
+                .is_err()
+        );
+        fixture
+            .daemon
+            .mark_reopen(&record, ReopenMark::Release)
+            .unwrap();
         assert!(
             fixture.rows().is_empty(),
             "neither a stale launch nor its rollback may revive retired intent"
@@ -1434,7 +1581,6 @@ mod tests {
                 saved.peer.as_mut().unwrap().boot.push_str("-changed");
             }),
             ("phase", |saved| saved.phase = Phase::Dead),
-            ("pending launch", |saved| saved.launch_pending = true),
             ("native block", |saved| {
                 saved.blocked = Some(RecoveryBlock::NativeContext);
             }),
@@ -1446,7 +1592,10 @@ mod tests {
             let mut stale = record.clone();
             change(&mut stale);
             assert!(
-                fixture.daemon.mark_reopen(&stale, true).is_err(),
+                fixture
+                    .daemon
+                    .mark_reopen(&stale, ReopenMark::Grant)
+                    .is_err(),
                 "changed {field} was treated as a metadata-only update"
             );
             assert_eq!(
@@ -1581,7 +1730,6 @@ mod tests {
             settings: json!({}),
             peer: Some(stale),
             phase: Phase::Idle,
-            launch_pending: false,
             blocked: None,
         };
         refresh_observed_peer(&mut record, pid, Some("old-root"), Some("new-root"));
@@ -1685,9 +1833,8 @@ mod tests {
         assert_eq!(error.to_string(), refuse_message(), "{error:#}");
         assert_eq!(fixture.daemon.state.lock().terminals.len(), terminals);
         assert_same_shell(&fixture, shell);
-        assert!(!fixture.rows().iter().any(|row| row.launch_pending));
-        saved.launch_pending = true;
-        acp.launch_pending = false;
+        assert!(!fixture.rows().iter().any(|row| row.phase == Phase::Pending));
+        saved.phase = Phase::Pending;
         fixture
             .daemon
             .startup_pending
@@ -1707,7 +1854,7 @@ mod tests {
             fixture
                 .rows()
                 .iter()
-                .any(|row| { row.session_id == session && row.launch_pending })
+                .any(|row| row.session_id == session && row.phase == Phase::Pending)
         );
         assert_same_shell(&fixture, shell);
         fixture
@@ -1812,7 +1959,6 @@ mod tests {
             settings: json!({}),
             peer: Some(gone_peer()),
             phase: Phase::Dead,
-            launch_pending: false,
             blocked: None,
         }
     }
@@ -1862,7 +2008,6 @@ mod tests {
         let mut saved = fixture.record(&session, file);
         saved.peer = Some(gone_peer());
         saved.phase = Phase::Dead;
-        saved.launch_pending = false;
         save(&fixture, vec![saved]);
         let terminals = fixture.daemon.state.lock().terminals.len();
         let shell = shell_pid(&fixture);
@@ -1905,7 +2050,6 @@ mod tests {
         install_retry_profile(&fixture, &script);
         let mut saved = dead_acp(&fixture, &script);
         saved.phase = Phase::Pending;
-        saved.launch_pending = false;
         let project = saved.project.id.clone();
         save(&fixture, vec![saved]);
         let error = open_retry(&fixture, &project).unwrap_err();
@@ -1923,10 +2067,12 @@ mod tests {
         let mut saved = fixture.record(&session, file);
         let peer = gone_peer();
         saved.peer = Some(peer.clone());
-        saved.phase = Phase::Pending;
-        saved.launch_pending = false;
+        saved.phase = Phase::Idle;
         save(&fixture, vec![saved.clone()]);
-        fixture.daemon.mark_reopen(&saved, true).unwrap();
+        fixture
+            .daemon
+            .mark_reopen(&saved, ReopenMark::Grant)
+            .unwrap();
         fixture.daemon.settle_acp_worker_start(&saved).unwrap();
         let row = fixture.rows().pop().unwrap();
         assert_eq!(row.phase, Phase::Dead);

@@ -1,6 +1,4 @@
 ------------------------------ MODULE ReopenSettlement ------------------------------
-\* One saved conversation record in reopen_conversation, mark_reopen, and
-\* refresh_observed_peer. CheckPending stands for the launch_pending refusal.
 EXTENDS Integers
 
 CONSTANT CheckPending
