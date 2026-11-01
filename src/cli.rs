@@ -770,4 +770,48 @@ mod tests {
         assert!(view["view"].get("terminal").is_some());
         assert!(view["view"].get("focused").is_some());
     }
+
+    #[test]
+    fn open_rejects_mixed_launch_before_the_daemon_is_asked() {
+        for args in [
+            vec!["amux", "open"],
+            vec!["amux", "open", "--omp"],
+            vec!["amux", "open", "--recipe", "check"],
+            vec!["amux", "open", "--command", "printf one"],
+        ] {
+            let parsed = Args::try_parse_from(args).unwrap();
+            let request = request_for(parsed.command.unwrap()).unwrap();
+            assert_eq!(request["op"], "open");
+        }
+        for args in [
+            vec!["amux", "open", "--omp", "--recipe", "check"],
+            vec!["amux", "open", "--omp", "--command", "printf one"],
+            vec![
+                "amux",
+                "open",
+                "--recipe",
+                "check",
+                "--command",
+                "printf one",
+            ],
+            vec![
+                "amux",
+                "open",
+                "--omp",
+                "--recipe",
+                "check",
+                "--command",
+                "printf one",
+            ],
+        ] {
+            let parsed = Args::try_parse_from(args).unwrap();
+            let error = request_for(parsed.command.unwrap())
+                .expect_err("mixed open must be rejected before the daemon is asked")
+                .to_string();
+            assert!(
+                error.contains("mixed-open:"),
+                "mixed open rejection was {error}"
+            );
+        }
+    }
 }

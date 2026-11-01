@@ -2775,3 +2775,158 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
     drop(listener);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+    use std::os::unix::fs::PermissionsExt;
+
+    struct OpenFixture {
+        root: PathBuf,
+        daemon: Arc<Daemon>,
+    }
+
+    impl OpenFixture {
+        fn new() -> Self {
+            let root = fs::canonicalize("/tmp")
+                .unwrap()
+                .join(format!("amux-mixed-open-{}", Uuid::new_v4().simple()));
+            fs::create_dir(&root).unwrap();
+            fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
+            let runtime = root.join("runtime");
+            fs::create_dir(&runtime).unwrap();
+            let socket = runtime.join("control.sock");
+            let config = root.join("config.json");
+            let store = Store::load(&config, Some(root.join("projects"))).unwrap();
+            let (recovery, error) = recovery::RecoveryState::open(&config, &socket);
+            assert!(error.is_none(), "{error:?}");
+            let native_store = recovery.agent_store();
+            let (hook_jobs, _receiver) = std::sync::mpsc::sync_channel(64);
+            let daemon = Arc::new(Daemon {
+                daemon_id: Uuid::new_v4().to_string(),
+                state: Mutex::new(State {
+                    store,
+                    terminals: BTreeMap::new(),
+                    agent_views: BTreeMap::new(),
+                    opening_terminals: 0,
+                    seq: 0,
+                    events: VecDeque::new(),
+                    event_bytes: 0,
+                    diagnostics: Vec::new(),
+                    observed: BTreeMap::new(),
+                    opening_projects: BTreeSet::new(),
+                    detach_generation: 0,
+                }),
+                controls: Mutex::new(crate::control::Registry::new()),
+                pending_launches: Mutex::new(BTreeMap::new()),
+                codex: crate::codex::Broker::new(&runtime, native_store.as_deref()).unwrap(),
+                acp: crate::acp::Broker::new(),
+                changed: Condvar::new(),
+                integration: Integration::new(&runtime, &socket, &std::env::current_exe().unwrap())
+                    .unwrap(),
+                git: GitCache::new(),
+                stopping: AtomicBool::new(false),
+                startup_pending: AtomicBool::new(false),
+                hook_jobs,
+                recovery: Mutex::new(recovery),
+            });
+            Self { root, daemon }
+        }
+
+        fn saturate(&self) {
+            let mut state = self.daemon.state.lock();
+            state.store.config.terminal_limit = 1;
+            state.opening_terminals = 1;
+        }
+
+        fn counts(&self) -> (usize, usize) {
+            let state = self.daemon.state.lock();
+            (state.terminals.len(), state.opening_terminals)
+        }
+    }
+
+    impl Drop for OpenFixture {
+        fn drop(&mut self) {
+            self.daemon.stopping.store(true, Ordering::Release);
+            self.daemon.acp.shutdown();
+            self.daemon.codex.shutdown();
+            fs::remove_dir_all(&self.root).unwrap();
+        }
+    }
+
+    #[test]
+    fn mixed_open_is_rejected_before_a_terminal_exists() {
+        let fixture = OpenFixture::new();
+        fixture.saturate();
+        let (terminals, opening) = fixture.counts();
+        for request in [
+            json!({"command":"printf one"}),
+            json!({"omp":true}),
+            json!({"recipe":"check"}),
+            json!({}),
+        ] {
+            let error = fixture.daemon.open(&request).unwrap_err().to_string();
+            assert!(
+                error.starts_with("terminal-limit:"),
+                "a single open mode must still ask for admission, got {error} for {request}"
+            );
+            assert_eq!(fixture.counts(), (terminals, opening), "{request}");
+        }
+        for request in [
+            json!({"omp":true,"recipe":"check"}),
+            json!({"omp":true,"command":"printf one"}),
+            json!({"recipe":"check","command":"printf one"}),
+            json!({"omp":true,"recipe":"check","command":"printf one"}),
+            json!({"omp":true,"recipe":""}),
+            json!({"command":"","recipe":"check"}),
+        ] {
+            let error = fixture.daemon.open(&request).unwrap_err().to_string();
+            assert!(
+                error.starts_with("mixed-open:"),
+                "mixed open rejection was {error} for {request}"
+            );
+            assert_eq!(
+                fixture.counts(),
+                (terminals, opening),
+                "mixed open changed admission for {request}"
+            );
+        }
+    }
+
+    #[test]
+    fn mixed_input_is_rejected_before_any_bytes_are_written() {
+        let fixture = OpenFixture::new();
+        let single = fixture
+            .daemon
+            .dispatch(
+                json!({"version":1,"op":"input","terminal":"missing","text":"hello"}),
+                0,
+            )
+            .unwrap_err()
+            .to_string();
+        assert!(
+            single.starts_with("invalid-request:"),
+            "one input field must still reach the input handler, got {single}"
+        );
+        assert_eq!(fixture.counts(), (0, 0));
+        for request in [
+            json!({"version":1,"op":"input","terminal":"missing","text":"hello","key":"enter"}),
+            json!({"version":1,"op":"input","terminal":"missing","text":"hello","bytes":[104]}),
+            json!({"version":1,"op":"input","terminal":"missing","key":"enter","bytes":[13]}),
+            json!({"version":1,"op":"input","terminal":"missing","text":"hello","key":"enter","bytes":[104]}),
+            json!({"version":1,"op":"input","terminal":"missing","text":"","key":"enter"}),
+        ] {
+            let error = fixture
+                .daemon
+                .dispatch(request.clone(), 0)
+                .unwrap_err()
+                .to_string();
+            assert!(
+                error.starts_with("mixed-input:"),
+                "mixed input rejection was {error} for {request}"
+            );
+            assert_eq!(fixture.counts(), (0, 0), "{request}");
+        }
+    }
+}
