@@ -752,6 +752,9 @@ fn e06s03_registration_time_keys_never_become_fresh_ownership_gestures() {
     );
     assert_eq!(ownership(&host, &agent)["owner"], owner);
     native.wait("Control requested");
+    // The progress title is painted before the claim is pending, and c is
+    // dropped until then. One early c never opens the confirmation.
+    native.wait("waiting-owner");
     native.send(b"c");
     native.wait("Cancel takeover?");
     native.send(b"\r");

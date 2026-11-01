@@ -172,7 +172,7 @@ exec "$AMUX_CODEX_FIXTURE_BINARY" --ignored --exact protocol_fixture_backend --n
         };
         fs::write(
             root.join("startup/.zshrc"),
-            format!("export PATH='{}'\nPS1='CODEX_FIXTURE> '\n", source_path),
+            format!("export PATH='{source_path}'\nPS1='CODEX_FIXTURE> '\n"),
         )
         .unwrap();
         let socket = root.join("daemon.sock");
