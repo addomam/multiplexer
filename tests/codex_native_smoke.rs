@@ -756,7 +756,7 @@ impl Live {
         wait_child(&guard, version_pid, BACKEND, true);
         assert_eq!(
             fs::read_to_string(version_path).unwrap().trim(),
-            "codex-cli 0.160.0",
+            "codex-cli 0.169.0",
             "installed Codex must match the bound schema"
         );
         {

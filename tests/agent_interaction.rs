@@ -122,7 +122,7 @@ if [ "${1:-}" = --version ]; then
         printf '%s\n' "$$" > "$AMUX_CODEX_FIXTURE_ROOT/native-pending.pid"
         while [ -f "$AMUX_CODEX_FIXTURE_ROOT/pause-native-version" ]; do /bin/sleep 0.02; done
     fi
-    printf 'codex-cli 0.160.0\n'
+    printf 'codex-cli 0.169.0\n'
     exit 0
 fi
 printf '%s\n' "$@" >> "$AMUX_CODEX_FIXTURE_ROOT/launcher.log"
@@ -2102,7 +2102,8 @@ fn daemon_shutdown_reaps_fixture_children_and_removes_private_roots() {
     assert!(!root.exists(), "private fixture root survived cleanup");
 }
 
-// Installed codex-cli 0.160.0 shapes are deliberately concrete, not a generic RPC
+// Fixture protocol shapes below were captured from Codex 0.160.0. The broker
+// version gate is official Codex CLI 0.169.0 (`codex-cli 0.169.0`).
 // echo server. The fixture maintains native-created thread/turn/request state,
 // checks semantic responses, and lets the test release protocol facts separately.
 struct Provider {
