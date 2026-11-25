@@ -2307,6 +2307,7 @@ impl Daemon {
             Command::Config(_) => {
                 let mut state = self.state.lock();
                 let config = state.store.configure_global(request["config"].clone())?;
+                self.codex.set_gateway(config.codex_gateway.clone());
                 Self::emit(&mut state, "config", None, json!(config));
                 self.changed.notify_all();
                 Ok(json!(config))
@@ -2557,6 +2558,8 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         return Err(error);
     }
     let native_store = recovery.agent_store();
+    let codex = crate::codex::Broker::new(runtime, native_store.as_deref())?;
+    codex.set_gateway(store.config.codex_gateway.clone());
     let startup = store.config.daemon_start_hooks.clone();
     let cwd = std::env::current_dir()?;
     let (hook_jobs, hook_receiver) = std::sync::mpsc::sync_channel::<Option<HookJob>>(64);
@@ -2578,7 +2581,7 @@ pub fn run(socket: &Path, projects_dir: Option<PathBuf>) -> Result<()> {
         changed: Condvar::new(),
         controls: Mutex::new(crate::control::Registry::new()),
         pending_launches: Mutex::new(BTreeMap::new()),
-        codex: crate::codex::Broker::new(runtime, native_store.as_deref())?,
+        codex,
         acp: crate::acp::Broker::new(),
         integration,
         git: GitCache::new(),

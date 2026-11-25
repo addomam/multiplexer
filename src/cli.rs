@@ -242,10 +242,10 @@ enum Command {
     },
     /// Patch daemon-global configuration with a JSON object.
     #[command(
-        after_help = "Example:\n  amux config '{\"prefix\":\"ctrl-b\",\"terminal_limit\":64}'\n\nSupplied hooks/profile maps replace their configured values; this is a deliberate\npersistent configuration change, not an agent authentication or model operation."
+        after_help = "Example:\n  amux config '{\"prefix\":\"ctrl-b\",\"terminal_limit\":64}'\n\nSupplied hooks/profile maps replace their configured values. codex_gateway is an\nopt-in OpenAI-compatible provider for later managed Codex launches. Put the bearer\ntoken in the 0600 file named by token_file, not in this JSON. This is a persistent\nconfiguration change."
     )]
     Config {
-        /// JSON configuration patch, such as prefix, terminal_limit or acp_profiles.
+        /// JSON configuration patch, such as prefix, terminal_limit, acp_profiles, or codex_gateway.
         config: String,
     },
     /// Submit a structured shell or native-agent integration event.

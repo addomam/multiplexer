@@ -50,6 +50,103 @@ pub struct AcpProfile {
     pub defaults: Value,
 }
 
+fn default_wire_api() -> String {
+    "responses".into()
+}
+
+/// Opt-in OpenAI-compatible provider for managed Codex launches.
+/// The bearer token is not stored here; `token_file` points at a 0600 file.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CodexGateway {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub model: String,
+    #[serde(default)]
+    pub provider: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub base_url: String,
+    #[serde(default = "default_wire_api")]
+    pub wire_api: String,
+    #[serde(default)]
+    pub token_file: PathBuf,
+}
+
+pub(crate) fn validate_gateway(gateway: &CodexGateway) -> Result<()> {
+    if !gateway.enabled {
+        return Ok(());
+    }
+    ensure!(
+        !gateway.model.is_empty()
+            && gateway.model.len() <= 256
+            && !gateway.model.chars().any(char::is_control),
+        "codex_gateway.model must be a single-line name up to 256 bytes"
+    );
+    ensure!(
+        valid_provider_id(&gateway.provider),
+        "codex_gateway.provider must be an unreserved TOML key of letters, digits, '_' or '-'"
+    );
+    ensure!(
+        !gateway.name.is_empty()
+            && gateway.name.len() <= 256
+            && !gateway.name.chars().any(char::is_control),
+        "codex_gateway.name must be a single-line label up to 256 bytes"
+    );
+    ensure!(
+        valid_gateway_url(&gateway.base_url),
+        "codex_gateway.base_url must be an absolute http(s) URL"
+    );
+    ensure!(
+        gateway.wire_api == "responses",
+        "codex_gateway.wire_api must be \"responses\" (Codex 0.169.0 removed \"chat\")"
+    );
+    ensure!(
+        gateway.token_file.is_absolute(),
+        "codex_gateway.token_file must be an absolute path"
+    );
+    Ok(())
+}
+
+fn valid_provider_id(provider: &str) -> bool {
+    const RESERVED: &[&str] = &[
+        "openai",
+        "amazon-bedrock",
+        "amazon-bedrock-runtime",
+        "gcp",
+        "ollama",
+        "ollama-chat",
+        "lmstudio",
+    ];
+    let mut chars = provider.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    provider.len() <= 64
+        && (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|character| {
+            character.is_ascii_alphanumeric() || character == '_' || character == '-'
+        })
+        && !RESERVED.contains(&provider)
+}
+
+fn valid_gateway_url(url: &str) -> bool {
+    let Some(rest) = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+    else {
+        return false;
+    };
+    !rest.is_empty()
+        && !rest.starts_with('/')
+        && url.len() <= 2048
+        && !url
+            .chars()
+            .any(|character| character.is_control() || character.is_whitespace())
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -63,6 +160,9 @@ pub struct Config {
     pub daemon_start_hooks: Vec<Hook>,
     #[serde(default)]
     pub acp_profiles: BTreeMap<String, AcpProfile>,
+    /// Absent, null, or `enabled: false` leaves managed Codex homes unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codex_gateway: Option<CodexGateway>,
 }
 
 impl Default for Config {
@@ -77,6 +177,7 @@ impl Default for Config {
             terminal_limit: default_terminal_limit(),
             daemon_start_hooks: Vec::new(),
             acp_profiles: BTreeMap::new(),
+            codex_gateway: None,
         }
     }
 }
@@ -294,6 +395,9 @@ fn validate_config(config: &Config) -> Result<()> {
         "mode_key must be F1..F24 or none"
     );
     validate_hooks(&config.daemon_start_hooks)?;
+    if let Some(gateway) = &config.codex_gateway {
+        validate_gateway(gateway)?;
+    }
     crate::acp_profiles::validate_profiles(&config.acp_profiles)
 }
 
@@ -605,6 +709,16 @@ impl Store {
                     "acp_profiles" => {
                         updated.acp_profiles = serde_json::from_value(value.clone())
                             .context("acp_profiles must be a map of bounded ACP launch profiles")?;
+                    }
+                    "codex_gateway" => {
+                        updated.codex_gateway = if value.is_null() {
+                            None
+                        } else {
+                            Some(
+                                serde_json::from_value(value.clone())
+                                    .context("codex_gateway must be an object")?,
+                            )
+                        };
                     }
                     _ => bail!("unknown global setting: {field}"),
                 }
@@ -2531,5 +2645,92 @@ mod tests {
         assert_eq!(renamed["original_path"], "tracked");
         assert_eq!(renamed["status"], "R");
         assert_eq!(result["untracked"]["files"][0], "line\nbreak");
+    }
+
+    #[test]
+    fn codex_gateway_is_opt_in_and_rejects_a_bad_definition_without_committing() {
+        let temp = TempDir::new();
+        let file = temp.0.join("config.json");
+        let mut store = Store::load(&file, None).unwrap();
+        assert!(store.config.codex_gateway.is_none());
+        store
+            .configure_global(json!({"codex_gateway": {"enabled": false}}))
+            .unwrap();
+        assert!(
+            store
+                .config
+                .codex_gateway
+                .as_ref()
+                .is_some_and(|gateway| !gateway.enabled)
+        );
+        store
+            .configure_global(json!({"codex_gateway": null}))
+            .unwrap();
+        assert!(store.config.codex_gateway.is_none());
+        assert!(!fs::read_to_string(&file).unwrap().contains("codex_gateway"));
+        assert!(
+            store
+                .configure_global(json!({"codex_gateway": {"enabled": true}}))
+                .is_err()
+        );
+        assert!(store.config.codex_gateway.is_none());
+        let token_file = temp.0.join("token");
+        store
+            .configure_global(json!({
+                "codex_gateway": {
+                    "enabled": true,
+                    "model": "gpt-6.1-terra",
+                    "provider": "infer",
+                    "name": "Homelab inference-gateway",
+                    "base_url": "https://infer.amiri.works/v1",
+                    "token_file": token_file,
+                }
+            }))
+            .unwrap();
+        let gateway = store.config.codex_gateway.clone().unwrap();
+        assert!(gateway.enabled);
+        assert_eq!(gateway.wire_api, "responses");
+        assert_eq!(gateway.model, "gpt-6.1-terra");
+        assert_eq!(gateway.token_file, token_file);
+        let saved = fs::read_to_string(&file).unwrap();
+        assert!(!saved.contains("experimental_bearer_token"));
+        assert!(
+            store
+                .configure_global(json!({
+                    "codex_gateway": {
+                        "enabled": true,
+                        "model": "gpt-6.1-terra",
+                        "provider": "infer",
+                        "name": "Homelab inference-gateway",
+                        "base_url": "https://infer.amiri.works/v1",
+                        "wire_api": "chat",
+                        "token_file": "relative/token",
+                    }
+                }))
+                .is_err()
+        );
+        assert_eq!(
+            store.config.codex_gateway.as_ref().unwrap().token_file,
+            token_file
+        );
+        assert!(
+            store
+                .configure_global(json!({
+                    "codex_gateway": {
+                        "enabled": true,
+                        "model": "gpt-6.1-terra",
+                        "provider": "openai",
+                        "name": "Homelab inference-gateway",
+                        "base_url": "https://infer.amiri.works/v1",
+                        "token_file": token_file,
+                    }
+                }))
+                .is_err()
+        );
+        let reloaded = Store::load(&file, None).unwrap();
+        assert_eq!(
+            reloaded.config.codex_gateway.unwrap().base_url,
+            "https://infer.amiri.works/v1"
+        );
     }
 }

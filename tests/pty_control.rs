@@ -1225,7 +1225,9 @@ fn three_second_progress_identifies_the_owner_without_a_native_call_or_timer_gra
         "{event}"
     );
     assert!(
-        blockers.iter().all(|blocker| blocker["kind"] != "settlement"),
+        blockers
+            .iter()
+            .all(|blocker| blocker["kind"] != "settlement"),
         "{event}"
     );
     assert_eq!(event["data"]["ownership"]["unsettled"], json!([]));

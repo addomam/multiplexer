@@ -343,6 +343,30 @@ Configuration saves use a stable sibling lock and compare the exact configuratio
 
 `amux config '{"terminal_limit":64}'` sets daemon-wide admission (default 64, valid 1–256). Live terminals, retained exited records and pending opens all count. To free capacity, close a terminal, wait for `exited`, then remove its record; a failed open refunds its reservation. Lowering the limit never destroys existing terminals. This is a terminal-count bound, not an aggregate byte quota.
 
+## Using a gateway
+
+Managed Codex launches keep the installed CLI's normal login unless `codex_gateway` is enabled in the daemon config. The bearer token is not a config value, command argument, or environment variable.
+
+```sh
+amux config "$(jq -n --arg token_file "$HOME/.codex-infer/config.toml" '{
+  codex_gateway: {
+    enabled: true,
+    model: "gpt-6.1-terra",
+    provider: "infer",
+    name: "Homelab inference-gateway",
+    base_url: "https://infer.amiri.works/v1",
+    wire_api: "responses",
+    token_file: $token_file
+  }
+}')"
+```
+
+`token_file` is an absolute path to a 0600 file you own, with no extra hard links. Use either a one-line token file or a Codex `config.toml` that sets `experimental_bearer_token`. amux reads only that token. It does not copy `~/.codex/config.toml`, so MCP servers and trust settings never enter the managed home.
+
+While the gateway is enabled, each managed launch writes a fresh `config.toml` into that session's private `CODEX_HOME`: directory mode 0700, file mode 0600, containing the model and one provider block. `wire_api` defaults to `responses`. Codex 0.169.0 still accepts `experimental_bearer_token` and `requires_openai_auth = false` (written for you) and rejects `wire_api = "chat"`. `amux config` applies on the next Codex launch. Turn it off with `{"codex_gateway":{"enabled":false}}` or `{"codex_gateway":null}`. Off leaves the private home unchanged and writes no `config.toml`.
+
+The broker requires official OpenAI Codex CLI 0.169.0 (`codex --version` prints `codex-cli 0.169.0`, release `rust-v0.169.0`). That version is pinned together with the six `codex-package-*.tar.gz` SHA-256 lines from the official `codex-package_SHA256SUMS`. Use that OpenAI release rather than a community build.
+
 ## Automation
 
 API commands print versioned JSON envelopes and return nonzero on errors. UUIDs are stable within daemon lifetime; saved project UUIDs persist. Names are selectors, and ambiguity is an error.
@@ -372,7 +396,7 @@ See the [wire contract](specs/contracts/pty-control.md) for exact capabilities, 
 
 ### Codex broker acceptance boundary
 
-The concrete broker is pinned to Codex 0.160.0. Its closed operations are `agent-open`, `agent-inspect`, `agent-prompt`, `agent-answer`, `agent-permission` and `agent-interrupt`; this is not a generic provider RPC relay.
+The concrete broker is pinned to official Codex CLI 0.169.0 (`codex-cli 0.169.0`, release `rust-v0.169.0`, with the published package-archive SHA-256 lines). Its closed operations are `agent-open`, `agent-inspect`, `agent-prompt`, `agent-answer`, `agent-permission` and `agent-interrupt`; this is not a generic provider RPC relay. See [Using a gateway](#using-a-gateway) to point managed sessions at an OpenAI-compatible provider.
 
 The native frontend creates the conversation on the owned backend. The observer binds its live identity without an API-created conversation or setup model turn, then explicitly subscribes when the first requested turn materializes history. Native title auxiliaries are not replacement conversations.
 

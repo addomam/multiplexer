@@ -72,10 +72,7 @@ impl Drop for Harness {
 fn wait_document_has_seq_and_state() {
     let harness = Harness::new();
     let snapshot = client::request(&harness.socket, json!({"op":"snapshot"})).unwrap();
-    let id = snapshot["terminals"][0]["id"]
-        .as_str()
-        .unwrap()
-        .to_owned();
+    let id = snapshot["terminals"][0]["id"].as_str().unwrap().to_owned();
     let waited = client::request(
         &harness.socket,
         json!({"op":"wait","terminal":id,"condition":"shell-ready","timeout_ms":10000}),

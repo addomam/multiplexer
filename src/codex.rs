@@ -1,4 +1,4 @@
-//! Concrete Codex 0.160.0 local app-server integration.
+//! Concrete Codex 0.169.0 local app-server integration.
 //!
 //! One worker owns each WebSocket. State/authority locks never span provider I/O.
 //! Provider response IDs and native input settlement are deliberately independent:
@@ -26,6 +26,21 @@ use std::time::{Duration, Instant, SystemTime};
 use tungstenite::client::client_with_config;
 use tungstenite::protocol::{Message, WebSocket, WebSocketConfig};
 use uuid::Uuid;
+
+/// Official OpenAI release `rust-v0.169.0`. `--version` prints [`CODEX_CLI_VERSION_LINE`].
+const CODEX_RELEASE_TAG: &str = "rust-v0.169.0";
+const CODEX_CLI_VERSION_LINE: &str = "codex-cli 0.169.0";
+/// CLI package lines from the published `codex-package_SHA256SUMS` for `rust-v0.169.0`.
+/// https://github.com/openai/codex/releases/download/rust-v0.169.0/codex-package_SHA256SUMS
+const CODEX_PACKAGE_SHA256SUMS: &str = "\
+8a232260df7a12c5e83e0b4b7659e1c8d9259b41942517bc0068d8ab55c36461  codex-package-aarch64-apple-darwin.tar.gz\n\
+75318180f853d1846f6542f3f6409bfeae4553b91cac6aaaa08c64ee16e7a534  codex-package-aarch64-pc-windows-msvc.tar.gz\n\
+c8d0b4ab2a97c595b70b10412d36d0d5464dcef1e1d3246b073d48017cdf5a4f  codex-package-aarch64-unknown-linux-musl.tar.gz\n\
+0a3c392235b4712409495ced02bbe0662ce7a038232766d1c1c34af74e905c2f  codex-package-x86_64-apple-darwin.tar.gz\n\
+456db280d16f4393cd99a398f11b4a14a3ede68b6bd31610ce41fb10d6b65737  codex-package-x86_64-pc-windows-msvc.tar.gz\n\
+3b8ed091149cc63a59046b9f094bcfa21cdb4dda15ede441ce369bcee4a71ba0  codex-package-x86_64-unknown-linux-musl.tar.gz\n";
+const GATEWAY_TOKEN_LIMIT: usize = 8 * 1024;
+const GATEWAY_FILE_LIMIT: u64 = 64 * 1024;
 
 const FRAME_LIMIT: usize = 4 * 1024 * 1024;
 const CALL_LIMIT: usize = 256;
@@ -94,6 +109,8 @@ struct Inner {
     recovery_store: Option<PathBuf>,
     instances: Mutex<BTreeMap<String, Arc<Instance>>>,
     preparing: Mutex<()>,
+    /// Enabled gateway only. Disabled and absent both stay `None`, so the off path does no extra I/O.
+    gateway: Mutex<Option<crate::projects::CodexGateway>>,
     stopped: AtomicBool,
 }
 
@@ -332,9 +349,15 @@ impl Broker {
                 recovery_store: recovery_store.map(Path::to_owned),
                 instances: Mutex::new(BTreeMap::new()),
                 preparing: Mutex::new(()),
+                gateway: Mutex::new(None),
                 stopped: AtomicBool::new(false),
             }),
         })
+    }
+
+    /// Replace the opt-in gateway. `enabled: false` clears it, matching an absent setting.
+    pub(crate) fn set_gateway(&self, gateway: Option<crate::projects::CodexGateway>) {
+        *self.inner.gateway.lock() = gateway.filter(|gateway| gateway.enabled);
     }
 
     pub fn prepare(&self, request: &Value) -> Result<Prepared> {
@@ -476,6 +499,10 @@ impl Broker {
                 false,
             )?;
         }
+        // Absent or disabled gateway does not touch the private home. The token is
+        // read from the configured file here and written only into this 0600 config.
+        let gateway = self.inner.gateway.lock().clone();
+        apply_gateway_config(&root.join("codex"), gateway.as_ref())?;
         if let Some(resume) = resume {
             let destination = recovery_store
                 .as_deref()
@@ -2262,6 +2289,350 @@ fn resolve_codex_executable() -> Result<PathBuf> {
     bail!("unavailable: executable Codex was not found in daemon PATH")
 }
 
+/// Bearer material never appears in `Debug`, `Display`, or error text.
+struct BearerToken(String);
+
+impl std::fmt::Debug for BearerToken {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("BearerToken([redacted])")
+    }
+}
+
+impl BearerToken {
+    fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+fn malformed_token() -> anyhow::Error {
+    anyhow::anyhow!("unsupported: Codex gateway token file is malformed")
+}
+
+fn apply_gateway_config(
+    codex_home: &Path,
+    gateway: Option<&crate::projects::CodexGateway>,
+) -> Result<()> {
+    let Some(gateway) = gateway.filter(|gateway| gateway.enabled) else {
+        return Ok(());
+    };
+    install_gateway_config(codex_home, gateway)
+}
+
+fn install_gateway_config(
+    codex_home: &Path,
+    gateway: &crate::projects::CodexGateway,
+) -> Result<()> {
+    crate::projects::validate_gateway(gateway)?;
+    let token = load_bearer_token(&gateway.token_file)?;
+    let contents = render_gateway_config(gateway, &token)?;
+    enforce_private_dir(codex_home)?;
+    write_private_file(&codex_home.join("config.toml"), contents.as_bytes())
+}
+
+fn enforce_private_dir(path: &Path) -> Result<()> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|_| anyhow::anyhow!("unavailable: Codex gateway home is unavailable"))?;
+    ensure!(
+        metadata.is_dir() && !metadata.file_type().is_symlink(),
+        "unavailable: Codex gateway home is not a private directory"
+    );
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|_| {
+        anyhow::anyhow!("unavailable: cannot restrict Codex gateway home to mode 0700")
+    })?;
+    let mode = fs::metadata(path)
+        .map_err(|_| anyhow::anyhow!("unavailable: Codex gateway home mode is unreadable"))?
+        .mode()
+        & 0o777;
+    ensure!(
+        mode == 0o700,
+        "unavailable: Codex gateway home is not mode 0700"
+    );
+    Ok(())
+}
+
+fn write_private_file(path: &Path, bytes: &[u8]) -> Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|_| anyhow::anyhow!("unavailable: cannot create private Codex gateway config"))?;
+    std::io::Write::write_all(&mut file, bytes)
+        .map_err(|_| anyhow::anyhow!("unavailable: cannot write private Codex gateway config"))?;
+    file.set_permissions(fs::Permissions::from_mode(0o600))
+        .map_err(|_| {
+            anyhow::anyhow!("unavailable: cannot restrict private Codex gateway config")
+        })?;
+    file.sync_all()
+        .map_err(|_| anyhow::anyhow!("unavailable: cannot sync private Codex gateway config"))?;
+    let mode = file
+        .metadata()
+        .map_err(|_| {
+            anyhow::anyhow!("unavailable: private Codex gateway config mode is unreadable")
+        })?
+        .mode();
+    ensure!(
+        mode & 0o777 == 0o600,
+        "unavailable: private Codex gateway config is not mode 0600"
+    );
+    Ok(())
+}
+
+fn render_gateway_config(
+    gateway: &crate::projects::CodexGateway,
+    token: &BearerToken,
+) -> Result<String> {
+    // Codex 0.169.0 still reads these keys. `wire_api = "chat"` is rejected upstream,
+    // and `requires_openai_auth = false` does not conflict with `experimental_bearer_token`.
+    let model = toml_basic(&gateway.model)?;
+    let provider = toml_basic(&gateway.provider)?;
+    let name = toml_basic(&gateway.name)?;
+    let base_url = toml_basic(&gateway.base_url)?;
+    let wire_api = toml_basic(&gateway.wire_api)?;
+    let secret = toml_basic(token.expose())?;
+    Ok(format!(
+        "\
+model = {model}
+model_provider = {provider}
+
+[model_providers.{id}]
+name = {name}
+base_url = {base_url}
+wire_api = {wire_api}
+requires_openai_auth = false
+experimental_bearer_token = {secret}
+",
+        id = gateway.provider,
+    ))
+}
+
+fn toml_basic(value: &str) -> Result<String> {
+    let mut encoded = String::from("\"");
+    for character in value.chars() {
+        match character {
+            '\\' => encoded.push_str("\\\\"),
+            '"' => encoded.push_str("\\\""),
+            character if character.is_control() => {
+                bail!("unsupported: Codex gateway field contains a control character");
+            }
+            character => encoded.push(character),
+        }
+    }
+    encoded.push('"');
+    Ok(encoded)
+}
+
+fn load_bearer_token(path: &Path) -> Result<BearerToken> {
+    let file = open_token_file(path)?;
+    let mut bytes = Vec::new();
+    file.take(GATEWAY_FILE_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| anyhow::anyhow!("unavailable: Codex gateway token file is unreadable"))?;
+    ensure!(
+        bytes.len() as u64 <= GATEWAY_FILE_LIMIT,
+        "unsupported: Codex gateway token file is too large"
+    );
+    let text = std::str::from_utf8(&bytes).map_err(|_| malformed_token())?;
+    let token = if provider_config_file(path, text) {
+        extract_bearer_token(text)?
+    } else {
+        raw_bearer_token(text)?
+    };
+    validate_bearer(&token)?;
+    Ok(BearerToken(token))
+}
+
+fn open_token_file(path: &Path) -> Result<fs::File> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            bail!("unavailable: Codex gateway token file is missing");
+        }
+        Err(_) => bail!("unavailable: Codex gateway token file is unavailable"),
+    };
+    ensure!(
+        crate::recovery::private_owner_file(&metadata),
+        "unavailable: Codex gateway token file must be a 0600 regular file owned by this user without hard-link aliases"
+    );
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_NONBLOCK)
+        .open(path)
+        .map_err(|_| anyhow::anyhow!("unavailable: Codex gateway token file is unavailable"))?;
+    let opened = file
+        .metadata()
+        .map_err(|_| anyhow::anyhow!("unavailable: Codex gateway token file is unavailable"))?;
+    ensure!(
+        crate::recovery::private_owner_file(&opened),
+        "unavailable: Codex gateway token file must be a 0600 regular file owned by this user without hard-link aliases"
+    );
+    Ok(file)
+}
+
+fn provider_config_file(path: &Path, text: &str) -> bool {
+    path.extension()
+        .is_some_and(|extension| extension == "toml")
+        || text.contains("experimental_bearer_token")
+        || text.contains("[model_providers")
+}
+
+fn raw_bearer_token(text: &str) -> Result<String> {
+    let token = text
+        .strip_suffix("\r\n")
+        .or_else(|| text.strip_suffix('\n'))
+        .unwrap_or(text);
+    if token
+        .chars()
+        .any(|character| character == '\n' || character == '\r')
+    {
+        return Err(malformed_token());
+    }
+    let token = token.trim();
+    if token.is_empty() {
+        return Err(malformed_token());
+    }
+    Ok(token.to_owned())
+}
+
+fn extract_bearer_token(text: &str) -> Result<String> {
+    if text.contains("\"\"\"") || text.contains("'''") {
+        return Err(malformed_token());
+    }
+    let mut found = None;
+    for line in text.lines() {
+        let Some(value) = assignment_of(line, "experimental_bearer_token") else {
+            continue;
+        };
+        let token = parse_toml_string(value)?;
+        if found.is_some() {
+            return Err(malformed_token());
+        }
+        found = Some(token);
+    }
+    found.ok_or_else(malformed_token)
+}
+
+fn assignment_of<'a>(line: &'a str, key: &str) -> Option<&'a str> {
+    let line = strip_toml_comment(line).trim();
+    if line.is_empty() || line.starts_with('[') {
+        return None;
+    }
+    let (raw_key, value) = line.split_once('=')?;
+    let normalized = raw_key
+        .trim()
+        .trim_matches(|character| character == '"' || character == '\'');
+    let matched = normalized == key
+        || normalized
+            .rsplit_once('.')
+            .is_some_and(|(_, tail)| tail == key);
+    matched.then_some(value.trim())
+}
+
+fn strip_toml_comment(line: &str) -> &str {
+    let mut in_single = false;
+    let mut in_double = false;
+    let mut escape = false;
+    for (index, character) in line.char_indices() {
+        if in_double {
+            if escape {
+                escape = false;
+                continue;
+            }
+            if character == '\\' {
+                escape = true;
+                continue;
+            }
+            if character == '"' {
+                in_double = false;
+            }
+            continue;
+        }
+        if in_single {
+            if character == '\'' {
+                in_single = false;
+            }
+            continue;
+        }
+        match character {
+            '"' => in_double = true,
+            '\'' => in_single = true,
+            '#' => return &line[..index],
+            _ => {}
+        }
+    }
+    line
+}
+
+fn parse_toml_string(input: &str) -> Result<String> {
+    let mut chars = input.char_indices();
+    let Some((_, quote)) = chars.next() else {
+        return Err(malformed_token());
+    };
+    if quote != '"' && quote != '\'' {
+        return Err(malformed_token());
+    }
+    let mut value = String::new();
+    let mut closed_at = None;
+    if quote == '\'' {
+        for (index, character) in chars.by_ref() {
+            if character == '\'' {
+                closed_at = Some(index + character.len_utf8());
+                break;
+            }
+            if character.is_control() {
+                return Err(malformed_token());
+            }
+            value.push(character);
+        }
+    } else {
+        while let Some((index, character)) = chars.next() {
+            if character == '\\' {
+                let Some((_, escaped)) = chars.next() else {
+                    return Err(malformed_token());
+                };
+                let decoded = match escaped {
+                    '\\' => '\\',
+                    '"' => '"',
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    _ => return Err(malformed_token()),
+                };
+                value.push(decoded);
+                continue;
+            }
+            if character == '"' {
+                closed_at = Some(index + character.len_utf8());
+                break;
+            }
+            if character.is_control() {
+                return Err(malformed_token());
+            }
+            value.push(character);
+        }
+    }
+    let Some(end) = closed_at else {
+        return Err(malformed_token());
+    };
+    let rest = input[end..].trim();
+    if !rest.is_empty() && !rest.starts_with('#') {
+        return Err(malformed_token());
+    }
+    Ok(value)
+}
+
+fn validate_bearer(token: &str) -> Result<()> {
+    ensure!(
+        !token.is_empty()
+            && token.len() <= GATEWAY_TOKEN_LIMIT
+            && !token
+                .chars()
+                .any(|character| character.is_control() || character == '\u{feff}'),
+        "unsupported: Codex gateway token file is malformed"
+    );
+    Ok(())
+}
+
 fn check_version(executable: &Path, env: &BTreeMap<String, String>) -> Result<()> {
     let output_path = PathBuf::from(&env["CODEX_HOME"]).join("version");
     let file = fs::OpenOptions::new()
@@ -2277,7 +2648,9 @@ fn check_version(executable: &Path, env: &BTreeMap<String, String>) -> Result<()
         .stderr(Stdio::null())
         .process_group(0)
         .spawn()
-        .context("unavailable: Codex 0.160.0 is not installed")?;
+        .context(format!(
+            "unavailable: {CODEX_CLI_VERSION_LINE} is not installed"
+        ))?;
     let deadline = Instant::now() + Duration::from_secs(5);
     let status = loop {
         match child.try_wait() {
@@ -2300,9 +2673,13 @@ fn check_version(executable: &Path, env: &BTreeMap<String, String>) -> Result<()
     );
     let version = fs::read_to_string(&output_path)?;
     fs::remove_file(output_path)?;
+    let pinned_packages = CODEX_PACKAGE_SHA256SUMS
+        .lines()
+        .filter(|line| !line.is_empty())
+        .count();
     ensure!(
-        status.success() && version.trim() == "codex-cli 0.160.0",
-        "unsupported: managed integration requires Codex CLI 0.160.0"
+        status.success() && version.trim() == CODEX_CLI_VERSION_LINE,
+        "unsupported: managed integration requires {CODEX_CLI_VERSION_LINE} ({CODEX_RELEASE_TAG}, {pinned_packages} official package digests)"
     );
     Ok(())
 }
@@ -2722,6 +3099,7 @@ fn shell_quote(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
     use std::os::unix::fs::PermissionsExt;
 
     struct PrivateRoot(PathBuf);
@@ -3638,5 +4016,248 @@ mod tests {
             !premature,
             "shutdown returned while terminal cleanup was paused"
         );
+    }
+
+    fn gateway_root() -> (PrivateRoot, PathBuf) {
+        let root = PrivateRoot(
+            std::env::temp_dir().join(format!("amux-gateway-{}", Uuid::new_v4().simple())),
+        );
+        fs::DirBuilder::new().mode(0o700).create(&root.0).unwrap();
+        let home = root.0.join("codex");
+        fs::DirBuilder::new().mode(0o700).create(&home).unwrap();
+        (root, home)
+    }
+
+    fn write_secret_file(path: &Path, mode: u32, bytes: &[u8]) {
+        let mut file = fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .mode(0o600)
+            .open(path)
+            .unwrap();
+        file.write_all(bytes).unwrap();
+        file.set_permissions(fs::Permissions::from_mode(mode))
+            .unwrap();
+    }
+
+    fn runtime_secret() -> String {
+        let mut secret = format!("gw-{}", Uuid::new_v4().simple());
+        secret.push('"');
+        secret.push('\\');
+        secret
+    }
+
+    fn sample_gateway(token_file: PathBuf, enabled: bool) -> crate::projects::CodexGateway {
+        crate::projects::CodexGateway {
+            enabled,
+            model: "gpt-6.1-terra".into(),
+            provider: "infer".into(),
+            name: "Homelab inference-gateway".into(),
+            base_url: "https://infer.amiri.works/v1".into(),
+            wire_api: "responses".into(),
+            token_file,
+        }
+    }
+
+    fn assert_no_secret(text: &str, secret: &str) {
+        assert!(
+            !text.contains(secret),
+            "bearer token leaked into an error or debug string"
+        );
+    }
+
+    #[test]
+    fn pinned_codex_release_is_official_0_169_0() {
+        assert_eq!(CODEX_CLI_VERSION_LINE, "codex-cli 0.169.0");
+        assert_eq!(CODEX_RELEASE_TAG, "rust-v0.169.0");
+        assert_eq!(
+            CODEX_PACKAGE_SHA256SUMS
+                .lines()
+                .filter(|line| !line.is_empty())
+                .collect::<Vec<_>>(),
+            vec![
+                "8a232260df7a12c5e83e0b4b7659e1c8d9259b41942517bc0068d8ab55c36461  codex-package-aarch64-apple-darwin.tar.gz",
+                "75318180f853d1846f6542f3f6409bfeae4553b91cac6aaaa08c64ee16e7a534  codex-package-aarch64-pc-windows-msvc.tar.gz",
+                "c8d0b4ab2a97c595b70b10412d36d0d5464dcef1e1d3246b073d48017cdf5a4f  codex-package-aarch64-unknown-linux-musl.tar.gz",
+                "0a3c392235b4712409495ced02bbe0662ce7a038232766d1c1c34af74e905c2f  codex-package-x86_64-apple-darwin.tar.gz",
+                "456db280d16f4393cd99a398f11b4a14a3ede68b6bd31610ce41fb10d6b65737  codex-package-x86_64-pc-windows-msvc.tar.gz",
+                "3b8ed091149cc63a59046b9f094bcfa21cdb4dda15ede441ce369bcee4a71ba0  codex-package-x86_64-unknown-linux-musl.tar.gz",
+            ]
+        );
+    }
+
+    #[test]
+    fn gateway_off_does_not_write_config_toml() {
+        let (root, home) = gateway_root();
+        let marker = home.join("auth.json");
+        fs::write(&marker, b"{}\n").unwrap();
+        let broker = Broker::new(&root.0, None).unwrap();
+        let gateway = broker.inner.gateway.lock().clone();
+        apply_gateway_config(&home, gateway.as_ref()).unwrap();
+        assert!(!home.join("config.toml").exists());
+        assert_eq!(fs::read(&marker).unwrap(), b"{}\n");
+        broker.set_gateway(Some(sample_gateway(root.0.join("missing"), false)));
+        let gateway = broker.inner.gateway.lock().clone();
+        assert!(gateway.is_none());
+        apply_gateway_config(&home, gateway.as_ref()).unwrap();
+        assert!(!home.join("config.toml").exists());
+        assert_eq!(fs::read(&marker).unwrap(), b"{}\n");
+    }
+
+    #[test]
+    fn gateway_writes_only_the_provider_block_and_redacts_the_token() {
+        let (root, home) = gateway_root();
+        fs::set_permissions(&home, fs::Permissions::from_mode(0o755)).unwrap();
+        let secret = runtime_secret();
+        let source = root.0.join("config.toml");
+        let quoted = toml_basic(&secret).unwrap();
+        write_secret_file(
+            &source,
+            0o600,
+            format!(
+                "model = \"other-model\"\ntrust_level = \"trusted\"\n[mcp_servers.local]\ncommand = \"do-not-copy\"\nexperimental_bearer_token = {quoted}\n"
+            )
+            .as_bytes(),
+        );
+        let broker = Broker::new(&root.0, None).unwrap();
+        broker.set_gateway(Some(sample_gateway(source.clone(), true)));
+        let gateway = broker.inner.gateway.lock().clone();
+        apply_gateway_config(&home, gateway.as_ref()).unwrap();
+        let written = fs::read_to_string(home.join("config.toml")).unwrap();
+        assert!(
+            !written.contains("mcp_servers")
+                && !written.contains("trust_level")
+                && !written.contains("do-not-copy")
+                && !written.contains("other-model"),
+            "gateway config copied user settings"
+        );
+        let lines: Vec<_> = written.lines().collect();
+        assert_eq!(
+            &lines[..7],
+            &[
+                "model = \"gpt-6.1-terra\"",
+                "model_provider = \"infer\"",
+                "",
+                "[model_providers.infer]",
+                "name = \"Homelab inference-gateway\"",
+                "base_url = \"https://infer.amiri.works/v1\"",
+                "wire_api = \"responses\"",
+            ][..]
+        );
+        assert_eq!(lines[7], "requires_openai_auth = false");
+        assert!(
+            lines[8].starts_with("experimental_bearer_token = ") && lines.len() == 9,
+            "provider block did not end with the bearer assignment"
+        );
+        let loaded = load_bearer_token(&home.join("config.toml")).unwrap();
+        assert!(
+            loaded.expose() == secret,
+            "written gateway token did not round-trip"
+        );
+        assert_no_secret(&format!("{loaded:?}"), &secret);
+        assert_eq!(fs::metadata(&home).unwrap().mode() & 0o777, 0o700);
+        assert_eq!(
+            fs::metadata(home.join("config.toml")).unwrap().mode() & 0o777,
+            0o600
+        );
+        let raw = root.0.join("token");
+        write_secret_file(&raw, 0o600, format!("{secret}\n").as_bytes());
+        let raw_home = root.0.join("raw-home");
+        fs::DirBuilder::new().mode(0o700).create(&raw_home).unwrap();
+        apply_gateway_config(&raw_home, Some(&sample_gateway(raw, true))).unwrap();
+        let loaded = load_bearer_token(&raw_home.join("config.toml")).unwrap();
+        assert!(
+            loaded.expose() == secret,
+            "raw token file did not round-trip"
+        );
+        let commented = root.0.join("commented.toml");
+        write_secret_file(
+            &commented,
+            0o600,
+            format!(
+                "experimental_bearer_token = {} # kept\n",
+                toml_basic(&secret).unwrap()
+            )
+            .as_bytes(),
+        );
+        let loaded = load_bearer_token(&commented).unwrap();
+        assert!(
+            loaded.expose() == secret,
+            "commented token did not round-trip"
+        );
+    }
+
+    #[test]
+    fn gateway_token_file_errors_do_not_leak_or_write_config() {
+        let (root, home) = gateway_root();
+        let secret = runtime_secret();
+        let missing = root.0.join("missing-token");
+        let error = load_bearer_token(&missing).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "unavailable: Codex gateway token file is missing"
+        );
+        assert_no_secret(&format!("{error:?}"), &secret);
+
+        let loose = root.0.join("loose");
+        write_secret_file(&loose, 0o644, secret.as_bytes());
+        let error = apply_gateway_config(&home, Some(&sample_gateway(loose, true))).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "unavailable: Codex gateway token file must be a 0600 regular file owned by this user without hard-link aliases"
+        );
+        assert_no_secret(&error.to_string(), &secret);
+        assert_no_secret(&format!("{error:?}"), &secret);
+        assert!(!home.join("config.toml").exists());
+
+        let linked_target = root.0.join("linked-target");
+        write_secret_file(&linked_target, 0o600, secret.as_bytes());
+        let link = root.0.join("linked");
+        fs::hard_link(&linked_target, &link).unwrap();
+        let error = load_bearer_token(&link).unwrap_err();
+        assert!(error.to_string().contains("0600"));
+        assert_no_secret(&format!("{error:?}"), &secret);
+
+        let alias = root.0.join("alias");
+        symlink(&linked_target, &alias).unwrap();
+        let error = load_bearer_token(&alias).unwrap_err();
+        assert!(error.to_string().contains("0600"));
+        assert_no_secret(&error.to_string(), &secret);
+        assert_no_secret(&format!("{error:?}"), &secret);
+
+        for (name, body) in [
+            ("empty", String::new()),
+            ("blank.toml", "model = \"x\"\n".into()),
+            (
+                "empty-token.toml",
+                "experimental_bearer_token = \"\"\n".into(),
+            ),
+            (
+                "trailing.toml",
+                format!(
+                    "experimental_bearer_token = {} trailing\n",
+                    toml_basic(&secret).unwrap()
+                ),
+            ),
+            (
+                "twice.toml",
+                format!(
+                    "experimental_bearer_token = {quoted}\nexperimental_bearer_token = {quoted}\n",
+                    quoted = toml_basic(&secret).unwrap()
+                ),
+            ),
+            ("lines", format!("{secret}\nsecond\n")),
+        ] {
+            let path = root.0.join(name);
+            write_secret_file(&path, 0o600, body.as_bytes());
+            let error = load_bearer_token(&path).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "unsupported: Codex gateway token file is malformed"
+            );
+            assert_no_secret(&error.to_string(), &secret);
+            assert_no_secret(&format!("{error:?}"), &secret);
+        }
+        assert!(!home.join("config.toml").exists());
     }
 }
